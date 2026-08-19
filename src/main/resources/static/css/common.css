@@ -1,0 +1,87 @@
+/*
+ * 공통 레이아웃: 모바일 고정폭(420px) 컨테이너 + 헤더/하단 네비
+ * PWA 미적용 — 반응형이 아닌, 모바일 사이즈로 고정된 일반 웹 페이지 (CLAUDE.md 설계 원칙 참고)
+ */
+
+:root {
+	--app-max-width: 420px;
+	--app-header-height: 56px;
+	--app-nav-height: 56px;
+	--color-border: #eaeaea;
+	--color-text: #1a1a1a;
+	--color-text-muted: #888;
+	--color-primary: #ff6b35;
+	--color-bg: #f5f5f5;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+/* 화면 전체를 감싸는 모바일 고정폭 컨테이너. 모든 페이지의 최상위 요소에 적용한다. */
+.app-container {
+	max-width: var(--app-max-width);
+	min-height: 100vh;
+	margin: 0 auto;
+	background: #fff;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+}
+
+.app-header {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: var(--app-header-height);
+	padding: 0 16px;
+	background: #fff;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.app-header-title {
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.app-content {
+	flex: 1;
+	padding: 16px;
+	padding-bottom: calc(var(--app-nav-height) + 16px);
+}
+
+/* 하단 네비게이션. 화면별로 필요할 때만 포함한다 (예: 로그인 등은 생략 가능). */
+.app-nav {
+	position: sticky;
+	bottom: 0;
+	z-index: 10;
+	display: flex;
+	height: var(--app-nav-height);
+	background: #fff;
+	border-top: 1px solid var(--color-border);
+}
+
+.app-nav-item {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	color: var(--color-text-muted);
+	text-decoration: none;
+}
+
+.app-nav-item.active {
+	color: var(--color-primary);
+	font-weight: 700;
+}

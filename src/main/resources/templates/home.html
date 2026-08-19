@@ -2,10 +2,20 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<title>기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
 <body>
-	<h1>기리기리</h1>
-	<p>동네 가게 마감 임박 음식 긴급 구제 서비스</p>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='기리기리')}"></header>
+
+		<main class="app-content">
+			<h1>기리기리</h1>
+			<p>동네 가게 마감 임박 음식 긴급 구제 서비스</p>
+		</main>
+
+		<nav th:replace="~{fragments/layout :: nav(active='home')}"></nav>
+	</div>
 </body>
 </html>

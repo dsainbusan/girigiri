@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+	<!-- 공통 상단 헤더. 사용: <div th:replace="~{fragments/layout :: header(title='기리기리')}"></div> -->
+	<header th:fragment="header(title)" class="app-header">
+		<span class="app-header-title" th:text="${title}">기리기리</span>
+	</header>
+
+	<!-- 공통 하단 네비게이션. 사용: <nav th:replace="~{fragments/layout :: nav(active='home')}"></nav> -->
+	<nav th:fragment="nav(active)" class="app-nav">
+		<a th:href="@{/}" class="app-nav-item" th:classappend="${active == 'home'} ? 'active'">홈</a>
+		<a th:href="@{/mypage}" class="app-nav-item" th:classappend="${active == 'mypage'} ? 'active'">마이페이지</a>
+	</nav>
+
+</body>
+</html>
