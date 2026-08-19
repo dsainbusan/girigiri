@@ -26,8 +26,12 @@ cd girigiri
 mysql -u root -p -e "CREATE DATABASE girigiri DEFAULT CHARACTER SET utf8mb4"
 
 # 3. 環境変数の設定
-cp .env.example .env
-# .env ファイルを開いて実際のDB接続情報に修正
+# プロジェクトルートに .env ファイルを作成し、以下を実際の値で記入
+cat <<'ENV' > .env
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/girigiri?useSSL=false&serverTimezone=Asia/Seoul&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=changeme
+ENV
 
 # 4. 実行
 ./gradlew bootRun
@@ -59,8 +63,12 @@ cd girigiri
 mysql -u root -p -e "CREATE DATABASE girigiri DEFAULT CHARACTER SET utf8mb4"
 
 # 3. 환경변수 설정
-cp .env.example .env
-# .env 파일을 열어 실제 DB 접속 정보로 수정
+# 프로젝트 루트에 .env 파일을 만들고 아래 내용을 실제 값으로 채운다
+cat <<'ENV' > .env
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/girigiri?useSSL=false&serverTimezone=Asia/Seoul&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=changeme
+ENV
 
 # 4. 실행
 ./gradlew bootRun

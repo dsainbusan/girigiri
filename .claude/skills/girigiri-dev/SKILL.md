@@ -73,7 +73,8 @@ public class XxxEntity {
 ## .env / 시크릿 규칙
 
 - 실제 API 키·시크릿·비밀번호는 어떤 파일에도 커밋하지 않는다. `.env`는 `.gitignore`에 등록되어 있다.
-- 새 외부 연동(OAuth2, PortOne, 카카오맵 등)을 추가할 때는 `.env.example`에 키 이름과 빈 값(또는 주석 placeholder)만 추가하고, 실제 값은 각자 로컬 `.env`에만 채운다.
+- `.env.example` 파일은 두지 않기로 했다 (팀 결정). 필요한 `.env` 키 목록과 예시 값은 `README.md`의 "로컬 실행" 섹션에 문서화되어 있다.
+- 새 외부 연동(OAuth2, PortOne, 카카오맵 등)을 추가할 때는 `README.md`의 로컬 실행 섹션에 새 키 이름을 추가해 문서화하고, 실제 값은 각자 로컬 `.env`에만 채운다.
 
 ## 커밋 메시지 컨벤션
 
