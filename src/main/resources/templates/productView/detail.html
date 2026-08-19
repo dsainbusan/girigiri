@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title th:text="${name} + ' - 기리기리'">상품 상세 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='상품 상세', badge='')}"></header>
+
+		<main class="app-content">
+			<div class="thumb-placeholder">이미지 준비 중</div>
+
+			<span class="badge badge-discount" th:text="${discountRate} + '% 할인'">60% 할인</span>
+			<p class="card-title" style="font-size: 18px; margin-top: 8px;" th:text="${name}">크루아상 5개 세트</p>
+
+			<p>
+				<span class="price-original" th:text="${originalPrice} + '원'">12000원</span>
+				<span class="price-discounted" th:text="${discountedPrice} + '원'">4800원</span>
+			</p>
+
+			<div class="card">
+				<p class="card-sub">남은 수량: <strong th:text="${remainingQuantity}">3</strong>개</p>
+				<p class="card-sub">픽업 시간: <strong th:text="${pickupTime}">오늘 21:00 ~ 21:30</strong></p>
+			</div>
+
+			<p th:text="${description}">상품 설명</p>
+		</main>
+
+		<div class="app-actionbar">
+			<a href="#" class="btn btn-primary btn-block">예약하기</a>
+		</div>
+	</div>
+</body>
+</html>

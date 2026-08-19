@@ -54,6 +54,13 @@ public class XxxEntity {
 
 `templates/` 하위는 컨트롤러 도메인과 1:1 대응하는 `xxxView/` 접미사 폴더를 쓴다 (예: `mapView/`, `productView/`, `storeView/`, `mypageView/`, `authView/`, `errorView/`). 새 화면 도메인을 추가할 때 이 규칙을 따른다.
 
+## 공통 레이아웃 사용법
+
+- 모든 화면은 `<div class="app-container">`로 감싼다. ADMIN 화면은 `class="app-container mode-admin"`로 액센트 색상을 바꾼다 (`static/css/common.css`의 `.mode-admin` 참고).
+- 공통 헤더는 `fragments/layout.html`의 `header(title, badge)` 프래그먼트를 쓴다. **Thymeleaf는 이름 지정 파라미터 호출 시 시그니처에 선언된 파라미터를 전부 명시해야 하므로, badge를 안 쓰는 화면도 반드시 `badge=''`를 넘긴다** — 하나라도 빠뜨리면 `Cannot resolve fragment` 예외로 그 화면이 500 에러가 난다. 새 프래그먼트 파라미터를 추가할 때도 동일하게 기존 호출부를 전부 갱신해야 한다.
+- 하단은 일반 화면이면 `nav(active)` 프래그먼트(홈/마이페이지 네비), 상세/체크아웃형 화면이면 `.app-actionbar`(버튼 1개짜리 고정바) 중 하나를 쓴다.
+- 버튼/카드/배지/가격표시 등 재사용 컴포넌트는 `common.css`에 이미 정의되어 있다 (`.btn`, `.btn-primary`, `.btn-outline`, `.card`, `.badge`, `.stat-grid`, `.price-original`/`.price-discounted` 등) — 새로 만들기 전에 먼저 확인한다.
+
 ## Dual-mode 세션 규칙 (중요)
 
 세션 구조:

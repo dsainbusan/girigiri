@@ -36,6 +36,10 @@ public class WebSecurityConfig {
 			, "/images/**"
 			, "/auth/loginForm"
 			, "/error/**"
+			// TODO(송보미): 아래 두 경로는 디자인 통일성 확인용 데모 화면이라 임시로 공개.
+			//   실 데이터/권한 연동 시 role 기준 접근 제어로 교체할 것.
+			, "/store/**"
+			, "/product/**"
 	);
 
 	@Bean
