@@ -2,9 +2,10 @@ package net.dsa.girigiri.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
-@GetMapping("/auth")
+@RequestMapping("/auth")
 public class AuthController {
 
 	@GetMapping("/loginForm")
