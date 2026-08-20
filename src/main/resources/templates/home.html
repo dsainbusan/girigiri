@@ -24,7 +24,7 @@
 		<nav th:replace="~{fragments/layout :: nav(active='home')}"></nav>
 	</div>
 
-	<script th:src="@{'//dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services,clusterer'}"></script>
+	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services,clusterer'}"></script>
 	<script th:inline="javascript">
 		/*<![CDATA[*/
 		// TODO(강노은): StoreRepository 연동 후 실제 가게 좌표 목록으로 교체.
