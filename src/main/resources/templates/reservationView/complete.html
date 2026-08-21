@@ -1,36 +1,25 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>예약 완료 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('예약 완료', ~{:: #content}, 'my', false, '', null)}">
 <body>
-	<div class="app-container">
-		<header th:replace="~{fragments/layout :: header(title='예약 완료', badge='')}"></header>
-
-		<main class="app-content">
-			<div class="card" style="text-align:center;">
-				<img th:src="@{/reservation/{id}/qr-image(id=${reservationId})}"
-					 width="180" height="180" alt="픽업 QR 코드">
-				<p class="card-sub" style="margin-top:8px;">
-					픽업 코드: <strong th:text="${pickupCode}">PICK-XXXXXXXX</strong>
-				</p>
-			</div>
-
-			<div class="card">
-				<p class="card-title" th:text="${storeName}">다이스키 베이커리</p>
-				<p class="card-sub" th:text="${productName} + ' ' + ${quantity} + '개'">식빵 마감세트 1개</p>
-				<p class="card-sub">결제 금액: <strong th:text="${totalPrice} + '원'">3000원</strong></p>
-				<p class="card-sub">픽업 시간: <strong th:text="${pickupTime}">08월 20일 10:00</strong></p>
-			</div>
-
-			<a th:href="@{/reservation/{id}/receipt(id=${reservationId})}"
-			   class="btn btn-outline btn-block" target="_blank">영수증 PDF 보기</a>
-		</main>
-
-		<nav th:replace="~{fragments/layout :: nav(active='mypage')}"></nav>
+<div id="content" th:fragment="content" class="page">
+	<div class="card u-center">
+		<img th:src="@{/reservation/{id}/qr-image(id=${reservationId})}"
+			 width="180" height="180" alt="픽업 QR 코드">
+		<p class="u-sub" style="margin-top:var(--s-2)">
+			픽업 코드: <strong th:text="${pickupCode}">PICK-XXXXXXXX</strong>
+		</p>
 	</div>
+
+	<div class="card" style="margin-top:var(--s-3)">
+		<h3 th:text="${storeName}">다이스키 베이커리</h3>
+		<p class="u-sub" th:text="${productName} + ' ' + ${quantity} + '개'">식빵 마감세트 1개</p>
+		<p class="u-sub">결제 금액: <strong th:text="${totalPrice} + '원'">3000원</strong></p>
+		<p class="u-sub">픽업 시간: <strong th:text="${pickupTime}">08월 20일 10:00</strong></p>
+	</div>
+
+	<a th:href="@{/reservation/{id}/receipt(id=${reservationId})}"
+	   class="btn btn--outline btn--block" style="margin-top:var(--s-3)" target="_blank">영수증 PDF 보기</a>
+</div>
 </body>
 </html>

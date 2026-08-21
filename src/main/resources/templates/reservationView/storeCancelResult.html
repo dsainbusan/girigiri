@@ -1,25 +1,16 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>매장 취소 완료 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('취소 처리 완료', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
-	<div class="app-container mode-admin">
-		<header th:replace="~{fragments/layout :: header(title='취소 처리 완료', badge='관리자 모드')}"></header>
-
-		<main class="app-content">
-			<div class="card" style="text-align:center;">
-				<p class="card-title">취소 처리됐어요</p>
-				<p class="card-sub">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
-				<p class="card-sub">사유: <strong th:text="${cancelReason}">매장 사정으로 취소됨</strong></p>
-				<p class="card-sub">결제 금액은 손님에게 환불 처리됐어요.</p>
-			</div>
-
-			<a th:href="@{/reservation/store-cancel}" class="btn btn-outline btn-block">다른 예약 취소 처리하기</a>
-		</main>
+<div id="content" th:fragment="content" class="page">
+	<div class="card u-center">
+		<h3>취소 처리됐어요</h3>
+		<p class="u-sub" style="margin-top:var(--s-2)">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
+		<p class="u-sub">사유: <strong th:text="${cancelReason}">매장 사정으로 취소됨</strong></p>
+		<p class="u-sub">결제 금액은 손님에게 환불 처리됐어요.</p>
 	</div>
+
+	<a th:href="@{/reservation/store-cancel}" class="btn btn--outline btn--block" style="margin-top:var(--s-3)">다른 예약 취소 처리하기</a>
+</div>
 </body>
 </html>

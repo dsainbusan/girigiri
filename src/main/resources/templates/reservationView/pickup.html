@@ -1,153 +1,54 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>픽업 확인 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-	<style>
-		/* 스캔/담기 상태 배너: 눈에 잘 띄게 색으로 구분한다 (영수증 PDF의 환불/노쇼 안내 배너랑 같은 생각) */
-		.scan-status {
-			display: none;
-			margin-top: 8px;
-			padding: 12px 14px;
-			border-radius: 8px;
-			font-size: 15px;
-			font-weight: 600;
-			line-height: 1.4;
-		}
-		.scan-status.status-loading {
-			background: #f5f5f5;
-			color: #555;
-			border: 1px solid var(--color-border);
-		}
-		.scan-status.status-ok {
-			background: #e8f5e9;
-			color: #1b5e20;
-			border: 1px solid #a5d6a7;
-		}
-		.scan-status.status-warn {
-			background: #fff3e0;
-			color: #e65100;
-			border: 1px solid #ffcc80;
-		}
-		.scan-status .scan-status-title {
-			font-size: 17px;
-			font-weight: 800;
-			margin-bottom: 4px;
-		}
-		.scan-status .scan-status-sub {
-			font-size: 14px;
-			font-weight: 600;
-			opacity: 0.85;
-			margin-bottom: 8px;
-		}
-		.scan-status .scan-status-hint {
-			font-size: 13px;
-			font-weight: 500;
-			opacity: 0.75;
-		}
-
-		/* 담은 예약(장바구니) 목록 */
-		#cart-list {
-			list-style: none;
-			padding: 0;
-			margin: 8px 0 0;
-		}
-		#cart-list li {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 10px 0;
-			border-bottom: 1px solid var(--color-border);
-		}
-		#cart-list li:last-child {
-			border-bottom: none;
-		}
-		.cart-item-title {
-			font-size: 15px;
-			font-weight: 700;
-		}
-		.cart-item-sub {
-			font-size: 13px;
-			color: var(--color-text-muted);
-			margin-top: 2px;
-		}
-		.cart-remove-btn {
-			background: none;
-			border: none;
-			color: #e53935;
-			font-size: 18px;
-			line-height: 1;
-			cursor: pointer;
-			padding: 6px 8px;
-		}
-
-		/* 일괄 처리 결과 */
-		#batch-result-list {
-			list-style: none;
-			padding: 0;
-			margin: 8px 0 0;
-			font-size: 13px;
-		}
-		#batch-result-list li {
-			padding: 4px 0;
-			color: #e65100;
-		}
-	</style>
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('픽업 확인', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
-	<div class="app-container mode-admin">
-		<header th:replace="~{fragments/layout :: header(title='픽업 확인', badge='관리자 모드')}"></header>
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
-		<main class="app-content">
-			<div class="card">
-				<p class="card-sub">손님이 보여준 QR/픽업 코드를 스캔하거나 입력해서 아래 목록에 담고, 한 번에 픽업 처리하세요.</p>
-			</div>
-
-			<!--
-				카메라로 QR 스캔하기: 브라우저 카메라 API를 쓰는 html5-qrcode 라이브러리를 CDN으로 불러와 쓴다.
-				(별도 앱 설치 없이 모바일/데스크톱 브라우저에서 그대로 동작. 카카오맵 SDK를 CDN 스크립트로
-				불러오는 home.html과 같은 방식.)
-				QR 하나를 인식하면 카메라를 잠깐 멈추고(pause) 결과를 보여준다 — 자동으로 계속 인식해서
-				바로바로 담아버리면 엉뚱한 QR이 잡혀도 모르고 지나칠 수 있어서, 한 건씩 눈으로 확인하고
-				"담기"를 눌러야 목록에 들어가게 했다. 담고 나면(또는 "다시 스캔" 누르면) 카메라가 자동으로
-				다시 움직여서 다음 QR을 이어서 찍을 수 있다.
-			-->
-			<div class="card">
-				<button type="button" id="scan-toggle-btn" class="btn btn-outline btn-block">📷 카메라로 QR 스캔하기</button>
-				<div id="qr-reader" style="width:100%; margin-top:12px; display:none;"></div>
-				<p id="scan-status" class="scan-status"></p>
-				<div id="scan-confirm-actions" style="display:none; gap:8px; margin-top:8px;">
-					<button type="button" id="scan-confirm-add-btn" class="btn btn-primary" style="flex:1;">담기</button>
-					<button type="button" id="scan-confirm-retry-btn" class="btn btn-outline" style="flex:1;">다시 스캔</button>
-				</div>
-			</div>
-
-			<!-- 수동 입력도 스캔과 똑같이 "먼저 확인 → 목록에 담기" 과정을 거친다 (바로 처리 안 함). -->
-			<div class="card">
-				<div style="display:flex; gap:8px;">
-					<input type="text" id="manual-code-input" placeholder="예: PICK-1001"
-						   style="flex:1; height:44px; padding:0 12px; border:1px solid var(--color-border); border-radius:8px; box-sizing:border-box;">
-					<button type="button" id="manual-add-btn" class="btn btn-outline" style="white-space:nowrap;">담기</button>
-				</div>
-			</div>
-
-			<!-- 담은 예약(장바구니) -->
-			<div class="card" id="cart-card" style="display:none;">
-				<p class="card-title">담은 예약 (<span id="cart-count">0</span>건)</p>
-				<ul id="cart-list"></ul>
-			</div>
-
-			<!-- 일괄 처리 결과 (실패한 건이 있을 때만 자세히 보여줌) -->
-			<div class="card" id="batch-result-card" style="display:none;">
-				<p class="card-title" id="batch-result-title"></p>
-				<ul id="batch-result-list"></ul>
-			</div>
-
-			<button type="button" id="batch-submit-btn" class="btn btn-primary btn-block" disabled>담은 예약 모두 픽업 처리하기</button>
-		</main>
+	<div class="card">
+		<p class="u-sub">손님이 보여준 QR/픽업 코드를 스캔하거나 입력해서 아래 목록에 담고, 한 번에 픽업 처리하세요.</p>
 	</div>
+
+	<!--
+		카메라로 QR 스캔하기: 브라우저 카메라 API를 쓰는 html5-qrcode 라이브러리를 CDN으로 불러와 쓴다.
+		(별도 앱 설치 없이 모바일/데스크톱 브라우저에서 그대로 동작. 카카오맵 SDK를 CDN 스크립트로
+		불러오는 home.html과 같은 방식.)
+		QR 하나를 인식하면 카메라를 잠깐 멈추고(pause) 결과를 보여준다 — 자동으로 계속 인식해서
+		바로바로 담아버리면 엉뚱한 QR이 잡혀도 모르고 지나칠 수 있어서, 한 건씩 눈으로 확인하고
+		"담기"를 눌러야 목록에 들어가게 했다. 담고 나면(또는 "다시 스캔" 누르면) 카메라가 자동으로
+		다시 움직여서 다음 QR을 이어서 찍을 수 있다.
+	-->
+	<div class="card" style="margin-top:var(--s-3)">
+		<button type="button" id="scan-toggle-btn" class="btn btn--outline btn--block">📷 카메라로 QR 스캔하기</button>
+		<div id="qr-reader" style="width:100%; margin-top:var(--s-3); display:none;"></div>
+		<p id="scan-status" class="scan-status"></p>
+		<div id="scan-confirm-actions" style="display:none; gap:var(--s-2); margin-top:var(--s-2);">
+			<button type="button" id="scan-confirm-add-btn" class="btn" style="flex:1;">담기</button>
+			<button type="button" id="scan-confirm-retry-btn" class="btn btn--outline" style="flex:1;">다시 스캔</button>
+		</div>
+	</div>
+
+	<!-- 수동 입력도 스캔과 똑같이 "먼저 확인 → 목록에 담기" 과정을 거친다 (바로 처리 안 함). -->
+	<div class="card" style="margin-top:var(--s-3)">
+		<div class="u-row">
+			<input type="text" id="manual-code-input" placeholder="예: PICK-1001" class="input" style="flex:1;">
+			<button type="button" id="manual-add-btn" class="btn btn--outline" style="white-space:nowrap;">담기</button>
+		</div>
+	</div>
+
+	<!-- 담은 예약(장바구니) -->
+	<div class="card" id="cart-card" style="display:none; margin-top:var(--s-3)">
+		<h3>담은 예약 (<span id="cart-count">0</span>건)</h3>
+		<ul id="cart-list"></ul>
+	</div>
+
+	<!-- 일괄 처리 결과 (실패한 건이 있을 때만 자세히 보여줌) -->
+	<div class="card" id="batch-result-card" style="display:none; margin-top:var(--s-3)">
+		<h3 id="batch-result-title"></h3>
+		<ul id="batch-result-list"></ul>
+	</div>
+
+	<button type="button" id="batch-submit-btn" class="btn btn--block" style="margin-top:var(--s-3)" disabled>담은 예약 모두 픽업 처리하기</button>
 
 	<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 	<script th:inline="javascript">
@@ -474,5 +375,6 @@
 			renderCart();
 		})();
 	</script>
+</div>
 </body>
 </html>

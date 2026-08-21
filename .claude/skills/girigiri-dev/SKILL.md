@@ -54,13 +54,8 @@ public class XxxEntity {
 
 `templates/` 하위는 컨트롤러 도메인과 1:1 대응하는 `xxxView/` 접미사 폴더를 쓴다 (예: `mapView/`, `productView/`, `storeView/`, `mypageView/`, `authView/`, `errorView/`). 새 화면 도메인을 추가할 때 이 규칙을 따른다.
 
-## 공통 레이아웃 사용법
 ## 공통 레이아웃 사용법 (2026-08-20 전면 개편)
 
-- 모든 화면은 `<div class="app-container">`로 감싼다. ADMIN 화면은 `class="app-container mode-admin"`로 액센트 색상을 바꾼다 (`static/css/common.css`의 `.mode-admin` 참고).
-- 공통 헤더는 `fragments/layout.html`의 `header(title, badge)` 프래그먼트를 쓴다. **Thymeleaf는 이름 지정 파라미터 호출 시 시그니처에 선언된 파라미터를 전부 명시해야 하므로, badge를 안 쓰는 화면도 반드시 `badge=''`를 넘긴다** — 하나라도 빠뜨리면 `Cannot resolve fragment` 예외로 그 화면이 500 에러가 난다. 새 프래그먼트 파라미터를 추가할 때도 동일하게 기존 호출부를 전부 갱신해야 한다.
-- 하단은 일반 화면이면 `nav(active)` 프래그먼트(홈/마이페이지 네비), 상세/체크아웃형 화면이면 `.app-actionbar`(버튼 1개짜리 고정바) 중 하나를 쓴다.
-- 버튼/카드/배지/가격표시 등 재사용 컴포넌트는 `common.css`에 이미 정의되어 있다 (`.btn`, `.btn-primary`, `.btn-outline`, `.card`, `.badge`, `.stat-grid`, `.price-original`/`.price-discounted` 등) — 새로 만들기 전에 먼저 확인한다.
 기존 `fragments/layout.html` + `common.css` 자체 제작 시스템을 폐기하고, 팀 공용 스타터킷(BEM + 디자인 토큰) 기반으로 전면 교체했다. 새 화면은 아래 컨벤션을 따른다.
 
 - **풀페이지 래핑 방식**이다 (예전처럼 페이지가 직접 header/nav를 조립하는 부분 include 방식이 아니다). 페이지는 자기 `<html><head>`를 만들지 않고, `<html>` 태그 자체를 `common/layout :: layout(...)`으로 교체한다:
@@ -122,17 +117,11 @@ feat: add security stub with form-login placeholder
 
 `main` 브랜치에는 직접 커밋하지 않는다 — 기능 브랜치(`dev` 또는 `feature/*`)에서 작업 후 PR로 병합한다.
 
-## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약)
-## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약, 2026-08-20 갱신)
+## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약, 2026-08-21 갱신)
 
 | 담당자 | 주로 건드리는 영역 |
 |---|---|
-| 송보미 (조장) | security/, 로그인/role/viewMode 세션 로직, 예약 서비스 코어 |
-| 송채현 | domain/entity(ERD), 재고 등록, 판매/폐기 리포트(Excel/PDF) |
-| 강노은 | 예약/노쇼 처리, 결제(PortOne)/QR/영수증 PDF, 게시판 |
-| 김태훈 | productView/, mypageView/, 리뷰, 환경 기여도 시각화 |
-| 문창호 | mapView/, 카카오맵, 실시간 알림(WebSocket) |
-| 문창호 | security/, authView/(회원가입·로그인), role/viewMode 세션 로직, POS json 연동, 할인율 자동계산, 픽업 예약 관리(QR)·노쇼 방지, 판매·폐기 리포트(Excel/PDF), 마이페이지/절약 가계부 |
+| 문창호 | security/, authView/(로그인·소셜로그인), role/viewMode 세션 로직, POS json 연동, 할인율 자동계산, 픽업 예약 관리(QR)·노쇼 방지, 판매·폐기 리포트(Excel/PDF), 마이페이지/절약 가계부 |
 | 송보미 (조장) | 공통 레이아웃(templates/common/*.html, static/css/{tokens,base,layout,components}.css), domain/entity, repository 공통 CRUD, 슈퍼어드민 |
 | 김태훈 | storeView/ (재고 등록, 판매/등록 현황 대시보드, 통계 그래프), 공지사항 게시판 관리 |
 | 강노은 | HomeController/home.html 등 지도·메인 화면, mapView/, 카카오맵 연동, productView/(상품 상세), 카테고리 필터, 찜하기, 리뷰, 실시간 알림(WebSocket/SSE) |
