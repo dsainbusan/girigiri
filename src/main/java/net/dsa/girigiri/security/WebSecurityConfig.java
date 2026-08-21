@@ -59,6 +59,9 @@ public class WebSecurityConfig {
 			//   실 데이터/권한 연동 시 role 기준 접근 제어로 교체할 것.
 			, "/store/**"
 			, "/product/**"
+			, "/user/products/**"   // 강노은: 상품 상세 화면. 로그인 붙으면 위 두 줄과 함께 정리할 것.
+			, "/user/search"        // 강노은: 검색·필터 결과 화면.
+			, "/user/stores/**"     // 강노은: 가게 상세 화면(둘러보기는 로그인 없이).
 			, "/reservation/**"   // TODO(송채현) 로그인 전이라 임시 공개. 로그인 붙으면 로그인한 사용자만 접근하도록 되돌릴 것.
 			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
 			, "/styleguide"

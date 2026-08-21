@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('검색 결과', ~{:: #content}, '', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<form th:action="@{/user/search}" method="get" class="search" style="margin-bottom:var(--s-3)">
+		<span>🔍</span>
+		<input type="text" name="q" th:value="${keyword}" placeholder="베이커리, 반찬, 도시락 검색"
+		       style="border:none;background:transparent;outline:none;width:100%;font-size:var(--fs-md);color:var(--c-text)">
+		<input type="hidden" name="sort" th:value="${sort}">
+		<input type="hidden" name="price" th:value="${price}">
+	</form>
+
+	<div class="u-row" style="justify-content:space-between">
+		<div class="u-row" style="gap:6px">
+			<a class="chip" th:classappend="${sort != 'price'} ? ' is-active'"
+			   th:href="@{/user/search(q=${keyword}, sort='discount', price=${price})}">할인율순</a>
+			<a class="chip" th:classappend="${sort == 'price'} ? ' is-active'"
+			   th:href="@{/user/search(q=${keyword}, sort='price', price=${price})}">가격낮은순</a>
+			<button type="button" class="chip" id="filter-toggle-btn"
+			        th:classappend="${price != null and !#strings.isEmpty(price)} ? ' is-active'">필터 ▾</button>
+		</div>
+		<span class="u-mut" style="font-size:12px" th:text="${resultCount} + '개 결과'">18개 결과</span>
+	</div>
+
+	<!--/* TODO(강노은): 픽업 가능 시간 필터는 Product/Store에 픽업 시간대 데이터가 없어 아직 시각 요소만 있다.
+	     (SearchController 클래스 주석 참고) 데이터 생기면 실제 필터링 연결. */-->
+	<div class="card" id="filter-panel" style="display:none;margin-top:var(--s-3)">
+		<div class="field" style="margin-bottom:16px">
+			<label class="field__label">가격대</label>
+			<div class="u-row" style="gap:8px;flex-wrap:wrap">
+				<a class="chip" th:classappend="${price == 'under5000'} ? ' is-active'"
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='under5000')}">5천원 이하</a>
+				<a class="chip" th:classappend="${price == '5000to10000'} ? ' is-active'"
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='5000to10000')}">5천~1만원</a>
+				<a class="chip" th:classappend="${price == 'over10000'} ? ' is-active'"
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='over10000')}">1만원 이상</a>
+			</div>
+		</div>
+		<div class="field">
+			<label class="field__label">픽업 가능 시간 <span class="u-mut" style="font-size:11px;font-weight:400">(준비 중)</span></label>
+			<div class="chip-row">
+				<span class="chip">지금 바로</span>
+				<span class="chip">저녁 18~21시</span>
+				<span class="chip">마감임박 21시~</span>
+			</div>
+		</div>
+		<a th:href="@{/user/search(q=${keyword})}" class="btn btn--outline btn--block" style="color:var(--c-text-sub);margin-top:16px">필터 초기화</a>
+	</div>
+
+	<div style="display:flex;flex-direction:column;gap:12px;margin-top:var(--s-3)">
+		<div th:each="card : ${results}">
+			<div th:replace="~{common/components :: storeCard(${card})}"></div>
+		</div>
+		<p th:if="${#lists.isEmpty(results)}" class="u-sub">검색 결과가 없어요.</p>
+	</div>
+
+	<script>
+		(function () {
+			var btn = document.getElementById('filter-toggle-btn');
+			var panel = document.getElementById('filter-panel');
+			if (!btn || !panel) return;
+			btn.addEventListener('click', function () {
+				panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+			});
+		})();
+	</script>
+</div>
+</body>
+</html>

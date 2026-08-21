@@ -44,7 +44,10 @@
   <span class="store-card__body">
     <span class="store-card__top">
       <span class="store-card__name" th:text="${store.name}">가게명</span>
-      <span class="store-card__like">&hearts;</span>
+      <!--/* 강노은: 찜하기 버튼. data-like-btn은 app.js가 전역으로 위임 처리(클릭 시 부모 <a> 이동 막고 토글). */-->
+      <button type="button" class="store-card__like" data-like-btn
+              th:classappend="${store.liked} ? ' is-liked'"
+              th:attr="data-store-id=${store.storeId}">&hearts;</button>
     </span>
     <span class="store-card__meta"
           th:text="${store.category} + ' · ' + ${store.distance}">베이커리 · 320m</span>

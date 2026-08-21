@@ -9,6 +9,35 @@
 	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
 	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;"></div>
 
+	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)">🔍 <span>베이커리, 반찬, 도시락 검색</span></a>
+
+	<div class="chip-row" id="category-filter" style="margin-top:var(--s-3)">
+		<button type="button" class="chip is-active" data-filter="all">전체</button>
+		<button type="button" class="chip" data-filter="베이커리">베이커리</button>
+		<button type="button" class="chip" data-filter="반찬">반찬</button>
+		<button type="button" class="chip" data-filter="도시락">도시락</button>
+		<button type="button" class="chip" data-filter="카페">카페</button>
+	</div>
+
+	<div class="banner" style="margin-top:var(--s-4)" th:if="${todayRescueCount} > 0">
+		<span style="font-size:16px">🌍</span>
+		<div class="u-grow">
+			<div class="banner__title" th:text="'오늘 ' + ${todayRescueCount} + '명이 마감 음식을 구했어요'">오늘 3,940명이 마감 음식을 구했어요</div>
+		</div>
+	</div>
+
+	<div class="section-title" style="padding-top:var(--s-2)">
+		내 주변 마감세일 <span class="section-title__count" th:text="${storeCards.size()}">12</span>
+	</div>
+
+	<div id="store-card-list" style="display:flex;flex-direction:column;gap:var(--s-3)">
+		<div th:each="card : ${storeCards}" th:attr="data-category=${card.category}">
+			<div th:replace="~{common/components :: storeCard(${card})}"></div>
+		</div>
+		<p th:if="${#lists.isEmpty(storeCards)}" class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
+	</div>
+
+	<!--/* th:replace="~{:: #content}"는 이 div 안쪽만 가져간다 — 스크립트도 반드시 여기 안에 있어야 렌더링된다. */-->
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services,clusterer'}"></script>
 	<script th:inline="javascript">
 		/*<![CDATA[*/
@@ -26,6 +55,46 @@
 				level: 4
 			});
 
-	</div>
+			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
+
+			stores.forEach(function (store) {
+				var position = new kakao.maps.LatLng(store.latitude, store.longitude);
+				var marker = new kakao.maps.Marker({ position: position, map: map });
+
+				kakao.maps.event.addListener(marker, 'click', function () {
+					infoWindow.setContent(
+						'<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">'
+						+ store.storeName + (store.category ? ' · ' + store.category : '')
+						+ '</div>'
+					);
+					infoWindow.open(map, marker);
+				});
+			});
+		});
+		/*]]>*/
+	</script>
+
+	<script>
+		(function () {
+			var filterBar = document.getElementById('category-filter');
+			var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
+			if (!filterBar || cardWrappers.length === 0) return;
+
+			filterBar.addEventListener('click', function (event) {
+				var chip = event.target.closest('.chip');
+				if (!chip) return;
+
+				filterBar.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });
+				chip.classList.add('is-active');
+
+				var filter = chip.dataset.filter;
+				cardWrappers.forEach(function (wrapper) {
+					var match = filter === 'all' || wrapper.dataset.category === filter;
+					wrapper.style.display = match ? '' : 'none';
+				});
+			});
+		})();
+	</script>
+</div>
 </body>
 </html>

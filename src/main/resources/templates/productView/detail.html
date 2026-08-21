@@ -1,28 +1,103 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout(${name} + ' - 기리기리', ~{:: #content}, '', false, '', ~{:: #actionbar})}">
+      th:replace="~{common/layout :: layout(${product.name} + ' - 기리기리', ~{:: #content}, '', false, '', ~{:: #actionbar})}">
 <body>
-<div id="content" th:fragment="content" class="page">
-	<div class="thumb-placeholder">이미지 준비 중</div>
+<div id="content" th:fragment="content">
+	<div th:style="'height:150px;background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:52px'"
+	     th:text="${thumbEmoji}">🥐</div>
 
-	<span class="badge badge--discount" th:text="${discountRate} + '% 할인'">60% 할인</span>
-	<h2 th:text="${name}" style="margin-top:var(--s-2)">크루아상 5개 세트</h2>
+	<div class="page" style="padding-bottom:92px">
+		<span th:if="${store != null and store.category != null}" class="badge badge--success" th:text="${store.category}">베이커리</span>
+		<h1 style="margin-top:8px" th:text="${product.name}">오늘의 모둠빵 세트</h1>
 
-	<p class="price" style="margin-top:var(--s-2)">
-		<span class="price__orig" th:text="${originalPrice} + '원'">12000원</span>
-		<span class="price__sale" th:text="${discountedPrice} + '원'">4800원</span>
-	</p>
+		<div class="price" style="margin-top:8px">
+			<span class="badge badge--discount" th:text="'-' + ${discountRate} + '%'">-51%</span>
+			<span class="price__orig" th:text="${product.originalPrice} + '원'">12,000원</span>
+			<span class="price__sale" th:text="${product.discountedPrice} + '원'">5,900원</span>
+		</div>
 
-	<div class="card" style="margin-top:var(--s-4)">
-		<p class="u-sub">남은 수량: <strong th:text="${remainingQuantity}">3</strong>개</p>
-		<p class="u-sub">픽업 시간: <strong th:text="${pickupTime}">오늘 21:00 ~ 21:30</strong></p>
+		<a th:if="${store != null}" th:href="@{/user/stores/{id}(id=${store.id})}" class="store-card" style="margin-top:14px;padding:10px">
+			<span class="store-card__thumb" style="width:44px;height:44px;background:var(--c-accent);font-size:16px"
+			      th:text="${store.storeName.substring(0,1)}">빵</span>
+			<span class="store-card__body" style="gap:2px">
+				<span class="store-card__name" style="font-size:13px" th:text="${store.storeName}">광안리 베이커리</span>
+				<span class="u-mut" style="font-size:11px" th:text="'★' + ${avgRating} + ' (' + ${reviewCount} + ')'">★4.6 (12)</span>
+			</span>
+			<span style="margin-left:auto;color:var(--c-text-mut)">›</span>
+		</a>
+
+		<div style="margin-top:6px">
+			<div class="info-row">
+				<span class="info-row__ico">🕘</span>
+				<div class="u-grow">
+					<b style="font-size:13px">픽업 가능 시간</b>
+					<span class="u-sub" style="font-size:13px" th:text="${#strings.isEmpty(pickupLabel)} ? '매장 영업시간 참고' : ${pickupLabel}">마감까지 2시간</span>
+				</div>
+			</div>
+			<div class="info-row">
+				<span class="info-row__ico">📦</span>
+				<div class="u-grow">
+					<b style="font-size:13px">남은 수량</b>
+					<span class="u-sub" style="font-size:13px" th:text="${product.remainingQuantity} + '개'">3개</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="u-row" style="justify-content:space-between;margin-top:14px">
+			<b style="font-size:14px">수량</b>
+			<div class="stepper" id="qty-stepper">
+				<span class="stepper__btn" id="qty-minus">−</span>
+				<span class="stepper__val" id="qty-val">1</span>
+				<span class="stepper__btn" id="qty-plus">+</span>
+			</div>
+		</div>
+
+		<div class="banner" style="margin-top:14px" th:if="${savedAmount} > 0">
+			<span style="font-size:16px">💰</span>
+			<div class="u-grow">
+				<div class="banner__title" th:text="'이 상품으로 ' + ${#numbers.formatInteger(savedAmount, 0, 'COMMA')} + '원 절약해요'">이 상품으로 6,100원 절약해요</div>
+			</div>
+		</div>
+
+		<p class="u-sub" style="margin-top:14px;font-size:12px;line-height:1.6" th:text="${product.description}">상품 설명</p>
 	</div>
 
-	<p style="margin-top:var(--s-4)" th:text="${description}">상품 설명</p>
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+		(function () {
+			var remaining = /*[[${product.remainingQuantity}]]*/ 1;
+			var qtyVal = document.getElementById('qty-val');
+			var qtyInput = document.getElementById('reserve-quantity');
+			var minusBtn = document.getElementById('qty-minus');
+			var plusBtn = document.getElementById('qty-plus');
+			var qty = 1;
+
+			function render() {
+				qtyVal.textContent = qty;
+				if (qtyInput) qtyInput.value = qty;
+			}
+
+			minusBtn.addEventListener('click', function () {
+				if (qty > 1) { qty--; render(); }
+			});
+			plusBtn.addEventListener('click', function () {
+				if (qty < remaining) { qty++; render(); }
+			});
+		})();
+		/*]]>*/
+	</script>
 </div>
 
 <div id="actionbar" th:fragment="actionbar" class="bottom-cta">
-	<a href="#" class="btn btn--block">예약하기</a>
+	<div class="bottom-cta__price">
+		<small>총 결제 금액</small>
+		<strong th:text="${product.discountedPrice} + '원'">5,900원</strong>
+	</div>
+	<form th:action="@{/reservation/checkout}" method="get" style="margin-left:auto">
+		<input type="hidden" name="productId" th:value="${product.id}">
+		<input type="hidden" name="quantity" id="reserve-quantity" value="1">
+		<button type="submit" class="btn">예약하기</button>
+	</form>
 </div>
 </body>
 </html>

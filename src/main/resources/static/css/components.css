@@ -97,7 +97,8 @@
 .store-card__top  { display: flex; align-items: center; gap: var(--s-2); }
 .store-card__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .store-card__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
-.store-card__like { margin-left: auto; font-size: 18px; color: var(--c-line); }
+.store-card__like { margin-left: auto; font-size: 18px; color: var(--c-line); line-height: 1; }
+.store-card__like.is-liked { color: var(--c-danger); }
 .store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-accent); }
 .store-card__left.is-urgent { color: var(--c-danger); }
 

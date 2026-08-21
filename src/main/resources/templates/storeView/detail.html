@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout(${store.storeName} + ' - 기리기리', ~{:: #content}, '', false, '', null)}">
+<body>
+<div id="content" th:fragment="content">
+	<div th:style="'height:120px;background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:44px'"
+	     th:text="${thumbEmoji}">🥐</div>
+
+	<div class="page">
+		<div class="u-row" style="justify-content:space-between">
+			<div>
+				<h1 th:text="${store.storeName}">가게명</h1>
+				<div class="u-sub" style="font-size:13px;margin-top:2px"
+				     th:text="${store.category} + (${store.address} != null ? ' · ' + ${store.address} : '')">베이커리 · 광안동</div>
+			</div>
+			<button type="button" class="store-card__like" data-like-btn style="font-size:24px"
+			        th:classappend="${liked} ? ' is-liked'" th:attr="data-store-id=${store.id}">&hearts;</button>
+		</div>
+
+		<div class="u-row" style="gap:6px;margin-top:8px" th:if="${reviewCount} > 0">
+			<span class="star" style="font-size:14px">★★★★☆</span>
+			<b style="font-size:14px" th:text="${avgRating}">4.6</b>
+			<span class="u-mut" style="font-size:13px" th:text="'(' + ${reviewCount} + ')'">(128)</span>
+		</div>
+
+		<div style="margin-top:12px">
+			<div class="info-row">
+				<span class="info-row__ico">🕘</span>
+				<div class="u-grow">
+					<b style="font-size:13px">영업시간</b>
+					<span class="u-sub" style="font-size:13px"
+					      th:text="${store.operatingHours} + (${#strings.isEmpty(closingLabel)} ? '' : ' · ' + ${closingLabel})">07:00–21:00</span>
+				</div>
+			</div>
+			<div class="info-row" th:if="${store.address != null}">
+				<span class="info-row__ico">📍</span>
+				<div class="u-grow">
+					<span class="u-sub" style="font-size:13px" th:text="${store.address}">주소</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="section-title" style="font-size:15px">
+			지금 파는 마감 상품 <span class="section-title__count" th:text="${products.size()}">3</span>
+		</div>
+
+		<div style="display:flex;flex-direction:column;gap:10px">
+			<a th:each="p : ${products}" th:href="@{/user/products/{id}(id=${p.id})}" class="store-card">
+				<span class="store-card__thumb" th:style="'background:' + ${thumbColor}" th:text="${thumbEmoji}">빵</span>
+				<span class="store-card__body">
+					<span class="store-card__name" th:text="${p.name}">상품명</span>
+					<span class="price" style="margin-top:4px">
+						<span class="badge badge--discount" th:text="${p.discountRate}">-51%</span>
+						<span class="price__orig" th:text="${p.origPrice}">12,000원</span>
+						<span class="price__sale" style="font-size:15px" th:text="${p.salePrice}">5,900원</span>
+					</span>
+					<span class="store-card__left" th:text="${p.remainingQuantity} + '개 남음'">3개 남음</span>
+				</span>
+			</a>
+			<p th:if="${#lists.isEmpty(products)}" class="u-sub">지금은 판매 중인 마감세일 상품이 없어요.</p>
+		</div>
+	</div>
+</div>
+</body>
+</html>

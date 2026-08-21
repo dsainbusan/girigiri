@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('찜한 가게', ~{:: #content}, 'like', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<div class="u-row" style="justify-content:space-between;margin-bottom:8px">
+		<b style="font-size:14px" th:text="'전체 ' + ${totalCount} + '곳'">전체 5곳</b>
+		<span class="u-mut" style="font-size:13px" th:text="'세일중 ' + ${onSaleCount} + '곳'">세일중 2곳</span>
+	</div>
+
+	<div style="display:flex;flex-direction:column;gap:10px">
+		<div th:each="s : ${likedStores}" class="store-card" th:style="${s.onSale} ? '' : 'opacity:.6'">
+			<span class="store-card__thumb" th:style="'background:' + ${s.thumbColor}" th:text="${s.thumbText}">빵</span>
+			<span class="store-card__body">
+				<span class="store-card__top">
+					<span class="store-card__name" th:text="${s.name}">가게명</span>
+					<button type="button" class="store-card__like is-liked" data-like-btn
+					        th:attr="data-store-id=${s.storeId}">&hearts;</button>
+				</span>
+				<span class="store-card__meta" th:text="${s.category}">카테고리</span>
+				<span th:if="${s.onSale}" class="price" style="margin-top:2px">
+					<span class="badge badge--discount" th:text="${s.discountRate}">-51%</span>
+					<span class="price__sale" style="font-size:15px" th:text="${s.salePrice}">5,900원</span>
+				</span>
+				<span th:if="${s.onSale}" class="store-card__left" th:text="'⏱ ' + ${s.leftLabel}">⏱ 마감까지 42분</span>
+				<span th:unless="${s.onSale}" class="u-mut" style="font-size:12px;margin-top:2px" th:text="${s.offSaleText}">지금은 세일 중이 아니에요</span>
+			</span>
+		</div>
+
+		<p th:if="${#lists.isEmpty(likedStores)}" class="u-sub">아직 찜한 가게가 없어요. 마음에 드는 가게의 하트를 눌러보세요.</p>
+	</div>
+</div>
+</body>
+</html>
