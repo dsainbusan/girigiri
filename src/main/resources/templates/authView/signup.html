@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>회원가입 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='회원가입', badge='')}"></header>
+
+		<!--
+			추가됨 (2026-08-21) — 왜: 최초 소셜 로그인 직후 닉네임/활동 지역을 받는 화면(참고 목업).
+			목업에 있던 "소비자로 시작 / 사장님으로 시작" 선택은 넣지 않는다 — 점주(OWNER)는 로그인 후
+			마이페이지에서 별도 신청 → 운영자 승인으로만 전환되므로(CLAUDE.md 3.1), 가입 시점엔 필요 없다.
+		-->
+		<main class="app-content">
+			<div class="card auth-provider-box">
+				<p class="card-title"
+				   th:text="${provider == 'kakao'} ? '카카오 계정으로 시작해요' : (${provider == 'google'} ? '구글 계정으로 시작해요' : '라인 계정으로 시작해요')">
+					카카오 계정으로 시작해요
+				</p>
+				<!-- 카카오/라인은 이메일 동의항목 승인 전이라 email이 없을 수 있음 — 그때는 문구 생략 -->
+				<p class="card-sub" th:if="${maskedEmail}" th:text="${maskedEmail}">song***@kakao.com</p>
+			</div>
+
+			<p class="form-error" th:if="${param.error}">닉네임은 2~10자로 입력해 주세요.</p>
+
+			<form th:action="@{/auth/signup}" method="post">
+				<div class="form-group">
+					<label class="form-label" for="nickname">닉네임</label>
+					<input type="text" id="nickname" name="nickname" class="input"
+					       th:value="${nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
+				</div>
+
+				<div class="form-group">
+					<label class="form-label" for="region">활동 지역</label>
+					<input type="text" id="region" name="region" class="input"
+					       th:value="${region}" placeholder="예: 부산 광안동">
+				</div>
+
+				<div class="btn-row" style="margin-top: 20px;">
+					<button type="submit" class="btn btn-brand btn-block">가입 완료</button>
+				</div>
+			</form>
+		</main>
+	</div>
+</body>
+</html>

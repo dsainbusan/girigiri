@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+
+<!--/* 상단바. dark=true 면 사장님/운영자용 다크 헤더. badge는 제목 옆 텍스트 뱃지(예: '관리자 모드'), 없으면 '' */-->
+<header th:fragment="topbar(title, dark, badge)"
+        class="topbar" th:classappend="${dark} ? ' topbar--dark' : ''">
+  <button class="topbar__back" type="button" data-back aria-label="뒤로">&lsaquo;</button>
+  <h1 class="topbar__title" th:text="${title}">제목</h1>
+  <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">관리자 모드</span>
+  <span class="topbar__spacer"></span>
+  <!--/* 필요 시 우측 액션 버튼을 페이지에서 확장 */-->
+</header>
+
+</body>
+</html>

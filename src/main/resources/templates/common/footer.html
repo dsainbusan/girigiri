@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+
+<!--/* 하단 탭바. active: home | like | ledger | alert | my */-->
+<nav th:fragment="bottomNav(active)" class="bottomnav">
+  <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/}">
+    <span class="bottomnav__ico">&#8962;</span><span>홈</span>
+  </a>
+  <a class="bottomnav__item" th:classappend="${active=='like'}   ? ' is-active'" th:href="@{/user/likes}">
+    <span class="bottomnav__ico">&hearts;</span><span>찜</span>
+  </a>
+  <a class="bottomnav__item" th:classappend="${active=='ledger'} ? ' is-active'" th:href="@{/user/ledger}">
+    <span class="bottomnav__ico">&#9636;</span><span>가계부</span>
+  </a>
+  <a class="bottomnav__item" th:classappend="${active=='alert'}  ? ' is-active'" th:href="@{/user/alerts}">
+    <span class="bottomnav__ico">&#128276;</span><span>알림</span>
+  </a>
+  <a class="bottomnav__item" th:classappend="${active=='my'}     ? ' is-active'" th:href="@{/mypage}">
+    <span class="bottomnav__ico">&#9680;</span><span>마이</span>
+  </a>
+</nav>
+
+</body>
+</html>
