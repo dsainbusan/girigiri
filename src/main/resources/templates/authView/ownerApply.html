@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('점주 입점 신청', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	점주(사장님) 입점 신청 및 추가 정보 입력 화면
+	담당: 문창호 (WBS 2.1 인증 / 점주 신청 플로우)
+	- 사장님으로 가입 선택 시 매장 정보 및 사업자 등록번호를 입력받습니다.
+	- 제출 시 StoreEntity가 PENDING 상태로 생성되며, 운영자(ADMIN, WBS 7.2 송보미) 승인 후 role=OWNER로 활성화됩니다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<!-- 심사 기간 및 이용 안내 배너 -->
+	<div class="banner banner--info" style="margin-bottom: var(--s-5); display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+		<div class="u-row" style="gap: var(--s-2);">
+			<span style="font-size: 18px;">⏳</span>
+			<span class="banner__title" style="font-size: var(--fs-md);">운영자 승인 심사 안내</span>
+		</div>
+		<p class="banner__desc" style="line-height: 1.5; font-size: var(--fs-sm); color: var(--c-text-sub);">
+			입점 신청서 제출 후 관리자 승인까지 <strong>최대 2~3일(영업일 기준)</strong>이 소요될 수 있습니다.<br>
+			승인 전까지는 <strong>소비자 모드</strong>로 서비스를 정상 이용하실 수 있으며, 승인 완료 시 점주 모드가 활성화됩니다.
+		</p>
+	</div>
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">필수 항목을 모두 올바르게 입력해 주세요.</p>
+
+	<form th:action="@{/auth/owner-apply}" method="post">
+		<!-- 1. 상호명 -->
+		<div class="field">
+			<label class="field__label" for="storeName">상호명 (매장명) <span class="u-accent">*</span></label>
+			<input class="input" type="text" id="storeName" name="storeName"
+			       placeholder="예: 기리베이커리 광안점" required maxlength="50">
+		</div>
+
+		<!-- 2. 사업자 등록번호 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="businessNumber">사업자 등록번호 <span class="u-accent">*</span></label>
+			<input class="input" type="text" id="businessNumber" name="businessNumber"
+			       placeholder="예: 123-45-67890" required maxlength="30">
+		</div>
+
+		<!-- 3. 매장 카테고리 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="category">매장 업종 (카테고리) <span class="u-accent">*</span></label>
+			<select class="input" id="category" name="category" required>
+				<option value="">카테고리를 선택해 주세요</option>
+				<option value="베이커리">베이커리</option>
+				<option value="카페/디저트">카페 / 디저트</option>
+				<option value="반찬">반찬</option>
+				<option value="도시락/샐러드">도시락 / 샐러드</option>
+				<option value="마트/식료품">마트 / 식료품</option>
+				<option value="일반음식점">일반음식점</option>
+				<option value="기타">기타</option>
+			</select>
+		</div>
+
+		<!-- 4. 매장 주소 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="address">매장 주소 <span class="u-accent">*</span></label>
+			<input class="input" type="text" id="address" name="address"
+			       placeholder="예: 부산광역시 수영구 광안로 123 1층" required maxlength="200">
+		</div>
+
+		<!-- 5. 매장 대표 연락처 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="phone">매장 대표 전화번호 <span class="u-accent">*</span></label>
+			<input class="input" type="tel" id="phone" name="phone"
+			       placeholder="예: 051-123-4567 또는 010-1234-5678" required maxlength="30">
+		</div>
+
+		<!-- 6. 영업시간 및 마감 세일 안내 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="operatingHours">영업시간 및 마감세일 예상 시간</label>
+			<input class="input" type="text" id="operatingHours" name="operatingHours"
+			       placeholder="예: 09:00 ~ 21:00 (마감 세일 19:00~)" maxlength="100">
+		</div>
+
+		<!-- 제출 버튼 -->
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">입점 신청서 제출하기</button>
+	</form>
+
+</div>
+</body>
+</html>

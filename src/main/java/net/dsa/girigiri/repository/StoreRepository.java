@@ -4,6 +4,15 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
+
+	// 추가됨 (2026-08-21) — 왜: 점주(OWNER) 유저가 신청/등록한 매장 조회
+	Optional<StoreEntity> findByOwnerId(Long ownerId);
+
+	// 추가됨 (2026-08-21) — 왜: 슈퍼어드민(WBS 7.2 송보미) 입점 심사 대기 목록 조회용
+	List<StoreEntity> findByApprovalStatus(String approvalStatus);
 }

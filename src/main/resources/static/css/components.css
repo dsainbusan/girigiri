@@ -25,6 +25,9 @@
 .btn--outline{ background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line); }
 .btn--kakao  { background: var(--c-kakao); color: var(--c-kakao-on); }
 .btn--naver  { background: var(--c-naver); color: #fff; }
+/* 추가됨 (2026-08-21) — 왜: 이 프로젝트의 실제 로그인 provider는 구글/카카오/라인이라 naver 옆에 추가. */
+.btn--google { background: var(--c-surface); color: var(--c-google-on); border: 1px solid var(--c-line); }
+.btn--line   { background: var(--c-line-brand); color: #fff; }
 .btn--sm     { padding: 8px var(--s-3); font-size: var(--fs-sm); border-radius: var(--r-sm); }
 .btn--ghost  { background: var(--c-bg); color: var(--c-text-sub); }
 

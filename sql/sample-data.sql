@@ -24,12 +24,16 @@ DELETE FROM store;
 DELETE FROM users;
 
 -- ---------------------------------------------------------------------
--- users (일반 소비자 2명 + 관리자 계정 소유주 1명)
+-- users (일반 소비자 2명 + 점주 계정 소유주 1명)
+-- 변경됨 (2026-08-21) — 왜: dev 브랜치에 OAuth2 소셜 로그인을 포팅하면서 UserEntity가
+-- login_id/password 없이 oauth_provider/oauth_id 필수 + email/region/profile_completed
+-- 컬럼을 갖게 됐고, role도 USER/ADMIN 2종에서 USER(일반)/OWNER(점주)/ADMIN(운영자) 3종으로 바뀌었다.
+-- 샘플 유저는 이미 온보딩을 마쳤다고 가정해 profile_completed=1로 넣는다.
 -- ---------------------------------------------------------------------
-INSERT INTO users (id, login_id, password, oauth_provider, oauth_id, role, nickname, latitude, longitude, created_at, updated_at) VALUES
-(1, 'user01', 'test1234', NULL, NULL, 'USER', '구제왕나은', 37.566826, 126.978656, NOW(), NOW()),
-(2, 'kakao_user', NULL, 'kakao', 'kakao_1001', 'USER', '알뜰소비자김태훈', 37.550000, 126.990000, NOW(), NOW()),
-(3, 'store_owner01', 'test1234', NULL, NULL, 'ADMIN', '사장님송채현', 37.560000, 126.985000, NOW(), NOW());
+INSERT INTO users (id, oauth_provider, oauth_id, role, nickname, email, region, profile_completed, latitude, longitude, created_at, updated_at) VALUES
+(1, 'google', 'google_1001', 'USER', '구제왕나은', 'noeun@example.com', '서울 중구', 1, 37.566826, 126.978656, NOW(), NOW()),
+(2, 'kakao', 'kakao_1001', 'USER', '알뜰소비자김태훈', NULL, '서울 중구', 1, 37.550000, 126.990000, NOW(), NOW()),
+(3, 'google', 'google_1002', 'OWNER', '사장님송채현', 'songchaehyeon@example.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW());
 
 -- ---------------------------------------------------------------------
 -- store (users.id=3 이 소유한 매장 1곳)

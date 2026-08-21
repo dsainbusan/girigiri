@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('마이페이지', ~{:: #content}, 'my', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<!--/* 
+	  마이페이지 메인 화면
+	  담당: 문창호 (WBS 6.1 절약 가계부 · 마이페이지)
+	*/-->
+
+	<!-- 1. 프로필 헤더 카드 -->
+	<a th:href="@{/mypage/edit}" class="card" style="display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); text-decoration: none; color: inherit;">
+		<!-- 아바타 원형 (초록 배경 + 닉네임 첫 글자) -->
+		<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--c-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: var(--fw-black); flex-shrink: 0;">
+			<span th:text="${user != null and user.nickname != null ? #strings.substring(user.nickname, 0, 1) : 'G'}">송</span>
+		</div>
+
+		<!-- 닉네임 및 동네 / 절약 N일째 정보 -->
+		<div class="u-grow" style="min-width: 0;">
+			<div class="u-row" style="gap: var(--s-2);">
+				<h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold);" th:text="${user != null ? user.nickname : '로그인이 필요합니다'}">송보미</h2>
+				<span th:if="${user != null and user.role == 'OWNER'}" class="badge badge--success" style="font-size: 10px;">사장님</span>
+				<span th:if="${user != null and user.role == 'ADMIN'}" class="badge badge--accent" style="font-size: 10px;">운영자</span>
+			</div>
+			<p style="font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 4px;">
+				<span th:text="${user != null and user.region != null ? user.region : '동네 미설정'}">광안동</span>
+				<span> · 절약 </span><span th:text="${daysJoined} ?: '1'">47</span><span>일째</span>
+			</p>
+		</div>
+
+		<!-- 우측 꺾쇠 -->
+		<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+	</a>
+
+	<!-- 2. 이번 달 절약 카드 (초록색 배너) -->
+	<div style="background: var(--c-primary); color: #fff; border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.15);">
+		<div>
+			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
+			<div style="font-size: 24px; font-weight: var(--fw-black); margin-top: 2px;">
+				<span th:text="${monthlySavings} ?: '0'">42,300</span><span>원</span>
+			</div>
+		</div>
+		<a th:href="@{/user/ledger}" style="background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+			가계부 &rsaquo;
+		</a>
+	</div>
+
+	<!-- 3. 메뉴 리스트 카드 -->
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+		<!-- 예약 내역 -->
+		<a href="#" class="list-menu-item">
+			<span class="list-menu-item__icon">🧾</span>
+			<span class="list-menu-item__title">예약 내역</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 찜한 가게 -->
+		<a th:href="@{/user/likes}" class="list-menu-item">
+			<span class="list-menu-item__icon">🖤</span>
+			<span class="list-menu-item__title">찜한 가게</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 내가 쓴 리뷰 -->
+		<a href="#" class="list-menu-item">
+			<span class="list-menu-item__icon">⭐</span>
+			<span class="list-menu-item__title">내가 쓴 리뷰</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 알림 설정 -->
+		<a th:href="@{/user/alerts}" class="list-menu-item">
+			<span class="list-menu-item__icon">🔔</span>
+			<span class="list-menu-item__title">알림 설정</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 고객 지원 -->
+		<a href="#" class="list-menu-item">
+			<span class="list-menu-item__icon">💬</span>
+			<span class="list-menu-item__title">고객 지원</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 회원정보 수정 (구현 완료) -->
+		<a th:href="@{/mypage/edit}" class="list-menu-item" style="border-bottom: none;">
+			<span class="list-menu-item__icon">⚙️</span>
+			<span class="list-menu-item__title">회원정보 수정</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+	</div>
+
+	<!-- 4. 사장님(점주) 관리자 모드 바로가기 (승인된 점주인 경우 노출) -->
+	<div th:if="${store != null and store.approvalStatus == 'APPROVED'}" class="card" style="margin-top: var(--s-3); background: var(--c-primary-weak); border-color: var(--c-primary-border);">
+		<div class="u-row" style="justify-content: space-between;">
+			<div>
+				<p class="u-bold" th:text="${store.storeName}">내 매장</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px;">점주 모드로 이동하여 재고 및 매장을 관리하세요.</p>
+			</div>
+			<a th:href="@{/store/dashboard}" class="btn btn--sm">관리자 모드</a>
+		</div>
+	</div>
+
+	<!-- 5. 로그아웃 버튼 -->
+	<div style="margin-top: var(--s-5); margin-bottom: var(--s-4);">
+		<form th:if="${user != null}" th:action="@{/auth/logout}" method="post">
+			<button type="submit" class="btn btn--block btn--outline u-mut" style="padding: 12px; font-size: var(--fs-sm); border-color: var(--c-line);">
+				로그아웃
+			</button>
+		</form>
+	</div>
+
+</div>
+
+<style>
+	.list-menu-item {
+		display: flex;
+		align-items: center;
+		padding: 16px var(--s-4);
+		border-bottom: 1px solid var(--c-line-weak);
+		text-decoration: none;
+		color: var(--c-text);
+		transition: background-color 0.15s ease;
+	}
+	.list-menu-item:active {
+		background-color: var(--c-bg);
+	}
+	.list-menu-item__icon {
+		font-size: 18px;
+		width: 28px;
+		display: flex;
+		align-items: center;
+	}
+	.list-menu-item__title {
+		font-size: var(--fs-md);
+		font-weight: var(--fw-medium);
+		flex-grow: 1;
+	}
+	.list-menu-item__arrow {
+		color: var(--c-text-mut);
+		font-size: 18px;
+		font-weight: var(--fw-bold);
+	}
+</style>
+
+</body>
+</html>

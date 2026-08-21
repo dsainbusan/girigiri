@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('회원정보 수정', ~{:: #content}, '', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<!--/* 
+	  회원정보 수정 화면
+	  담당: 문창호 (WBS 2.1 회원정보 수정 / 회원 관리)
+	*/-->
+
+	<!-- 계정 소셜 연동 정보 박스 -->
+	<div class="card" style="background: var(--c-surface); border: 1px solid var(--c-line-weak); margin-bottom: var(--s-4);">
+		<div class="u-row" style="gap: var(--s-3);">
+			<span style="font-size: 22px;">👤</span>
+			<div>
+				<div class="u-row" style="gap: var(--s-2);">
+					<span class="u-bold" style="font-size: var(--fs-sm);">연동 계정</span>
+					<span class="badge badge--info" style="font-size: 10px;"
+					      th:text="${user?.oauthProvider == 'kakao' ? '카카오' : (user?.oauthProvider == 'google' ? '구글' : '라인')}">카카오</span>
+				</div>
+				<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 2px;"
+				   th:text="${user?.email != null ? user.email : '소셜 계정 로그인 연동됨'}">user@example.com</p>
+			</div>
+		</div>
+	</div>
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">닉네임은 2~10자로 입력해 주세요.</p>
+
+	<form th:action="@{/mypage/edit}" method="post">
+		<!-- 닉네임 입력 -->
+		<div class="field">
+			<label class="field__label" for="nickname">닉네임</label>
+			<input class="input" type="text" id="nickname" name="nickname"
+			       th:value="${user?.nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
+		</div>
+
+		<!-- 활동 지역 입력 -->
+		<div class="field" style="margin-top: var(--s-4);">
+			<label class="field__label" for="region">활동 지역</label>
+			<input class="input" type="text" id="region" name="region"
+			       th:value="${user?.region}" placeholder="예: 부산 광안동">
+		</div>
+
+		<!-- 점주(사장님) 입점 신청 / 상태 섹션 -->
+		<div class="card" style="margin-top: var(--s-5); background: var(--c-bg); border-color: var(--c-line);">
+			<!-- Case 1: 아직 입점 신청을 하지 않은 일반 소비자 -->
+			<div th:if="${store == null}">
+				<div class="u-row" style="gap: var(--s-2);">
+					<span style="font-size: 20px;">🏪</span>
+					<h3 style="font-size: var(--fs-md);">사장님이신가요?</h3>
+				</div>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
+					매장을 등록하고 마감 세일 음식을 판매해 보세요.<br>
+					신청 후 운영자 승인이 완료되면 점주 모드를 이용하실 수 있습니다.
+				</p>
+				<!-- 기존 ownerApply.html 재활용 링크 -->
+				<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+					점주 입점 신청하기 &rsaquo;
+				</a>
+			</div>
+
+			<!-- Case 2: 입점 신청 완료 후 심사 진행 중인 경우 -->
+			<div th:if="${store != null and store.approvalStatus == 'PENDING'}">
+				<div class="u-row" style="gap: var(--s-2);">
+					<span style="font-size: 20px;">⏳</span>
+					<h3 style="font-size: var(--fs-md); color: var(--c-info);">점주 입점 심사 진행 중</h3>
+				</div>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
+					<strong th:text="${store.storeName}">매장명</strong> 입점 신청서가 접수되었습니다.<br>
+					승인까지 최대 2~3일(영업일 기준)이 소요됩니다.
+				</p>
+				<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+					신청 정보 수정하기 &rsaquo;
+				</a>
+			</div>
+
+			<!-- Case 3: 점주 승인이 완료된 경우 -->
+			<div th:if="${store != null and store.approvalStatus == 'APPROVED'}">
+				<div class="u-row" style="gap: var(--s-2);">
+					<span style="font-size: 20px;">✅</span>
+					<h3 style="font-size: var(--fs-md); color: var(--c-primary);">점주 승인 완료</h3>
+				</div>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;">
+					등록 매장: <strong th:text="${store.storeName}">매장명</strong>
+				</p>
+			</div>
+		</div>
+
+		<!-- 수정 완료 저장 버튼 -->
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6);">
+			수정 완료
+		</button>
+	</form>
+
+</div>
+</body>
+</html>

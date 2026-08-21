@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('신청 완료', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	점주(사장님) 입점 신청 완료 안내 화면
+	담당: 문창호 (WBS 2.1 인증 / 점주 신청 플로우)
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<div class="u-center" style="margin: var(--s-6) 0 var(--s-6);">
+		<div style="width: 72px; height: 72px; margin: 0 auto var(--s-4); border-radius: var(--r-xl); background: var(--c-primary-weak); color: var(--c-primary); display: flex; align-items: center; justify-content: center; font-size: 32px;">
+			🏪
+		</div>
+		<h1 class="u-primary">입점 신청이 접수되었습니다!</h1>
+		<p class="u-bold" style="margin-top: var(--s-2); font-size: var(--fs-md);">
+			<span th:text="${storeName} ?: '매장'">기리기리 매장</span>의 입점 심사가 진행 중입니다.
+		</p>
+	</div>
+
+	<!-- 심사 안내 카드 -->
+	<div class="card" style="background: var(--c-surface); border: 1px solid var(--c-line-weak);">
+		<div class="u-row" style="gap: var(--s-3); align-items: flex-start;">
+			<span style="font-size: 20px;">📌</span>
+			<div>
+				<p class="u-bold" style="font-size: var(--fs-sm);">승인 소요 기간</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px;">
+					운영자가 사업자 정보 및 매장 위치를 확인한 후 <strong>최대 2~3일(영업일 기준) 이내</strong>에 승인 처리가 완료됩니다.
+				</p>
+			</div>
+		</div>
+
+		<div class="u-row" style="gap: var(--s-3); align-items: flex-start; margin-top: var(--s-4);">
+			<span style="font-size: 20px;">🛍️</span>
+			<div>
+				<p class="u-bold" style="font-size: var(--fs-sm);">서비스 이용 안내</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px;">
+					승인 대기 중에도 일반 <strong>소비자 권한</strong>으로 기리기리의 마감세일 혜택을 자유롭게 이용하실 수 있습니다.
+				</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- 이동 버튼 -->
+	<div style="margin-top: var(--s-6);">
+		<a th:href="@{/}" class="btn btn--block">홈으로 가기</a>
+		<a th:href="@{/mypage}" class="btn btn--block btn--outline" style="margin-top: var(--s-3);">마이페이지에서 확인하기</a>
+	</div>
+
+</div>
+</body>
+</html>

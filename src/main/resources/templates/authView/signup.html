@@ -1,50 +1,165 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>회원가입 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('회원가입', ~{:: #content}, '', false, '', null)}">
 <body>
-	<div class="app-container">
-		<header th:replace="~{fragments/layout :: header(title='회원가입', badge='')}"></header>
+<!--/*
+	회원가입 완료 화면
+	담당: 문창호 (WBS 2.1 인증)
+	- 최초 소셜 로그인 성공 직후 닉네임, 활동 지역, 이용 역할(소비자/사장님)을 입력받습니다.
+	- 소비자 선택 시: 즉시 가입 완료 후 홈(/)으로 이동
+	- 사장님 선택 시: 기본 가입 완료 후 점주 입점 신청(/auth/owner-apply)으로 이동
+*/-->
+<div id="content" th:fragment="content" class="page">
 
-		<!--
-			추가됨 (2026-08-21) — 왜: 최초 소셜 로그인 직후 닉네임/활동 지역을 받는 화면(참고 목업).
-			목업에 있던 "소비자로 시작 / 사장님으로 시작" 선택은 넣지 않는다 — 점주(OWNER)는 로그인 후
-			마이페이지에서 별도 신청 → 운영자 승인으로만 전환되므로(CLAUDE.md 3.1), 가입 시점엔 필요 없다.
-		-->
-		<main class="app-content">
-			<div class="card auth-provider-box">
-				<p class="card-title"
+	<!-- 소셜 계정 안내 박스 -->
+	<div class="card" style="background:var(--c-info-weak); margin-bottom: var(--s-4); border: 1px solid #E0F2FE;">
+		<div class="u-row" style="gap: var(--s-3);">
+			<span style="font-size: 24px;">🎉</span>
+			<div>
+				<p class="u-bold" style="color:var(--c-info)"
 				   th:text="${provider == 'kakao'} ? '카카오 계정으로 시작해요' : (${provider == 'google'} ? '구글 계정으로 시작해요' : '라인 계정으로 시작해요')">
 					카카오 계정으로 시작해요
 				</p>
-				<!-- 카카오/라인은 이메일 동의항목 승인 전이라 email이 없을 수 있음 — 그때는 문구 생략 -->
-				<p class="card-sub" th:if="${maskedEmail}" th:text="${maskedEmail}">song***@kakao.com</p>
+				<!-- 카카오/라인은 이메일 동의항목 승인 전이라 email이 없을 수 있음(application.properties 참고) -->
+				<p class="u-mut" th:if="${maskedEmail}" th:text="${maskedEmail}" style="font-size:var(--fs-sm); margin-top:2px">song***@kakao.com</p>
+			</div>
+		</div>
+	</div>
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">닉네임은 2~10자로 입력해 주세요.</p>
+
+	<form th:action="@{/auth/signup}" method="post">
+		<!-- 닉네임 입력 -->
+		<div class="field">
+			<label class="field__label" for="nickname">닉네임</label>
+			<input class="input" type="text" id="nickname" name="nickname"
+			       th:value="${nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
+		</div>
+
+		<!-- 활동 지역 입력 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="region">활동 지역</label>
+			<input class="input" type="text" id="region" name="region"
+			       th:value="${region}" placeholder="예: 부산 광안동">
+		</div>
+
+		<!-- 이용 역할 선택 (소비자 / 사장님) -->
+		<div style="margin-top: var(--s-5)">
+			<label class="field__label" style="display: block; margin-bottom: var(--s-2);">어떻게 이용하시나요?</label>
+
+			<!-- 1. 소비자로 시작 카드 -->
+			<div class="role-card is-selected" id="card-user" onclick="selectRole('USER')">
+				<div class="role-card__icon" style="background: #FFF7ED; color: #EA580C;">買</div>
+				<div class="role-card__body">
+					<div class="role-card__title">소비자로 시작</div>
+					<div class="role-card__desc">마감 특가로 장보기</div>
+				</div>
+				<div class="role-card__radio">
+					<div class="radio-indicator"></div>
+				</div>
+				<input type="radio" name="userType" value="USER" id="role-user" checked style="display: none;">
 			</div>
 
-			<p class="form-error" th:if="${param.error}">닉네임은 2~10자로 입력해 주세요.</p>
-
-			<form th:action="@{/auth/signup}" method="post">
-				<div class="form-group">
-					<label class="form-label" for="nickname">닉네임</label>
-					<input type="text" id="nickname" name="nickname" class="input"
-					       th:value="${nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
+			<!-- 2. 사장님으로 시작 카드 -->
+			<div class="role-card" id="card-owner" onclick="selectRole('OWNER')" style="margin-top: var(--s-3);">
+				<div class="role-card__icon" style="background: #F0FDF4; color: #16A34A;">店</div>
+				<div class="role-card__body">
+					<div class="role-card__title">사장님으로 시작</div>
+					<div class="role-card__desc">매장 등록 · 마감 상품 판매</div>
 				</div>
-
-				<div class="form-group">
-					<label class="form-label" for="region">활동 지역</label>
-					<input type="text" id="region" name="region" class="input"
-					       th:value="${region}" placeholder="예: 부산 광안동">
+				<div class="role-card__radio">
+					<div class="radio-indicator"></div>
 				</div>
+				<input type="radio" name="userType" value="OWNER" id="role-owner" style="display: none;">
+			</div>
+		</div>
 
-				<div class="btn-row" style="margin-top: 20px;">
-					<button type="submit" class="btn btn-brand btn-block">가입 완료</button>
-				</div>
-			</form>
-		</main>
-	</div>
+		<!-- 제출 버튼 -->
+		<button type="submit" id="btn-submit" class="btn btn--block" style="margin-top: var(--s-6)">가입 완료</button>
+	</form>
+
+	<style>
+		.role-card {
+			display: flex;
+			align-items: center;
+			gap: var(--s-3);
+			padding: var(--s-4);
+			background: var(--c-surface);
+			border: 1.5px solid var(--c-line);
+			border-radius: var(--r-xl);
+			cursor: pointer;
+			transition: all 0.2s ease;
+			user-select: none;
+		}
+		.role-card.is-selected {
+			border-color: var(--c-primary);
+			box-shadow: 0 2px 8px rgba(21, 128, 61, 0.08);
+		}
+		.role-card__icon {
+			width: 48px;
+			height: 48px;
+			border-radius: var(--r-lg);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 22px;
+			font-weight: var(--fw-black);
+			flex-shrink: 0;
+		}
+		.role-card__body {
+			flex-grow: 1;
+		}
+		.role-card__title {
+			font-size: var(--fs-md);
+			font-weight: var(--fw-bold);
+			color: var(--c-text);
+		}
+		.role-card__desc {
+			font-size: var(--fs-xs);
+			color: var(--c-text-sub);
+			margin-top: 3px;
+		}
+		.role-card__radio {
+			width: 22px;
+			height: 22px;
+			border-radius: 50%;
+			border: 2px solid var(--c-line);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			transition: all 0.2s ease;
+		}
+		.role-card.is-selected .role-card__radio {
+			border-color: var(--c-primary);
+		}
+		.role-card.is-selected .radio-indicator {
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			background: var(--c-primary);
+		}
+	</style>
+
+	<script>
+		function selectRole(role) {
+			const isOwner = role === 'OWNER';
+			document.getElementById('role-user').checked = !isOwner;
+			document.getElementById('role-owner').checked = isOwner;
+
+			const cardUser = document.getElementById('card-user');
+			const cardOwner = document.getElementById('card-owner');
+
+			if (isOwner) {
+				cardUser.classList.remove('is-selected');
+				cardOwner.classList.add('is-selected');
+			} else {
+				cardUser.classList.add('is-selected');
+				cardOwner.classList.remove('is-selected');
+			}
+		}
+	</script>
+
+</div>
 </body>
 </html>
