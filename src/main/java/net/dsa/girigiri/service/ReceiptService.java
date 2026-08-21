@@ -57,8 +57,12 @@ public class ReceiptService {
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
 		// 취소/노쇼는 더 이상 픽업이 일어날 수 없는 상태라 QR을 넣을 필요가 없다.
-		// (예약 생성 시점(confirmed)엔 당연히 QR 포함, 나중에 상태가 바뀐 뒤 다시 이 메서드가 불리면 QR 제외)
-		boolean includeQr = "confirmed".equals(reservation.getStatus()) || "picked".equals(reservation.getStatus());
+		// (예약 생성 시점(confirmed)과 매장 수락 후(ready)엔 당연히 QR 포함 — ready일 때 QR을 빼면
+		// 정작 픽업하러 갈 때 보여줄 QR이 없어진다. picked도 "방금 픽업했다"는 확인용으로 유지한다.)
+		boolean includeQr = switch (reservation.getStatus()) {
+			case "confirmed", "ready", "picked" -> true;
+			default -> false;
+		};
 
 		// 취소/노쇼는 결제 상태가 정상 예약이랑 다르니까, 영수증에도 그걸 명확히 표시해서
 		// "결제완료 3000원"만 덩그러니 보고 오해하는 일이 없게 한다.
@@ -75,7 +79,7 @@ public class ReceiptService {
 				refundNotice = false;
 				noticeMessage = "픽업 시간이 지나 노쇼 처리된 예약이에요. 결제하신 금액은 환불되지 않아요.";
 			}
-			default -> { }   // confirmed/picked/pending은 정상 영수증, 배너 없음
+			default -> { }   // confirmed/ready/picked/pending은 정상 영수증, 배너 없음
 		}
 
 		ReceiptPdfGenerator.ReceiptData data = new ReceiptPdfGenerator.ReceiptData(

@@ -5,7 +5,13 @@
 <div id="content" th:fragment="content" class="page">
 	<div class="card u-center">
 		<h3>취소 처리됐어요</h3>
-		<p class="u-sub" style="margin-top:var(--s-2)">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
+		<p class="u-bold" style="margin:var(--s-2) 0 2px;">
+			<span th:text="${productName}">식빵 마감세트</span> × <span th:text="${quantity}">1</span>개
+		</p>
+		<p class="u-sub" style="margin-bottom:var(--s-2)">
+			<span th:text="${storeName}">다이스키 베이커리</span> · <span th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA')}">3,000</span>원
+		</p>
+		<p class="u-sub">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
 		<p class="u-sub">사유: <strong th:text="${cancelReason}">매장 사정으로 취소됨</strong></p>
 		<p class="u-sub">결제 금액은 손님에게 환불 처리됐어요.</p>
 	</div>

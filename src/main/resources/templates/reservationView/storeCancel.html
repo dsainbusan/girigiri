@@ -3,15 +3,91 @@
       th:replace="~{common/layout :: layout('매장 취소 처리', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
 	<div class="card">
 		<p class="u-sub">재고 착오 등 매장 사정으로 예약을 취소해야 할 때 사용해요.
 			손님 결제는 바로 취소(환불) 처리되고, 시간 제한 없이 언제든 가능해요.</p>
 	</div>
 
-	<form th:action="@{/reservation/store-cancel}" method="post" style="margin-top:var(--s-3)">
-		<input type="text" name="pickupCode" placeholder="예: PICK-1001" class="input" style="margin-bottom:var(--s-3)">
-		<input type="text" name="reason" placeholder="취소 사유 (예: 재고 부족)" class="input" style="margin-bottom:var(--s-3)">
-		<button type="submit" class="btn btn--block">취소 처리</button>
+	<!-- 변경됨 (2026-08-21) — 왜: 픽업 코드를 손으로 옮겨 적다 오타 나거나, 이미 지나간 예약을
+		 잘못 입력하는 걸 막으려고 직접 타이핑 대신 "지금 취소 가능한 예약" 목록에서 고르게 바꿨다. -->
+	<div th:if="${#lists.isEmpty(cancellable)}" class="empty-state" style="margin-top:var(--s-3)">
+		지금 취소할 수 있는 예약이 없어요.
+	</div>
+
+	<form th:unless="${#lists.isEmpty(cancellable)}"
+		  th:action="@{/reservation/store-cancel}" method="post" id="cancel-form" style="margin-top:var(--s-3)">
+		<div class="card">
+			<select name="pickupCode" id="cancel-code-select" class="input">
+				<option th:each="r : ${cancellable}"
+						th:value="${r.pickupCode}"
+						th:text="${r.productName} + ' × ' + ${r.quantity} + '개 (' + ${r.pickupCode} + ')'"
+						th:attr="data-product=${r.productName}, data-quantity=${r.quantity}, data-store=${r.storeName}, data-price=${r.totalPrice}, data-badge=${r.statusBadge}">
+					식빵 마감세트 × 1개 (PICK-1001)
+				</option>
+			</select>
+			<p id="cancel-status" class="scan-status"></p>
+		</div>
+
+		<div class="card" style="margin-top:var(--s-3)">
+			<p class="u-bold" style="margin-bottom:var(--s-2)">취소 사유</p>
+			<div class="chip-row" style="flex-wrap:wrap; margin-bottom:var(--s-3)">
+				<button type="button" class="chip" data-reason="재고 부족/품절">재고 부족/품절</button>
+				<button type="button" class="chip" data-reason="준비 시간 부족">준비 시간 부족</button>
+				<button type="button" class="chip" data-reason="매장 사정으로 취소">매장 사정으로 취소</button>
+				<button type="button" class="chip" data-reason="">기타 (직접 입력)</button>
+			</div>
+			<input type="text" name="reason" id="cancel-reason-input" placeholder="취소 사유 (예: 재고 부족)" class="input">
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-3)">취소 처리</button>
+
+		<script th:inline="none">
+		(function () {
+			var select = document.getElementById('cancel-code-select');
+			var statusP = document.getElementById('cancel-status');
+			var reasonInput = document.getElementById('cancel-reason-input');
+			var chips = document.querySelectorAll('.chip[data-reason]');
+
+			function escapeHtml(text) {
+				var div = document.createElement('div');
+				div.textContent = text;
+				return div.innerHTML;
+			}
+
+			/** 목록에서 고른 예약이 뭔지 미리 보여준다. 이미 서버가 취소 가능한 것만 걸러서 준 목록이라
+				따로 조회(fetch)할 필요 없이, 선택된 <option>에 심어둔 data-* 값을 그대로 보여주면 된다. */
+			function showSelected() {
+				var opt = select.options[select.selectedIndex];
+				if (!opt) {
+					return;
+				}
+				var price = Number(opt.getAttribute('data-price')) || 0;
+				statusP.className = 'scan-status status-ok';
+				statusP.style.display = 'block';
+				statusP.innerHTML =
+					'<div class="scan-status-title">' + escapeHtml(opt.getAttribute('data-product')) + ' × ' + opt.getAttribute('data-quantity') + '개</div>' +
+					'<div class="scan-status-sub">' + escapeHtml(opt.getAttribute('data-store')) + ' · ' + price.toLocaleString() + '원 · ' + escapeHtml(opt.getAttribute('data-badge')) + '</div>' +
+					'<div class="scan-status-hint">이 예약을 취소하는 게 맞는지 확인해주세요.</div>';
+			}
+
+			select.addEventListener('change', showSelected);
+			showSelected();   // 페이지 열자마자 기본 선택된 예약 미리보기
+
+			chips.forEach(function (chip) {
+				chip.addEventListener('click', function () {
+					chips.forEach(function (c) { c.classList.remove('is-active'); });
+					chip.classList.add('is-active');
+					var preset = chip.getAttribute('data-reason');
+					reasonInput.value = preset;
+					if (!preset) {
+						reasonInput.focus();
+					}
+				});
+			});
+		})();
+		</script>
 	</form>
 </div>
 </body>

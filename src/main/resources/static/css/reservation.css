@@ -4,6 +4,73 @@
  * tokens.css의 CSS 변수(--c-line, --c-primary, --c-text-mut 등)를 그대로 재사용한다.
  */
 
+/* 추가됨 (2026-08-21) — 왜: 품절/주문 마감 등으로 th:disabled 처리된 버튼이 눌리지도 않으면서
+   색은 그대로 초록이라 "눌러도 되는 버튼"처럼 보였다. components.css의 .btn엔 disabled 상태
+   스타일이 아예 없어서(공통 파일이라 여기서 건드리진 않고), 이 화면(예약)에서 쓰는 버튼만
+   회색으로 바뀌게 이 파일에 추가한다. */
+.btn:disabled {
+	background: var(--c-line-weak);
+	color: var(--c-text-mut);
+	cursor: not-allowed;
+}
+
+/* 추가됨 (2026-08-21) — 왜: 노쇼·취소 탭에서 "취소"와 "노쇼" 배지가 똑같이 파란색(badge--info)이라
+   구분이 안 됐다. components.css(송보미 오너, 공통 파일)엔 회색 계열 배지가 없어서, 이 화면(예약)
+   전용으로 여기에 하나 추가한다 — "취소"는 대부분 정상적인 흐름(손님/매장 사정)이라 중립적인 회색,
+   "노쇼"는 손님이 안 나타난 페널티 성격이라 기존 badge--discount(빨강)를 그대로 쓴다. */
+.badge--muted {
+	background: var(--c-line-weak);
+	color: var(--c-text-mut);
+}
+
+/* 추가됨 (2026-08-21) — 왜: 예약 확인 화면에서 "취소" 처리 직후 안내 배너를 초록(banner 기본색)이
+   아니라 빨간 계열로 보여주고 싶은데, components.css(공통 파일)엔 banner--info만 있고 위험/취소용
+   변형이 없어서 이 화면(예약) 전용으로 여기에 추가한다. */
+.banner--danger {
+	background: var(--c-danger-weak);
+	border-color: var(--c-danger);
+}
+.banner--danger .banner__title,
+.banner--danger .banner__desc {
+	color: var(--c-danger);
+}
+
+/* 추가됨 (2026-08-21) — 왜: 체크아웃 화면에서 예약 수량이 1개로 고정돼 있던 걸 남은 수량 이하
+   범위에서 +/- 로 조절할 수 있게 바꾸면서 필요해진 스테퍼 스타일. 이 화면(예약) 전용이라 여기에 둔다. */
+.qty-stepper {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.qty-stepper__control {
+	display: flex;
+	align-items: center;
+	gap: var(--s-4);
+}
+.qty-stepper__btn {
+	width: 32px;
+	height: 32px;
+	border-radius: var(--r-sm);
+	background: var(--c-bg);
+	color: var(--c-text);
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-bold);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.qty-stepper__btn:disabled {
+	color: var(--c-text-mut);
+	background: var(--c-line-weak);
+	cursor: not-allowed;
+}
+.qty-stepper__value {
+	min-width: 28px;
+	text-align: center;
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-black);
+}
+
 /* 탭바 (마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소) */
 .tab-bar {
 	display: flex;

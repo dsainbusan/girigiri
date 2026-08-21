@@ -47,7 +47,11 @@
     </div>
 
     <!-- 본문 -->
-    <main class="app__main">
+    <!--/* 변경됨 (2026-08-21) — 왜: 하단 액션바(actionbar)가 sticky라 내용이 짧은 화면(체크아웃 등)에서
+       버튼이 화면 아래로 밀려나 안 보이는 문제가 있어서 fixed로 바꿨다(아래 .bottom-cta 참고). fixed는
+       문서 흐름에서 완전히 빠지므로, 액션바가 있는 화면은 본문 하단에 그만큼 여백을 더 줘야 마지막
+       내용이 버튼에 가려지지 않는다 — 그래서 actionbar가 있을 때만 app__main--has-actionbar를 붙인다. */-->
+    <main class="app__main" th:classappend="${actionbar} != null ? ' app__main--has-actionbar' : ''">
       <div th:replace="${content}"></div>
     </main>
 

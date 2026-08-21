@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('예약 확인', ~{:: #content}, '', true, '관리자 모드', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<!-- 방금 수락 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
+	<div th:if="${acceptedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">✅ 확인 완료</p>
+			<p class="banner__desc" th:text="${acceptedMessage}">예약을 확인했어요. 이제 손님이 픽업하러 올 수 있어요.</p>
+		</div>
+	</div>
+
+	<!-- 방금 취소 처리한 직후 안내 배너. (2026-08-21 추가) -->
+	<div th:if="${cancelledMessage != null}" class="banner banner--danger" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">🚫 취소 완료</p>
+			<p class="banner__desc" th:text="${cancelledMessage}">예약을 취소했어요. 결제하신 금액은 환불됩니다.</p>
+		</div>
+	</div>
+
+	<div class="card">
+		<p class="u-sub">결제가 끝난 새 주문들이에요. 확인되면 "수락", 어려우면 바로 "취소"할 수 있어요.</p>
+	</div>
+
+	<div th:if="${#lists.isEmpty(incoming)}" class="empty-state">
+		아직 확인할 새 주문이 없어요.
+	</div>
+
+	<div class="card" th:each="r : ${incoming}" style="margin-top:var(--s-3)">
+		<p class="u-bold" style="font-size:var(--fs-lg)">
+			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
+		</p>
+		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
+		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
+		<p class="u-sub">주문 시각: <strong th:text="${r.reservedAtDisplay}">08월 21일 15:00</strong></p>
+
+		<div class="btn-row" style="display:flex; gap:var(--s-2); margin-top:var(--s-3)">
+			<form th:action="@{/reservation/{id}/accept(id=${r.reservationId})}" method="post" style="flex:1 1 0">
+				<button type="submit" class="btn btn--block">수락</button>
+			</form>
+			<button type="button" class="btn btn--outline reject-toggle-btn"
+					style="flex:1 1 0; color:var(--c-danger); border-color:var(--c-danger)"
+					th:attr="data-target='reject-panel-' + ${r.reservationId}">취소</button>
+		</div>
+
+		<!-- 취소 사유 선택 패널. 평소엔 숨겨져 있다가 "취소" 버튼을 누르면 펼쳐진다. -->
+		<div class="reject-panel" th:id="'reject-panel-' + ${r.reservationId}" style="display:none; margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak)">
+			<p class="u-bold" style="font-size:var(--fs-sm); margin-bottom:var(--s-2)">취소 사유</p>
+			<div class="chip-row" style="flex-wrap:wrap; margin-bottom:var(--s-3)">
+				<button type="button" class="chip reject-chip is-active" data-reason="매장 사정으로 취소">매장 사정으로 취소</button>
+				<button type="button" class="chip reject-chip" data-reason="재고 부족/품절">재고 부족/품절</button>
+				<button type="button" class="chip reject-chip" data-reason="준비 시간 부족">준비 시간 부족</button>
+			</div>
+			<form th:action="@{/reservation/{id}/store-cancel(id=${r.reservationId})}" method="post">
+				<input type="hidden" name="reason" class="reject-reason-input" value="매장 사정으로 취소">
+				<button type="submit" class="btn btn--block" style="background:var(--c-danger)">이 예약 취소하기</button>
+			</form>
+		</div>
+	</div>
+
+	<script th:inline="none">
+	(function () {
+		document.querySelectorAll('.reject-toggle-btn').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var panel = document.getElementById(btn.getAttribute('data-target'));
+				if (panel) {
+					panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+				}
+			});
+		});
+		document.querySelectorAll('.reject-panel').forEach(function (panel) {
+			var chips = panel.querySelectorAll('.reject-chip');
+			var hiddenInput = panel.querySelector('.reject-reason-input');
+			chips.forEach(function (chip) {
+				chip.addEventListener('click', function () {
+					chips.forEach(function (c) { c.classList.remove('is-active'); });
+					chip.classList.add('is-active');
+					hiddenInput.value = chip.getAttribute('data-reason');
+				});
+			});
+		});
+	})();
+	</script>
+</div>
+</body>
+</html>

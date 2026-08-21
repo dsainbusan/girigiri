@@ -45,18 +45,24 @@ public class ReservationEntity {
 	@Column(name = "status", nullable = false, length = 20)
 	private String status;
 	// pending   : 결제 전 임시 상태. 결제 성공 시 confirmed로 전환, 결제 실패/이탈 시 자동 취소(레코드 정리)
-	// confirmed : 예약완료 + 픽업대기를 모두 포함 (DB엔 값 하나). 화면에서는 pickupTime과 현재시각 차이로
-	//             '예약완료' / '픽업대기' 뱃지만 구분 표시하고, 상태 컬럼은 추가하지 않는다.
+	// confirmed : 결제 완료, 매장 확인(수락) 대기중. 손님은 아직 픽업하러 오면 안 되는 상태 —
+	//             (2026-08-21 변경) 매장이 "예약 확인" 화면에서 수락하기 전까지는 픽업 처리(QR 스캔)가
+	//             막힌다. 취소는 이 상태에서도 그대로 가능하다.
+	// ready     : 매장이 확인/수락함 → 이제 손님이 와서 픽업해도 되는 상태. acceptedAt에 수락 시각 기록.
 	// picked    : 픽업완료 (pickedAt에 픽업 시각 기록)
 	// cancelled : 취소
-	// noshowed  : 노쇼 (픽업 마감시간 경과 후 확정 처리)
+	// noshowed  : 노쇼 (매장 마지막 픽업시간 경과 후 확정 처리)
 	//
-	// 목록 탭 필터 매핑: 진행중 = status IN (confirmed) · 픽업완료 = status = picked
+	// 목록 탭 필터 매핑: 진행중 = status IN (confirmed, ready) · 픽업완료 = status = picked
 	//                   노쇼·취소 = status IN (cancelled, noshowed)
 
 	@CreatedDate
 	@Column(name = "reserved_at", updatable = false)
 	private LocalDateTime reservedAt;
+
+	// 매장이 "예약 확인" 화면에서 수락한 시각 (status가 confirmed -> ready로 바뀐 시점)
+	@Column(name = "accepted_at")
+	private LocalDateTime acceptedAt;
 
 	@Column(name = "picked_at")
 	private LocalDateTime pickedAt;

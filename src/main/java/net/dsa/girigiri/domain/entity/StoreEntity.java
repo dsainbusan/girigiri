@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "store")
@@ -50,6 +51,18 @@ public class StoreEntity {
 
 	@Column(name = "operating_hours", length = 100)
 	private String operatingHours;
+
+	// 추가됨 (2026-08-21) — 왜: "떨이 서비스는 당일 판매·당일 픽업" 컨셉에 맞춰 픽업 시간을 손님이
+	// 직접 고르지 않고, 매장이 한 번만 설정해두면 시스템이 "현재시간 + 준비시간 <= 마지막 픽업시간"으로
+	// 자동 계산해서 주문 가능 여부/예상 픽업 시각을 판단하는 구조로 바꿨다 (PickupAvailabilityUtil 참고).
+	// 아직 매장 설정 화면이 없어서 기존 매장(sample-data.sql)은 이 값들이 비어있을(NULL) 수 있는데,
+	// 그럴 땐 "설정 전이라 항상 주문 가능"으로 취급한다 (PickupAvailabilityUtil.canOrderNow 참고).
+	@Builder.Default
+	@Column(name = "prep_time_minutes")
+	private Integer prepTimeMinutes = 20;   // 기본 준비시간(분): 주문~픽업 준비에 걸리는 시간
+
+	@Column(name = "last_pickup_time")
+	private LocalTime lastPickupTime;   // 마지막 픽업시간: 이 시간 이후로는 오늘 주문/픽업 마감
 
 	@Column(name = "role", nullable = false, length = 20)
 	private String role;   // = OWNER (점주 매장)

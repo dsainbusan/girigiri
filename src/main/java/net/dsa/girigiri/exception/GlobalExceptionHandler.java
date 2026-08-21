@@ -42,6 +42,22 @@ public class GlobalExceptionHandler {
 		return "errorView/custom-error-page";
 	}
 
+	// 주문 불가 (매장 마지막 픽업시간이 지나서 오늘 판매 마감)
+	@ExceptionHandler(OrderNotAllowedException.class)
+	public String handleOrderNotAllowed(OrderNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] OrderNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
+	// 예약 확인(수락) 불가 (이미 수락됨 / 이미 픽업·취소·노쇼)
+	@ExceptionHandler(AcceptNotAllowedException.class)
+	public String handleAcceptNotAllowed(AcceptNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] AcceptNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
 	// 그 외 처리되지 않은 예외
 	@ExceptionHandler(Exception.class)
 	public String handleException(Exception e, Model model) {

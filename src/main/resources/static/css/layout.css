@@ -6,7 +6,12 @@
 .app {
   width: 100%;
   max-width: var(--app-max);
-  min-height: 100vh;
+  min-height: 100vh;   /* 구형 브라우저 폴백 */
+  /* 추가됨 (2026-08-21) — 왜: 100vh는 모바일 브라우저의 주소창/하단바가 접히기 전 "최대" 뷰포트
+     기준이라, 내용이 짧은 화면(체크아웃 등)에서 하단 고정 버튼이 실제 보이는 화면보다 아래에
+     생겨서 스크롤해야만 보이는 문제가 있었다. 100dvh(동적 뷰포트 높이)를 지원하는 브라우저는
+     이 값으로 덮어써서, 실제 눈에 보이는 높이 기준으로 버튼이 바로 화면 안에 들어오게 한다. */
+  min-height: 100dvh;
   margin: 0 auto;
   background: var(--c-surface);
   display: flex;
@@ -19,6 +24,14 @@
 .app__main {
   flex: 1 1 auto;
   padding-bottom: calc(var(--bottomnav-h) + var(--s-4));
+}
+
+/* 추가됨 (2026-08-21) — 왜: 액션바(.bottom-cta)를 fixed로 바꾸면서 문서 흐름에서 빠졌다.
+   하단 탭바(64px)보다 액션바가 더 높아서(버튼 + 위아래 여백), 탭바 기준 여백만 있으면 마지막
+   카드/배너가 버튼에 가려진다. actionbar가 있는 화면에서만(app__main--has-actionbar) 이 값으로
+   덮어써서 가려짐을 막는다. */
+.app__main--has-actionbar {
+  padding-bottom: calc(96px + var(--s-4));
 }
 
 .app__main--plain { background: var(--c-bg); }   /* 회색 배경이 필요한 화면 */
@@ -82,9 +95,19 @@
 .bottomnav__item.is-active { color: var(--c-primary); font-weight: var(--fw-bold); }
 
 /* ---------- 하단 고정 CTA (상품상세 등) ---------- */
+/* 변경됨 (2026-08-21) — 왜: sticky는 .app 컨테이너 높이(내용이 짧으면 min-height로 늘어난 빈
+   공간까지)를 기준으로 흐름 위치가 정해져서, 내용이 짧은 화면(체크아웃 등)에서 버튼이 실제 보이는
+   화면 아래로 밀려나 스크롤해야만 보이는 문제가 있었다. 하단 탭바(.bottomnav)처럼 fixed로 바꿔서
+   내용 길이/화면 높이와 무관하게 항상 화면 맨 아래에 딱 붙게 했다. (액션바와 하단 탭바를 같은
+   화면에서 동시에 쓰는 페이지는 없어서 — layout.html 사용처 확인함 — 겹칠 걱정은 없다.) */
 .bottom-cta {
-  position: sticky;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 0;
+  width: 100%;
+  max-width: var(--app-max);
+  z-index: 25;
   display: flex;
   align-items: center;
   gap: var(--s-3);

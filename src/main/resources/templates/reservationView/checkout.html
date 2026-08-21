@@ -3,6 +3,8 @@
       th:replace="~{common/layout :: layout(${name} + ' 예약 확인', ~{:: #content}, '', false, '', ~{:: #actionbar})}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
 	<div class="card">
 		<h3 th:text="${name}">식빵 마감세트</h3>
 		<p class="price" style="margin-top:var(--s-2)">
@@ -12,22 +14,102 @@
 		<p class="u-sub">남은 수량: <strong th:text="${remainingQuantity}">4</strong>개</p>
 	</div>
 
-	<div class="card" style="margin-top:var(--s-3)">
-		<p class="u-sub">예약 수량: <strong th:text="${quantity}">1</strong>개</p>
-		<p class="u-sub">결제 예정 금액: <strong th:text="${totalPrice} + '원'">3000원</strong></p>
+	<!-- 추가됨 (2026-08-21) — 왜: 남은 수량이 0개(품절)인데도 수량 조절/예약 버튼이 눌리는 문제가
+		있었다. 품절이면 스테퍼 대신 이 안내만 보여주고, 아래 스테퍼/결제금액 카드 자체를 숨긴다. -->
+	<div class="card" th:if="${soldOut}" style="margin-top:var(--s-3)">
+		<p class="u-sub">죄송해요, 이 상품은 품절됐어요.</p>
 	</div>
 
-	<p class="u-mut" style="font-size:var(--fs-xs);margin-top:var(--s-3)">
-		* 픽업 시간은 예약 확정 후 지금으로부터 2시간 뒤로 자동 지정돼요.
-		(픽업 시간을 직접 고르는 기능은 다음에 추가될 예정이에요.)
-	</p>
+	<!-- 변경됨 (2026-08-21) — 왜: 예약 수량이 항상 1개로 고정돼 있어서, 남은 수량 이하 범위에서
+		직접 +/- 로 조절할 수 있게 스테퍼(qty-stepper)로 바꿨다. 서버는 이미 재고 이상 예약 시
+		OutOfStockException으로 막고 있어서(StockService), 여기서는 UI상 남은 수량을 넘지 않게만
+		막아주면 된다. 품절(soldOut)이면 이 카드 자체를 아예 숨긴다. -->
+	<div class="card qty-stepper" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+		<span class="u-sub">예약 수량</span>
+		<div class="qty-stepper__control">
+			<button type="button" class="qty-stepper__btn" id="qty-minus" aria-label="수량 감소">−</button>
+			<span class="qty-stepper__value" id="qty-value" th:text="${quantity}">1</span>
+			<button type="button" class="qty-stepper__btn" id="qty-plus" aria-label="수량 증가">+</button>
+		</div>
+	</div>
+	<!-- 최대 수량에 닿았을 때만 보이는 안내 문구. 평소엔 숨겨져 있다 -->
+	<p id="qty-max-hint" class="u-mut u-center" th:unless="${soldOut}" style="display:none; font-size:var(--fs-xs); margin-top:var(--s-1)">최대 수량입니다</p>
+
+	<div class="card" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+		<p class="u-sub">결제 예정 금액: <strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong></p>
+	</div>
+
+	<!--
+		변경됨 (2026-08-21) — 왜: 떨이 서비스는 당일 판매·당일 픽업이라, 손님이 픽업 시간대를 여러 개
+		중에서 고를 필요가 없다. 매장이 설정한 준비시간/마지막 픽업시간을 기준으로 "지금 주문하면
+		픽업 가능한지"와 "예상 픽업 가능 시각(현재시간 + 준비시간)"을 서버가 자동 계산해서 보여주기만
+		한다 (ReservationController.checkout 참고). 손님은 그냥 "예약 확정하기"만 누르면 된다.
+	-->
+	<!-- 수정됨 (2026-08-21) — 왜: 품절(soldOut)인데도 "주문 시간 지남" 카드나 "예상 픽업 가능 시각"
+		배너가 그대로 보이는 버그가 있었다. 품절 안내가 이미 위에 떠 있으니, 이 아래 두 블록은
+		품절이 아닐 때만(!soldOut) 보이게 조건을 추가했다. -->
+	<div class="card" th:if="${!soldOut and !canOrder}" style="margin-top:var(--s-3)">
+		<p class="u-sub">죄송해요, 오늘은 주문 가능한 시간이 지났어요. 내일 다시 확인해주세요.</p>
+	</div>
+
+	<div class="banner" th:if="${!soldOut and canOrder}" style="margin-top:var(--s-3)">
+		<div>
+			<p class="banner__title">예상 픽업 가능 시각: <span th:text="${earliestPickupDisplay}">08월 20일 10:20</span></p>
+			<p class="banner__desc">주문 후 매장이 확인하면, 이 시각 이후로 오시면 바로 픽업하실 수 있어요.</p>
+		</div>
+	</div>
+
+	<script th:inline="javascript">
+	/*
+	 * 변경됨 (2026-08-21) — 왜: 이 스크립트가 있는 #content(main)가 실제 화면에서 하단 고정
+	 * 액션바(#actionbar, 수량 hidden input이 들어있는 곳)보다 먼저 그려진다(common/layout.html
+	 * 구조상 main -> actionbar 순서). 스크립트를 즉시 실행하면 아직 파싱 안 된 hidden input을
+	 * 못 찾아서 에러가 나므로, 문서 전체가 다 만들어진 뒤(DOMContentLoaded)에 실행되게 감쌌다.
+	 */
+	document.addEventListener('DOMContentLoaded', function () {
+		var soldOut = /*[[${soldOut}]]*/ false;
+		if (soldOut) { return; }   // 품절이면 스테퍼 자체가 화면에 없으니 아무것도 안 한다
+
+		var max = /*[[${remainingQuantity}]]*/ 1;
+		var unitPrice = /*[[${discountedPrice}]]*/ 0;
+		var qty = /*[[${quantity}]]*/ 1;
+		if (max < 1) { max = 1; }
+		if (qty > max) { qty = max; }
+		if (qty < 1) { qty = 1; }
+
+		var valueEl = document.getElementById('qty-value');
+		var minusBtn = document.getElementById('qty-minus');
+		var plusBtn = document.getElementById('qty-plus');
+		var totalEl = document.getElementById('total-price-display');
+		var hiddenInput = document.getElementById('qty-hidden-input');
+		var maxHint = document.getElementById('qty-max-hint');
+
+		function render() {
+			valueEl.textContent = qty;
+			totalEl.textContent = (unitPrice * qty).toLocaleString() + '원';
+			hiddenInput.value = qty;
+			minusBtn.disabled = (qty <= 1);
+			plusBtn.disabled = (qty >= max);
+			maxHint.style.display = (qty >= max) ? 'block' : 'none';
+		}
+
+		minusBtn.addEventListener('click', function () {
+			if (qty > 1) { qty -= 1; render(); }
+		});
+		plusBtn.addEventListener('click', function () {
+			if (qty < max) { qty += 1; render(); }
+		});
+
+		render();
+	});
+	</script>
 </div>
 
 <div id="actionbar" th:fragment="actionbar" class="bottom-cta">
-	<form th:action="@{/reservation}" method="post" style="width:100%">
+	<form th:action="@{/reservation}" method="post" id="checkout-form" style="width:100%">
 		<input type="hidden" name="productId" th:value="${productId}">
-		<input type="hidden" name="quantity" th:value="${quantity}">
-		<button type="submit" class="btn btn--block">예약 확정하기</button>
+		<input type="hidden" name="quantity" id="qty-hidden-input" th:value="${quantity}">
+		<button type="submit" class="btn btn--block" th:disabled="${!canOrder or soldOut}">예약 확정하기</button>
 	</form>
 </div>
 </body>

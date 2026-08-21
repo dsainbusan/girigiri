@@ -2,12 +2,15 @@ package net.dsa.girigiri.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.CancellableReservationDto;
+import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.dto.StoreCancelStatsDto;
+import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
 import net.dsa.girigiri.repository.PaymentRepository;
@@ -109,6 +112,10 @@ public class ReservationService {
 	/**
 	 * 픽업 현장에서 QR/픽업코드를 확인했을 때 호출한다. 예약을 "picked" 상태로 바꾸고 픽업 시각을 기록한다.
 	 * 이미 픽업됐거나, 취소/노쇼 처리됐거나, 아직 결제가 안 된 예약이면 PickupNotAllowedException을 던진다.
+	 *
+	 * 변경됨 (2026-08-21) — 왜: 결제만 끝났다고 바로 픽업이 되면, 매장이 실제로 그 주문을 확인하기도
+	 * 전에 손님이 찾아와버릴 수 있다. "매장이 확인(수락)한 뒤에만 픽업 가능"하도록, confirmed 상태는
+	 * 더 이상 픽업 허용 대상이 아니고 ready 상태만 허용한다 (acceptReservation 참고).
 	 */
 	@Transactional
 	public ReservationEntity confirmPickup(String pickupCode) {
@@ -119,12 +126,59 @@ public class ReservationService {
 			case "picked" -> throw new PickupNotAllowedException("이미 픽업 완료 처리된 예약이에요.");
 			case "cancelled", "noshowed" -> throw new PickupNotAllowedException("취소되었거나 노쇼 처리된 예약이라 픽업할 수 없어요.");
 			case "pending" -> throw new PickupNotAllowedException("아직 결제가 완료되지 않은 예약이에요.");
-			default -> { }   // "confirmed" 상태만 정상적으로 아래 로직 진행
+			case "confirmed" -> throw new PickupNotAllowedException("아직 매장에서 확인(수락)하지 않은 예약이에요. 예약 확인 화면에서 먼저 수락해주세요.");
+			default -> { }   // "ready" 상태만 정상적으로 아래 로직 진행
 		}
 
 		reservation.setStatus("picked");
 		reservation.setPickedAt(java.time.LocalDateTime.now());
 		return reservationRepository.save(reservation);
+	}
+
+	/**
+	 * 매장(사장님)이 "예약 확인" 화면에서 새로 들어온 주문을 수락한다 — confirmed -> ready.
+	 * 이 수락이 끝나야 손님이 QR/픽업코드로 픽업 처리(confirmPickup)를 할 수 있다.
+	 * 이미 수락됐거나, 픽업/취소/노쇼 처리된 예약을 또 수락하려 하면 AcceptNotAllowedException을 던진다.
+	 */
+	@Transactional
+	public ReservationEntity acceptReservation(Long reservationId) {
+		ReservationEntity reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+
+		switch (reservation.getStatus()) {
+			case "ready" -> throw new AcceptNotAllowedException("이미 수락된 예약이에요.");
+			case "picked" -> throw new AcceptNotAllowedException("이미 픽업 완료된 예약이에요.");
+			case "cancelled" -> throw new AcceptNotAllowedException("이미 취소된 예약이에요.");
+			case "noshowed" -> throw new AcceptNotAllowedException("이미 노쇼 처리된 예약이에요.");
+			case "pending" -> throw new AcceptNotAllowedException("아직 결제가 완료되지 않은 예약이에요.");
+			default -> { }   // "confirmed" 상태만 정상적으로 아래 로직 진행
+		}
+
+		reservation.setStatus("ready");
+		reservation.setAcceptedAt(LocalDateTime.now());
+		return reservationRepository.save(reservation);
+	}
+
+	/**
+	 * 사장님용 "들어온 예약 확인/수락" 목록 — 아직 수락 안 한(confirmed) 주문들을 오래된 순으로 보여준다.
+	 */
+	public List<ReservationIncomingItemDto> getIncomingReservations() {
+		List<ReservationEntity> incoming = reservationRepository.findByStatusOrderByReservedAtAsc("confirmed");
+		return incoming.stream().map(this::toIncomingItemDto).toList();
+	}
+
+	private ReservationIncomingItemDto toIncomingItemDto(ReservationEntity reservation) {
+		ProductEntity product = productRepository.findById(reservation.getProductId())
+				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
+
+		return new ReservationIncomingItemDto(
+				reservation.getId(),
+				product.getName(),
+				reservation.getReservedQuantity(),
+				reservation.getTotalPrice(),
+				reservation.getPickupCode(),
+				reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-"
+		);
 	}
 
 	/**
@@ -206,6 +260,33 @@ public class ReservationService {
 		return saved;
 	}
 
+	/**
+	 * 매장 취소 화면용 "취소 가능한 예약" 목록 — checkCancellableState와 동일한 기준(픽업/취소/노쇼가
+	 * 아닌 예약)으로, 오래된 주문부터 보여준다. 픽업 코드를 직접 타이핑하지 않고 여기서 골라 취소한다.
+	 */
+	public List<CancellableReservationDto> getCancellableReservations() {
+		List<ReservationEntity> cancellable =
+				reservationRepository.findByStatusInOrderByReservedAtAsc(List.of("pending", "confirmed", "ready"));
+		return cancellable.stream().map(this::toCancellableDto).toList();
+	}
+
+	private CancellableReservationDto toCancellableDto(ReservationEntity reservation) {
+		ProductEntity product = productRepository.findById(reservation.getProductId())
+				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
+		StoreEntity store = storeRepository.findById(reservation.getStoreId())
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
+
+		return new CancellableReservationDto(
+				reservation.getId(),
+				reservation.getPickupCode(),
+				product.getName(),
+				reservation.getReservedQuantity(),
+				reservation.getTotalPrice(),
+				store.getStoreName(),
+				resolveStatusBadge(reservation)
+		);
+	}
+
 	/** 픽업/취소/노쇼처럼 이미 끝난 예약을 또 취소하려는 걸 막는 공통 상태 체크. */
 	private void checkCancellableState(ReservationEntity reservation) {
 		switch (reservation.getStatus()) {
@@ -239,8 +320,14 @@ public class ReservationService {
 	}
 
 	/**
-	 * 픽업 마감시간이 지났는데도 아직 픽업 안 된(confirmed 상태) 예약들을 전부 "noshowed"로 바꾼다.
+	 * 픽업 마감시간이 지났는데도 아직 픽업 안 된(confirmed/ready 상태) 예약들을 전부 "noshowed"로 바꾼다.
 	 * NoShowScheduler가 주기적으로 이 메서드를 호출한다.
+	 *
+	 * 변경됨 (2026-08-21) — 왜: 픽업 시간을 손님이 고르지 않고 자동 계산(현재+준비시간)하는 구조로
+	 * 바뀌면서, reservation.pickupTime은 이제 "가장 빠른 픽업 가능 시각"일 뿐 마감 기준이 아니다.
+	 * 진짜 마감 기준은 매장의 lastPickupTime(마지막 픽업시간)이라서, 매장이 그 값을 설정해뒀으면
+	 * 그 기준으로 판단한다. 아직 매장 설정 화면이 없어서 값이 비어있는 매장(대부분의 기존 데이터)은
+	 * 예전처럼 reservation.pickupTime 기준으로 판단(하위 호환)한다.
 	 *
 	 * 손님 취소/매장 취소와 다르게, 노쇼는:
 	 *   - 재고를 복구하지 않는다 (노쇼가 감지되는 시점 자체가 이미 마감 임박/직후라, 다시 팔 시간이 없다고 봄)
@@ -251,8 +338,12 @@ public class ReservationService {
 	 */
 	@Transactional
 	public int processNoShows() {
-		List<ReservationEntity> overdue =
-				reservationRepository.findByStatusAndPickupTimeBefore("confirmed", LocalDateTime.now());
+		LocalDateTime now = LocalDateTime.now();
+		List<ReservationEntity> candidates = reservationRepository.findByStatusIn(List.of("confirmed", "ready"));
+
+		List<ReservationEntity> overdue = candidates.stream()
+				.filter(reservation -> isPastPickupDeadline(reservation, now))
+				.toList();
 
 		for (ReservationEntity reservation : overdue) {
 			reservation.setStatus("noshowed");
@@ -267,13 +358,26 @@ public class ReservationService {
 		return overdue.size();
 	}
 
+	/** 매장의 lastPickupTime이 설정돼 있으면 그 기준으로, 아니면 예전처럼 reservation.pickupTime 기준으로 마감 여부 판단. */
+	private boolean isPastPickupDeadline(ReservationEntity reservation, LocalDateTime now) {
+		StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
+
+		if (store != null && store.getLastPickupTime() != null && reservation.getReservedAt() != null) {
+			LocalDateTime lastPickupDateTime =
+					LocalDateTime.of(reservation.getReservedAt().toLocalDate(), store.getLastPickupTime());
+			return now.isAfter(lastPickupDateTime);
+		}
+
+		return reservation.getPickupTime() != null && reservation.getPickupTime().isBefore(now);
+	}
+
 	/**
 	 * 마이페이지 예약 목록용 데이터. tab에 따라 다른 status 값들을 조회해서 화면에 필요한 형태(DTO)로 가공해 돌려준다.
 	 * tab 값은 TAB_PROGRESS / TAB_PICKED / TAB_CANCELLED 셋 중 하나.
 	 */
 	public List<ReservationListItemDto> getMyReservations(Long userId, String tab) {
 		List<String> statuses = switch (tab) {
-			case TAB_PROGRESS -> List.of("confirmed");
+			case TAB_PROGRESS -> List.of("confirmed", "ready");   // (2026-08-21) 매장 수락 대기중/수락됨 둘 다 "진행중"
 			case TAB_PICKED -> List.of("picked");
 			case TAB_CANCELLED -> List.of("cancelled", "noshowed");
 			default -> throw new IllegalArgumentException("알 수 없는 탭입니다: " + tab);
@@ -307,16 +411,16 @@ public class ReservationService {
 
 	/**
 	 * DB status 값을 화면에 보여줄 한글 배지로 바꾼다.
-	 * confirmed 하나뿐인 상태를, 픽업 시간이 지났는지로 "예약완료"/"픽업대기"로 나눠서 보여준다
-	 * (ReservationEntity의 status 필드 주석에 있는 탭 매핑 규칙 그대로).
+	 *
+	 * 변경됨 (2026-08-21) — 왜: 예전엔 confirmed 하나뿐인 상태를 pickupTime이 지났는지로
+	 * "예약완료"/"픽업대기"로 나눠서 보여줬는데, 이제 매장 수락 여부 자체가 별도 상태(ready)로
+	 * 분리돼서 시간 비교 없이 상태값 그대로 배지로 보여주면 된다.
 	 */
 	private String resolveStatusBadge(ReservationEntity reservation) {
 		return switch (reservation.getStatus()) {
-			case "confirmed" -> {
-				boolean pickupTimePassed = reservation.getPickupTime() != null
-						&& reservation.getPickupTime().isBefore(LocalDateTime.now());
-				yield pickupTimePassed ? "픽업대기" : "예약완료";
-			}
+			case "pending" -> "결제 대기";       // (2026-08-21 추가) getCancellableReservations 목록에서 어색한 영문 노출 방지용
+			case "confirmed" -> "주문 확인중";   // 결제완료, 매장이 아직 수락 전
+			case "ready" -> "픽업 가능";         // 매장이 수락함, 손님이 와서 픽업하면 됨
 			case "picked" -> "픽업완료";
 			case "cancelled" -> "취소";
 			case "noshowed" -> "노쇼";

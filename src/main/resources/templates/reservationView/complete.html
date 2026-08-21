@@ -15,7 +15,16 @@
 		<h3 th:text="${storeName}">다이스키 베이커리</h3>
 		<p class="u-sub" th:text="${productName} + ' ' + ${quantity} + '개'">식빵 마감세트 1개</p>
 		<p class="u-sub">결제 금액: <strong th:text="${totalPrice} + '원'">3000원</strong></p>
-		<p class="u-sub">픽업 시간: <strong th:text="${pickupTime}">08월 20일 10:00</strong></p>
+		<p class="u-sub">예상 픽업 가능 시각: <strong th:text="${pickupTime}">08월 20일 10:00</strong></p>
+	</div>
+
+	<!-- 추가됨 (2026-08-21) — 왜: 결제만 끝났지 매장이 아직 확인(수락)하기 전이라, 지금 바로 찾아가면
+		 안 된다는 걸 손님한테 명확히 알려준다. 매장이 수락하면 마이페이지 배지가 "픽업 가능"으로 바뀐다. -->
+	<div class="banner banner--info" style="margin-top:var(--s-3)">
+		<div>
+			<p class="banner__title">매장에서 주문을 확인하고 있어요</p>
+			<p class="banner__desc">매장이 확인(수락)하면 픽업하러 오실 수 있어요. 마이페이지에서 상태를 확인해주세요.</p>
+		</div>
 	</div>
 
 	<a th:href="@{/reservation/{id}/receipt(id=${reservationId})}"

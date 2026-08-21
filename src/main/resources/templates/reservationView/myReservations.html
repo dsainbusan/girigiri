@@ -5,6 +5,14 @@
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
+	<!-- 예약 취소 직후 "진짜 환불되는지" 확인이 안 보여서 넣은 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
+	<div th:if="${cancelledMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">✅ 취소 완료</p>
+			<p class="banner__desc" th:text="${cancelledMessage}">예약이 취소됐어요. 결제하신 금액은 환불됩니다.</p>
+		</div>
+	</div>
+
 	<nav class="tab-bar">
 		<a th:href="@{/reservation/my(tab='progress')}" class="tab-item"
 		   th:classappend="${activeTab == 'progress'} ? 'active'">진행중</a>
@@ -21,11 +29,15 @@
 	<div class="card" th:each="r : ${reservations}" style="margin-top:var(--s-3)">
 		<div class="u-row" style="justify-content:space-between;align-items:flex-start">
 			<h3 th:text="${r.storeName}">다이스키 베이커리</h3>
-			<span class="badge badge--info" th:text="${r.statusBadge}">예약완료</span>
+			<!-- 변경됨 (2026-08-21) — 왜: "취소"와 "노쇼"가 둘 다 badge--discount(빨강)라 구분이 안
+				 됐다. 픽업 가능(수락됨)은 초록, 노쇼는 빨강(페널티 성격), 취소는 회색(중립), 나머진 파랑. -->
+			<span class="badge"
+				  th:classappend="${r.statusBadge == '픽업 가능' ? 'badge--success' : (r.statusBadge == '노쇼' ? 'badge--discount' : (r.statusBadge == '취소' ? 'badge--muted' : 'badge--info'))}"
+				  th:text="${r.statusBadge}">예약완료</span>
 		</div>
 		<p class="u-sub" th:text="${r.productName} + ' ' + ${r.quantity} + '개'">식빵 마감세트 1개</p>
 		<p class="u-sub">결제 금액: <strong th:text="${r.totalPrice} + '원'">3000원</strong></p>
-		<p class="u-sub">픽업 시간: <strong th:text="${r.pickupTimeDisplay}">08월 20일 10:00</strong></p>
+		<p class="u-sub">픽업 가능 시각: <strong th:text="${r.pickupTimeDisplay}">08월 20일 10:00</strong></p>
 		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-XXXXXXXX</strong></p>
 		<!-- 이제 모든 상태에서 영수증을 보여준다. 취소/노쇼는 내용 자체가 달라져서(환불 안내 배너,
 			 QR 제외) 그 상태에 맞게 보여주기 때문에 굳이 버튼을 숨길 필요가 없다. -->
