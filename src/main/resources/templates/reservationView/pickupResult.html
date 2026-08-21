@@ -13,6 +13,12 @@
 		<main class="app-content">
 			<div class="card" style="text-align:center;">
 				<p class="card-title">픽업완료 처리됐어요</p>
+				<p style="font-size:17px; font-weight:800; margin:10px 0 2px;">
+					<span th:text="${productName}">식빵 마감세트</span> × <span th:text="${quantity}">1</span>개
+				</p>
+				<p class="card-sub" style="margin-bottom:10px;">
+					<span th:text="${storeName}">다이스키 베이커리</span> · <span th:text="${#numbers.formatInteger(totalPrice, 0, 'COMMA')}">3,000</span>원
+				</p>
 				<p class="card-sub">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
 				<p class="card-sub">픽업 시각: <strong th:text="${pickedAt}">08월 20일 10:00</strong></p>
 			</div>

@@ -75,17 +75,23 @@ class ReservationServiceTest {
 		assertEquals("paid", payment.getPayStatus());
 		assertEquals(reservation.getTotalPrice(), payment.getAmount());
 
-		// 6. 영수증 PDF가 실제로 만들어져서 파일로 저장되고, DB에도 기록됐는지
+		// 6. 영수증이 실제로 만들어져서 DB에 기록됐는지. .env에 Supabase가 설정돼 있으면 pdfUrl이
+		//    실제 http(s) URL이고, 아직 설정 전이면 ReceiptService가 로컬 receipts/ 폴더에 저장한
+		//    파일 경로가 그대로 들어있다 — 둘 다 정상이라 어느 쪽인지 보고 맞는 방식으로 확인한다.
 		ReceiptEntity receipt = receiptRepository.findByReservationId(reservation.getId()).orElseThrow();
 		assertNotNull(receipt.getPdfUrl());
-		File pdfFile = new File("receipts/receipt-" + reservation.getId() + ".pdf");
-		assertTrue(pdfFile.exists());
+		String pdfUrl = receipt.getPdfUrl();
+		if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) {
+			System.out.println("영수증이 Supabase Storage에 업로드됐어요: " + pdfUrl);
+		} else {
+			assertTrue(new File(pdfUrl).exists());
+			System.out.println("Supabase가 아직 설정 안 돼있어서 로컬에 저장됐어요: " + new File(pdfUrl).getAbsolutePath());
+			System.out.println("-> 저 파일 더블클릭해서 실제 예약 정보로 영수증이 잘 만들어졌는지 확인해보세요.");
+		}
 
 		System.out.println("생성된 예약 id: " + reservation.getId());
 		System.out.println("픽업 코드: " + reservation.getPickupCode());
 		System.out.println("결제 상태: " + payment.getPayStatus() + " / 금액: " + payment.getAmount());
 		System.out.println("재고: " + stockBefore + " -> " + after.getRemainingQuantity());
-		System.out.println("영수증 파일 저장 위치: " + pdfFile.getAbsolutePath());
-		System.out.println("-> 저 파일 더블클릭해서 실제 예약 정보로 영수증이 잘 만들어졌는지 확인해보세요.");
 	}
 }

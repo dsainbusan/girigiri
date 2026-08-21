@@ -5,6 +5,96 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 	<title>픽업 확인 - 기리기리</title>
 	<link rel="stylesheet" th:href="@{/css/common.css}">
+	<style>
+		/* 스캔/담기 상태 배너: 눈에 잘 띄게 색으로 구분한다 (영수증 PDF의 환불/노쇼 안내 배너랑 같은 생각) */
+		.scan-status {
+			display: none;
+			margin-top: 8px;
+			padding: 12px 14px;
+			border-radius: 8px;
+			font-size: 15px;
+			font-weight: 600;
+			line-height: 1.4;
+		}
+		.scan-status.status-loading {
+			background: #f5f5f5;
+			color: #555;
+			border: 1px solid var(--color-border);
+		}
+		.scan-status.status-ok {
+			background: #e8f5e9;
+			color: #1b5e20;
+			border: 1px solid #a5d6a7;
+		}
+		.scan-status.status-warn {
+			background: #fff3e0;
+			color: #e65100;
+			border: 1px solid #ffcc80;
+		}
+		.scan-status .scan-status-title {
+			font-size: 17px;
+			font-weight: 800;
+			margin-bottom: 4px;
+		}
+		.scan-status .scan-status-sub {
+			font-size: 14px;
+			font-weight: 600;
+			opacity: 0.85;
+			margin-bottom: 8px;
+		}
+		.scan-status .scan-status-hint {
+			font-size: 13px;
+			font-weight: 500;
+			opacity: 0.75;
+		}
+
+		/* 담은 예약(장바구니) 목록 */
+		#cart-list {
+			list-style: none;
+			padding: 0;
+			margin: 8px 0 0;
+		}
+		#cart-list li {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 10px 0;
+			border-bottom: 1px solid var(--color-border);
+		}
+		#cart-list li:last-child {
+			border-bottom: none;
+		}
+		.cart-item-title {
+			font-size: 15px;
+			font-weight: 700;
+		}
+		.cart-item-sub {
+			font-size: 13px;
+			color: var(--color-text-muted);
+			margin-top: 2px;
+		}
+		.cart-remove-btn {
+			background: none;
+			border: none;
+			color: #e53935;
+			font-size: 18px;
+			line-height: 1;
+			cursor: pointer;
+			padding: 6px 8px;
+		}
+
+		/* 일괄 처리 결과 */
+		#batch-result-list {
+			list-style: none;
+			padding: 0;
+			margin: 8px 0 0;
+			font-size: 13px;
+		}
+		#batch-result-list li {
+			padding: 4px 0;
+			color: #e65100;
+		}
+	</style>
 </head>
 <body>
 	<div class="app-container mode-admin">
@@ -12,15 +102,377 @@
 
 		<main class="app-content">
 			<div class="card">
-				<p class="card-sub">손님이 보여준 QR/픽업 코드를 입력하면 픽업완료로 처리돼요.</p>
+				<p class="card-sub">손님이 보여준 QR/픽업 코드를 스캔하거나 입력해서 아래 목록에 담고, 한 번에 픽업 처리하세요.</p>
 			</div>
 
-			<form th:action="@{/reservation/pickup}" method="post">
-				<input type="text" name="pickupCode" placeholder="예: PICK-1001"
-					   style="width:100%; height:44px; padding:0 12px; border:1px solid var(--color-border); border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
-				<button type="submit" class="btn btn-primary btn-block">픽업 완료 처리</button>
-			</form>
+			<!--
+				카메라로 QR 스캔하기: 브라우저 카메라 API를 쓰는 html5-qrcode 라이브러리를 CDN으로 불러와 쓴다.
+				(별도 앱 설치 없이 모바일/데스크톱 브라우저에서 그대로 동작. 카카오맵 SDK를 CDN 스크립트로
+				불러오는 home.html과 같은 방식.)
+				QR 하나를 인식하면 카메라를 잠깐 멈추고(pause) 결과를 보여준다 — 자동으로 계속 인식해서
+				바로바로 담아버리면 엉뚱한 QR이 잡혀도 모르고 지나칠 수 있어서, 한 건씩 눈으로 확인하고
+				"담기"를 눌러야 목록에 들어가게 했다. 담고 나면(또는 "다시 스캔" 누르면) 카메라가 자동으로
+				다시 움직여서 다음 QR을 이어서 찍을 수 있다.
+			-->
+			<div class="card">
+				<button type="button" id="scan-toggle-btn" class="btn btn-outline btn-block">📷 카메라로 QR 스캔하기</button>
+				<div id="qr-reader" style="width:100%; margin-top:12px; display:none;"></div>
+				<p id="scan-status" class="scan-status"></p>
+				<div id="scan-confirm-actions" style="display:none; gap:8px; margin-top:8px;">
+					<button type="button" id="scan-confirm-add-btn" class="btn btn-primary" style="flex:1;">담기</button>
+					<button type="button" id="scan-confirm-retry-btn" class="btn btn-outline" style="flex:1;">다시 스캔</button>
+				</div>
+			</div>
+
+			<!-- 수동 입력도 스캔과 똑같이 "먼저 확인 → 목록에 담기" 과정을 거친다 (바로 처리 안 함). -->
+			<div class="card">
+				<div style="display:flex; gap:8px;">
+					<input type="text" id="manual-code-input" placeholder="예: PICK-1001"
+						   style="flex:1; height:44px; padding:0 12px; border:1px solid var(--color-border); border-radius:8px; box-sizing:border-box;">
+					<button type="button" id="manual-add-btn" class="btn btn-outline" style="white-space:nowrap;">담기</button>
+				</div>
+			</div>
+
+			<!-- 담은 예약(장바구니) -->
+			<div class="card" id="cart-card" style="display:none;">
+				<p class="card-title">담은 예약 (<span id="cart-count">0</span>건)</p>
+				<ul id="cart-list"></ul>
+			</div>
+
+			<!-- 일괄 처리 결과 (실패한 건이 있을 때만 자세히 보여줌) -->
+			<div class="card" id="batch-result-card" style="display:none;">
+				<p class="card-title" id="batch-result-title"></p>
+				<ul id="batch-result-list"></ul>
+			</div>
+
+			<button type="button" id="batch-submit-btn" class="btn btn-primary btn-block" disabled>담은 예약 모두 픽업 처리하기</button>
 		</main>
 	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+	<script th:inline="javascript">
+		(function () {
+			var toggleBtn = document.getElementById('scan-toggle-btn');
+			var readerDiv = document.getElementById('qr-reader');
+			var statusP = document.getElementById('scan-status');
+			var confirmActions = document.getElementById('scan-confirm-actions');
+			var confirmAddBtn = document.getElementById('scan-confirm-add-btn');
+			var confirmRetryBtn = document.getElementById('scan-confirm-retry-btn');
+			var manualInput = document.getElementById('manual-code-input');
+			var manualAddBtn = document.getElementById('manual-add-btn');
+			var cartCard = document.getElementById('cart-card');
+			var cartList = document.getElementById('cart-list');
+			var cartCountEl = document.getElementById('cart-count');
+			var batchSubmitBtn = document.getElementById('batch-submit-btn');
+			var batchResultCard = document.getElementById('batch-result-card');
+			var batchResultTitle = document.getElementById('batch-result-title');
+			var batchResultList = document.getElementById('batch-result-list');
+
+			var html5QrCode = null;
+			var scanning = false;
+			var paused = false;
+			var cart = [];   // { pickupCode, productName, quantity, storeName, totalPrice }
+			var pendingLookup = null;   // 지금 화면에 "담기/다시 스캔" 확인 대기 중인 스캔 결과
+			var lastScannedCode = null;
+			var lastScannedAt = 0;
+
+			/** type: 'loading' | 'ok' | 'warn' — 색으로 상태를 구분해서 한눈에 보이게 한다. */
+			function showStatus(text, type) {
+				statusP.style.display = 'block';
+				statusP.textContent = text;
+				statusP.className = 'scan-status status-' + (type || 'loading');
+			}
+
+			function hideStatus() {
+				statusP.style.display = 'none';
+			}
+
+			function escapeHtml(text) {
+				var div = document.createElement('div');
+				div.textContent = text;
+				return div.innerHTML;
+			}
+
+			function renderCart() {
+				cartList.innerHTML = '';
+				cart.forEach(function (item) {
+					var li = document.createElement('li');
+
+					var infoDiv = document.createElement('div');
+					var titleDiv = document.createElement('div');
+					titleDiv.className = 'cart-item-title';
+					titleDiv.textContent = item.productName + ' × ' + item.quantity + '개';
+					var subDiv = document.createElement('div');
+					subDiv.className = 'cart-item-sub';
+					subDiv.textContent = item.storeName + ' · ' + item.totalPrice.toLocaleString() + '원 · ' + item.pickupCode;
+					infoDiv.appendChild(titleDiv);
+					infoDiv.appendChild(subDiv);
+
+					var removeBtn = document.createElement('button');
+					removeBtn.type = 'button';
+					removeBtn.className = 'cart-remove-btn';
+					removeBtn.textContent = '✕';
+					removeBtn.addEventListener('click', function () {
+						cart = cart.filter(function (c) { return c.pickupCode !== item.pickupCode; });
+						renderCart();
+					});
+
+					li.appendChild(infoDiv);
+					li.appendChild(removeBtn);
+					cartList.appendChild(li);
+				});
+
+				cartCountEl.textContent = cart.length;
+				cartCard.style.display = cart.length > 0 ? 'block' : 'none';
+				batchSubmitBtn.disabled = cart.length === 0;
+				batchSubmitBtn.textContent = cart.length > 0
+					? '담은 예약 ' + cart.length + '건 픽업 처리하기'
+					: '담은 예약 모두 픽업 처리하기';
+			}
+
+			/** 스캔했든 손으로 입력했든, 코드 하나를 "확인 후 담기"까지 처리하는 공통 로직. */
+			function addToCartIfValid(code) {
+				code = (code || '').trim();
+				if (!code) {
+					return;
+				}
+				pendingLookup = null;
+				confirmActions.style.display = 'none';
+				if (cart.some(function (item) { return item.pickupCode === code; })) {
+					showStatus('이미 담아둔 코드예요: ' + code, 'warn');
+					return;
+				}
+
+				showStatus('코드 확인 중... (' + code + ')', 'loading');
+
+				fetch('/reservation/pickup/lookup?pickupCode=' + encodeURIComponent(code))
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						if (data.ok) {
+							cart.push({
+								pickupCode: code,
+								productName: data.productName,
+								quantity: data.quantity,
+								storeName: data.storeName,
+								totalPrice: data.totalPrice
+							});
+							renderCart();
+							statusP.className = 'scan-status status-ok';
+							statusP.style.display = 'block';
+							statusP.innerHTML =
+								'<div class="scan-status-title">✅ 담았어요: ' + escapeHtml(data.productName) + ' × ' + data.quantity + '개</div>' +
+								'<div class="scan-status-hint">계속 스캔하거나, 다 모았으면 아래 버튼을 눌러주세요.</div>';
+						} else {
+							showStatus('⚠️ ' + data.message + ' (' + code + ')', 'warn');
+						}
+					})
+					.catch(function () {
+						showStatus('코드 확인에 실패했어요. 다시 시도해주세요. (' + code + ')', 'warn');
+					});
+			}
+
+			function stopScanning() {
+				pendingLookup = null;
+				confirmActions.style.display = 'none';
+				paused = false;
+				if (!html5QrCode || !scanning) {
+					return;
+				}
+				scanning = false;
+				html5QrCode.stop()
+					.catch(function () { /* 이미 멈춰있어도 UI 정리는 계속 진행 */ })
+					.then(function () {
+						readerDiv.style.display = 'none';
+						toggleBtn.textContent = '📷 카메라로 QR 스캔하기';
+					});
+			}
+
+			/** QR 하나를 인식한 직후 카메라를 잠깐 멈춘다 — 확인 없이 계속 자동으로 넘어가지 않게. */
+			function pauseScanning() {
+				if (html5QrCode && scanning && typeof html5QrCode.pause === 'function') {
+					try {
+						html5QrCode.pause(true);
+						paused = true;
+					} catch (e) { /* 무시 */ }
+				}
+			}
+
+			/** "담기"나 "다시 스캔"을 누르면(=확인이 끝나면) 다음 QR을 찍을 수 있게 다시 움직인다. */
+			function resumeScanning() {
+				if (html5QrCode && scanning && paused && typeof html5QrCode.resume === 'function') {
+					try {
+						html5QrCode.resume();
+					} catch (e) { /* 무시 */ }
+				}
+				paused = false;
+			}
+
+			function onScanSuccess(decodedText) {
+				// 같은 QR이 카메라에 계속 잡혀있으면 프레임마다 반복 호출되니, 3초 안에 같은 코드는 무시한다.
+				var now = Date.now();
+				if (decodedText === lastScannedCode && (now - lastScannedAt) < 3000) {
+					return;
+				}
+				lastScannedCode = decodedText;
+				lastScannedAt = now;
+
+				// 자동으로 담지 않고, 카메라를 멈추고 결과를 보여준 뒤 사람이 "담기"를 눌러야 담긴다.
+				pauseScanning();
+
+				if (cart.some(function (item) { return item.pickupCode === decodedText; })) {
+					showStatus('이미 담아둔 코드예요: ' + decodedText, 'warn');
+					resumeScanning();
+					return;
+				}
+
+				showStatus('코드 확인 중... (' + decodedText + ')', 'loading');
+
+				fetch('/reservation/pickup/lookup?pickupCode=' + encodeURIComponent(decodedText))
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						if (data.ok) {
+							pendingLookup = {
+								pickupCode: decodedText,
+								productName: data.productName,
+								quantity: data.quantity,
+								storeName: data.storeName,
+								totalPrice: data.totalPrice
+							};
+							statusP.className = 'scan-status status-ok';
+							statusP.style.display = 'block';
+							statusP.innerHTML =
+								'<div class="scan-status-title">' + escapeHtml(data.productName) + ' × ' + data.quantity + '개</div>' +
+								'<div class="scan-status-sub">' + escapeHtml(data.storeName) + ' · ' + data.totalPrice.toLocaleString() + '원</div>' +
+								'<div class="scan-status-hint">맞으면 "담기"를 눌러주세요.</div>';
+							confirmActions.style.display = 'flex';
+						} else {
+							showStatus('⚠️ ' + data.message + ' (' + decodedText + ')', 'warn');
+							resumeScanning();
+						}
+					})
+					.catch(function () {
+						showStatus('코드 확인에 실패했어요. 다시 시도해주세요. (' + decodedText + ')', 'warn');
+						resumeScanning();
+					});
+			}
+
+			function startScanning() {
+				if (typeof Html5Qrcode === 'undefined') {
+					alert('QR 스캔 기능을 불러오지 못했어요 (인터넷 연결 확인). 코드를 직접 입력해주세요.');
+					return;
+				}
+				readerDiv.style.display = 'block';
+				hideStatus();
+				confirmActions.style.display = 'none';
+				html5QrCode = new Html5Qrcode('qr-reader');
+				html5QrCode.start(
+					{ facingMode: 'environment' },
+					{ fps: 10, qrbox: 220 },
+					onScanSuccess
+				).then(function () {
+					scanning = true;
+					toggleBtn.textContent = '스캔 중지';
+				}).catch(function (err) {
+					readerDiv.style.display = 'none';
+					console.error('QR 스캔 카메라 시작 실패:', err);
+					var reason = (err && err.name) ? err.name : String(err);
+					alert('카메라를 사용할 수 없어요.\n원인 코드: ' + reason + '\n코드를 직접 입력해주세요.');
+				});
+			}
+
+			toggleBtn.addEventListener('click', function () {
+				if (scanning) {
+					stopScanning();
+				} else {
+					startScanning();
+				}
+			});
+
+			confirmAddBtn.addEventListener('click', function () {
+				if (!pendingLookup) {
+					return;
+				}
+				cart.push(pendingLookup);
+				pendingLookup = null;
+				renderCart();
+				confirmActions.style.display = 'none';
+				hideStatus();
+				resumeScanning();
+			});
+
+			confirmRetryBtn.addEventListener('click', function () {
+				pendingLookup = null;
+				confirmActions.style.display = 'none';
+				hideStatus();
+				resumeScanning();
+			});
+
+			manualAddBtn.addEventListener('click', function () {
+				addToCartIfValid(manualInput.value);
+				manualInput.value = '';
+				manualInput.focus();
+			});
+
+			manualInput.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					manualAddBtn.click();
+				}
+			});
+
+			batchSubmitBtn.addEventListener('click', function () {
+				if (cart.length === 0) {
+					return;
+				}
+				stopScanning();
+				batchSubmitBtn.disabled = true;
+				batchSubmitBtn.textContent = '처리 중...';
+				batchResultCard.style.display = 'none';
+
+				var params = new URLSearchParams();
+				cart.forEach(function (item) { params.append('pickupCodes', item.pickupCode); });
+
+				fetch('/reservation/pickup/batch', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: params.toString()
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (results) {
+						var succeeded = results.filter(function (r) { return r.ok; });
+						var failed = results.filter(function (r) { return !r.ok; });
+
+						batchResultCard.style.display = 'block';
+						if (failed.length === 0) {
+							batchResultTitle.textContent = '✅ ' + succeeded.length + '건 모두 픽업 처리 완료!';
+							batchResultTitle.style.color = '#1b5e20';
+						} else {
+							batchResultTitle.textContent = '✅ ' + succeeded.length + '건 완료 · ⚠️ ' + failed.length + '건 실패';
+							batchResultTitle.style.color = '#e65100';
+						}
+						batchResultList.innerHTML = failed.map(function (r) {
+							return '<li>⚠️ ' + escapeHtml(r.pickupCode) + ' — ' + escapeHtml(r.message) + '</li>';
+						}).join('');
+
+						// 성공한 건은 목록에서 빼고, 실패한 건은 남겨서 다시 확인하거나 지울 수 있게 한다.
+						var succeededCodes = succeeded.map(function (r) { return r.pickupCode; });
+						cart = cart.filter(function (item) { return succeededCodes.indexOf(item.pickupCode) === -1; });
+						renderCart();
+					})
+					.catch(function () {
+						batchResultCard.style.display = 'block';
+						batchResultTitle.textContent = '⚠️ 처리 중 오류가 발생했어요. 다시 시도해주세요.';
+						batchResultTitle.style.color = '#e65100';
+						batchResultList.innerHTML = '';
+						batchSubmitBtn.disabled = cart.length === 0;
+						batchSubmitBtn.textContent = cart.length > 0
+							? '담은 예약 ' + cart.length + '건 픽업 처리하기'
+							: '담은 예약 모두 픽업 처리하기';
+					});
+			});
+
+			renderCart();
+		})();
+	</script>
 </body>
 </html>
