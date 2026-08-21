@@ -31,6 +31,11 @@ cat <<'ENV' > .env
 SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/girigiri?useSSL=false&serverTimezone=Asia/Seoul&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=changeme
+
+# カカオマップのホーム画面地図が必要な場合のみ入力する(Kakao Developers > マイアプリケーション > アプリキー > JavaScriptキー)。
+# 該当アプリの「製品設定 > カカオマップ」を必ず有効化し、「アプリ設定 > プラットフォーム > Web」に下記の実行アドレス
+# (例: http://localhost:8080)を登録しないと、ブラウザで domain mismatched エラーが出る。
+KAKAO_MAP_API_KEY=
 ENV
 
 # 4. 実行
@@ -38,6 +43,14 @@ ENV
 ```
 
 初回実行時、コンソールにSpring Securityが生成した仮ログインパスワードがログ出力されます — まだ実際の会員/OAuth2認証が連携されていないスキャフォールディング段階のため正常な動作です。
+
+### ローカルテストデータ
+
+店舗/商品などのサンプルデータが必要な場合(ホーム画面の地図マーカー確認など)、`sql/sample-data.sql` をローカルDBに実行する:
+```bash
+mysql --default-character-set=utf8mb4 -u root -p girigiri < sql/sample-data.sql
+```
+`--default-character-set=utf8mb4` を省略すると、韓国語データの文字化けで insert に失敗することがある。
 
 ---
 
@@ -68,6 +81,11 @@ cat <<'ENV' > .env
 SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/girigiri?useSSL=false&serverTimezone=Asia/Seoul&useUnicode=true&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=changeme
+
+# 카카오맵 홈 화면 지도가 필요할 때만 채우면 된다 (Kakao Developers > 내 애플리케이션 > 앱 키 > JavaScript 키).
+# 반드시 해당 앱의 "제품 설정 > 카카오맵"을 활성화하고, "앱 설정 > 플랫폼 > Web"에 아래 실행 주소
+# (예: http://localhost:8080)를 등록해야 브라우저에서 정상 동작한다. 안 하면 콘솔에 domain mismatched 에러가 뜬다.
+KAKAO_MAP_API_KEY=
 ENV
 
 # 4. 실행
@@ -76,7 +94,10 @@ ENV
 
 첫 실행 시 콘솔에 Spring Security가 생성한 임시 로그인 비밀번호가 로그로 출력됩니다 — 아직 실제 회원/OAuth2 인증이 연동되지 않은 스캐폴딩 단계라 정상입니다.
 
-앱을 한 번 실행해 테이블이 생성된 뒤(`ddl-auto=update`), 각자 로컬 DB에 테스트용 더미 데이터를 넣고 싶다면 `sql/sample-data.sql`을 실행하세요.
+### 로컬 테스트 데이터
+
+앱을 한 번 실행해 테이블이 생성된 뒤(`ddl-auto=update`), 가게/상품 등 샘플 데이터가 필요하면(홈 화면 지도 마커 확인 등) `sql/sample-data.sql`을 로컬 DB에 실행한다:
 ```bash
-mysql -u root -p girigiri < sql/sample-data.sql
+mysql --default-character-set=utf8mb4 -u root -p girigiri < sql/sample-data.sql
 ```
+`--default-character-set=utf8mb4`를 빼면 한글 데이터가 인코딩 깨짐으로 insert 실패할 수 있다.

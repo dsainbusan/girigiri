@@ -121,11 +121,10 @@ feat: add security stub with form-login placeholder
 
 | 담당자 | 주로 건드리는 영역 |
 |---|---|
-| 문창호 | security/, authView/(회원가입·로그인), role/viewMode 세션 로직, POS json 연동, 할인율 자동계산, 픽업 예약 관리(QR)·노쇼 방지, 판매·폐기 리포트(Excel/PDF) |
-| 송보미 (조장) | 공통 레이아웃(templates/common/*.html, static/css/{tokens,base,layout,components}.css), domain/entity, repository 공통 CRUD |
-| 김태훈 | storeView/ (재고 등록, 판매/등록 현황 대시보드, 통계 그래프, 공지사항 게시판 관리) |
-| 강노은 | mapView/, productView/, 카카오맵 연동, 카테고리 필터, 찜하기 |
-| 송채현 | 예약 서비스 코어, 결제(PortOne), QR 발급, 영수증 PDF |
-| 담당 미정 | 실시간 알림(WebSocket/SSE) — 담당자 배정 필요 |
+| 문창호 | security/, authView/(회원가입·로그인), role/viewMode 세션 로직, POS json 연동, 할인율 자동계산, 픽업 예약 관리(QR)·노쇼 방지, 판매·폐기 리포트(Excel/PDF), 마이페이지/절약 가계부 |
+| 송보미 (조장) | 공통 레이아웃(templates/common/*.html, static/css/{tokens,base,layout,components}.css), domain/entity, repository 공통 CRUD, 슈퍼어드민 |
+| 김태훈 | storeView/ (재고 등록, 판매/등록 현황 대시보드, 통계 그래프), 공지사항 게시판 관리 |
+| 강노은 | HomeController/home.html 등 지도·메인 화면, mapView/, 카카오맵 연동, productView/(상품 상세), 카테고리 필터, 찜하기, 리뷰, 실시간 알림(WebSocket/SSE) |
+| 송채현 | 예약 서비스 코어, 결제(PortOne), QR 발급, 영수증 PDF, 고객 지원 챗봇 |
 
-> mypageView/는 새 역할분담표에 명시적 담당자가 없다 — 배정되면 이 표도 갱신할 것.
+> 최신 담당/일정은 WBS 기준으로 CLAUDE.md 쪽이 우선한다 — 이 표는 요약이라 세부 일정 변경 시 CLAUDE.md를 먼저 확인할 것.
