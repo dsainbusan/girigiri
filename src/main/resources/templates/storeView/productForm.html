@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('재고 등록', ~{:: #content}, '', true, '관리자 모드', ~{:: #actionbar})}">
+<body>
+<!--/*
+	사장님용 재고(상품) 등록 화면
+	마감 전 남은 상품을 사진 + 원가/할인가/수량으로 등록한다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<form id="productForm" th:action="@{/store/products}" th:object="${productRegisterForm}"
+	      method="post" enctype="multipart/form-data">
+
+		<label class="thumb-upload" id="thumbPreview">
+			사진 등록
+			<input type="file" th:field="*{image}" accept="image/*">
+		</label>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="name">품목</label>
+			<input class="input" type="text" id="name" th:field="*{name}"
+			       placeholder="예: 크루아상 5개 세트" required maxlength="100">
+		</div>
+
+		<div class="u-row" style="gap: var(--s-3); margin-top: var(--s-4)">
+			<div class="field u-grow">
+				<label class="field__label" for="originalPrice">원가</label>
+				<input class="input" type="number" id="originalPrice" th:field="*{originalPrice}"
+				       placeholder="12000" min="0" required>
+			</div>
+			<div class="field u-grow">
+				<label class="field__label" for="discountedPrice">할인가</label>
+				<input class="input" type="number" id="discountedPrice" th:field="*{discountedPrice}"
+				       placeholder="4800" min="0" required>
+			</div>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="quantity">수량</label>
+			<input class="input" type="number" id="quantity" th:field="*{quantity}"
+			       placeholder="5" min="1" required>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="description">설명 (선택)</label>
+			<textarea class="input" id="description" th:field="*{description}"
+			          placeholder="상품에 대한 간단한 설명을 입력하세요" style="resize:vertical; min-height:72px"></textarea>
+		</div>
+	</form>
+
+	<style>
+		.thumb-upload {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 100%;
+			height: 160px;
+			border: 1px dashed var(--c-line);
+			border-radius: var(--r-lg);
+			background: var(--c-bg);
+			color: var(--c-text-sub);
+			font-size: var(--fs-sm);
+			cursor: pointer;
+			overflow: hidden;
+			background-size: cover;
+			background-position: center;
+		}
+		.thumb-upload input[type="file"] { display: none; }
+	</style>
+
+	<script th:inline="javascript">
+		const thumbPreview = document.getElementById('thumbPreview');
+		const imageInput = thumbPreview.querySelector('input[type="file"]');
+
+		imageInput.addEventListener('change', () => {
+			const file = imageInput.files[0];
+			if (!file) {
+				return;
+			}
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				thumbPreview.style.backgroundImage = `url(${e.target.result})`;
+				thumbPreview.textContent = '';
+				thumbPreview.appendChild(imageInput);
+			};
+			reader.readAsDataURL(file);
+		});
+	</script>
+</div>
+
+<div id="actionbar" th:fragment="actionbar" class="bottom-cta">
+	<button type="submit" form="productForm" class="btn btn--block">등록하기</button>
+</div>
+</body>
+</html>
