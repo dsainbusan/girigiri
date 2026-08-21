@@ -101,8 +101,10 @@ feat: add security stub with form-login placeholder
 
 | 담당자 | 주로 건드리는 영역 |
 |---|---|
-| 송보미 (조장) | security/, 로그인/role/viewMode 세션 로직, 예약 서비스 코어 |
-| 송채현 | domain/entity(ERD), 재고 등록, 판매/폐기 리포트(Excel/PDF) |
-| 강노은 | 예약/노쇼 처리, 결제(PortOne)/QR/영수증 PDF, 게시판 |
-| 김태훈 | productView/, mypageView/, 리뷰, 환경 기여도 시각화 |
-| 문창호 | mapView/, 카카오맵, 실시간 알림(WebSocket) |
+| 문창호 | security/, 로그인/소셜로그인/role·viewMode 세션 로직, POS 연동, 할인율 계산, 예약 관리/노쇼 처리, 판매·폐기 리포트(Excel/PDF) |
+| 송보미 (조장) | 공통 레이아웃(fragments/layout.html, common.css), domain/entity(ERD)·공통 CRUD |
+| 김태훈 | storeView/(재고 등록·대시보드), 공지사항 게시판 |
+| 강노은 | HomeController/home.html 등 지도·메인 화면, mapView/, 카카오맵, productView/(상품 상세), 찜하기 |
+| 송채현 | 예약 로직(백엔드), 결제(PortOne)/QR 발급, 영수증 PDF |
+
+※ 실시간 알림(WebSocket/SSE)은 담당자 미정 — CLAUDE.md 참고.

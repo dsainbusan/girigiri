@@ -27,20 +27,35 @@
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services,clusterer'}"></script>
 	<script th:inline="javascript">
 		/*<![CDATA[*/
-		// TODO(강노은): StoreRepository 연동 후 실제 가게 좌표 목록으로 교체.
-		// 현재는 SDK 연동 확인용 데모 좌표(서울시청)다.
+		// StoreRepository에서 좌표가 있는 매장 전체를 뿌린다.
+		var stores = /*[[${stores}]]*/ [];
+
+		// 매장이 하나도 없을 때는 서울시청 좌표를 기본값으로 둔다.
+		var FALLBACK_CENTER = { latitude: 37.5665, longitude: 126.9780 };
+
 		kakao.maps.load(function () {
 			var container = document.getElementById('kakao-map');
-			var options = {
-				center: new kakao.maps.LatLng(37.5665, 126.9780),
+			var center = stores.length > 0 ? stores[0] : FALLBACK_CENTER;
+			var map = new kakao.maps.Map(container, {
+				center: new kakao.maps.LatLng(center.latitude, center.longitude),
 				level: 4
-			};
-			var map = new kakao.maps.Map(container, options);
-
-			var marker = new kakao.maps.Marker({
-				position: options.center
 			});
-			marker.setMap(map);
+
+			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
+
+			stores.forEach(function (store) {
+				var position = new kakao.maps.LatLng(store.latitude, store.longitude);
+				var marker = new kakao.maps.Marker({ position: position, map: map });
+
+				kakao.maps.event.addListener(marker, 'click', function () {
+					infoWindow.setContent(
+						'<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">'
+						+ store.storeName + (store.category ? ' · ' + store.category : '')
+						+ '</div>'
+					);
+					infoWindow.open(map, marker);
+				});
+			});
 		});
 		/*]]>*/
 	</script>
