@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--/*
+  공통 레이아웃 — 모든 페이지는 이 fragment를 감싸 쓴다. (페이지마다 새 레이아웃 만들지 말 것)
+
+  사용법 (페이지 템플릿 예):
+  <html th:replace="~{common/layout :: layout('마이페이지', ~{:: #content}, 'ledger', false, '', null)}">
+    <body>
+      <div id="content" th:fragment="content"> ...페이지 본문... </div>
+    </body>
+  </html>
+
+  파라미터 (6개 전부 명시할 것 — 위치 인자라 생략은 되지만, badge를 빠뜨려 500 에러가 났던 전례가 있어
+  팀 컨벤션으로 항상 전부 채운다)
+   - title     : 상단바 제목 & <title>
+   - content   : 본문 fragment (~{:: #content})
+   - active    : 하단 탭 활성값 ('home' | 'like' | 'ledger' | 'alert' | 'my' | '' 없음)
+   - dark      : 상단바 다크 여부 (사장님/운영자 모드는 true)
+   - badge     : 상단바 제목 옆에 붙는 텍스트 뱃지 (예: '관리자 모드'), 없으면 ''
+   - actionbar : 상세/체크아웃형 화면의 하단 고정 버튼바 fragment (~{:: #actionbar}), 없으면 null
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:fragment="layout(title, content, active, dark, badge, actionbar)" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title th:text="${title} ?: 'ギリギリ'">ギリギリ</title>
+  <link rel="stylesheet" th:href="@{/css/tokens.css}">
+  <link rel="stylesheet" th:href="@{/css/base.css}">
+  <link rel="stylesheet" th:href="@{/css/layout.css}">
+  <link rel="stylesheet" th:href="@{/css/components.css}">
+</head>
+<body>
+  <div class="app">
+
+    <!-- 상단바 -->
+    <div th:replace="~{common/header :: topbar(${title}, ${dark}, ${badge})}"></div>
+
+    <!-- 본문 -->
+    <main class="app__main">
+      <div th:replace="${content}"></div>
+    </main>
+
+    <!-- 하단 고정 액션바 (상세/체크아웃형 화면에서만) -->
+    <div th:if="${actionbar} != null" th:replace="${actionbar}"></div>
+
+    <!-- 하단 탭바 (active가 있을 때만) -->
+    <div th:if="${active != null and active != ''}"
+         th:replace="~{common/footer :: bottomNav(${active})}"></div>
+
+  </div>
+  <script th:src="@{/js/app.js}"></script>
+</body>
+</html>

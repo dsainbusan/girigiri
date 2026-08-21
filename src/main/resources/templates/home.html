@@ -1,21 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('기리기리', ~{:: #content}, 'home', false, '', null)}">
 <body>
-	<div class="app-container">
-		<header th:replace="~{fragments/layout :: header(title='기리기리', badge='')}"></header>
-
-		<main class="app-content">
-			<h1>기리기리</h1>
-			<p>동네 가게 마감 임박 음식 긴급 구제 서비스</p>
-		</main>
-
-		<nav th:replace="~{fragments/layout :: nav(active='home')}"></nav>
-	</div>
+<div id="content" th:fragment="content" class="page">
+	<h1>기리기리</h1>
+	<p class="u-sub">동네 가게 마감 임박 음식 긴급 구제 서비스</p>
+</div>
 </body>
 </html>

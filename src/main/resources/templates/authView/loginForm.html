@@ -1,22 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>로그인 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('로그인', ~{:: #content}, '', false, '', null)}">
 <body>
-	<div class="app-container">
-		<header th:replace="~{fragments/layout :: header(title='로그인', badge='')}"></header>
-
-		<main class="app-content">
-			<form th:action="@{/auth/login}" method="post">
-				<input type="text" name="id" placeholder="아이디">
-				<input type="password" name="password" placeholder="비밀번호">
-				<button type="submit">로그인</button>
-			</form>
-		</main>
-	</div>
+<div id="content" th:fragment="content" class="page">
+	<form th:action="@{/auth/login}" method="post">
+		<div class="field">
+			<input class="input" type="text" name="id" placeholder="아이디">
+		</div>
+		<div class="field" style="margin-top:var(--s-3)">
+			<input class="input" type="password" name="password" placeholder="비밀번호">
+		</div>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">로그인</button>
+	</form>
+</div>
 </body>
 </html>

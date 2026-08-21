@@ -75,3 +75,8 @@ ENV
 ```
 
 첫 실행 시 콘솔에 Spring Security가 생성한 임시 로그인 비밀번호가 로그로 출력됩니다 — 아직 실제 회원/OAuth2 인증이 연동되지 않은 스캐폴딩 단계라 정상입니다.
+
+앱을 한 번 실행해 테이블이 생성된 뒤(`ddl-auto=update`), 각자 로컬 DB에 테스트용 더미 데이터를 넣고 싶다면 `sql/sample-data.sql`을 실행하세요.
+```bash
+mysql -u root -p girigiri < sql/sample-data.sql
+```

@@ -54,12 +54,32 @@ public class XxxEntity {
 
 `templates/` 하위는 컨트롤러 도메인과 1:1 대응하는 `xxxView/` 접미사 폴더를 쓴다 (예: `mapView/`, `productView/`, `storeView/`, `mypageView/`, `authView/`, `errorView/`). 새 화면 도메인을 추가할 때 이 규칙을 따른다.
 
-## 공통 레이아웃 사용법
+## 공통 레이아웃 사용법 (2026-08-20 전면 개편)
 
-- 모든 화면은 `<div class="app-container">`로 감싼다. ADMIN 화면은 `class="app-container mode-admin"`로 액센트 색상을 바꾼다 (`static/css/common.css`의 `.mode-admin` 참고).
-- 공통 헤더는 `fragments/layout.html`의 `header(title, badge)` 프래그먼트를 쓴다. **Thymeleaf는 이름 지정 파라미터 호출 시 시그니처에 선언된 파라미터를 전부 명시해야 하므로, badge를 안 쓰는 화면도 반드시 `badge=''`를 넘긴다** — 하나라도 빠뜨리면 `Cannot resolve fragment` 예외로 그 화면이 500 에러가 난다. 새 프래그먼트 파라미터를 추가할 때도 동일하게 기존 호출부를 전부 갱신해야 한다.
-- 하단은 일반 화면이면 `nav(active)` 프래그먼트(홈/마이페이지 네비), 상세/체크아웃형 화면이면 `.app-actionbar`(버튼 1개짜리 고정바) 중 하나를 쓴다.
-- 버튼/카드/배지/가격표시 등 재사용 컴포넌트는 `common.css`에 이미 정의되어 있다 (`.btn`, `.btn-primary`, `.btn-outline`, `.card`, `.badge`, `.stat-grid`, `.price-original`/`.price-discounted` 등) — 새로 만들기 전에 먼저 확인한다.
+기존 `fragments/layout.html` + `common.css` 자체 제작 시스템을 폐기하고, 팀 공용 스타터킷(BEM + 디자인 토큰) 기반으로 전면 교체했다. 새 화면은 아래 컨벤션을 따른다.
+
+- **풀페이지 래핑 방식**이다 (예전처럼 페이지가 직접 header/nav를 조립하는 부분 include 방식이 아니다). 페이지는 자기 `<html><head>`를 만들지 않고, `<html>` 태그 자체를 `common/layout :: layout(...)`으로 교체한다:
+  ```html
+  <html th:replace="~{common/layout :: layout('제목', ~{:: #content}, 'home', false, '', null)}">
+  <body>
+  <div id="content" th:fragment="content" class="page"> ...본문... </div>
+  </body>
+  </html>
+  ```
+- `layout(title, content, active, dark, badge, actionbar)` — **6개 인자 전부 명시**한다 (위치 인자라 생략해도 에러는 안 나지만, 예전 `badge=''` 누락으로 500 에러 났던 전례가 있어 팀 컨벤션으로 항상 다 채운다).
+  - `title`: 상단바 제목 & `<title>`
+  - `content`: 본문 프래그먼트 (`~{:: #content}`)
+  - `active`: 하단 탭 활성값 (`'home' | 'like' | 'ledger' | 'alert' | 'my' | ''`)
+  - `dark`: 상단바 다크 여부 (사장님/운영자 모드는 `true`)
+  - `badge`: 상단바 제목 옆 텍스트 뱃지 (예: `'관리자 모드'`), 안 쓰면 `''`
+  - `actionbar`: 상세/체크아웃형 화면의 하단 고정 버튼바 프래그먼트 (`~{:: #actionbar}`), 안 쓰면 `null` — 페이지에 `<div id="actionbar" th:fragment="actionbar" class="bottom-cta">...</div>`로 정의 (`productView/detail.html` 참고)
+- 하단 탭바는 `common/footer.html :: bottomNav(active)`가 `layout`을 통해 자동으로 붙는다 (`active`가 빈 값이 아닐 때만) — 직접 호출할 일은 거의 없다.
+- 재사용 컴포넌트는 `common/components.html`에 프래그먼트로 정의되어 있다 (`btn(label,variant,href)`, `chip(label,active)`, `badge(text,variant)`, `price(orig,sale)`, `storeCard(store)`, `savingBanner(title,desc)`, `statCard(label,value,delta,deltaColor)`) — 새로 만들기 전에 먼저 확인한다.
+- **클래스 네이밍은 BEM**(`블록__요소--변형`)이다: `.btn--outline`, `.badge--discount`, `.store-card__name`, `.bottomnav__item.is-active` 등. 예전의 플랫 네이밍(`.btn-primary`, `.badge-discount`)은 전부 폐기됐다.
+- **색·간격·모서리·타이포는 `tokens.css`의 CSS 변수만 쓴다** (`--c-primary`, `--s-4`, `--r-md`, `--fs-lg` 등) — `#15803D`, `16px` 같은 하드코딩 금지. 톤을 바꾸려면 `tokens.css` 한 곳만 고치면 전체 반영된다.
+- CSS는 4개 파일로 분리되어 있다: `tokens.css`(토큰) → `base.css`(리셋) → `layout.css`(앱 껍데기/상단바/하단바) → `components.css`(버튼·카드·칩·뱃지 등). 페이지 전용 스타일이 필요하면 이 4개를 건드리지 말고 `static/css/<도메인>.css`(예: `store.css`, `ledger.css`)를 새로 만든다.
+- 컴포넌트 생김새가 헷갈리면 `/styleguide`(`StyleguideController`, 로그인 불필요)에서 확인하고 복붙한다.
+- 공통 파일(`templates/common/*.html`, `static/css/{tokens,base,layout,components}.css`) 오너는 송보미(조장)다 — 새 컴포넌트/토큰 추가는 오너에게 요청하거나 PR 리뷰를 거친다.
 
 ## Dual-mode 세션 규칙 (중요)
 
@@ -97,12 +117,15 @@ feat: add security stub with form-login placeholder
 
 `main` 브랜치에는 직접 커밋하지 않는다 — 기능 브랜치(`dev` 또는 `feature/*`)에서 작업 후 PR로 병합한다.
 
-## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약)
+## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약, 2026-08-20 갱신)
 
 | 담당자 | 주로 건드리는 영역 |
 |---|---|
-| 송보미 (조장) | security/, 로그인/role/viewMode 세션 로직, 예약 서비스 코어 |
-| 송채현 | domain/entity(ERD), 재고 등록, 판매/폐기 리포트(Excel/PDF) |
-| 강노은 | 예약/노쇼 처리, 결제(PortOne)/QR/영수증 PDF, 게시판 |
-| 김태훈 | productView/, mypageView/, 리뷰, 환경 기여도 시각화 |
-| 문창호 | mapView/, 카카오맵, 실시간 알림(WebSocket) |
+| 문창호 | security/, authView/(회원가입·로그인), role/viewMode 세션 로직, POS json 연동, 할인율 자동계산, 픽업 예약 관리(QR)·노쇼 방지, 판매·폐기 리포트(Excel/PDF) |
+| 송보미 (조장) | 공통 레이아웃(templates/common/*.html, static/css/{tokens,base,layout,components}.css), domain/entity, repository 공통 CRUD |
+| 김태훈 | storeView/ (재고 등록, 판매/등록 현황 대시보드, 통계 그래프, 공지사항 게시판 관리) |
+| 강노은 | mapView/, productView/, 카카오맵 연동, 카테고리 필터, 찜하기 |
+| 송채현 | 예약 서비스 코어, 결제(PortOne), QR 발급, 영수증 PDF |
+| 담당 미정 | 실시간 알림(WebSocket/SSE) — 담당자 배정 필요 |
+
+> mypageView/는 새 역할분담표에 명시적 담당자가 없다 — 배정되면 이 표도 갱신할 것.

@@ -1,0 +1,198 @@
+/* =====================================================================
+   components.css  —  공통 컴포넌트 (BEM 네이밍: .block__element--modifier)
+   ★ 새 컴포넌트가 필요하면 여기에 추가하고, 페이지 전용 스타일은
+     각자 페이지 CSS(store.css, ledger.css 등)에 둔다.
+   ===================================================================== */
+
+/* ---------------- Button ---------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 15px var(--s-5);
+  border-radius: var(--r-md);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #fff;
+  background: var(--c-primary);
+  transition: filter .15s ease;
+}
+.btn:active { filter: brightness(.94); }
+.btn--block  { display: flex; width: 100%; }
+.btn--accent { background: var(--c-accent); }
+.btn--dark   { background: var(--c-dark); }
+.btn--outline{ background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line); }
+.btn--kakao  { background: var(--c-kakao); color: var(--c-kakao-on); }
+.btn--naver  { background: var(--c-naver); color: #fff; }
+.btn--sm     { padding: 8px var(--s-3); font-size: var(--fs-sm); border-radius: var(--r-sm); }
+.btn--ghost  { background: var(--c-bg); color: var(--c-text-sub); }
+
+/* ---------------- Card ---------------- */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+}
+.card--flat   { box-shadow: none; }
+.card--shadow { border-color: transparent; box-shadow: var(--shadow-card); }
+.card + .card { margin-top: var(--s-3); }
+
+/* ---------------- Chip (카테고리 필터 등) ---------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--c-bg);
+  color: var(--c-text-sub);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.chip.is-active { background: var(--c-primary); color: #fff; font-weight: var(--fw-bold); }
+.chip-row { display: flex; gap: var(--s-2); overflow-x: auto; }
+.chip-row::-webkit-scrollbar { display: none; }
+
+/* ---------------- Badge (할인율/상태) ---------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--s-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-black);
+}
+.badge--discount { background: var(--c-danger-weak); color: var(--c-danger); }
+.badge--success  { background: var(--c-primary-weak); color: var(--c-primary); }
+.badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent); }
+.badge--info     { background: var(--c-info-weak);    color: var(--c-info); }
+
+/* ---------------- Price (원가 취소선 + 할인가) ---------------- */
+.price { display: inline-flex; align-items: center; gap: var(--s-2); }
+.price__orig { font-size: var(--fs-sm); color: var(--c-text-mut); text-decoration: line-through; }
+.price__sale { font-size: var(--fs-xl); font-weight: var(--fw-black); color: var(--c-primary); }
+
+/* ---------------- Store card (홈 리스트) ---------------- */
+.store-card {
+  display: flex;
+  gap: var(--s-4);
+  padding: var(--s-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-lg);
+}
+.store-card__thumb {
+  flex: 0 0 auto;
+  width: 76px; height: 76px;
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: var(--fw-black); color: #fff;
+}
+.store-card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.store-card__top  { display: flex; align-items: center; gap: var(--s-2); }
+.store-card__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.store-card__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
+.store-card__like { margin-left: auto; font-size: 18px; color: var(--c-line); }
+.store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-accent); }
+.store-card__left.is-urgent { color: var(--c-danger); }
+
+/* ---------------- Banner (절약 강조 등) ---------------- */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--c-primary-weak);
+  border: 1px solid var(--c-primary-border);
+}
+.banner__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary); }
+.banner__desc  { font-size: var(--fs-xs); color: var(--c-primary-strong); }
+.banner--info { background: var(--c-info-weak); border-color: #A5F3FC; }
+
+/* ---------------- Stat card (대시보드) ---------------- */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.stat-card {
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.stat-card__label { font-size: var(--fs-xs); color: var(--c-text-mut); }
+.stat-card__value { font-size: var(--fs-xl); font-weight: var(--fw-black); }
+.stat-card__delta { font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+
+/* ---------------- Progress (목표 달성률) ---------------- */
+.progress { height: 14px; border-radius: var(--r-sm); background: var(--c-line-weak); overflow: hidden; }
+.progress__bar { height: 100%; border-radius: var(--r-sm); background: #22C55E; }
+
+/* ---------------- Section title ---------------- */
+.section-title {
+  display: flex; align-items: center; gap: var(--s-2);
+  font-size: var(--fs-lg); font-weight: var(--fw-black);
+  padding: var(--s-4) 0 var(--s-2);
+}
+.section-title__count { margin-left: auto; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-accent); }
+
+/* ---------------- Input ---------------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field__label { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.input {
+  width: 100%;
+  padding: 12px var(--s-4);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+.input:focus { outline: none; border-color: var(--c-primary); }
+.input::placeholder { color: var(--c-text-mut); }
+
+/* 검색창 */
+.search {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 12px var(--s-4);
+  background: var(--c-bg);
+  border-radius: var(--r-md);
+  color: var(--c-text-mut);
+}
+
+/* ---------------- List row (내역/예약) ---------------- */
+.list-row { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) 0; }
+.list-row__ico {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.list-row__body { flex: 1 1 auto; min-width: 0; }
+.list-row + .list-row { border-top: 1px solid var(--c-line-weak); }
+
+/* ---------------- Segmented / mode select card ---------------- */
+.mode-card {
+  display: flex; align-items: center; gap: var(--s-4);
+  padding: var(--s-5) var(--s-4);
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-primary);
+  border-radius: var(--r-xl);
+}
+.mode-card--accent { border-color: var(--c-accent); }
+.mode-card__ico {
+  flex: 0 0 auto; width: 56px; height: 56px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: var(--fw-black);
+}
+
+/* ---------------- Thumbnail placeholder (이미지 준비 중) ---------------- */
+.thumb-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--c-line-weak);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-mut);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--s-4);
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--/*
+  스타일 가이드 (개발 참고용). /styleguide 로 접속.
+  팀원이 "버튼/카드 어떻게 생겼더라?" 할 때 여기서 확인하고 복붙한다.
+  common/layout 을 감싸 쓰는 표준 페이지 예시이기도 하다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('스타일 가이드', ~{:: #content}, '', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page app__main--plain">
+
+  <h2 class="section-title">색상 토큰</h2>
+  <div class="card" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-2)">
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-primary)"></div><small class="u-sub">primary</small></div>
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-accent)"></div><small class="u-sub">accent</small></div>
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-danger)"></div><small class="u-sub">danger</small></div>
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-info)"></div><small class="u-sub">info</small></div>
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-dark)"></div><small class="u-sub">dark</small></div>
+    <div><div style="height:44px;border-radius:var(--r-md);background:var(--c-bg);border:1px solid var(--c-line)"></div><small class="u-sub">bg</small></div>
+  </div>
+
+  <h2 class="section-title">버튼</h2>
+  <div class="card" style="display:flex;flex-direction:column;gap:var(--s-2)">
+    <a class="btn btn--block" href="#">Primary · 예약하고 결제하기</a>
+    <a class="btn btn--block btn--accent" href="#">Accent · 마감 상품 등록</a>
+    <a class="btn btn--block btn--dark" href="#">Dark · 가계부 내보내기</a>
+    <a class="btn btn--block btn--outline" href="#">Outline · 이메일로 로그인</a>
+    <div class="u-row" style="gap:var(--s-2)">
+      <a class="btn btn--kakao u-grow" href="#">카카오로 시작</a>
+      <a class="btn btn--naver u-grow" href="#">네이버로 시작</a>
+    </div>
+  </div>
+
+  <h2 class="section-title">칩 · 뱃지</h2>
+  <div class="card">
+    <div class="chip-row" style="margin-bottom:var(--s-3)">
+      <span class="chip is-active">전체</span>
+      <span class="chip">베이커리</span>
+      <span class="chip">반찬</span>
+      <span class="chip">도시락</span>
+      <span class="chip">카페</span>
+    </div>
+    <div class="u-row">
+      <span class="badge badge--discount">-51%</span>
+      <span class="badge badge--success">절약</span>
+      <span class="badge badge--accent">마감임박</span>
+      <span class="badge badge--info">예약중</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">가격</h2>
+  <div class="card">
+    <span class="price"><span class="badge badge--discount">-51%</span>
+      <span class="price__orig">12,000원</span><span class="price__sale">5,900원</span></span>
+  </div>
+
+  <h2 class="section-title">가게 카드</h2>
+  <a class="store-card" href="#">
+    <span class="store-card__thumb" style="background:#F59E0B">빵</span>
+    <span class="store-card__body">
+      <span class="store-card__top">
+        <span class="store-card__name">광안리 베이커리</span>
+        <span class="store-card__like">&hearts;</span>
+      </span>
+      <span class="store-card__meta">베이커리 · 320m</span>
+      <span class="price" style="margin-top:2px">
+        <span class="badge badge--discount">-51%</span>
+        <span class="price__orig">12,000원</span>
+        <span class="price__sale" style="font-size:var(--fs-lg)">5,900원</span>
+      </span>
+      <span class="store-card__left is-urgent">&#9201; 마감까지 42분</span>
+    </span>
+  </a>
+
+  <h2 class="section-title">절약 배너</h2>
+  <div class="banner">
+    <span style="font-size:18px">&#128176;</span>
+    <div class="u-grow">
+      <div class="banner__title">이 상품 사면 6,100원 절약해요!</div>
+      <div class="banner__desc">결제하면 자동으로 절약 가계부에 기록돼요</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">통계 카드</h2>
+  <div class="stat-grid">
+    <div class="stat-card"><span class="stat-card__label">오늘 매출</span><span class="stat-card__value">286,400원</span><span class="stat-card__delta u-primary">▲ +18%</span></div>
+    <div class="stat-card"><span class="stat-card__label">판매 / 등록</span><span class="stat-card__value">18 / 24</span><span class="stat-card__delta u-accent">6개 판매중</span></div>
+  </div>
+
+  <h2 class="section-title">진행률</h2>
+  <div class="card">
+    <div class="u-row" style="justify-content:space-between;margin-bottom:var(--s-2)">
+      <span class="u-bold">이번 달 절약 목표</span><span class="u-bold u-primary">42,300 / 50,000원</span>
+    </div>
+    <div class="progress"><div class="progress__bar" style="width:85%"></div></div>
+  </div>
+
+  <h2 class="section-title">입력</h2>
+  <div class="card" style="display:flex;flex-direction:column;gap:var(--s-3)">
+    <div class="field"><label class="field__label">상품명</label><input class="input" placeholder="예) 오늘의 모둠빵 세트"></div>
+    <div class="search">&#128269; <span>가게 · 메뉴 검색</span></div>
+  </div>
+
+  <div style="height:var(--s-8)"></div>
+</div>
+</body>
+</html>

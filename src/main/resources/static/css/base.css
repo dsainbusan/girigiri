@@ -1,0 +1,54 @@
+/* =====================================================================
+   base.css  —  리셋 + 기본 태그 스타일 (모든 페이지 공통 바탕)
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-base);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-regular);
+  color: var(--c-text);
+  background: var(--c-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+h1 { font-size: var(--fs-xl);  font-weight: var(--fw-black); }
+h2 { font-size: var(--fs-lg);  font-weight: var(--fw-bold); }
+h3 { font-size: var(--fs-md);  font-weight: var(--fw-bold); }
+
+a { color: inherit; text-decoration: none; }
+
+img { max-width: 100%; display: block; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: var(--fs-md);
+}
+
+/* 유틸 (자주 쓰는 것만 최소한으로) */
+.u-mut  { color: var(--c-text-mut); }
+.u-sub  { color: var(--c-text-sub); }
+.u-bold { font-weight: var(--fw-bold); }
+.u-black{ font-weight: var(--fw-black); }
+.u-center { text-align: center; }
+.u-primary { color: var(--c-primary); }
+.u-accent  { color: var(--c-accent); }
+.u-danger  { color: var(--c-danger); }
+.u-row  { display: flex; align-items: center; gap: var(--s-2); }
+.u-grow { flex: 1 1 auto; }
+.u-mt-2 { margin-top: var(--s-2); }
+.u-mt-4 { margin-top: var(--s-4); }

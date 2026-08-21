@@ -40,6 +40,8 @@ public class WebSecurityConfig {
 			//   실 데이터/권한 연동 시 role 기준 접근 제어로 교체할 것.
 			, "/store/**"
 			, "/product/**"
+			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
+			, "/styleguide"
 	);
 
 	@Bean

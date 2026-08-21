@@ -1,0 +1,97 @@
+/* =====================================================================
+   layout.css  —  모바일 앱 껍데기 (고정폭 컨테이너 / 상단바 / 하단 탭바)
+   ===================================================================== */
+
+/* 앱 컨테이너: 화면 중앙, 최대 420px 고정폭 */
+.app {
+  width: 100%;
+  max-width: var(--app-max);
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--c-surface);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 0 1px var(--c-line);   /* 데스크탑에서 폰 영역 구분 */
+}
+
+/* 본문: 하단 탭바 높이만큼 여백 */
+.app__main {
+  flex: 1 1 auto;
+  padding-bottom: calc(var(--bottomnav-h) + var(--s-4));
+}
+
+.app__main--plain { background: var(--c-bg); }   /* 회색 배경이 필요한 화면 */
+
+/* 페이지 안에서 좌우 공통 여백 */
+.page { padding: var(--s-5); }
+.page--tight { padding: var(--s-4); }
+
+/* ---------- 상단바 ---------- */
+.topbar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-4);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.topbar__back  { font-size: 26px; color: var(--c-text); line-height: 1; }
+.topbar__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.topbar__spacer{ flex: 1 1 auto; }
+.topbar__action{ font-size: 18px; color: var(--c-text-sub); }
+
+/* 다크 상단바 (사장님 / 운영자 모드) */
+.topbar--dark {
+  background: var(--c-dark);
+  border-bottom: none;
+  color: #fff;
+}
+.topbar--dark .topbar__title { color: #fff; }
+
+/* ---------- 하단 탭바 ---------- */
+.bottomnav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: var(--app-max);
+  height: var(--bottomnav-h);
+  display: flex;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-line);
+  box-shadow: var(--shadow-nav);
+  z-index: 30;
+}
+.bottomnav__item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--c-text-mut);
+  font-size: var(--fs-xs);
+}
+.bottomnav__ico { font-size: 18px; line-height: 1; }
+.bottomnav__item.is-active { color: var(--c-primary); font-weight: var(--fw-bold); }
+
+/* ---------- 하단 고정 CTA (상품상세 등) ---------- */
+.bottom-cta {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-line);
+}
+.bottom-cta__price { display: flex; flex-direction: column; line-height: 1.2; }
+.bottom-cta__price small { font-size: var(--fs-xs); color: var(--c-text-mut); }
+.bottom-cta__price strong { font-size: var(--fs-xl); font-weight: var(--fw-black); }

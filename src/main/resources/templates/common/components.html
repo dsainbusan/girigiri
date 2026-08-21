@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--/*
+  재사용 컴포넌트 프래그먼트 모음.
+  팀원 누구나 같은 fragment를 호출하므로 화면이 자동으로 통일된다.
+  사용 예:
+    <div th:replace="~{common/components :: btn('예약하고 결제하기','primary','/user/pay')}"></div>
+    <div th:replace="~{common/components :: chip('베이커리', true)}"></div>
+    <div th:replace="~{common/components :: storeCard(${store})}"></div>
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+
+<!--/* 버튼: variant = primary | accent | dark | outline | kakao | naver */-->
+<a th:fragment="btn(label, variant, href)"
+   th:href="${href}"
+   class="btn btn--block"
+   th:classappend="'btn--' + ${variant}"
+   th:text="${label}">버튼</a>
+
+<!--/* 칩 */-->
+<span th:fragment="chip(label, active)"
+      class="chip" th:classappend="${active} ? ' is-active'"
+      th:text="${label}">칩</span>
+
+<!--/* 뱃지: variant = discount | success | accent | info */-->
+<span th:fragment="badge(text, variant)"
+      class="badge" th:classappend="'badge--' + ${variant}"
+      th:text="${text}">-50%</span>
+
+<!--/* 가격: 원가 취소선 + 할인가 */-->
+<span th:fragment="price(orig, sale)" class="price">
+  <span class="price__orig" th:text="${orig}">12,000원</span>
+  <span class="price__sale" th:text="${sale}">5,900원</span>
+</span>
+
+<!--/*
+  가게 카드. store 객체 필드 예: thumbText, thumbColor, name, category, distance,
+  origPrice, salePrice, discountRate, leftLabel, urgent(boolean)
+*/-->
+<a th:fragment="storeCard(store)" class="store-card" th:href="@{/user/products/{id}(id=${store.id})}">
+  <span class="store-card__thumb"
+        th:style="'background:' + ${store.thumbColor}"
+        th:text="${store.thumbText}">빵</span>
+  <span class="store-card__body">
+    <span class="store-card__top">
+      <span class="store-card__name" th:text="${store.name}">가게명</span>
+      <span class="store-card__like">&hearts;</span>
+    </span>
+    <span class="store-card__meta"
+          th:text="${store.category} + ' · ' + ${store.distance}">베이커리 · 320m</span>
+    <span class="price" style="margin-top:2px">
+      <span class="badge badge--discount" th:text="${store.discountRate}">-51%</span>
+      <span class="price__orig" th:text="${store.origPrice}">12,000원</span>
+      <span class="price__sale" style="font-size:var(--fs-lg)" th:text="${store.salePrice}">5,900원</span>
+    </span>
+    <span class="store-card__left" th:classappend="${store.urgent} ? ' is-urgent'">
+      <span>&#9201;</span><span th:text="${store.leftLabel}">마감까지 42분</span>
+    </span>
+  </span>
+</a>
+
+<!--/* 절약 배너 */-->
+<div th:fragment="savingBanner(title, desc)" class="banner">
+  <span style="font-size:18px">&#128176;</span>
+  <div class="u-grow">
+    <div class="banner__title" th:text="${title}">이 상품 사면 6,100원 절약!</div>
+    <div class="banner__desc"  th:text="${desc}">결제하면 절약 가계부에 기록돼요</div>
+  </div>
+</div>
+
+<!--/* 통계 카드 (대시보드) */-->
+<div th:fragment="statCard(label, value, delta, deltaColor)" class="stat-card">
+  <span class="stat-card__label" th:text="${label}">라벨</span>
+  <span class="stat-card__value" th:text="${value}">값</span>
+  <span class="stat-card__delta" th:style="'color:' + ${deltaColor}" th:text="${delta}">델타</span>
+</div>
+
+</body>
+</html>
