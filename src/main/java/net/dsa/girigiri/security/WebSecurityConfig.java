@@ -13,6 +13,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.List;
@@ -41,6 +43,8 @@ public class WebSecurityConfig {
 	// 이 경로는 userService가 아니라 별도의 oidcUserService로 지정해야 우리 회원 자동 생성 로직이 호출된다.
 	private final CustomOidcUserService customOidcUserService;
 	private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+	// 추가됨 (2026-08-21) — 왜: 이메일+비밀번호 로그인(formLogin) 추가하면서 필요.
+	private final EmailLoginSuccessHandler emailLoginSuccessHandler;
 
 	// 로그인 없이 접근 가능한 경로
 	private static final List<String> PUBLIC_URLS = List.of(
@@ -65,6 +69,10 @@ public class WebSecurityConfig {
 			, "/reservation/**"   // TODO(송채현) 로그인 전이라 임시 공개. 로그인 붙으면 로그인한 사용자만 접근하도록 되돌릴 것.
 			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
 			, "/styleguide"
+			// 추가됨 (2026-08-21) — 왜: 이메일 가입/로그인 화면. 로그인 전 단계라 permitAll 없이는
+			// 접근 자체가 막힌다(/auth/emailLogin은 formLogin의 loginProcessingUrl이기도 하다).
+			, "/auth/emailSignup"
+			, "/auth/emailLogin"
 	);
 
 	@Bean
@@ -96,6 +104,19 @@ public class WebSecurityConfig {
 						.failureUrl("/auth/loginForm?error")
 				)
 
+				// 추가됨 (2026-08-21) — 왜: 소셜 계정 없이도 가입할 수 있는 이메일+비밀번호 로그인.
+				// oauth2Login과 나란히 등록해도 무방 — Spring Security는 한 필터체인에 여러 인증
+				// 방식을 동시에 둘 수 있다. UserDetailsService(EmailUserDetailsService)와
+				// PasswordEncoder 빈이 있으면 Spring Boot가 DaoAuthenticationProvider를 자동 구성한다.
+				.formLogin(form -> form
+						.loginPage("/auth/loginForm")
+						.loginProcessingUrl("/auth/emailLogin")
+						.usernameParameter("email")
+						.passwordParameter("password")
+						.successHandler(emailLoginSuccessHandler)
+						.failureUrl("/auth/emailLogin?error")
+				)
+
 				.logout(logout -> logout
 						.logoutUrl("/auth/logout")
 						.invalidateHttpSession(true)
@@ -104,6 +125,13 @@ public class WebSecurityConfig {
 				);
 
 		return http.build();
+	}
+
+	// 추가됨 (2026-08-21) — 왜: 이메일 회원가입 시 비밀번호 암호화 저장(AuthController#emailSignup),
+	// 로그인 시 검증(EmailUserDetailsService 기반 DaoAuthenticationProvider) 양쪽에서 필요.
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 
 	// 추가됨 — 왜: LINE 로그인 시도 중 "[invalid_id_token] Signed JWT rejected:

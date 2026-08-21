@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('이메일로 로그인', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	이메일 로그인 화면
+	담당: 문창호 (WBS 2.1 인증)
+	- 실제 인증 처리(POST /auth/emailLogin)는 Spring Security formLogin(WebSecurityConfig)이
+	  가로채서 처리한다 — 이 화면은 폼만 그린다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<p class="u-primary u-center" th:if="${param.justSignedUp != null}" style="margin-bottom: var(--s-4)">가입이 완료됐어요. 로그인해 주세요.</p>
+	<p class="u-danger" th:if="${param.error != null}" style="margin-bottom: var(--s-4)">이메일 또는 비밀번호가 올바르지 않아요.</p>
+
+	<form th:action="@{/auth/emailLogin}" method="post">
+		<div class="field">
+			<label class="field__label" for="email">이메일</label>
+			<input class="input" type="email" id="email" name="email" placeholder="example@email.com" required>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="password">비밀번호</label>
+			<input class="input" type="password" id="password" name="password" placeholder="비밀번호" required>
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">로그인</button>
+	</form>
+
+	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
+		계정이 없으신가요? <a th:href="@{/auth/emailSignup}" class="u-primary" style="font-weight: var(--fw-bold)">가입하기</a>
+	</p>
+
+</div>
+</body>
+</html>

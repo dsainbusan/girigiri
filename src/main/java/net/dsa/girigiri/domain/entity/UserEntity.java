@@ -37,6 +37,12 @@ public class UserEntity {
 	@Column(name = "oauth_id", length = 100, nullable = false)
 	private String oauthId;
 
+	// 추가됨 (2026-08-21) — 왜: 소셜 계정 없이도 가입할 수 있도록 이메일+비밀번호 로그인을 추가하면서
+	// 신설. 이메일 계정은 oauthProvider="email", oauthId=이메일 값으로 저장해 기존 조회 로직
+	// (findByOauthProviderAndOauthId)을 그대로 재사용한다. 소셜 계정은 계속 null로 남는다.
+	@Column(name = "password", length = 100)
+	private String password;
+
 	@Column(name = "role", nullable = false, length = 20)
 	private String role;   // USER / OWNER / ADMIN
 

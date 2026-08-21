@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('이메일로 가입', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	이메일 회원가입 화면
+	담당: 문창호 (WBS 2.1 인증)
+	- 소셜 계정이 없어도 이메일+비밀번호로 가입할 수 있게 하는 4번째 옵션.
+	- 여기서는 계정만 만들고 자동 로그인은 하지 않는다 — 가입 후 /auth/emailLogin으로 보내서
+	  방금 입력한 비밀번호로 직접 로그인하게 한다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'email'}" style="margin-bottom: var(--s-4)">이메일 형식이 올바르지 않아요.</p>
+	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'password'}" style="margin-bottom: var(--s-4)">비밀번호는 8자 이상이어야 해요.</p>
+	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'mismatch'}" style="margin-bottom: var(--s-4)">비밀번호가 서로 일치하지 않아요.</p>
+	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'duplicate'}" style="margin-bottom: var(--s-4)">이미 가입된 이메일이에요. 로그인해 주세요.</p>
+
+	<form th:action="@{/auth/emailSignup}" method="post">
+		<div class="field">
+			<label class="field__label" for="email">이메일</label>
+			<input class="input" type="email" id="email" name="email" placeholder="example@email.com" required>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="password">비밀번호</label>
+			<input class="input" type="password" id="password" name="password" placeholder="8자 이상" minlength="8" required>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="passwordConfirm">비밀번호 확인</label>
+			<input class="input" type="password" id="passwordConfirm" name="passwordConfirm" placeholder="비밀번호를 한 번 더 입력해 주세요" minlength="8" required>
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">가입하기</button>
+	</form>
+
+	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
+		이미 계정이 있으신가요? <a th:href="@{/auth/emailLogin}" class="u-primary" style="font-weight: var(--fw-bold)">로그인</a>
+	</p>
+
+</div>
+</body>
+</html>

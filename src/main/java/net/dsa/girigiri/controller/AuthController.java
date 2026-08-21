@@ -7,12 +7,15 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.regex.Pattern;
 
 /**
  * 인증 및 회원가입 컨트롤러
@@ -24,12 +27,87 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequiredArgsConstructor
 public class AuthController {
 
+	// 추가됨 (2026-08-21) — 왜: 이메일 가입 시 최소한의 형식 검증용. 완벽한 RFC 5322 검증은 과함 —
+	// "무언가@무언가.무언가" 수준만 걸러도 이 프로젝트 단계에선 충분하다.
+	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
+	private final PasswordEncoder passwordEncoder;
 
 	@GetMapping("/loginForm")
 	public String loginForm() {
 		return "authView/loginForm";
+	}
+
+	/**
+	 * 이메일 회원가입 폼 화면
+	 */
+	@GetMapping("/emailSignup")
+	public String emailSignupForm() {
+		return "authView/emailSignup";
+	}
+
+	/**
+	 * 이메일 회원가입 처리 — 계정만 만들고 자동 로그인은 시키지 않는다(로그인 페이지로 보내서
+	 * 방금 입력한 비밀번호로 직접 로그인하게 함 — Spring Security 수동 인증 코드 없이 단순하게 처리).
+	 */
+	@PostMapping("/emailSignup")
+	public String emailSignup(@RequestParam String email,
+	                          @RequestParam String password,
+	                          @RequestParam String passwordConfirm) {
+		String trimmedEmail = email == null ? "" : email.trim();
+		if (!EMAIL_PATTERN.matcher(trimmedEmail).matches()) {
+			return "redirect:/auth/emailSignup?error=email";
+		}
+		if (password == null || password.length() < 8) {
+			return "redirect:/auth/emailSignup?error=password";
+		}
+		if (!password.equals(passwordConfirm)) {
+			return "redirect:/auth/emailSignup?error=mismatch";
+		}
+		if (userRepository.findByOauthProviderAndOauthId("email", trimmedEmail).isPresent()) {
+			return "redirect:/auth/emailSignup?error=duplicate";
+		}
+
+		UserEntity user = UserEntity.builder()
+				.oauthProvider("email")
+				.oauthId(trimmedEmail)
+				.email(trimmedEmail)
+				.password(passwordEncoder.encode(password))
+				.role(UserEntity.ROLE_USER)
+				.build();
+		userRepository.save(user);
+
+		return "redirect:/auth/emailLogin?justSignedUp";
+	}
+
+	/**
+	 * 이메일 로그인 폼 화면 — 실제 인증 처리(POST /auth/emailLogin)는 Spring Security
+	 * formLogin(WebSecurityConfig)이 가로채므로 여기엔 GET만 있다.
+	 */
+	@GetMapping("/emailLogin")
+	public String emailLoginForm() {
+		return "authView/emailLogin";
+	}
+
+	/**
+	 * 유저 모드 / 점주 모드 전환 토글 — role은 그대로 두고 세션 viewMode만 바꾼다.
+	 *
+	 * 추가됨 (2026-08-21) — 왜: role 라우팅 + 유저/점주 모드 분기 작업. OWNER 계정만 이 토글을 쓸 수 있다
+	 * (common/header.html에서 role==OWNER일 때만 버튼 노출). USER가 이 엔드포인트를 직접 호출해도
+	 * role 체크로 막아서 모드가 안 바뀐다 — 권한 승격이 아니라 화면 전환일 뿐이라 role은 절대 안 건드린다.
+	 */
+	@PostMapping("/mode")
+	public String toggleMode(HttpSession session) {
+		if (!UserEntity.ROLE_OWNER.equals(session.getAttribute("role"))) {
+			return "redirect:/";
+		}
+
+		boolean isOwnerMode = "OWNER_MODE".equals(session.getAttribute("viewMode"));
+		session.setAttribute("viewMode", isOwnerMode ? "USER_MODE" : "OWNER_MODE");
+
+		return "redirect:" + (isOwnerMode ? "/" : "/store/dashboard");
 	}
 
 	/**

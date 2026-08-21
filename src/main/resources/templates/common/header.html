@@ -9,7 +9,15 @@
   <h1 class="topbar__title" th:text="${title}">제목</h1>
   <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">관리자 모드</span>
   <span class="topbar__spacer"></span>
-  <!--/* 필요 시 우측 액션 버튼을 페이지에서 확장 */-->
+  <!--/*
+    유저 모드 / 점주 모드 전환 토글 — role은 세션에 항상 있으니 페이지마다 layout() 호출부(6개 파라미터)를
+    안 건드리고 여기서 바로 세션을 읽는다(Thymeleaf+Spring이 제공하는 ${session.xxx} 암시 객체).
+    OWNER 계정에만 노출 — USER는 전환할 "점주 모드" 자체가 없다.
+  */-->
+  <form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post">
+    <button type="submit" class="topbar__action"
+            th:text="${session.viewMode == 'OWNER_MODE'} ? '유저 모드로' : '사장님 모드로'">모드 전환</button>
+  </form>
 </header>
 
 <!--/*
