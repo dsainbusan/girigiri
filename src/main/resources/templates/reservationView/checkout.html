@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title th:text="${name} + ' 예약 확인 - 기리기리'">예약 확인 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='예약 확인', badge='')}"></header>
+
+		<main class="app-content">
+			<div class="card">
+				<p class="card-title" th:text="${name}">식빵 마감세트</p>
+				<p>
+					<span class="price-original" th:text="${originalPrice} + '원'">6000원</span>
+					<span class="price-discounted" th:text="${discountedPrice} + '원'">3000원</span>
+				</p>
+				<p class="card-sub">남은 수량: <strong th:text="${remainingQuantity}">4</strong>개</p>
+			</div>
+
+			<div class="card">
+				<p class="card-sub">예약 수량: <strong th:text="${quantity}">1</strong>개</p>
+				<p class="card-sub">결제 예정 금액: <strong th:text="${totalPrice} + '원'">3000원</strong></p>
+			</div>
+
+			<p class="card-sub">
+				* 픽업 시간은 예약 확정 후 지금으로부터 2시간 뒤로 자동 지정돼요.
+				(픽업 시간을 직접 고르는 기능은 다음에 추가될 예정이에요.)
+			</p>
+		</main>
+
+		<div class="app-actionbar">
+			<form th:action="@{/reservation}" method="post">
+				<input type="hidden" name="productId" th:value="${productId}">
+				<input type="hidden" name="quantity" th:value="${quantity}">
+				<button type="submit" class="btn btn-primary btn-block">예약 확정하기</button>
+			</form>
+		</div>
+	</div>
+</body>
+</html>

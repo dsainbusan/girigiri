@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>픽업 처리 완료 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+	<div class="app-container mode-admin">
+		<header th:replace="~{fragments/layout :: header(title='픽업 처리 완료', badge='관리자 모드')}"></header>
+
+		<main class="app-content">
+			<div class="card" style="text-align:center;">
+				<p class="card-title">픽업완료 처리됐어요</p>
+				<p class="card-sub">픽업 코드: <strong th:text="${pickupCode}">PICK-1001</strong></p>
+				<p class="card-sub">픽업 시각: <strong th:text="${pickedAt}">08월 20일 10:00</strong></p>
+			</div>
+
+			<a th:href="@{/reservation/pickup}" class="btn btn-outline btn-block">다른 예약 픽업 처리하기</a>
+		</main>
+	</div>
+</body>
+</html>

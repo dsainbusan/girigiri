@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>내 예약 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+</head>
+<body>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='내 예약', badge='')}"></header>
+
+		<main class="app-content">
+			<nav class="tab-bar">
+				<a th:href="@{/reservation/my(tab='progress')}" class="tab-item"
+				   th:classappend="${activeTab == 'progress'} ? 'active'">진행중</a>
+				<a th:href="@{/reservation/my(tab='picked')}" class="tab-item"
+				   th:classappend="${activeTab == 'picked'} ? 'active'">픽업완료</a>
+				<a th:href="@{/reservation/my(tab='cancelled')}" class="tab-item"
+				   th:classappend="${activeTab == 'cancelled'} ? 'active'">노쇼·취소</a>
+			</nav>
+
+			<div th:if="${#lists.isEmpty(reservations)}" class="empty-state">
+				이 탭에는 아직 예약 내역이 없어요.
+			</div>
+
+			<div class="card" th:each="r : ${reservations}">
+				<div style="display:flex; justify-content:space-between; align-items:flex-start;">
+					<p class="card-title" th:text="${r.storeName}">다이스키 베이커리</p>
+					<span class="badge badge-status" th:text="${r.statusBadge}">예약완료</span>
+				</div>
+				<p class="card-sub" th:text="${r.productName} + ' ' + ${r.quantity} + '개'">식빵 마감세트 1개</p>
+				<p class="card-sub">결제 금액: <strong th:text="${r.totalPrice} + '원'">3000원</strong></p>
+				<p class="card-sub">픽업 시간: <strong th:text="${r.pickupTimeDisplay}">08월 20일 10:00</strong></p>
+				<p class="card-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-XXXXXXXX</strong></p>
+				<!-- 이제 모든 상태에서 영수증을 보여준다. 취소/노쇼는 내용 자체가 달라져서(환불 안내 배너,
+					 QR 제외) 그 상태에 맞게 보여주기 때문에 굳이 버튼을 숨길 필요가 없다. -->
+				<a th:href="@{/reservation/{id}/receipt(id=${r.reservationId})}"
+				   class="btn btn-outline btn-block" style="margin-top:8px;" target="_blank">영수증 PDF 보기</a>
+
+				<!-- 취소는 아직 픽업 전(진행중 탭)일 때만 의미가 있다. -->
+				<form th:if="${activeTab == 'progress'}"
+					  th:action="@{/reservation/{id}/cancel(id=${r.reservationId})}" method="post"
+					  style="margin-top:8px;">
+					<button type="submit" class="btn btn-outline btn-block">예약 취소</button>
+				</form>
+			</div>
+		</main>
+
+		<nav th:replace="~{fragments/layout :: nav(active='mypage')}"></nav>
+	</div>
+</body>
+</html>

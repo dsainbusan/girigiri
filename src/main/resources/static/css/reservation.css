@@ -1,0 +1,36 @@
+/*
+ * 예약(reservationView) 화면 전용 스타일.
+ * common.css(공용 레이아웃/컴포넌트)는 건드리지 않고, 이 도메인에서만 쓰는 스타일은 여기에 둔다.
+ * common.css의 CSS 변수(--color-primary, --color-border, --color-text-muted 등)는 그대로 재사용한다.
+ */
+
+/* 탭바 (마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소) */
+.tab-bar {
+	display: flex;
+	border-bottom: 1px solid var(--color-border);
+	margin-bottom: 12px;
+}
+
+.tab-item {
+	flex: 1;
+	text-align: center;
+	padding: 12px 0;
+	font-size: 14px;
+	color: var(--color-text-muted);
+	text-decoration: none;
+	border-bottom: 2px solid transparent;
+}
+
+.tab-item.active {
+	color: var(--color-primary);
+	font-weight: 700;
+	border-bottom-color: var(--color-primary);
+}
+
+/* 빈 목록 안내 문구 */
+.empty-state {
+	text-align: center;
+	color: var(--color-text-muted);
+	font-size: 13px;
+	padding: 40px 0;
+}

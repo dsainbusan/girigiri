@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>로그인 - 기리기리</title>
+	<link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+	<div class="app-container">
+		<header th:replace="~{fragments/layout :: header(title='로그인', badge='')}"></header>
+
+		<main class="app-content">
+			<form th:action="@{/auth/login}" method="post">
+				<input type="text" name="id" placeholder="아이디">
+				<input type="password" name="password" placeholder="비밀번호">
+				<button type="submit">로그인</button>
+			</form>
+		</main>
+	</div>
+</body>
+</html>
