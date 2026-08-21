@@ -16,8 +16,13 @@
 		<div class="u-row" style="gap: var(--s-3);">
 			<span style="font-size: 24px;">🎉</span>
 			<div>
+				<!--/*
+					변경됨 (2026-08-21) — 왜: kakao/google만 명시 분기하고 나머지는 전부 "라인"으로
+					떨어지게 돼 있어서, 이메일 가입(provider="email")도 잘못된 문구로 표시됐다.
+					line/email을 각각 명시 분기하고, 알 수 없는 값은 안전한 문구로 처리.
+				*/-->
 				<p class="u-bold" style="color:var(--c-info)"
-				   th:text="${provider == 'kakao'} ? '카카오 계정으로 시작해요' : (${provider == 'google'} ? '구글 계정으로 시작해요' : '라인 계정으로 시작해요')">
+				   th:text="${provider == 'kakao'} ? '카카오 계정으로 시작해요' : (${provider == 'google'} ? '구글 계정으로 시작해요' : (${provider == 'line'} ? '라인 계정으로 시작해요' : (${provider == 'email'} ? '이메일로 시작해요' : '계정으로 시작해요')))">
 					카카오 계정으로 시작해요
 				</p>
 				<!-- 카카오/라인은 이메일 동의항목 승인 전이라 email이 없을 수 있음(application.properties 참고) -->

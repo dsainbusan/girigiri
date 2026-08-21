@@ -1,54 +1,47 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	<title>사장님 대시보드 - 기리기리</title>
-	<link rel="stylesheet" th:href="@{/css/common.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
-	<div class="app-container mode-admin">
-		<header th:replace="~{fragments/layout :: header(title=${storeName}, badge='관리자 모드')}"></header>
+<!--/*
+	사장님 대시보드
+	담당: 송채현 (WBS 3.0 매장 관리) — 실데이터/권한 연동은 TODO 아래 참고, 지금은 디자인 통일성 확인용 데모 데이터.
 
-		<main class="app-content">
-			<!-- 추가됨 (2026-08-21) — 왜: role 라우팅 + 유저/점주 모드 분기 작업 중, 이 화면이 다른 페이지로
-			     나가는 버튼이 하나도 없는 막다른 화면이었다. 이 페이지는 common/header.html(새 디자인
-			     시스템)이 아니라 옛 fragments/layout.html을 쓰고 있어서 거기 추가한 토글이 안 보였다 —
-			     여기서 별도로 "유저 모드로" 버튼을 추가한다. role은 그대로 두고 세션 viewMode만 바꾼다. -->
-			<form th:action="@{/auth/mode}" method="post" style="margin-bottom: 16px;">
-				<button type="submit" class="btn btn-outline btn-block">유저 모드로 전환</button>
-			</form>
+	변경됨 (2026-08-21) — 왜: 팀원 커밋에서 옛 디자인 시스템(fragments/layout.html, static/css/common.css)이
+	삭제되면서 이 화면이 그걸 참조하다 500 에러가 났다. common/layout.html(새 디자인 시스템)로 옮겼다.
+	dark=true + badge='관리자 모드'로 넘기면 common/header.html의 다크 헤더 + 유저모드 전환 토글이
+	자동으로 뜨므로, 예전에 본문 안에 수동으로 넣었던 "유저 모드로 전환" 버튼은 중복이라 제거했다.
+*/-->
+<div id="content" th:fragment="content" class="page">
 
-			<div class="stat-grid">
-				<div class="stat-box">
-					<div class="stat-value" th:text="${registeredCount}">12</div>
-					<div class="stat-label">오늘 등록</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value" th:text="${soldCount}">8</div>
-					<div class="stat-label">판매</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value" th:text="${expiredCount}">1</div>
-					<div class="stat-label">폐기</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value" th:text="${rescueRate} + '%'">67%</div>
-					<div class="stat-label">구제율</div>
-				</div>
-			</div>
-
-			<div class="card" style="margin-top: 16px;">
-				<p class="card-title">리포트</p>
-				<p class="card-sub">오늘 판매·폐기 현황을 문서로 내려받을 수 있습니다.</p>
-				<div class="btn-row">
-					<a href="#" class="btn btn-outline btn-block">Excel</a>
-					<a href="#" class="btn btn-outline btn-block">PDF</a>
-				</div>
-			</div>
-		</main>
-
-		<nav th:replace="~{fragments/layout :: nav(active='')}"></nav>
+	<!-- TODO(송채현): StoreRepository/ProductRepository 연동, 실제 등록/판매/폐기 통계로 교체. -->
+	<div class="stat-grid">
+		<div class="stat-card">
+			<span class="stat-card__label">오늘 등록</span>
+			<span class="stat-card__value" th:text="${registeredCount}">12</span>
+		</div>
+		<div class="stat-card">
+			<span class="stat-card__label">판매</span>
+			<span class="stat-card__value" th:text="${soldCount}">8</span>
+		</div>
+		<div class="stat-card">
+			<span class="stat-card__label">폐기</span>
+			<span class="stat-card__value" th:text="${expiredCount}">1</span>
+		</div>
+		<div class="stat-card">
+			<span class="stat-card__label">구제율</span>
+			<span class="stat-card__value" th:text="${rescueRate} + '%'">67%</span>
+		</div>
 	</div>
+
+	<div class="card" style="margin-top: var(--s-4)">
+		<p class="u-bold">리포트</p>
+		<p class="u-sub" style="font-size: var(--fs-sm); margin-top: 2px">오늘 판매·폐기 현황을 문서로 내려받을 수 있습니다.</p>
+		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
+			<a href="#" class="btn btn--outline btn--block">Excel</a>
+			<a href="#" class="btn btn--outline btn--block">PDF</a>
+		</div>
+	</div>
+
+</div>
 </body>
 </html>
