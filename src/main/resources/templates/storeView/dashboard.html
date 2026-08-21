@@ -3,7 +3,12 @@
       th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<div class="stat-grid">
+	<div class="u-row" style="gap:var(--s-3)">
+		<a th:href="@{/store/products/new}" class="btn btn--accent u-grow">+ 재고 등록</a>
+		<a th:href="@{/store/settings}" class="btn btn--outline u-grow">매장 정보 수정</a>
+	</div>
+
+	<div class="stat-grid" style="margin-top:var(--s-4)">
 		<div class="stat-card">
 			<span class="stat-card__label">오늘 등록</span>
 			<span class="stat-card__value" th:text="${registeredCount}">12</span>

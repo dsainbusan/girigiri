@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('매장 정보 수정', ~{:: #content}, '', true, '관리자 모드', ~{:: #actionbar})}">
+<body>
+<!--/*
+	매장 정보(카테고리·위치·영업시간) 등록/수정 화면
+	- /auth/owner-apply에서 최초 등록된 매장 정보를 승인 이후 다시 열람·수정한다.
+	- 위도/경도는 홈 화면 카카오맵 마커(문창호 담당)가 참조하는 값이라 여기서 같이 관리한다.
+	  지도에서 직접 좌표를 찍는 UI는 카카오맵 연동 범위라 우선 숫자 입력으로 대체했다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<div class="banner banner--info" th:if="${param.saved}" style="margin-bottom: var(--s-4)">
+		<span class="banner__title">매장 정보가 저장되었습니다.</span>
+	</div>
+
+	<form id="settingsForm" th:action="@{/store/settings}" th:object="${storeSettingsForm}" method="post">
+
+		<div class="field">
+			<label class="field__label" for="storeName">매장명</label>
+			<input class="input" type="text" id="storeName" th:field="*{storeName}"
+			       placeholder="예: 기리베이커리 광안점" required maxlength="50">
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="category">매장 업종 (카테고리)</label>
+			<select class="input" id="category" th:field="*{category}" required>
+				<option value="">카테고리를 선택해 주세요</option>
+				<option value="베이커리">베이커리</option>
+				<option value="카페/디저트">카페 / 디저트</option>
+				<option value="반찬">반찬</option>
+				<option value="도시락/샐러드">도시락 / 샐러드</option>
+				<option value="마트/식료품">마트 / 식료품</option>
+				<option value="일반음식점">일반음식점</option>
+				<option value="기타">기타</option>
+			</select>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="address">매장 주소</label>
+			<input class="input" type="text" id="address" th:field="*{address}"
+			       placeholder="예: 부산광역시 수영구 광안로 123 1층" required maxlength="200">
+		</div>
+
+		<div class="u-row" style="gap: var(--s-3); margin-top: var(--s-4)">
+			<div class="field u-grow">
+				<label class="field__label" for="latitude">위도</label>
+				<input class="input" type="number" id="latitude" th:field="*{latitude}"
+				       placeholder="35.153" step="0.000001" min="-90" max="90">
+			</div>
+			<div class="field u-grow">
+				<label class="field__label" for="longitude">경도</label>
+				<input class="input" type="number" id="longitude" th:field="*{longitude}"
+				       placeholder="129.118" step="0.000001" min="-180" max="180">
+			</div>
+		</div>
+		<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 4px">
+			홈 지도에 매장 위치를 표시하는 데 쓰입니다. 비워두면 지도에 표시되지 않습니다.
+		</p>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="phone">매장 대표 전화번호</label>
+			<input class="input" type="tel" id="phone" th:field="*{phone}"
+			       placeholder="예: 051-123-4567 또는 010-1234-5678" maxlength="30">
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="operatingHours">영업시간 및 마감세일 예상 시간</label>
+			<input class="input" type="text" id="operatingHours" th:field="*{operatingHours}"
+			       placeholder="예: 09:00 ~ 21:00 (마감 세일 19:00~)" maxlength="100">
+		</div>
+	</form>
+</div>
+
+<div id="actionbar" th:fragment="actionbar" class="bottom-cta">
+	<button type="submit" form="settingsForm" class="btn btn--block">저장하기</button>
+</div>
+</body>
+</html>
