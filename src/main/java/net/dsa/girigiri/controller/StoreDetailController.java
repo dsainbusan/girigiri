@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
-import net.dsa.girigiri.repository.ReviewRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.LikeService;
+import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -31,8 +31,8 @@ public class StoreDetailController {
 
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
-	private final ReviewRepository reviewRepository;
 	private final LikeService likeService;
+	private final ReviewService reviewService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
@@ -45,18 +45,19 @@ public class StoreDetailController {
 				.filter(p -> p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0)
 				.toList();
 
-		var reviews = reviewRepository.findAll().stream()
-				.filter(r -> id.equals(r.getStoreId()))
-				.toList();
-		double avgRating = reviews.stream().mapToInt(r -> r.getRating() == null ? 0 : r.getRating()).average().orElse(0);
-
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
 
 		Long userId = (Long) session.getAttribute("userId");
+		String role = (String) session.getAttribute("role");
+		var myReview = reviewService.getMyReview(userId, id);
 
 		model.addAttribute("store", store);
-		model.addAttribute("avgRating", String.format("%.1f", avgRating));
-		model.addAttribute("reviewCount", reviews.size());
+		model.addAttribute("avgRating", String.format("%.1f", reviewService.getAverageRating(id)));
+		model.addAttribute("reviewCount", reviewService.getReviewCount(id));
+		model.addAttribute("reviews", reviewService.getReviews(id, userId, role));
+		model.addAttribute("loggedIn", userId != null);
+		model.addAttribute("myRating", myReview.map(r -> r.getRating()).orElse(0));
+		model.addAttribute("myContent", myReview.map(r -> r.getContent()).orElse(""));
 		model.addAttribute("closingLabel", closingInfo.label());
 		model.addAttribute("products", activeProducts.stream().map(this::toProductRow).toList());
 		model.addAttribute("liked", likeService.isLiked(userId, id));

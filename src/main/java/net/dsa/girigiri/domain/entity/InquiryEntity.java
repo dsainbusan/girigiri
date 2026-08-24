@@ -7,15 +7,18 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/**
+ * 문의 게시판 글. storeId가 있으면 특정 가게에 대한 문의, null이면 서비스 전체에 대한 일반 문의다.
+ */
 @Entity
-@Table(name = "review")
+@Table(name = "inquiry")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class ReviewEntity {
+public class InquiryEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,21 +27,14 @@ public class ReviewEntity {
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
 
-	@Column(name = "store_id", nullable = false)
-	private Long storeId;
+	@Column(name = "store_id")
+	private Long storeId;   // null이면 일반 문의(특정 가게 무관)
 
-	@Column(name = "rating", nullable = false)
-	private Integer rating;
+	@Column(name = "title", nullable = false, length = 100)
+	private String title;
 
-	@Column(name = "content", length = 500)
+	@Column(name = "content", nullable = false, length = 1000)
 	private String content;
-
-	// 추가됨 (강노은) — 왜: 리뷰 수정 남용(예: 작성 후 몰래 내용을 바꾸는 것) 방지용으로
-	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#submitReview에서
-	// 기존 리뷰를 덮어쓸 때만 true로 바뀐다.
-	@Builder.Default
-	@Column(name = "edited", nullable = false)
-	private boolean edited = false;
 
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)

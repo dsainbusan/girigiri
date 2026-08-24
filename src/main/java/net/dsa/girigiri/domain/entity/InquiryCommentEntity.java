@@ -7,38 +7,32 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+/**
+ * 문의 글에 달리는 댓글. 작성자 본인이 이어서 남기는 댓글일 수도, 가게 사장님/운영자가 남기는
+ * 답변일 수도 있다 — 둘을 구분하는 컬럼은 아직 없다(role/viewMode 세션 로직 확정 후 추가 검토).
+ */
 @Entity
-@Table(name = "review")
+@Table(name = "inquiry_comment")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class ReviewEntity {
+public class InquiryCommentEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(name = "inquiry_id", nullable = false)
+	private Long inquiryId;
+
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
 
-	@Column(name = "store_id", nullable = false)
-	private Long storeId;
-
-	@Column(name = "rating", nullable = false)
-	private Integer rating;
-
-	@Column(name = "content", length = 500)
+	@Column(name = "content", nullable = false, length = 500)
 	private String content;
-
-	// 추가됨 (강노은) — 왜: 리뷰 수정 남용(예: 작성 후 몰래 내용을 바꾸는 것) 방지용으로
-	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#submitReview에서
-	// 기존 리뷰를 덮어쓸 때만 true로 바뀐다.
-	@Builder.Default
-	@Column(name = "edited", nullable = false)
-	private boolean edited = false;
 
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout(${inquiry.title}, ~{:: #content}, 'home', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+	<a th:href="@{/user/inquiries}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
+
+	<div class="card">
+		<div class="u-row" style="justify-content:space-between;align-items:flex-start">
+			<b style="font-size:16px" th:text="${inquiry.title}">문의 제목</b>
+			<form th:if="${canDeleteInquiry}" th:action="@{/user/inquiries/{id}/delete(id=${inquiry.id})}" method="post"
+			      onsubmit="return confirm('문의를 삭제할까요? 댓글도 함께 삭제됩니다.')">
+				<button type="submit" class="btn btn--outline" style="padding:4px 10px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+			</form>
+		</div>
+		<div class="u-mut" style="font-size:12px;margin-top:4px">
+			<span th:text="${authorName}">작성자</span>
+			<span th:if="${storeName != null}" th:text="' · ' + ${storeName}"></span>
+			<span th:text="' · ' + ${createdAtDisplay}"></span>
+		</div>
+		<p style="margin-top:var(--s-3);font-size:14px;white-space:pre-wrap" th:text="${inquiry.content}">문의 내용</p>
+	</div>
+
+	<div class="section-title" style="font-size:15px">
+		댓글 <span class="section-title__count" th:text="${comments.size()}">2</span>
+	</div>
+
+	<div style="display:flex;flex-direction:column;gap:0">
+		<div th:each="c : ${comments}" class="list-row" style="align-items:flex-start">
+			<div class="list-row__body">
+				<div class="u-row" style="justify-content:space-between">
+					<b style="font-size:13px" th:text="${c.authorName}">닉네임</b>
+					<span class="u-mut" style="font-size:11px" th:text="${c.createdAtLabel}">오늘</span>
+				</div>
+				<p style="font-size:13px;margin-top:4px" th:text="${c.content}">댓글 내용</p>
+				<form th:if="${c.canDelete}" th:action="@{/user/inquiries/{id}/comments/{commentId}/delete(id=${inquiry.id}, commentId=${c.id})}"
+				      method="post" onsubmit="return confirm('댓글을 삭제할까요?')" style="margin-top:4px">
+					<button type="submit" class="btn btn--outline" style="padding:2px 8px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+				</form>
+			</div>
+		</div>
+		<p th:if="${#lists.isEmpty(comments)}" class="u-sub">아직 댓글이 없어요.</p>
+	</div>
+
+	<form th:if="${loggedIn}" th:action="@{/user/inquiries/{id}/comments(id=${inquiry.id})}" method="post" style="margin-top:var(--s-4)">
+		<textarea name="content" class="input" required maxlength="500" style="min-height:70px;resize:vertical" placeholder="댓글을 입력하세요"></textarea>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-2)">댓글 등록</button>
+	</form>
+	<p th:unless="${loggedIn}" class="u-sub" style="margin-top:var(--s-4)">
+		<a th:href="@{/auth/loginForm}" class="u-primary" style="font-weight:700">로그인</a> 하면 댓글을 남길 수 있어요.
+	</p>
+</div>
+</body>
+</html>
