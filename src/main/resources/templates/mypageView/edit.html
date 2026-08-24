@@ -93,6 +93,17 @@
 		</button>
 	</form>
 
+	<!-- 회원 탈퇴 -->
+	<div style="margin-top: var(--s-6); text-align: center;">
+		<form th:action="@{/mypage/withdraw}" method="post"
+		      onsubmit="return confirm('정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다.');">
+			<button type="submit" class="u-danger"
+			        style="background: none; border: none; font-size: var(--fs-xs); text-decoration: underline; padding: var(--s-2); cursor: pointer;">
+				회원 탈퇴
+			</button>
+		</form>
+	</div>
+
 </div>
 </body>
 </html>

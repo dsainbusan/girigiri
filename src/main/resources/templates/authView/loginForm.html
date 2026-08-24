@@ -3,9 +3,9 @@
       th:replace="~{common/layout :: layout('로그인', ~{:: #content}, '', false, '', null)}">
 <body>
 <!--/*
-	변경됨 (2026-08-21) — 왜: 브랜드 소개형 단일 화면으로 재구성해달라는 요청(참고 목업)에 맞춰
-	common/layout 프래그먼트(팀 공통 레이아웃) 위에 다시 그렸다. 이 프로젝트는 자체 회원가입이 없고
-	소셜 로그인 자체가 곧 가입이라(CLAUDE.md 3.1) 로그인/가입 문구를 따로 나누지 않는다.
+	로그인 화면
+	담당: 문창호 (WBS 2.1 인증)
+	- 자체 회원가입이 없고 소셜 로그인(카카오, 구글, 라인)을 통해 로그인/가입을 처리합니다.
 */-->
 <div id="content" th:fragment="content" class="page">
 
@@ -21,11 +21,13 @@
 	<a th:href="@{/oauth2/authorization/kakao}" class="btn btn--block btn--kakao">카카오로 시작하기</a>
 	<a th:href="@{/oauth2/authorization/google}" class="btn btn--block btn--google" style="margin-top:var(--s-3)">구글로 시작하기</a>
 	<a th:href="@{/oauth2/authorization/line}" class="btn btn--block btn--line" style="margin-top:var(--s-3)">라인으로 시작하기</a>
+	<!-- 추가됨 (2026-08-21) — 왜: 소셜 계정 없이도 가입할 수 있는 이메일+비밀번호 옵션(4번째 선택지).
+	     변경됨 — 왜: 로그인 화면을 기본으로 크게 보여주고, 계정 없는 신규 유저는 그 화면 안의
+	     "계정이 없으신가요? 가입하기" 작은 링크로 가입 화면(emailSignup)에 가도록 순서를 바꿨다. -->
+	<a th:href="@{/auth/emailLogin}" class="btn btn--block btn--outline" style="margin-top:var(--s-3)">이메일로 시작하기</a>
 
 	<p class="u-mut u-center" style="font-size:var(--fs-xs);margin:var(--s-4) 0">가입 시 이용약관 및 개인정보처리방침에 동의하게 됩니다</p>
 
-	<!-- 변경됨 (2026-08-21) — 왜: role 3종 개편으로 점주(OWNER)는 로그인 후 "선택"이 아니라
-	     신청 + 운영자 승인으로만 전환되므로(CLAUDE.md 3.1), 안내 문구를 실제 정책에 맞게 작성. -->
 	<div class="card" style="background:var(--c-primary-weak)">
 		<p class="u-bold">사장님이신가요?</p>
 		<p class="u-sub" style="font-size:var(--fs-sm);margin-top:4px">로그인 후 마이페이지에서 점주 신청을 하시면, 운영자 승인 후 점주 모드를 이용하실 수 있어요.</p>

@@ -47,47 +47,47 @@
 	</div>
 
 	<!-- 3. 메뉴 리스트 카드 -->
-	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden; display: flex; flex-direction: column;">
 		<!-- 예약 내역 -->
-		<a href="#" class="list-menu-item">
-			<span class="list-menu-item__icon">🧾</span>
-			<span class="list-menu-item__title">예약 내역</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🧾</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">예약 내역</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 
 		<!-- 찜한 가게 -->
-		<a th:href="@{/user/likes}" class="list-menu-item">
-			<span class="list-menu-item__icon">🖤</span>
-			<span class="list-menu-item__title">찜한 가게</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<a th:href="@{/user/likes}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🖤</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">찜한 가게</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 
 		<!-- 내가 쓴 리뷰 -->
-		<a href="#" class="list-menu-item">
-			<span class="list-menu-item__icon">⭐</span>
-			<span class="list-menu-item__title">내가 쓴 리뷰</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">⭐</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">내가 쓴 리뷰</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 
 		<!-- 알림 설정 -->
-		<a th:href="@{/user/alerts}" class="list-menu-item">
-			<span class="list-menu-item__icon">🔔</span>
-			<span class="list-menu-item__title">알림 설정</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<a th:href="@{/user/alerts}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🔔</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">알림 설정</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 
 		<!-- 고객 지원 -->
-		<a href="#" class="list-menu-item">
-			<span class="list-menu-item__icon">💬</span>
-			<span class="list-menu-item__title">고객 지원</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">💬</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">고객 지원</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 
-		<!-- 회원정보 수정 (구현 완료) -->
-		<a th:href="@{/mypage/edit}" class="list-menu-item" style="border-bottom: none;">
-			<span class="list-menu-item__icon">⚙️</span>
-			<span class="list-menu-item__title">회원정보 수정</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
+		<!-- 회원정보 수정 -->
+		<a th:href="@{/mypage/edit}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); text-decoration: none; color: var(--c-text);">
+			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">⚙️</span>
+			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">회원정보 수정</span>
+			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 		</a>
 	</div>
 
@@ -112,37 +112,5 @@
 	</div>
 
 </div>
-
-<style>
-	.list-menu-item {
-		display: flex;
-		align-items: center;
-		padding: 16px var(--s-4);
-		border-bottom: 1px solid var(--c-line-weak);
-		text-decoration: none;
-		color: var(--c-text);
-		transition: background-color 0.15s ease;
-	}
-	.list-menu-item:active {
-		background-color: var(--c-bg);
-	}
-	.list-menu-item__icon {
-		font-size: 18px;
-		width: 28px;
-		display: flex;
-		align-items: center;
-	}
-	.list-menu-item__title {
-		font-size: var(--fs-md);
-		font-weight: var(--fw-medium);
-		flex-grow: 1;
-	}
-	.list-menu-item__arrow {
-		color: var(--c-text-mut);
-		font-size: 18px;
-		font-weight: var(--fw-bold);
-	}
-</style>
-
 </body>
 </html>

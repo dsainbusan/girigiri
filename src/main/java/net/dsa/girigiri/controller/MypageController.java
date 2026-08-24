@@ -98,4 +98,22 @@ public class MypageController {
 
 		return "redirect:/mypage";
 	}
+
+	/**
+	 * 회원 탈퇴 처리
+	 * TODO(담당 미정): 점주(OWNER)가 매장을 보유한 채로 탈퇴하면 StoreEntity.ownerId가 가리키는
+	 * 유저가 사라져 고아 데이터가 된다 — FK 매핑/ERD가 아직 확정 전이라 지금은 손대지 않음.
+	 */
+	@PostMapping("/withdraw")
+	public String withdraw(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
+			return "redirect:/auth/loginForm";
+		}
+
+		userRepository.deleteById(userId);
+		session.invalidate();
+
+		return "redirect:/";
+	}
 }
