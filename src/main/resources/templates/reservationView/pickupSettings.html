@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('픽업 설정', ~{:: #content}, '', true, '관리자 모드', null)}">
+      th:replace="~{common/layout :: layout('주문 마감 설정', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
@@ -9,7 +9,7 @@
 	<div th:if="${savedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
 		<div>
 			<p class="banner__title">✅ 저장 완료</p>
-			<p class="banner__desc" th:text="${savedMessage}">픽업 설정을 저장했어요.</p>
+			<p class="banner__desc" th:text="${savedMessage}">주문 마감 설정을 저장했어요.</p>
 		</div>
 	</div>
 

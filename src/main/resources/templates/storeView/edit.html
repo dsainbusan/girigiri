@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('매장 정보 수정', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	매장 정보 등록/수정 (영업시간·위치·카테고리) — WBS 3.0, 문창호 담당.
+
+	/auth/owner-apply(입점 "신청" 화면)를 승인 후에도 재사용하면 approvalStatus가 PENDING으로
+	리셋되는 문제가 있어서, 승인된 매장이 안전하게 정보만 고치는 별도 화면으로 새로 만들었다.
+
+	상호명/사업자등록번호/주소는 승인 심사의 근거였던 값이라 읽기전용으로만 보여주고 폼에도 안 담는다
+	(점주가 마음대로 바꾸면 "승인 안 된 가게가 승인된 척" 할 수 있는 구멍이 생김). 이 셋을 바꾸는
+	건 슈퍼어드민 화면(송보미 담당)이 생긴 뒤 "변경 요청 → 재승인" 플로우로 별도 구현 예정 — 지금은
+	카테고리/연락처/영업시간/위치만 자유롭게 수정 가능하다.
+
+	위치(latitude/longitude)는 사람이 손으로 입력하기 비현실적이라, 주소 입력 후 "주소로 위치 확인"
+	버튼을 누르면 카카오맵 Geocoder(주소→좌표 변환)로 계산해서 hidden input에 채워 넣는다.
+	홈 화면(home.html)이 이미 같은 카카오맵 SDK(&libraries=services)를 쓰고 있어서 그 패턴을 그대로 재사용.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">필수 항목을 모두 올바르게 입력해 주세요.</p>
+
+	<!-- 승인 심사의 근거였던 값(상호명/사업자등록번호/주소) — 읽기전용, 폼(form) 밖에 둬서 애초에
+	     제출도 안 되게 한다. disabled 속성만 쓰면 되지만, 그건 실수로 disabled를 지워도 제출될 수
+	     있어서 더 안전하게 폼 자체를 분리했다. -->
+	<div class="card" style="background: var(--c-bg); border-color: var(--c-line);">
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)">
+			아래 정보는 입점 승인 심사 근거라 여기서 바로 수정할 수 없어요. 변경이 필요하면 운영자에게 문의해 주세요.
+		</p>
+		<div class="field">
+			<label class="field__label">상호명 (매장명)</label>
+			<input class="input" type="text" th:value="${store.storeName}" disabled>
+		</div>
+		<div class="field" style="margin-top: var(--s-3)">
+			<label class="field__label">사업자 등록번호</label>
+			<input class="input" type="text" th:value="${store.businessNumber}" disabled>
+		</div>
+		<div class="field" style="margin-top: var(--s-3)">
+			<label class="field__label">매장 주소</label>
+			<input class="input" type="text" id="address" th:value="${store.address}" disabled>
+		</div>
+	</div>
+
+	<form th:action="@{/store/edit}" method="post" id="storeEditForm" style="margin-top: var(--s-4)">
+		<!-- 1. 매장 카테고리 -->
+		<div class="field">
+			<label class="field__label" for="category">매장 업종 (카테고리) <span class="u-accent">*</span></label>
+			<select class="input" id="category" name="category" required>
+				<option value="">카테고리를 선택해 주세요</option>
+				<option value="베이커리" th:selected="${store.category == '베이커리'}">베이커리</option>
+				<option value="카페/디저트" th:selected="${store.category == '카페/디저트'}">카페 / 디저트</option>
+				<option value="반찬" th:selected="${store.category == '반찬'}">반찬</option>
+				<option value="도시락/샐러드" th:selected="${store.category == '도시락/샐러드'}">도시락 / 샐러드</option>
+				<option value="마트/식료품" th:selected="${store.category == '마트/식료품'}">마트 / 식료품</option>
+				<option value="일반음식점" th:selected="${store.category == '일반음식점'}">일반음식점</option>
+				<option value="기타" th:selected="${store.category == '기타'}">기타</option>
+			</select>
+		</div>
+
+		<!-- 2. 위치 확인 (주소는 위에서 고정, 좌표만 새로 계산 가능) -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label">지도 위치 확인</label>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)">
+				손님 홈 화면 지도에 매장이 표시되려면, 위 주소를 좌표로 한 번 변환해둬야 해요.
+			</p>
+			<button type="button" id="geocodeBtn" class="btn btn--outline btn--sm">
+				📍 주소로 위치 확인
+			</button>
+			<p id="geocodeStatus" class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;"
+			   th:text="${store.latitude != null} ? '✅ 위치 확인됨 — 아래 지도 핀 위치가 맞는지 확인해 주세요.' : '아직 위치가 확인되지 않았어요 — 버튼을 눌러 확인해 주세요.'"></p>
+			<!-- 추가됨 — 왜: "확인됨"이라는 텍스트만으로는 실제로 어디로 잡혔는지 점주가 검증할 방법이
+				없었다(엉뚱한 곳으로 잡혀도 모르고 넘어갈 수 있음). 지도 미리보기로 핀 위치를 눈으로
+				바로 확인할 수 있게 한다. 기존에 좌표가 있으면 페이지를 열자마자 바로 보여준다. -->
+			<div id="locationPreviewMap"
+			     th:style="${store.latitude != null} ? 'display:block' : 'display:none'"
+			     style="width:100%; height:160px; margin-top:var(--s-2); border-radius:var(--r-md); border:1px solid var(--c-line);"></div>
+		</div>
+		<input type="hidden" id="latitude" name="latitude" th:value="${store.latitude}">
+		<input type="hidden" id="longitude" name="longitude" th:value="${store.longitude}">
+
+		<!-- 3. 매장 대표 연락처 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="phone">매장 대표 전화번호 <span class="u-accent">*</span></label>
+			<input class="input" type="tel" id="phone" name="phone"
+			       th:value="${store.phone}" placeholder="예: 051-123-4567 또는 010-1234-5678" required maxlength="30">
+		</div>
+
+		<!-- 4. 영업시간 및 마감 세일 안내 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="operatingHours">영업시간 및 마감세일 예상 시간</label>
+			<input class="input" type="text" id="operatingHours" name="operatingHours"
+			       th:value="${store.operatingHours}" placeholder="예: 09:00 ~ 21:00 (마감 세일 19:00~)" maxlength="100">
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">저장</button>
+	</form>
+
+	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
+	<script th:inline="javascript">
+		kakao.maps.load(function () {
+			var geocoder = new kakao.maps.services.Geocoder();
+			var statusEl = document.getElementById('geocodeStatus');
+			var mapEl = document.getElementById('locationPreviewMap');
+			var map = null;
+			var marker = null;
+
+			/** 지도를 처음 보여줄 때만 kakao.maps.Map을 만든다 — 숨겨진 div 위에 미리 만들면
+				타일이 깨져서 보이는 카카오맵 특유의 버그가 있어서, 보여주는 시점에 만든다. */
+			function showPreview(lat, lng) {
+				var position = new kakao.maps.LatLng(lat, lng);
+				mapEl.style.display = 'block';
+
+				if (!map) {
+					map = new kakao.maps.Map(mapEl, { center: position, level: 4 });
+					marker = new kakao.maps.Marker({ position: position, map: map });
+				} else {
+					map.setCenter(position);
+					marker.setPosition(position);
+					map.relayout();
+				}
+			}
+
+			var initialLat = document.getElementById('latitude').value;
+			var initialLng = document.getElementById('longitude').value;
+			if (initialLat && initialLng) {
+				showPreview(Number(initialLat), Number(initialLng));
+			}
+
+			document.getElementById('geocodeBtn').addEventListener('click', function () {
+				var address = document.getElementById('address').value.trim();
+				if (!address) {
+					statusEl.textContent = '주소를 먼저 입력해 주세요.';
+					return;
+				}
+				statusEl.textContent = '위치 확인 중...';
+
+				geocoder.addressSearch(address, function (result, status) {
+					if (status === kakao.maps.services.Status.OK) {
+						var lat = result[0].y;
+						var lng = result[0].x;
+						document.getElementById('latitude').value = lat;
+						document.getElementById('longitude').value = lng;
+						statusEl.textContent = '✅ 확인된 위치: ' + result[0].address_name + ' — 아래 지도 핀이 맞는지 확인해 주세요.';
+						showPreview(Number(lat), Number(lng));
+					} else {
+						document.getElementById('latitude').value = '';
+						document.getElementById('longitude').value = '';
+						mapEl.style.display = 'none';
+						statusEl.textContent = '⚠️ 이 주소로 위치를 찾지 못했어요. 주소를 더 자세히 입력해 보세요 (저장은 가능하지만 지도엔 안 뜰 수 있어요).';
+					}
+				});
+			});
+		});
+	</script>
+
+</div>
+</body>
+</html>

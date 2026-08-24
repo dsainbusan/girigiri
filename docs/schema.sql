@@ -80,6 +80,7 @@ CREATE TABLE reservation (
     id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id            BIGINT NOT NULL,
     product_id         BIGINT NOT NULL,
+    product_name       VARCHAR(100) COMMENT '주문 당시 상품명 스냅샷, 문창호 추가',
     store_id           BIGINT NOT NULL,
     reserved_quantity  INT NOT NULL,
     total_price        INT NOT NULL,

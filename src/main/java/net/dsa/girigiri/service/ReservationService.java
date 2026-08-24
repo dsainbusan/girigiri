@@ -3,6 +3,7 @@ package net.dsa.girigiri.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CancellableReservationDto;
+import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
@@ -86,6 +87,7 @@ public class ReservationService {
 		ReservationEntity reservation = ReservationEntity.builder()
 				.userId(userId)
 				.productId(productId)
+				.productName(product.getName())
 				.storeId(product.getStoreId())
 				.reservedQuantity(quantity)
 				.totalPrice(totalPrice)
@@ -169,13 +171,41 @@ public class ReservationService {
 		return incoming.stream().map(this::toIncomingItemDto).toList();
 	}
 
-	private ReservationIncomingItemDto toIncomingItemDto(ReservationEntity reservation) {
-		ProductEntity product = productRepository.findById(reservation.getProductId())
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
+	/**
+	 * 추가됨 — 왜: 매장이 수락(ready)했지만 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된 예약들을
+	 * 볼 방법이 없었다 — "손님이 안 왔나?" 확인하려면 이 목록이 필요하다. getIncomingReservations()와
+	 * 데이터 모양이 완전히 같아서(상품/수량/금액/픽업코드/주문시각) DTO를 그대로 재사용한다.
+	 */
+	public List<ReservationIncomingItemDto> getReadyReservations() {
+		List<ReservationEntity> ready = reservationRepository.findByStatusOrderByReservedAtAsc("ready");
+		return ready.stream().map(this::toIncomingItemDto).toList();
+	}
 
+	/**
+	 * 추가됨 — 왜: 손님이 실제로 픽업해서 거래가 끝난 내역을 점주가 볼 화면이 없었다. 매장별로 픽업
+	 * 완료(picked) 예약만 최신순으로 보여준다.
+	 */
+	public List<ReservationCompletedItemDto> getCompletedTransactions(Long storeId) {
+		List<ReservationEntity> completed = reservationRepository.findByStoreIdAndStatusOrderByPickedAtDesc(storeId, "picked");
+		return completed.stream().map(this::toCompletedItemDto).toList();
+	}
+
+	private ReservationCompletedItemDto toCompletedItemDto(ReservationEntity reservation) {
+		return new ReservationCompletedItemDto(
+				reservation.getId(),
+				reservation.getProductName(),
+				reservation.getReservedQuantity(),
+				reservation.getTotalPrice(),
+				reservation.getPickupCode(),
+				reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+				reservation.getPickedAt() != null ? reservation.getPickedAt().format(LIST_DISPLAY_FORMAT) : "-"
+		);
+	}
+
+	private ReservationIncomingItemDto toIncomingItemDto(ReservationEntity reservation) {
 		return new ReservationIncomingItemDto(
 				reservation.getId(),
-				product.getName(),
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				reservation.getPickupCode(),
@@ -273,15 +303,13 @@ public class ReservationService {
 	}
 
 	private CancellableReservationDto toCancellableDto(ReservationEntity reservation) {
-		ProductEntity product = productRepository.findById(reservation.getProductId())
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
 		return new CancellableReservationDto(
 				reservation.getId(),
 				reservation.getPickupCode(),
-				product.getName(),
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				store.getStoreName(),
@@ -415,15 +443,13 @@ public class ReservationService {
 	}
 
 	private ReservationListItemDto toListItemDto(ReservationEntity reservation) {
-		ProductEntity product = productRepository.findById(reservation.getProductId())
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
 		return new ReservationListItemDto(
 				reservation.getId(),
 				store.getStoreName(),
-				product.getName(),
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				reservation.getPickupTime() != null ? reservation.getPickupTime().format(LIST_DISPLAY_FORMAT) : "-",

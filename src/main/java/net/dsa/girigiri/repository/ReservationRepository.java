@@ -35,4 +35,16 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 추가됨 (2026-08-21) — 왜: 매장 취소 화면에서 픽업 코드를 직접 타이핑하는 대신, 지금 취소 가능한
 	// (아직 픽업/취소/노쇼 안 된) 예약들을 목록으로 보여주고 그중에서 고르게 하려고 추가.
 	List<ReservationEntity> findByStatusInOrderByReservedAtAsc(List<String> statuses);
+
+	// 점주 대시보드용 (StoreController, WBS 3.0 문창호 담당): 오늘 픽업 예정인 예약 목록
+	List<ReservationEntity> findByStoreIdAndPickupTimeBetween(
+			Long storeId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+	// 회원 탈퇴 시 미완료 예약(결제대기/진행중) 있으면 차단하기 위한 체크 (MypageController)
+	boolean existsByUserIdAndStatusIn(Long userId, List<String> statuses);
+
+	boolean existsByStoreIdAndStatusIn(Long storeId, List<String> statuses);
+
+	// 점주용 "완료된 거래 내역" 화면에서 사용 — 최근 픽업 완료 건이 위로 오게 정렬.
+	List<ReservationEntity> findByStoreIdAndStatusOrderByPickedAtDesc(Long storeId, String status);
 }

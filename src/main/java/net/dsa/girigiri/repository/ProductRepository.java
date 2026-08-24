@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,4 +18,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select p from ProductEntity p where p.id = :id")
 	Optional<ProductEntity> findByIdForUpdate(@Param("id") Long id);
+
+	// 점주 대시보드용 (StoreController, WBS 3.0 문창호 담당)
+	List<ProductEntity> findByStoreId(Long storeId);
 }

@@ -6,7 +6,7 @@
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
 	<div class="card">
-		<p class="u-sub">손님이 보여준 QR/픽업 코드를 스캔하거나 입력해서 아래 목록에 담고, 한 번에 픽업 처리하세요.</p>
+		<p class="u-sub">손님이 보여준 QR/픽업 코드를 스캔하거나 입력해서 아래 목록에 확인해두고, 한 번에 픽업 처리하세요.</p>
 	</div>
 
 	<!--
@@ -14,8 +14,8 @@
 		(별도 앱 설치 없이 모바일/데스크톱 브라우저에서 그대로 동작. 카카오맵 SDK를 CDN 스크립트로
 		불러오는 home.html과 같은 방식.)
 		QR 하나를 인식하면 카메라를 잠깐 멈추고(pause) 결과를 보여준다 — 자동으로 계속 인식해서
-		바로바로 담아버리면 엉뚱한 QR이 잡혀도 모르고 지나칠 수 있어서, 한 건씩 눈으로 확인하고
-		"담기"를 눌러야 목록에 들어가게 했다. 담고 나면(또는 "다시 스캔" 누르면) 카메라가 자동으로
+		바로바로 확인 처리해버리면 엉뚱한 QR이 잡혀도 모르고 지나칠 수 있어서, 한 건씩 눈으로 확인하고
+		"확인"을 눌러야 목록에 들어가게 했다. 확인하고 나면(또는 "다시 스캔" 누르면) 카메라가 자동으로
 		다시 움직여서 다음 QR을 이어서 찍을 수 있다.
 	-->
 	<div class="card" style="margin-top:var(--s-3)">
@@ -23,22 +23,22 @@
 		<div id="qr-reader" style="width:100%; margin-top:var(--s-3); display:none;"></div>
 		<p id="scan-status" class="scan-status"></p>
 		<div id="scan-confirm-actions" style="display:none; gap:var(--s-2); margin-top:var(--s-2);">
-			<button type="button" id="scan-confirm-add-btn" class="btn" style="flex:1;">담기</button>
+			<button type="button" id="scan-confirm-add-btn" class="btn" style="flex:1;">확인</button>
 			<button type="button" id="scan-confirm-retry-btn" class="btn btn--outline" style="flex:1;">다시 스캔</button>
 		</div>
 	</div>
 
-	<!-- 수동 입력도 스캔과 똑같이 "먼저 확인 → 목록에 담기" 과정을 거친다 (바로 처리 안 함). -->
+	<!-- 수동 입력도 스캔과 똑같이 "먼저 확인 → 목록에 추가" 과정을 거친다 (바로 처리 안 함). -->
 	<div class="card" style="margin-top:var(--s-3)">
 		<div class="u-row">
 			<input type="text" id="manual-code-input" placeholder="예: PICK-1001" class="input" style="flex:1;">
-			<button type="button" id="manual-add-btn" class="btn btn--outline" style="white-space:nowrap;">담기</button>
+			<button type="button" id="manual-add-btn" class="btn btn--outline" style="white-space:nowrap;">확인</button>
 		</div>
 	</div>
 
-	<!-- 담은 예약(장바구니) -->
+	<!-- 확인된 예약 목록 (일괄 처리 대기 중) -->
 	<div class="card" id="cart-card" style="display:none; margin-top:var(--s-3)">
-		<h3>담은 예약 (<span id="cart-count">0</span>건)</h3>
+		<h3>확인된 예약 (<span id="cart-count">0</span>건)</h3>
 		<ul id="cart-list"></ul>
 	</div>
 
@@ -48,7 +48,7 @@
 		<ul id="batch-result-list"></ul>
 	</div>
 
-	<button type="button" id="batch-submit-btn" class="btn btn--block" style="margin-top:var(--s-3)" disabled>담은 예약 모두 픽업 처리하기</button>
+	<button type="button" id="batch-submit-btn" class="btn btn--block" style="margin-top:var(--s-3)" disabled>확인된 예약 모두 픽업 처리하기</button>
 
 	<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 	<script th:inline="javascript">
@@ -73,7 +73,7 @@
 			var scanning = false;
 			var paused = false;
 			var cart = [];   // { pickupCode, productName, quantity, storeName, totalPrice }
-			var pendingLookup = null;   // 지금 화면에 "담기/다시 스캔" 확인 대기 중인 스캔 결과
+			var pendingLookup = null;   // 지금 화면에 "확인/다시 스캔" 대기 중인 스캔 결과
 			var lastScannedCode = null;
 			var lastScannedAt = 0;
 
@@ -127,11 +127,11 @@
 				cartCard.style.display = cart.length > 0 ? 'block' : 'none';
 				batchSubmitBtn.disabled = cart.length === 0;
 				batchSubmitBtn.textContent = cart.length > 0
-					? '담은 예약 ' + cart.length + '건 픽업 처리하기'
-					: '담은 예약 모두 픽업 처리하기';
+					? '확인된 예약 ' + cart.length + '건 픽업 처리하기'
+					: '확인된 예약 모두 픽업 처리하기';
 			}
 
-			/** 스캔했든 손으로 입력했든, 코드 하나를 "확인 후 담기"까지 처리하는 공통 로직. */
+			/** 스캔했든 손으로 입력했든, 코드 하나를 "확인 후 목록에 추가"까지 처리하는 공통 로직. */
 			function addToCartIfValid(code) {
 				code = (code || '').trim();
 				if (!code) {
@@ -140,7 +140,7 @@
 				pendingLookup = null;
 				confirmActions.style.display = 'none';
 				if (cart.some(function (item) { return item.pickupCode === code; })) {
-					showStatus('이미 담아둔 코드예요: ' + code, 'warn');
+					showStatus('이미 확인한 코드예요: ' + code, 'warn');
 					return;
 				}
 
@@ -161,8 +161,8 @@
 							statusP.className = 'scan-status status-ok';
 							statusP.style.display = 'block';
 							statusP.innerHTML =
-								'<div class="scan-status-title">✅ 담았어요: ' + escapeHtml(data.productName) + ' × ' + data.quantity + '개</div>' +
-								'<div class="scan-status-hint">계속 스캔하거나, 다 모았으면 아래 버튼을 눌러주세요.</div>';
+								'<div class="scan-status-title">✅ 확인했어요: ' + escapeHtml(data.productName) + ' × ' + data.quantity + '개</div>' +
+								'<div class="scan-status-hint">계속 스캔하거나, 다 확인했으면 아래 버튼을 눌러주세요.</div>';
 						} else {
 							showStatus('⚠️ ' + data.message + ' (' + code + ')', 'warn');
 						}
@@ -198,7 +198,7 @@
 				}
 			}
 
-			/** "담기"나 "다시 스캔"을 누르면(=확인이 끝나면) 다음 QR을 찍을 수 있게 다시 움직인다. */
+			/** "확인"이나 "다시 스캔"을 누르면(=확인이 끝나면) 다음 QR을 찍을 수 있게 다시 움직인다. */
 			function resumeScanning() {
 				if (html5QrCode && scanning && paused && typeof html5QrCode.resume === 'function') {
 					try {
@@ -217,11 +217,11 @@
 				lastScannedCode = decodedText;
 				lastScannedAt = now;
 
-				// 자동으로 담지 않고, 카메라를 멈추고 결과를 보여준 뒤 사람이 "담기"를 눌러야 담긴다.
+				// 자동으로 확인 처리하지 않고, 카메라를 멈추고 결과를 보여준 뒤 사람이 "확인"을 눌러야 목록에 들어간다.
 				pauseScanning();
 
 				if (cart.some(function (item) { return item.pickupCode === decodedText; })) {
-					showStatus('이미 담아둔 코드예요: ' + decodedText, 'warn');
+					showStatus('이미 확인한 코드예요: ' + decodedText, 'warn');
 					resumeScanning();
 					return;
 				}
@@ -244,7 +244,7 @@
 							statusP.innerHTML =
 								'<div class="scan-status-title">' + escapeHtml(data.productName) + ' × ' + data.quantity + '개</div>' +
 								'<div class="scan-status-sub">' + escapeHtml(data.storeName) + ' · ' + data.totalPrice.toLocaleString() + '원</div>' +
-								'<div class="scan-status-hint">맞으면 "담기"를 눌러주세요.</div>';
+								'<div class="scan-status-hint">맞으면 "확인"을 눌러주세요.</div>';
 							confirmActions.style.display = 'flex';
 						} else {
 							showStatus('⚠️ ' + data.message + ' (' + decodedText + ')', 'warn');
@@ -367,8 +367,8 @@
 						batchResultList.innerHTML = '';
 						batchSubmitBtn.disabled = cart.length === 0;
 						batchSubmitBtn.textContent = cart.length > 0
-							? '담은 예약 ' + cart.length + '건 픽업 처리하기'
-							: '담은 예약 모두 픽업 처리하기';
+							? '확인된 예약 ' + cart.length + '건 픽업 처리하기'
+							: '확인된 예약 모두 픽업 처리하기';
 					});
 			});
 

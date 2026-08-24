@@ -3,7 +3,9 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.stereotype.Controller;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /**
  * 마이페이지 및 회원정보 관리 컨트롤러
@@ -26,8 +29,11 @@ import java.time.temporal.ChronoUnit;
 @RequiredArgsConstructor
 public class MypageController {
 
+	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = List.of("pending", "confirmed");
+
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
+	private final ReservationRepository reservationRepository;
 
 	/**
 	 * 마이페이지 메인 화면
@@ -101,14 +107,26 @@ public class MypageController {
 
 	/**
 	 * 회원 탈퇴 처리
-	 * TODO(담당 미정): 점주(OWNER)가 매장을 보유한 채로 탈퇴하면 StoreEntity.ownerId가 가리키는
-	 * 유저가 사라져 고아 데이터가 된다 — FK 매핑/ERD가 아직 확정 전이라 지금은 손대지 않음.
+	 * 미완료 예약(결제대기/진행중, 아직 픽업·취소·노쇼 처리가 안 된 건)이 있으면 탈퇴를 막는다 —
+	 * 손님 입장에서 결제만 하고 계정이 사라지면 픽업/환불 처리가 불가능해지고, 점주 입장에서도
+	 * 매장에 남은 예약이 붕 뜨기 때문. 그 외 케이스(예: 점주가 매장을 보유한 채 탈퇴)는 기존 그대로
+	 * 둔다 — StoreEntity.ownerId 고아 데이터 문제는 FK 매핑/ERD 확정 전이라 별도 논의 필요.
 	 */
 	@PostMapping("/withdraw")
 	public String withdraw(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
+		}
+
+		if (reservationRepository.existsByUserIdAndStatusIn(userId, INCOMPLETE_RESERVATION_STATUSES)) {
+			return "redirect:/mypage/edit?withdrawError";
+		}
+
+		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		if (store != null
+				&& reservationRepository.existsByStoreIdAndStatusIn(store.getId(), INCOMPLETE_RESERVATION_STATUSES)) {
+			return "redirect:/mypage/edit?withdrawError";
 		}
 
 		userRepository.deleteById(userId);

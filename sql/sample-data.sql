@@ -52,10 +52,10 @@ INSERT INTO product (id, store_id, name, original_price, discounted_price, quant
 -- ---------------------------------------------------------------------
 -- reservation (users.id=1,2 의 예약 내역)
 -- ---------------------------------------------------------------------
-INSERT INTO reservation (id, user_id, product_id, store_id, reserved_quantity, total_price, pickup_time, pickup_code, status, reserved_at, picked_at) VALUES
-(1, 1, 1, 1, 2, 6000, DATE_ADD(NOW(), INTERVAL 2 HOUR), 'PICK-1001', 'confirmed', NOW(), NULL),
-(2, 2, 2, 1, 1, 4500, NOW(), 'PICK-1002', 'picked', NOW(), NOW()),
-(3, 1, 3, 1, 1, 6000, DATE_ADD(NOW(), INTERVAL 1 DAY), 'PICK-1003', 'pending', NOW(), NULL);
+INSERT INTO reservation (id, user_id, product_id, product_name, store_id, reserved_quantity, total_price, pickup_time, pickup_code, status, reserved_at, picked_at) VALUES
+(1, 1, 1, '식빵 마감세트', 1, 2, 6000, DATE_ADD(NOW(), INTERVAL 2 HOUR), 'PICK-1001', 'confirmed', NOW(), NULL),
+(2, 2, 2, '크루아상 3개입', 1, 1, 4500, NOW(), 'PICK-1002', 'picked', NOW(), NOW()),
+(3, 1, 3, '어제 만든 케이크', 1, 1, 6000, DATE_ADD(NOW(), INTERVAL 1 DAY), 'PICK-1003', 'pending', NOW(), NULL);
 
 -- ---------------------------------------------------------------------
 -- review (픽업 완료 건에 대한 리뷰)

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('완료된 거래 내역', ~{:: #content}, '', true, '관리자 모드', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
+	<!-- 추가됨 — 왜: 이 화면은 대시보드에서만 들어오는 단일 진입점이라, incoming.html과 같은 이유로
+		상단바 뒤로가기를 브라우저 history 대신 항상 대시보드로 고정한다. -->
+	<script th:inline="none">
+	(function () {
+		var backBtn = document.querySelector('.topbar__back');
+		if (!backBtn) { return; }
+		backBtn.removeAttribute('data-back');
+		backBtn.addEventListener('click', function () {
+			location.href = '/store/dashboard';
+		});
+	})();
+	</script>
+
+	<div class="card">
+		<p class="u-sub">손님이 실제로 픽업해간 거래 내역이에요. 최근 완료된 순서로 보여줘요.</p>
+	</div>
+
+	<div th:if="${#lists.isEmpty(completed)}" class="empty-state">
+		아직 완료된 거래가 없어요.
+	</div>
+
+	<div class="card" th:each="r : ${completed}" style="margin-top:var(--s-3)">
+		<p class="u-bold" style="font-size:var(--fs-lg)">
+			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
+		</p>
+		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
+		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
+		<p class="u-sub">주문 시각: <span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span></p>
+		<p class="u-sub">픽업 완료: <strong class="u-primary" th:text="${r.pickedAtDisplay}">08월 21일 15:20</strong></p>
+	</div>
+</div>
+</body>
+</html>

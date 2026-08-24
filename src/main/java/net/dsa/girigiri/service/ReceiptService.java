@@ -2,11 +2,9 @@ package net.dsa.girigiri.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReceiptEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReceiptRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
@@ -40,7 +38,6 @@ public class ReceiptService {
 	private static final String LOCAL_FALLBACK_DIR = "receipts";
 
 	private final ReservationRepository reservationRepository;
-	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReceiptRepository receiptRepository;
 	private final SupabaseStorageClient supabaseStorageClient;
@@ -49,9 +46,6 @@ public class ReceiptService {
 	public ReceiptEntity generateReceipt(Long reservationId) {
 		ReservationEntity reservation = reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
-
-		ProductEntity product = productRepository.findById(reservation.getProductId())
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
 
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
@@ -84,7 +78,7 @@ public class ReceiptService {
 
 		ReceiptPdfGenerator.ReceiptData data = new ReceiptPdfGenerator.ReceiptData(
 				store.getStoreName(),
-				product.getName(),
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				reservation.getPickupTime(),
