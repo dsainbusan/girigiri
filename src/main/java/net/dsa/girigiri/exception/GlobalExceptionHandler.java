@@ -58,6 +58,16 @@ public class GlobalExceptionHandler {
 		return "errorView/custom-error-page";
 	}
 
+	// PortOne 결제 검증 실패 (결제 미완료 / 금액 불일치 등). checkout.html의 confirm-payment API는
+	// 이 예외를 컨트롤러에서 직접 잡아 JSON으로 응답하지만(AJAX라 에러 페이지로 넘기면 안 됨),
+	// 혹시 다른 경로로 이 예외가 여기까지 올라오는 경우를 대비해 폴백으로 남겨둔다.
+	@ExceptionHandler(PaymentVerificationException.class)
+	public String handlePaymentVerificationFailed(PaymentVerificationException e, Model model) {
+		log.debug("> [GlobalException] PaymentVerificationException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
 	// 그 외 처리되지 않은 예외
 	@ExceptionHandler(Exception.class)
 	public String handleException(Exception e, Model model) {

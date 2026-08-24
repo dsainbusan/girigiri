@@ -64,11 +64,31 @@
 	background: var(--c-line-weak);
 	cursor: not-allowed;
 }
+/* 변경됨 (2026-08-24) — 왜: 원래 <span>이라 눈으로만 보고 +/- 버튼으로만 바꿀 수 있었는데,
+   숫자를 직접 타이핑해서 바꿀 수 있게 <input type="number">로 바꿨다(checkout.html 참고). 겉모습은
+   기존 span 때와 똑같이 보이게(테두리 없음, 배경 투명) 스타일을 추가하고, 브라우저 기본 숫자
+   스피너 화살표는 이미 옆에 우리 +/- 버튼이 있어서 중복이라 숨겼다. */
 .qty-stepper__value {
 	min-width: 28px;
+	width: 48px;
 	text-align: center;
 	font-size: var(--fs-lg);
 	font-weight: var(--fw-black);
+	font-family: inherit;
+	color: var(--c-text);
+	background: transparent;
+	border: none;
+	border-radius: var(--r-sm);
+	-moz-appearance: textfield;
+}
+.qty-stepper__value:focus {
+	outline: none;
+	background: var(--c-bg);
+}
+.qty-stepper__value::-webkit-outer-spin-button,
+.qty-stepper__value::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
 }
 
 /* 탭바 (마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소) */

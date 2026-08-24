@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *                       예약 id=2(user2, picked — 이미 픽업된 예약, 취소 불가 테스트용).
  *
  * 참고: sample-data.sql로 직접 넣은 예약이라 payment 테이블엔 연결된 기록이 없어요.
- *      (payment는 우리 코드의 createReservation()을 거쳐야만 같이 생기는 데이터라서요.)
+ *      (payment는 우리 코드의 prepareReservation()/confirmPayment()를 거쳐야만 같이 생기는
+ *      데이터라서요 — 2026-08-24 PortOne 연동으로 createReservation() 하나였던 게 이 둘로 나뉨.)
  *      그래서 결제 취소 표시 검증은 "있으면 cancelled로 바뀌었는지"만 확인해요.
  *
  * 주의: 이 테스트를 한 번 돌리면 예약1이 진짜로 cancelled로 바뀌고 재고도 복구돼요.

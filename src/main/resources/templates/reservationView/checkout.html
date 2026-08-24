@@ -28,7 +28,12 @@
 		<span class="u-sub">예약 수량</span>
 		<div class="qty-stepper__control">
 			<button type="button" class="qty-stepper__btn" id="qty-minus" aria-label="수량 감소">−</button>
-			<span class="qty-stepper__value" id="qty-value" th:text="${quantity}">1</span>
+			<!-- 변경됨 (2026-08-24) — 왜: 원래 +/- 버튼으로만 수량을 바꿀 수 있었는데, 숫자를 직접 타이핑해서
+				바꾸고 싶다는 요청으로 span 대신 number input으로 바꿨다. 타이핑 중간 상태(예: 지우고 다시
+				입력)에서 매번 범위를 강제로 맞추면 입력이 튕기니, 실제 보정은 change/blur 시점에만
+				한다(아래 스크립트의 commitTypedValue 참고) — +/- 버튼은 그대로 즉시 반영된다. -->
+			<input type="number" class="qty-stepper__value" id="qty-value" th:value="${quantity}"
+				   inputmode="numeric" min="1" th:max="${remainingQuantity}" aria-label="예약 수량 직접 입력">
 			<button type="button" class="qty-stepper__btn" id="qty-plus" aria-label="수량 증가">+</button>
 		</div>
 	</div>
@@ -62,7 +67,7 @@
 	<!-- 변경됨 (2026-08-24) — 왜: 처음엔 작은 글씨 안내문(캡션)으로 넣었는데 "글씨가 작아서 눈에 잘
 		안 보인다, 팝업이 낫지 않겠냐"는 피드백을 받았다. 그래서 캡션 대신, "예약 확정하기"를 눌렀을 때
 		결제 전에 한 번 더 확인하는 팝업(모달)을 띄우는 방식으로 바꿨다 — 팝업에서 "확인했어요"를
-		눌러야만 실제로 예약이 진행된다(아래 스크립트에서 폼 제출(submit)을 가로채서 처리).
+		눌러야만 실제로 결제창이 뜬다(아래 스크립트에서 처리).
 		모달/팝업 자체는 공용 컴포넌트(common/components.html)에 아직 없어서(송보미 담당, 아직 미착수)
 		일단 이 화면 안에서만 쓰는 걸로 만들었다 — 나중에 공용 모달이 생기면 그걸로 바꿔도 된다. -->
 	<div id="cancel-notice-modal" class="modal-overlay" th:if="${!soldOut and canOrder}" style="display:none">
@@ -71,11 +76,16 @@
 			<p class="modal-box__title">결제 전에 확인해주세요</p>
 			<p class="modal-box__desc">결제 후 <strong th:text="${cancelWindowMinutes}">30</strong>분 이내에만 취소할 수 있어요.<br>신중하게 결제해주세요.</p>
 			<div class="modal-box__actions">
-				<button type="button" id="cancel-notice-confirm" class="btn btn--block">확인했어요, 예약 확정</button>
+				<button type="button" id="cancel-notice-confirm" class="btn btn--block">확인했어요, 결제하기</button>
 				<button type="button" id="cancel-notice-close" class="btn btn--outline btn--block">다시 볼게요</button>
 			</div>
 		</div>
 	</div>
+
+	<!-- 추가됨 (2026-08-24, PortOne 연동) — 왜: PortOne V2 결제창을 띄우려면 이 브라우저 SDK가 필요하다.
+		아직 PortOne 설정이 안 끝난 로컬 환경(portOneConfigured=false)에서는 굳이 외부 스크립트를
+		불러올 필요가 없어서 조건부로만 로드한다. -->
+	<script th:if="${portOneConfigured}" src="https://cdn.portone.io/v2/browser-sdk.js"></script>
 
 	<script th:inline="javascript">
 	/*
@@ -85,30 +95,129 @@
 	 * 못 찾아서 에러가 나므로, 문서 전체가 다 만들어진 뒤(DOMContentLoaded)에 실행되게 감쌌다.
 	 */
 	document.addEventListener('DOMContentLoaded', function () {
-		// 결제 전 확인 팝업(모달) 연결 — soldOut이거나 canOrder가 false면 모달 자체가 화면에 없어서
-		// (th:if로 안 그려짐) checkoutForm/modal이 null이 되니, 그 경우엔 그냥 아무 것도 안 한다.
-		// (버튼도 그 상태에선 disabled라 애초에 제출 자체가 안 되니 문제 없음.)
-		var checkoutForm = document.getElementById('checkout-form');
+		// 변경됨 (2026-08-24, PortOne 연동) — 왜: 예전엔 이 팝업에서 "확인했어요"를 누르면 바로
+		// 폼을 제출해서 서버가 결제 성공을 가정하고 예약을 confirmed로 만들었는데, 이제 진짜
+		// 결제창을 띄워야 해서 폼 submit 대신 아래 startPayment() 흐름(prepare -> PortOne 결제창
+		// -> confirm-payment 서버 검증 -> 완료 화면 이동)으로 바꿨다. "예약 확정하기" 버튼도 더 이상
+		// 폼을 제출하지 않는 일반 버튼이라, checkout-form 자체는 productId/quantity를 담아두는
+		// 용도로만 남아있다(실제 전송은 fetch로 함).
+		var reserveBtn = document.getElementById('reserve-confirm-btn');
 		var modal = document.getElementById('cancel-notice-modal');
-		if (checkoutForm && modal) {
+		if (reserveBtn && modal) {
 			var confirmBtn = document.getElementById('cancel-notice-confirm');
 			var closeBtn = document.getElementById('cancel-notice-close');
 
-			checkoutForm.addEventListener('submit', function (e) {
-				e.preventDefault();
+			reserveBtn.addEventListener('click', function () {
 				modal.style.display = 'flex';
 			});
 
 			confirmBtn.addEventListener('click', function () {
 				modal.style.display = 'none';
-				// form.submit()은 (버튼 클릭이나 requestSubmit()과 다르게) submit 이벤트를 다시
-				// 일으키지 않아서, 위 리스너가 또 가로채 무한 루프가 되는 일 없이 바로 제출된다.
-				checkoutForm.submit();
+				startPayment();
 			});
 
 			closeBtn.addEventListener('click', function () {
 				modal.style.display = 'none';
 			});
+		}
+
+		// 추가됨 (2026-08-24, PortOne 연동) — 왜: 1) 서버에 예약 준비(재고차감+pending 저장)를
+		// 요청해서 paymentId를 발급받고, 2) 그 값으로 PortOne 결제창을 띄운 뒤, 3) 결제창이 끝나면
+		// 그 결과를 서버에 다시 보내 진짜 결제됐는지 검증(confirm-payment)한다. 세 단계 중 어디서든
+		// 실패하면 사용자에게 이유를 보여주고 멈춘다 — 특히 2단계(결제창)에서 사용자가 그냥 닫아버리는
+		// 경우("취소")도 실패로 취급해서 서버로 confirm-payment를 보내지 않는다.
+		//
+		// 변경됨 (2026-08-24 추가) — 왜: 처음엔 실패 시 그냥 pending인 채로 놔두고 스케줄러
+		// (expireStalePendingReservations, 최대 15분+ 주기)가 나중에 정리하게 했는데, "결제 안 했는데
+		// 재고가 안 돌아온다"는 피드백을 받았다. 프론트가 실패를 확인한 그 순간 releasePending()으로
+		// 서버에 바로 알려서, 재고를 즉시 풀어주도록 바꿨다 (스케줄러는 이제 프론트가 못 알리고 그냥
+		// 브라우저를 꺼버린 경우를 위한 안전망으로만 남는다).
+		async function startPayment() {
+			var portOneConfigured = /*[[${portOneConfigured}]]*/ false;
+			if (!portOneConfigured) {
+				alert('결제 시스템이 아직 준비중이에요. 잠시 후 다시 시도해주세요.');
+				return;
+			}
+
+			var productId = /*[[${productId}]]*/ 0;
+			var hiddenInput = document.getElementById('qty-hidden-input');
+			var qty = parseInt(hiddenInput.value, 10);
+
+			// prepare()가 성공하면(=재고가 이미 차감된 상태) 이 값이 채워진다. 그 뒤 어디서 실패하든
+			// (결제창 취소, PortOne 호출 자체 오류 등) 이 값이 있으면 releasePending()으로 재고를 바로
+			// 풀어줘야 한다 — 안 그러면 서버의 15분 자동정리 스케줄러가 돌 때까지 재고가 묶여있다.
+			var prepared = null;
+
+			try {
+				var prepareRes = await fetch('/reservation/prepare', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'productId=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty)
+				});
+				if (!prepareRes.ok) {
+					throw new Error('예약 준비에 실패했어요.');
+				}
+				prepared = await prepareRes.json();
+
+				var storeId = /*[[${portOneStoreId}]]*/ '';
+				var channelKey = /*[[${portOneChannelKey}]]*/ '';
+
+				var paymentResponse = await PortOne.requestPayment({
+					storeId: storeId,
+					channelKey: channelKey,
+					paymentId: prepared.paymentId,
+					orderName: prepared.orderName,
+					totalAmount: prepared.amount,
+					currency: 'CURRENCY_KRW',
+					payMethod: 'CARD'
+				});
+
+				// PortOne SDK 관례: 실패(사용자가 결제창을 닫은 경우 포함)하면 code가 채워져서 온다.
+				// 추가됨 (2026-08-24) — 왜: 예전엔 여기서 alert만 띄우고 끝이라, pending 예약이 서버
+				// 스케줄러가 정리해줄 때까지(최대 15분+) 재고를 계속 붙잡고 있었다("결제 안 했는데
+				// 남은 수량이 안 돌아온다" 피드백). 실패를 확인한 이 순간 바로 release 요청을 보낸다.
+				if (paymentResponse && paymentResponse.code != null) {
+					alert(paymentResponse.message || '결제가 취소됐어요.');
+					await releasePending(prepared.reservationId);
+					return;
+				}
+
+				var confirmRes = await fetch('/reservation/' + prepared.reservationId + '/confirm-payment', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'paymentId=' + encodeURIComponent(prepared.paymentId)
+				});
+				var confirmed = await confirmRes.json();
+
+				if (confirmed.success) {
+					window.location.href = confirmed.redirectUrl;
+				} else {
+					// 이 실패 케이스(결제 검증 실패)는 서버가 confirmPayment() 안에서 이미 예약을
+					// cancelled로 바꾸고 재고도 복구해준다 — 여기서 또 releasePending을 부를 필요는 없다.
+					alert(confirmed.message || '결제 확인에 실패했어요. 다시 시도해주세요.');
+				}
+			} catch (err) {
+				// prepare까지는 성공해서(prepared가 채워짐) 재고가 이미 차감된 상태인데 그 이후
+				// 어딘가에서(PortOne 호출 자체가 터지는 등) 예외가 났다면, 여기서도 재고를 풀어준다.
+				if (prepared) {
+					await releasePending(prepared.reservationId);
+				}
+				alert('결제 처리 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.');
+			}
+		}
+
+		/**
+		 * pending 예약을 즉시 취소하고 재고를 바로 복구한다(ReservationController.cancelPending).
+		 * 이 요청 자체가 실패해도(네트워크 문제 등) 화면 흐름은 막지 않는다 — 최악의 경우엔
+		 * 서버의 자동정리 스케줄러(ReservationService.expireStalePendingReservations)가
+		 * 안전망으로 나중에 정리해준다.
+		 */
+		async function releasePending(reservationId) {
+			try {
+				await fetch('/reservation/' + reservationId + '/cancel-pending', { method: 'POST' });
+			} catch (e) {
+				// 무시 — 위 주석 참고.
+			}
 		}
 
 		var soldOut = /*[[${soldOut}]]*/ false;
@@ -129,7 +238,7 @@
 		var maxHint = document.getElementById('qty-max-hint');
 
 		function render() {
-			valueEl.textContent = qty;
+			valueEl.value = qty;
 			totalEl.textContent = (unitPrice * qty).toLocaleString() + '원';
 			hiddenInput.value = qty;
 			minusBtn.disabled = (qty <= 1);
@@ -144,16 +253,41 @@
 			if (qty < max) { qty += 1; render(); }
 		});
 
+		// 추가됨 (2026-08-24) — 왜: 숫자를 직접 타이핑해서 수량을 바꾸고 싶다는 요청. 입력 중(input
+		// 이벤트)엔 매번 범위를 강제로 맞추지 않는다 — 예를 들어 "12"를 입력하려고 "1"을 지우는
+		// 순간 빈 문자열이 되는데, 그때마다 1로 되돌려버리면 두 자리 숫자를 아예 입력할 수 없게 된다.
+		// 실제 보정(1~남은수량 범위로 clamp)은 change/blur 시점, 즉 입력을 끝낸 순간에만 한다.
+		// (서버는 이미 재고 이상 예약 시 OutOfStockException으로 한 번 더 막고 있어서, 여기서는
+		// UI상 남은 수량을 넘지 않게만 막아주면 된다 — 위 qty-stepper 스테퍼 버튼과 동일한 원칙.)
+		function commitTypedValue() {
+			var typed = parseInt(valueEl.value, 10);
+			if (isNaN(typed) || typed < 1) { typed = 1; }
+			if (typed > max) { typed = max; }
+			qty = typed;
+			render();
+		}
+		valueEl.addEventListener('change', commitTypedValue);
+		valueEl.addEventListener('blur', commitTypedValue);
+		valueEl.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter') {
+				valueEl.blur();   // 엔터 치면 바로 확정되게 (blur가 commitTypedValue를 실행시킨다)
+			}
+		});
+
 		render();
 	});
 	</script>
 </div>
 
+<!-- 변경됨 (2026-08-24, PortOne 연동) — 왜: 예전엔 이 폼을 그냥 제출(submit)하는 방식이었는데,
+	이제 결제창을 띄우고 그 결과를 서버에 검증받는 여러 단계(fetch)를 거쳐야 해서 폼 submit으로는
+	표현이 안 된다. <form> 자체는 지우지 않고 hidden input(productId/quantity)만 값 보관용으로
+	남겨뒀다 — 위 스크립트(startPayment)가 이 값들을 읽어서 fetch 바디에 그대로 실어 보낸다. -->
 <div id="actionbar" th:fragment="actionbar" class="bottom-cta">
-	<form th:action="@{/reservation}" method="post" id="checkout-form" style="width:100%">
+	<form id="checkout-form" style="width:100%" onsubmit="return false;">
 		<input type="hidden" name="productId" th:value="${productId}">
 		<input type="hidden" name="quantity" id="qty-hidden-input" th:value="${quantity}">
-		<button type="submit" class="btn btn--block" th:disabled="${!canOrder or soldOut}">예약 확정하기</button>
+		<button type="button" id="reserve-confirm-btn" class="btn btn--block" th:disabled="${!canOrder or soldOut}">예약 확정하기</button>
 	</form>
 </div>
 </body>
