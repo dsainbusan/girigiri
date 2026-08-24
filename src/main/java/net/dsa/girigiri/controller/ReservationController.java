@@ -4,16 +4,21 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CancellableReservationDto;
+import net.dsa.girigiri.domain.dto.PaymentConfirmResponseDto;
 import net.dsa.girigiri.domain.dto.PickupBatchItemResultDto;
 import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
+import net.dsa.girigiri.domain.dto.ReservationPrepareResponseDto;
+import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.ReceiptEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
+import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
+import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReceiptRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
@@ -22,6 +27,7 @@ import net.dsa.girigiri.service.ReceiptService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
+import net.dsa.girigiri.util.PortOneClient;
 import net.dsa.girigiri.util.QrCodeUtil;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,7 +58,7 @@ import java.util.List;
  * 주의2 (2026-08-21 변경): "당일 판매·당일 픽업" 컨셉에 맞춰, 픽업 시간을 손님이 직접 고르지 않고
  *      "현재시간 + 매장 준비시간"으로 자동 계산한다(PickupAvailabilityUtil). 매장의 마지막
  *      픽업시간을 넘겼으면 주문 자체를 막는다. 이 검증은 여기 컨트롤러 레벨에서만 하고
- *      ReservationService.createReservation 자체는 그대로 둔다 — 테스트에서 시간대와 무관하게
+ *      ReservationService.prepareReservation 자체는 그대로 둔다 — 테스트에서 시간대와 무관하게
  *      결정적으로 동작해야 하는데, 서비스 안에 넣으면 실행 시각에 따라 테스트가 흔들릴 수 있어서다.
  */
 @Controller
@@ -71,6 +77,8 @@ public class ReservationController {
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReceiptRepository receiptRepository;
+	private final PaymentRepository paymentRepository;
+	private final PortOneClient portOneClient;
 
 	// TODO(송보미 로그인 완료 후): 세션에서 실제 로그인한 userId를 꺼내오도록 교체
 	private Long resolveCurrentUserId() {
@@ -124,19 +132,38 @@ public class ReservationController {
 		model.addAttribute("canOrder", canOrder);
 		model.addAttribute("soldOut", soldOut);
 		model.addAttribute("earliestPickupDisplay", earliestPickupTime.format(DISPLAY_FORMAT));
+		// 추가됨 (2026-08-24) — 왜: "결제 후 30분 이내에만 취소할 수 있으니 신중하게 결제하라"는 안내를
+		// 예약 확정 버튼 누르기 전에 보여주고 싶다는 요청. ReservationService.cancelReservation이 실제로
+		// 쓰는 값(USER_CANCEL_WINDOW_MINUTES)을 그대로 가져다 써서, 나중에 정책이 바뀌어도 화면 문구가
+		// 따로 안 맞을 일이 없게 했다.
+		model.addAttribute("cancelWindowMinutes", ReservationService.USER_CANCEL_WINDOW_MINUTES);
+
+		// 추가됨 (2026-08-24, PortOne 연동) — 왜: 결제창(PortOne 브라우저 SDK)을 프론트에서 띄우려면
+		// storeId/channelKey가 필요한데, 이 값들은 브라우저에 노출돼도 되는 "공개" 설정값이라(진짜
+		// 비밀값인 apiSecret은 서버(PortOneClient.verifyPayment)에서만 쓰고 여기 안 넘긴다) 그냥
+		// 모델에 실어 화면으로 보낸다. 팀에 아직 PortOne 테스트 계정이 없어서(portOneConfigured=false)
+		// 지금은 결제창 대신 "결제 준비중" 안내만 뜬다 — 계정 생기고 .env만 채우면 자동으로 실제
+		// 결제창이 뜨게 된다(코드 수정 불필요).
+		model.addAttribute("portOneConfigured", portOneClient.isConfigured());
+		model.addAttribute("portOneStoreId", portOneClient.getStoreId());
+		model.addAttribute("portOneChannelKey", portOneClient.getChannelKey());
 
 		return "reservationView/checkout";
 	}
 
 	/**
-	 * "예약 확정하기" 버튼 제출: 실제 예약 생성(재고차감+QR+결제+영수증)이 여기서 전부 처리된다.
-	 * (2026-08-21 변경) 픽업 시간은 더 이상 화면에서 받지 않고, 체크아웃 화면과 똑같은 계산을
-	 * 여기서 다시 한번 한다 — 체크아웃을 열어본 뒤 시간이 좀 지나 실제 제출하는 사이에 마감시간을
-	 * 넘겨버렸을 수도 있어서, 진짜로 예약을 만들기 직전에 다시 확인한다.
+	 * "예약 확정하기" 팝업에서 "확인했어요"를 누르면 결제창을 띄우기 직전에 호출되는 API(AJAX).
+	 * 재고 차감 + 예약을 pending으로 저장 + PortOne에 넘길 paymentId 발급까지 여기서 처리하고,
+	 * 그 값을 프론트로 돌려주면 프론트가 PortOne.requestPayment()를 호출한다.
+	 *
+	 * (2026-08-21에 있던 pickup 시간 재계산 로직은 그대로 유지 — 체크아웃 화면을 열어본 뒤 시간이
+	 *  좀 지나 실제 제출하는 사이에 마감시간을 넘겨버렸을 수도 있어서, 진짜로 예약을 만들기
+	 *  직전에 다시 확인한다.)
 	 */
-	@PostMapping
-	public String create(@RequestParam Long productId,
-						  @RequestParam(defaultValue = "1") int quantity) {
+	@PostMapping("/prepare")
+	@ResponseBody
+	public ReservationPrepareResponseDto prepare(@RequestParam Long productId,
+												  @RequestParam(defaultValue = "1") int quantity) {
 		ProductEntity product = productRepository.findById(productId)
 				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + productId));
 		StoreEntity store = storeRepository.findById(product.getStoreId())
@@ -151,10 +178,54 @@ public class ReservationController {
 
 		LocalDateTime pickupTime = PickupAvailabilityUtil.earliestPickupTime(now, prepTimeMinutes);
 
-		ReservationEntity reservation = reservationService.createReservation(
+		ReservationEntity reservation = reservationService.prepareReservation(
 				resolveCurrentUserId(), productId, quantity, pickupTime);
 
-		return "redirect:/reservation/" + reservation.getId() + "/complete";
+		PaymentEntity payment = paymentRepository.findByReservationId(reservation.getId())
+				.orElseThrow(() -> new EntityNotFoundException("결제 기록을 찾을 수 없습니다. reservationId=" + reservation.getId()));
+
+		return new ReservationPrepareResponseDto(
+				reservation.getId(), payment.getMerchantUid(), reservation.getTotalPrice(), product.getName());
+	}
+
+	/**
+	 * 결제창(PortOne 브라우저 SDK)이 끝난 뒤, 프론트가 이 API로 paymentId를 넘기면 서버가 PortOne에
+	 * 직접 재조회해서 진짜 결제가 됐는지 확인한다(ReservationService.confirmPayment). 검증에 성공하면
+	 * 예약 완료 화면 주소를 돌려주고, 프론트는 그 주소로 이동만 하면 된다.
+	 *
+	 * AJAX 호출이라 실패 시에도 에러 페이지로 안 넘기고, 항상 200 + success:false로 응답해서
+	 * 프론트가 같은 화면에서 실패 메시지를 보여줄 수 있게 한다.
+	 */
+	@PostMapping("/{id}/confirm-payment")
+	@ResponseBody
+	public PaymentConfirmResponseDto confirmPayment(@PathVariable Long id, @RequestParam String paymentId) {
+		try {
+			ReservationEntity reservation = reservationService.confirmPayment(id, paymentId);
+			return PaymentConfirmResponseDto.success("/reservation/" + reservation.getId() + "/complete");
+		} catch (PaymentVerificationException | EntityNotFoundException e) {
+			return PaymentConfirmResponseDto.failure(e.getMessage());
+		} catch (IllegalStateException e) {
+			// PortOneClient.verifyPayment()가 .env 미설정 상태에서 호출된 경우(정상 흐름에선 checkout.html이
+			// portOneConfigured를 먼저 확인해서 여기까지 안 오지만, 방어적으로 한 번 더 막아둔다).
+			return PaymentConfirmResponseDto.failure("결제 시스템이 아직 준비되지 않았어요.");
+		}
+	}
+
+	/**
+	 * 결제창(PortOne)이 실패했거나 손님이 그냥 닫아버렸을 때, checkout.html의 startPayment()가 바로
+	 * 호출하는 API. pending 예약을 즉시 취소하고 재고를 바로 복구한다
+	 * (ReservationService.cancelPendingReservation 참고).
+	 *
+	 * 추가됨 (2026-08-24) — 왜: 이 호출이 없으면 pending 예약은 최대 PENDING_EXPIRY_MINUTES(15분) +
+	 * 스케줄러 주기(5분)만큼 지나야 재고가 풀렸다 — "결제 안 했는데 남은 수량이 그대로/안 늘어난다"는
+	 * 피드백을 받고 추가했다. 프론트 fetch가 실패해도(네트워크 문제 등) 화면 자체는 막지 않도록
+	 * body 없이 204만 내려준다 — 최악의 경우엔 기존 스케줄러가 안전망으로 정리해준다.
+	 */
+	@PostMapping("/{id}/cancel-pending")
+	@ResponseBody
+	public ResponseEntity<Void> cancelPending(@PathVariable Long id) {
+		reservationService.cancelPendingReservation(id);
+		return ResponseEntity.noContent().build();
 	}
 
 	/** 예약 완료 화면: QR 코드 + 픽업 코드 + 영수증 링크를 보여준다. */
@@ -507,7 +578,7 @@ public class ReservationController {
 	 * receipts/ 폴더에 저장해뒀을 거라, 그 경우엔 예전처럼 파일을 직접 읽어서 내려준다.
 	 * (pdfUrl이 http(s)로 시작하는지 보고 두 경우를 구분한다.)
 	 *
-	 * 영수증은 원래 예약 생성 시점(createReservation)에 한 번 만들어지고, 이후 취소/노쇼로 상태가
+	 * 영수증은 원래 결제 확인 시점(ReservationService.confirmPayment)에 한 번 만들어지고, 이후 취소/노쇼로 상태가
 	 * 바뀌는 "그 순간"(cancelReservation/cancelByStore/processNoShows 안에서) 다시 만들어지기 때문에,
 	 * 여기서는 보통 DB에 이미 있는 Receipt 레코드를 찾아서 URL만 꺼내 쓰면 된다.
 	 * 예외적으로 sample-data.sql로 직접 넣어서 우리 코드를 한 번도 안 거친 예약처럼 Receipt 레코드

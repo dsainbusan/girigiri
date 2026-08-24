@@ -13,12 +13,15 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.dto.StoreCancelStatsDto;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
+import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
 import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.OperatingHoursUtil;
+import net.dsa.girigiri.util.PortOneClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,11 +41,20 @@ import java.util.List;
  *      나중에 로그인이 만들어지면, 컨트롤러에서 로그인 세션의 userId를 꺼내서
  *      이 메서드에 넘겨주기만 하면 되고, 이 서비스 내부는 안 바뀐다.
  *
- * 주의2: PortOne 실제 결제 연동은 아직 안 된 상태라, 지금은 "결제가 바로 성공했다"고
- *      가정하고 진행한다. 나중에 실제 결제 연동 시에는 이 메서드를 두 단계로 쪼개서
- *      (1) 예약을 pending으로 먼저 만들고 → (2) PortOne 결제 성공 콜백이 왔을 때
- *      confirmed로 바꾸는 식으로 수정하면 된다.
+ * 주의2 (2026-08-24, PortOne 연동) — 예전엔 "결제가 바로 성공했다"고 가정하고 createReservation()
+ *      하나로 재고차감+결제기록+confirmed 저장까지 한 번에 끝냈는데, 이제 실제 결제창을 거치므로
+ *      두 단계로 쪼갰다:
+ *        1) prepareReservation() — 재고를 먼저 차감하고 예약을 "pending"으로 저장 + 결제 레코드를
+ *           "ready"로 만들어 PortOne에 넘길 paymentId(=PaymentEntity.merchantUid)를 발급한다.
+ *           (재고를 먼저 차감하는 이유: 결제창이 떠 있는 동안 다른 손님이 같은 재고를 또 살 수
+ *            없어야 하기 때문 — 결제 실패/포기 시엔 재고를 다시 돌려놓는다.)
+ *        2) confirmPayment() — 프론트에서 결제창 완료 후 넘어온 paymentId를 가지고, 서버가 직접
+ *           PortOne에 물어봐서(PortOneClient) 진짜 결제가 됐는지 확인한 다음에야 "confirmed"로
+ *           바꾼다. 실패하면 예약을 취소 처리하고 재고를 복구한다.
+ *      결제창을 띄우지도 않고 이탈한 pending 예약은 expireStalePendingReservations()가 주기적으로
+ *      정리한다 (NoShowScheduler 참고 — 같은 스케줄러에 얹어서 같이 돈다).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
@@ -60,15 +72,28 @@ public class ReservationService {
 	public static final int USER_CANCEL_WINDOW_MINUTES = 30;
 	private static final int CLOSING_CUTOFF_MINUTES = 30;
 
+	// 결제창을 띄운 채 결제를 끝내지 않고 이탈한 pending 예약을 "포기한 걸로 보고" 자동 취소하기까지
+	// 기다리는 시간. 그동안 재고를 계속 붙잡고 있으면 다른 손님이 못 사니 너무 길게 두면 안 되지만,
+	// 카드 인증 등으로 결제창 자체가 오래 걸릴 수도 있어서 너무 짧게도 안 둔다.
+	public static final int PENDING_EXPIRY_MINUTES = 15;
+
 	private final StockService stockService;
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReservationRepository reservationRepository;
 	private final PaymentRepository paymentRepository;
 	private final ReceiptService receiptService;
+	private final PortOneClient portOneClient;
 
+	/**
+	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
+	 * 아직 결제가 된 게 아니므로 영수증은 만들지 않는다 (confirmPayment 성공 시에만 만든다).
+	 *
+	 * @return 저장된 예약 (아직 pending 상태). 화면/컨트롤러는 이 반환값의 id로 결제 기록을
+	 *         조회해서 PortOne.requestPayment()에 넘길 paymentId를 꺼내 쓰면 된다.
+	 */
 	@Transactional
-	public ReservationEntity createReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime) {
+	public ReservationEntity prepareReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime) {
 
 		// 1. 재고 차감. 재고가 없으면 여기서 OutOfStockException이 터지면서 아래 코드는 실행되지 않는다.
 		//    (동시에 여러 명이 예약해도 안전하게 처리되는 부분은 StockService가 이미 책임진다.)
@@ -80,10 +105,11 @@ public class ReservationService {
 
 		int totalPrice = product.getDiscountedPrice() * quantity;
 
-		// 3. 픽업 확인용 QR 코드 문자열 생성
+		// 3. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
+		//    무관하게 예약 하나당 하나면 되고, confirmed로 바뀐 뒤에 새로 만들 이유가 없다)
 		String pickupCode = net.dsa.girigiri.util.QrCodeUtil.generatePickupCode();
 
-		// 4. 예약 레코드 저장 (결제 연동 전이므로 바로 confirmed로 저장)
+		// 4. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
 		ReservationEntity reservation = ReservationEntity.builder()
 				.userId(userId)
 				.productId(productId)
@@ -93,24 +119,161 @@ public class ReservationService {
 				.totalPrice(totalPrice)
 				.pickupTime(pickupTime)
 				.pickupCode(pickupCode)
-				.status("confirmed")
+				.status("pending")
 				.build();
 		reservation = reservationRepository.save(reservation);
 
-		// 5. 결제 기록 저장 (나중에 진짜 PortOne 콜백 데이터로 채워질 부분을 지금은 흉내만 낸다)
+		// 5. 결제 레코드를 "ready"(결제 대기)로 미리 만들어둔다. merchantUid가 곧 PortOne의
+		//    paymentId다 — 서버가 미리 발급해서 프론트에 내려주고, 프론트는 이 값 그대로
+		//    PortOne.requestPayment()에 넘긴다 (프론트가 마음대로 paymentId를 만들게 하면 나중에
+		//    confirmPayment에서 어떤 결제 기록과 매칭해야 할지 알 수 없어서, 반드시 서버가 먼저
+		//    발급해야 한다).
 		PaymentEntity payment = PaymentEntity.builder()
 				.reservationId(reservation.getId())
 				.merchantUid("MID-" + reservation.getId() + "-" + System.currentTimeMillis())
 				.amount(totalPrice)
-				.payStatus("paid")
-				.paidAt(LocalDateTime.now())
+				.payStatus("ready")
 				.build();
 		paymentRepository.save(payment);
 
-		// 6. 결제가 성공했으니(지금은 가정) 영수증 PDF도 바로 만들어서 저장해둔다.
-		receiptService.generateReceipt(reservation.getId());
-
 		return reservation;
+	}
+
+	/**
+	 * 결제창(PortOne 브라우저 SDK)이 끝난 뒤, 프론트가 넘겨준 paymentId를 가지고 서버가 PortOne에
+	 * 직접 재조회해서 진짜 결제가 됐는지 확인한다. 확인 없이 프론트 응답만 믿고 confirmed로 바꾸면
+	 * 결제 안 하고도 예약을 확정시키는 조작이 가능해지므로, 이 서버 재검증은 생략하면 안 된다.
+	 *
+	 * 검증 실패(결제 미완료/금액 불일치/이미 처리된 예약 등)면 예약을 취소 처리하고 재고를 복구한
+	 * 뒤 PaymentVerificationException을 던진다 — 실패한 채로 재고만 계속 붙잡고 있으면 안 되기 때문.
+	 */
+	@Transactional
+	public ReservationEntity confirmPayment(Long reservationId, String paymentId) {
+		ReservationEntity reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+
+		if (!"pending".equals(reservation.getStatus())) {
+			throw new PaymentVerificationException("이미 처리된 예약이에요 (현재 상태: " + reservation.getStatus() + ")");
+		}
+
+		PaymentEntity payment = paymentRepository.findByReservationId(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("결제 기록을 찾을 수 없습니다. reservationId=" + reservationId));
+
+		// 프론트가 엉뚱한 paymentId(다른 예약 것 등)를 실수로 넘겼는지 한 번 더 확인
+		if (!payment.getMerchantUid().equals(paymentId)) {
+			throw new PaymentVerificationException("결제 정보가 이 예약과 일치하지 않아요.");
+		}
+
+		PortOneClient.PortOneVerifyResult result = portOneClient.verifyPayment(paymentId, reservation.getTotalPrice());
+
+		if (!result.paid()) {
+			// 결제 실패/취소 -> 재고를 다시 돌려놓고, 예약도 취소된 걸로 확정지어야 한다
+			// (pending으로 계속 남겨두면 재고를 영구히 붙잡고 있는 셈이라 다른 손님이 못 산다).
+			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
+
+			payment.setPayStatus("failed");
+			payment.setFailReason(result.failReason());
+			paymentRepository.save(payment);
+
+			reservation.setStatus("cancelled");
+			reservation.setCancelledBy("SYSTEM");
+			reservation.setCancelReason("결제 실패: " + result.failReason());
+			reservationRepository.save(reservation);
+
+			throw new PaymentVerificationException(result.failReason());
+		}
+
+		// 결제 확인 완료 -> 결제 레코드를 실제 값으로 채우고, 예약을 confirmed로 전환
+		payment.setPayStatus("paid");
+		payment.setImpUid(result.transactionId());
+		payment.setPaidAt(LocalDateTime.now());
+		paymentRepository.save(payment);
+
+		reservation.setStatus("confirmed");
+		ReservationEntity saved = reservationRepository.save(reservation);
+
+		// 결제가 실제로 확인된 이 시점에야 영수증 PDF를 만든다.
+		receiptService.generateReceipt(saved.getId());
+
+		return saved;
+	}
+
+	/**
+	 * 결제창(PortOne)이 실패/취소로 끝났다는 걸 프론트가 그 즉시 알게 됐을 때 호출하는 메서드 —
+	 * pending 예약을 바로 취소하고 재고를 즉시 복구한다.
+	 *
+	 * 추가됨 (2026-08-24) — 왜: expireStalePendingReservations()가 있긴 하지만, 그건 PENDING_EXPIRY_MINUTES
+	 * (15분)가 지나야, 그것도 5분 주기 스케줄러가 다음에 돌 때야 정리해준다. 손님이 결제창을 그냥
+	 * 닫아버린 순간 프론트는 이미 "결제 안 됐다"는 걸 확실히 알고 있는데, 그 상태에서 최대 20분 가까이
+	 * 재고가 묶여 있는 것처럼 보이는 건 다른 손님 입장에서 이상하다("분명 남은 수량이 있다는데 왜
+	 * 안 줄어드는지" 반대로 "왜 안 늘어나는지") — checkout.html의 startPayment()가 결제 실패/취소를
+	 * 확인하는 즉시 이 메서드를 호출해서 바로 풀어준다.
+	 *
+	 * 결제가 이미 확정/취소/노쇼 등으로 처리된(=더 이상 pending이 아닌) 예약이면 아무것도 하지 않고
+	 * 그대로 돌려준다 — 예를 들어 다른 탭에서 그 사이 결제가 성공해버린 경우처럼, pending이 아닌
+	 * 예약까지 여기서 취소해버리면 안 되기 때문이다.
+	 *
+	 * 아직 결제 전(payStatus="ready")이라 PortOne에 실제로 돈이 오간 적이 없으므로, markPaymentCancelled와
+	 * 달리 PortOne 환불 API는 호출하지 않는다.
+	 */
+	@Transactional
+	public ReservationEntity cancelPendingReservation(Long reservationId) {
+		ReservationEntity reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+
+		if (!"pending".equals(reservation.getStatus())) {
+			return reservation;
+		}
+
+		stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
+
+		paymentRepository.findByReservationId(reservationId).ifPresent(payment -> {
+			payment.setPayStatus("cancelled");
+			payment.setFailReason("결제창에서 취소/실패해서 손님이 결제를 끝내지 못함");
+			paymentRepository.save(payment);
+		});
+
+		reservation.setStatus("cancelled");
+		reservation.setCancelledBy("SYSTEM");
+		reservation.setCancelReason("결제 미완료로 취소됨");
+		return reservationRepository.save(reservation);
+	}
+
+	/**
+	 * 결제창을 띄운 채로 결제를 끝내지 않고 이탈한(또는 결제창 자체를 아예 안 연 채 브라우저를 닫은)
+	 * pending 예약들을 정리한다. PENDING_EXPIRY_MINUTES가 지난 pending 예약은 "결제 포기"로 보고
+	 * 재고를 복구하며 자동 취소한다. NoShowScheduler가 노쇼 처리와 같은 주기로 이 메서드도 호출한다.
+	 *
+	 * (2026-08-24 추가된 cancelPendingReservation()과의 관계: 이 메서드는 프론트가 실패를 못 알아채고
+	 * 그냥 브라우저를 닫아버린 경우처럼, 즉시 정리가 안 된 pending 예약들을 늦게라도 걸러내는
+	 * "안전망"이다. cancelPendingReservation()이 정상적으로 매번 호출된다면 이 메서드가 처리할 대상은
+	 * 거의 없어야 정상이다.)
+	 *
+	 * @return 이번에 자동 취소된 예약 개수
+	 */
+	@Transactional
+	public int expireStalePendingReservations() {
+		LocalDateTime cutoff = LocalDateTime.now().minusMinutes(PENDING_EXPIRY_MINUTES);
+		List<ReservationEntity> stale = reservationRepository.findByStatusIn(List.of("pending")).stream()
+				.filter(reservation -> reservation.getReservedAt() != null && reservation.getReservedAt().isBefore(cutoff))
+				.toList();
+
+		for (ReservationEntity reservation : stale) {
+			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
+
+			paymentRepository.findByReservationId(reservation.getId()).ifPresent(payment -> {
+				payment.setPayStatus("cancelled");
+				payment.setFailReason("결제 시간 초과로 자동 취소됨");
+				paymentRepository.save(payment);
+			});
+
+			reservation.setStatus("cancelled");
+			reservation.setCancelledBy("SYSTEM");
+			reservation.setCancelReason("결제 시간 초과로 자동 취소됨");
+		}
+		reservationRepository.saveAll(stale);
+
+		return stale.size();
 	}
 
 	/**
@@ -249,8 +412,8 @@ public class ReservationService {
 		// 3. 재고를 다시 돌려놓는다 (예약할 때 차감했던 만큼)
 		stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
 
-		// 4. 결제 기록이 있으면 "cancelled"로 표시해둔다 (실제 PortOne 환불 연동 전까지는 상태만 남긴다)
-		markPaymentCancelled(reservationId);
+		// 4. 결제가 이미 완료(paid)된 건이면 PortOne에 실제 환불도 요청하고, 로컬 기록도 "cancelled"로 바꾼다.
+		markPaymentCancelled(reservationId, "손님 요청으로 취소");
 
 		// 5. 예약 상태 변경 + 취소 주체 기록
 		reservation.setStatus("cancelled");
@@ -278,12 +441,15 @@ public class ReservationService {
 
 		checkCancellableState(reservation);
 
-		// 결제는 무조건, 즉시 취소(환불) 처리 — 손님 잘못이 아니므로 예외 없이 보장한다.
-		markPaymentCancelled(reservationId);
+		String resolvedReason = (reason == null || reason.isBlank()) ? "매장 사정으로 취소됨" : reason;
+
+		// 결제가 이미 완료(paid)된 건이면 PortOne에 실제 환불을 요청한다 — 손님 잘못이 아니므로
+		// (매장 취소는 재고 착오 등 매장 사정이 이유라서) 로컬 상태는 예외 없이 항상 "cancelled"로 바뀐다.
+		markPaymentCancelled(reservationId, resolvedReason);
 
 		reservation.setStatus("cancelled");
 		reservation.setCancelledBy("STORE");
-		reservation.setCancelReason(reason == null || reason.isBlank() ? "매장 사정으로 취소됨" : reason);
+		reservation.setCancelReason(resolvedReason);
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 취소 안내 배너 + QR 제외 버전으로 영수증도 이 시점에 바로 다시 만들어둔다.
@@ -348,8 +514,36 @@ public class ReservationService {
 		return closingDateTime.isBefore(now.plusMinutes(CLOSING_CUTOFF_MINUTES));
 	}
 
-	private void markPaymentCancelled(Long reservationId) {
+	/**
+	 * 결제 기록을 취소 처리한다 — 로컬 DB 상태를 "cancelled"로 바꾸는 것뿐 아니라, 이미 실제로 결제가
+	 * 완료(paid)된 건이었다면 PortOne에도 진짜 환불(결제 취소) 요청을 보낸다.
+	 *
+	 * 변경됨 (2026-08-24, 실 결제 연동 이후) — 왜: 그동안은 로컬 payStatus만 "cancelled"로 바꿔두고
+	 * PortOne 쪽엔 아무것도 요청하지 않았다("실제 PortOne 환불 연동 전까지는 상태만 남긴다"). 이제 나이스
+	 * (NICE) 테스트 채널로 실제 카드 결제가 되는 상태라, paid였던 예약을 취소할 땐 PortOne에도 취소를
+	 * 요청해야 손님 카드로 실제 환불이 나간다. 아직 결제가 안 끝난 상태(payStatus="ready")에서 취소되는
+	 * 경우엔 애초에 결제된 돈이 없으니 PortOne 호출 자체를 건너뛴다.
+	 *
+	 * PortOne 환불 요청이 실패해도(네트워크 오류거나, 나이스 테스트 모드 특성상 그날 밤 23시대에 이미
+	 * 자동취소돼버린 경우 등) 예약 취소 자체를 막지는 않는다 — 이 메서드는 cancelReservation/
+	 * cancelByStore의 @Transactional 안에서 호출되는데, 여기서 예외를 던지면 재고 복구까지 통째로
+	 * 롤백돼버려서 "환불 API 한 번 실패했다고 취소 자체가 안 되는" 더 이상한 상황이 된다. 대신 실패
+	 * 사유를 결제 기록(failReason)에 남기고 로그(log.warn)도 남겨서, 나중에 확인/수동 환불이 필요한
+	 * 건을 놓치지 않게 한다.
+	 */
+	private void markPaymentCancelled(Long reservationId, String reason) {
 		paymentRepository.findByReservationId(reservationId).ifPresent(payment -> {
+			if ("paid".equals(payment.getPayStatus())) {
+				PortOneClient.PortOneCancelResult result = portOneClient.cancelPayment(payment.getMerchantUid(), reason);
+				if (result.cancelled()) {
+					payment.setFailReason(null);
+				} else {
+					payment.setFailReason("환불 실패(수동 확인 필요): " + result.failReason());
+					log.warn("> [ReservationService] PortOne 환불 실패 - reservationId={}, merchantUid={}, 사유={}",
+							reservationId, payment.getMerchantUid(), result.failReason());
+				}
+			}
+
 			payment.setPayStatus("cancelled");
 			paymentRepository.save(payment);
 		});

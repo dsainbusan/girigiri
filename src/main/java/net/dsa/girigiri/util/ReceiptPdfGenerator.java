@@ -1,9 +1,12 @@
 package net.dsa.girigiri.util;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -15,17 +18,23 @@ import java.util.Base64;
  */
 public class ReceiptPdfGenerator {
 
+	private static final Logger log = LoggerFactory.getLogger(ReceiptPdfGenerator.class);
+
 	private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
 	// 추가됨 (2026-08-24) — 왜: PDF 기본 폰트(CSS의 sans-serif → PDF에 내장된 Helvetica 등)는 한글
 	// 글리프가 아예 없어서, 매장명/상품명 같은 한글이 전부 "#"으로 깨져서 나오는 버그가 있었다
 	// (openhtmltopdf/PDFBox가 폰트에 없는 글자를 "#"로 대체해서 렌더링함 — 스크린샷으로 확인됨).
-	// 그래서 한글이 포함된 무료 폰트(Noto Sans KR, SIL OFL 라이선스, 구글/어도비 배포)를 리소스에
-	// 직접 넣고 PDF에 명시적으로 등록해서 쓴다. 원본 폰트는 한자(漢字) 글리프까지 다 들어있어서
-	// 16MB가 넘길래, 실제로 쓰는 한글 음절/영문/숫자/기본 문장부호만 남기고 서브셋해서 1.7MB로
-	// 줄인 걸 리소스에 넣었다(src/main/resources/fonts/NotoSansKR-Regular.ttf).
-	private static final String FONT_FAMILY = "NotoSansKR";
-	private static final String FONT_RESOURCE_PATH = "/fonts/NotoSansKR-Regular.ttf";
+	//
+	// 수정됨 (2026-08-24) — 처음엔 Noto Sans KR을 한글 음절만 남기고 서브셋해서 썼는데, 그렇게 고친
+	// 뒤에도 여전히 "#"으로 깨지는 게 재현됐다(새로 만든 예약으로도 확인함 — 캐싱 문제 아님). Noto Sans
+	// CJK는 원래 PostScript 외곽선(CFF) 방식 폰트라서, 서브셋 과정에서 PDFBox가 까다로워하는 걸로
+	// 의심된다. 그래서 훨씬 오래되고 검증된, 순수 TrueType(글자 하나하나가 실제 윤곽선 좌표로 된)
+	// 무료 한글 폰트인 은돋움(UnDotum)으로 바꿨다 — PDF 임베딩용으로 굉장히 널리 쓰여온 폰트라 호환성
+	// 문제가 훨씬 적을 것으로 기대. 서브셋 안 하고 원본 그대로 써서(3.6MB) 혹시 모를 서브셋발 손상
+	// 가능성도 없앴다.
+	private static final String FONT_FAMILY = "UnDotum";
+	private static final String FONT_RESOURCE_PATH = "/fonts/UnDotum.ttf";
 
 	private ReceiptPdfGenerator() {
 	}
@@ -42,6 +51,20 @@ public class ReceiptPdfGenerator {
 		}
 
 		String html = buildHtml(data, qrBase64);
+
+		// 추가됨 (2026-08-24) — 왜: 폰트를 등록해도 한글이 계속 깨지는 문제를 디버깅하려고 넣었다.
+		// 이 로그가 "못 찾음"으로 찍히면 폰트 파일이 빌드에 아예 안 들어간 것(경로/빌드 문제)이고,
+		// "찾음"인데도 PDF에서 여전히 깨지면 폰트 자체 호환성 문제라는 걸 구분할 수 있다.
+		try (InputStream check = ReceiptPdfGenerator.class.getResourceAsStream(FONT_RESOURCE_PATH)) {
+			if (check == null) {
+				log.error("[영수증 PDF] 한글 폰트 리소스를 찾지 못했습니다: {} " +
+								"(src/main/resources{}가 실제로 있는지, 빌드에 포함됐는지 확인하세요)",
+						FONT_RESOURCE_PATH, FONT_RESOURCE_PATH);
+			} else {
+				log.info("[영수증 PDF] 한글 폰트 리소스 확인됨: {} ({}바이트)",
+						FONT_RESOURCE_PATH, check.readAllBytes().length);
+			}
+		}
 
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			PdfRendererBuilder builder = new PdfRendererBuilder();
