@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!--/*
+  신고 처리 / 1:1 문의 관리. /superadmin/reports 로 접속.
+  TODO(송보미): 데모 데이터 → Report/Inquiry Repository 연동, 답변/처리 액션은 실제 처리 API 붙을 때 버튼 활성화.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('신고 · 문의', ~{:: #content}, 'reports', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <h2 class="section-title">신고 접수</h2>
+  <div class="card">
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">싱싱반찬가게 신고 — "상품 상태 불량"</div>
+        <div class="u-sub">2026-08-19 접수 · 신고자 song_bm</div>
+      </div>
+      <span class="badge badge--accent">대기</span>
+    </div>
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">노은카페 신고 — "노쇼 과다 청구"</div>
+        <div class="u-sub">2026-08-17 접수 · 신고자 noeun_k</div>
+      </div>
+      <span class="badge badge--success">처리완료</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">매장 문의<span class="section-title__count">사장님</span></h2>
+  <div class="card">
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">"이번 달 정산 내역이 안 맞아요"</div>
+        <div class="u-sub">2026-08-21 접수 · 보미네베이커리</div>
+      </div>
+      <span class="badge badge--accent">대기</span>
+      <button class="btn btn--sm btn--outline" type="button" disabled>답변</button>
+    </div>
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">"상품 등록이 자꾸 실패해요"</div>
+        <div class="u-sub">2026-08-18 접수 · 채현이네 도시락</div>
+      </div>
+      <span class="badge badge--success">답변완료</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">유저 문의<span class="section-title__count">소비자</span></h2>
+  <div class="card">
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">"환불이 안돼요"</div>
+        <div class="u-sub">2026-08-21 접수 · 작성자 taehoon_k</div>
+      </div>
+      <span class="badge badge--accent">대기</span>
+      <button class="btn btn--sm btn--outline" type="button" disabled>답변</button>
+    </div>
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">"픽업 QR이 인식이 안돼요"</div>
+        <div class="u-sub">2026-08-18 접수 · 작성자 changho_m</div>
+      </div>
+      <span class="badge badge--success">답변완료</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

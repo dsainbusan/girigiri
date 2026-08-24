@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--/*
+  슈퍼어드민 통계 대시보드. /superadmin/dashboard 로 접속.
+  TODO(송보미): 데모 데이터 → Repository 연동(회원수/거래량/구제량/매출 실집계)으로 교체.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('통계 대시보드', ~{:: #content}, 'dashboard', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <h2 class="section-title">오늘 플랫폼 지표</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="stat-card__label">전체 회원수</span>
+      <span class="stat-card__value">12,480</span>
+      <span class="stat-card__delta u-primary">+124 오늘</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">거래량</span>
+      <span class="stat-card__value">3,210건</span>
+      <span class="stat-card__delta u-primary">+8.2%</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">구제량</span>
+      <span class="stat-card__value">1,987개</span>
+      <span class="stat-card__delta u-accent">CO2 412kg 절감</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">매출</span>
+      <span class="stat-card__value">₩8,420,000</span>
+      <span class="stat-card__delta u-danger">-2.1%</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">최근 처리 대기</h2>
+
+  <div class="u-sub u-bold" style="padding-bottom:var(--s-1)">입점 신청</div>
+  <div class="card" style="margin-bottom:var(--s-4)">
+    <a class="list-row" th:href="@{/superadmin/stores}">
+      <div class="list-row__body">
+        <div class="u-bold">동네빵집 청파점 — 입점 신청</div>
+        <div class="u-sub">2026-08-20 접수</div>
+      </div>
+      <span class="badge badge--accent">대기</span>
+      <span class="list-row__arrow">›</span>
+    </a>
+  </div>
+
+  <div class="u-sub u-bold" style="padding-bottom:var(--s-1)">1:1 문의</div>
+  <div class="card" style="margin-bottom:var(--s-4)">
+    <a class="list-row" th:href="@{/superadmin/reports}">
+      <div class="list-row__body">
+        <div class="u-bold">"환불이 안돼요" — 1:1 문의</div>
+        <div class="u-sub">2026-08-21 접수</div>
+      </div>
+      <span class="badge badge--accent">대기</span>
+      <span class="list-row__arrow">›</span>
+    </a>
+  </div>
+
+  <div class="u-sub u-bold" style="padding-bottom:var(--s-1)">신고 접수</div>
+  <div class="card">
+    <a class="list-row" th:href="@{/superadmin/reports}">
+      <div class="list-row__body">
+        <div class="u-bold">싱싱반찬가게 — 신고 접수</div>
+        <div class="u-sub">2026-08-19 접수</div>
+      </div>
+      <span class="badge badge--success">처리완료</span>
+      <span class="list-row__arrow">›</span>
+    </a>
+  </div>
+
+</div>
+</body>
+</html>

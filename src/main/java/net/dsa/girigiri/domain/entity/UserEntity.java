@@ -24,6 +24,11 @@ public class UserEntity {
 	public static final String ROLE_OWNER = "OWNER";
 	public static final String ROLE_ADMIN = "ADMIN";
 
+	// 추가됨 — 왜: 슈퍼어드민 회원 관리(정지/탈퇴)에 필요한 계정 상태. StoreEntity.approvalStatus와
+	// 동일하게 문자열 상수 패턴을 따른다.
+	public static final String STATUS_ACTIVE = "ACTIVE";
+	public static final String STATUS_SUSPENDED = "SUSPENDED";
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -45,6 +50,10 @@ public class UserEntity {
 
 	@Column(name = "role", nullable = false, length = 20)
 	private String role;   // USER / OWNER / ADMIN
+
+	@Builder.Default
+	@Column(name = "status", length = 20)
+	private String status = STATUS_ACTIVE;   // ACTIVE / SUSPENDED
 
 	@Column(name = "nickname", length = 30)
 	private String nickname;

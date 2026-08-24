@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+  회원 관리 (조회 / 정지 / 탈퇴). /superadmin/members 로 접속.
+  SuperAdminController#members 가 UserRepository.findAll()로 조회한 ${users}를 그린다 (실 데이터).
+  TODO(송보미): 상단 검색/필터 칩(전체·USER·ADMIN·정지)은 아직 클릭해도 동작하지 않는 정적 데모다.
+    정지/탈퇴 버튼도 실제 처리 API가 없어 disabled — 두 기능 다 붙을 때 함께 활성화할 것.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('회원 관리', ~{:: #content}, 'members', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <h2 class="section-title">회원 목록<span class="section-title__count" th:text="${users.size()} + '명'">0명</span></h2>
+
+  <div class="card" style="display:flex;gap:var(--s-2);margin-bottom:var(--s-3)">
+    <div class="search u-grow">&#128269; <span>닉네임 · 이메일 검색</span></div>
+    <span class="chip is-active">전체</span>
+    <span class="chip">USER</span>
+    <span class="chip">ADMIN</span>
+    <span class="chip">정지</span>
+  </div>
+
+  <div class="card">
+    <div class="list-row" th:each="u : ${users}">
+      <div class="list-row__body">
+        <div class="u-bold" th:text="${u.nickname}">닉네임</div>
+        <div class="u-sub"
+             th:text="${u.role} + ' · 가입 ' + ${#temporals.format(u.createdAt, 'yyyy-MM-dd')}">USER · 가입 2026-08-01</div>
+      </div>
+      <span class="badge" th:classappend="${u.status == 'SUSPENDED'} ? 'badge--discount' : 'badge--success'"
+            th:text="${u.status == 'SUSPENDED'} ? '정지됨' : '정상'">정상</span>
+      <button class="btn btn--sm btn--outline" type="button" disabled
+              th:text="${u.status == 'SUSPENDED'} ? '탈퇴' : '정지'">정지</button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

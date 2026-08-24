@@ -1,0 +1,85 @@
+/* =====================================================================
+   layout-admin.css  —  슈퍼어드민(플랫폼 운영자) 전용 wide 셸
+   (사이드바 + 넓은 콘텐츠). layout.css의 420px 고정폭 .app 셸과는 별개다 —
+   consumer/사장님 화면에서 이 파일을 링크하지 말 것.
+   ===================================================================== */
+
+body.admin { background: var(--c-bg); }
+
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ---------- 사이드바 ---------- */
+.admin-sidebar {
+  flex: 0 0 240px;
+  width: 240px;
+  background: var(--c-dark);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: var(--s-5) 0;
+}
+
+.admin-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-5) var(--s-6);
+}
+.admin-sidebar__logo { font-size: var(--fs-lg); font-weight: var(--fw-black); color: #fff; }
+
+.admin-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--s-3); }
+.admin-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  color: rgba(255, 255, 255, .7);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+.admin-nav__item.is-active { background: rgba(255, 255, 255, .12); color: #fff; font-weight: var(--fw-bold); }
+.admin-nav__ico { font-size: 16px; width: 20px; text-align: center; }
+
+/* ---------- 메인 영역 ---------- */
+.admin-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+.admin-topbar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-6);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.admin-topbar__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.admin-topbar__user  { font-size: var(--fs-sm); color: var(--c-text-sub); }
+.admin-topbar__action{ font-size: var(--fs-sm); color: var(--c-text-sub); font-weight: var(--fw-medium); }
+
+.admin-content {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 1280px;
+  padding: var(--s-6);
+}
+
+/* 대시보드 stat-grid는 데스크탑 폭에서 2열보다 넓게 쓴다 (components.css의 기본 2열은 420px 기준) */
+.admin-content .stat-grid { grid-template-columns: repeat(4, 1fr); }
+
+/* 좁은 화면(태블릿 이하)에서는 사이드바를 상단 바로 접어 최소한의 사용성만 보장한다 */
+@media (max-width: 860px) {
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; position: static; padding: var(--s-3); }
+  .admin-sidebar__brand { padding: 0 var(--s-3) var(--s-3); }
+  .admin-nav { flex-direction: row; overflow-x: auto; }
+  .admin-content .stat-grid { grid-template-columns: 1fr 1fr; }
+}

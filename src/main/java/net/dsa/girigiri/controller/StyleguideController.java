@@ -17,4 +17,9 @@ public class StyleguideController {
 	public String styleguide() {
 		return "common/styleguide";
 	}
+
+	@GetMapping("/styleguide/admin")
+	public String styleguideAdmin() {
+		return "common/styleguide-admin";
+	}
 }

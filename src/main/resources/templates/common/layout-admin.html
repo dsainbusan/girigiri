@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--/*
+  슈퍼어드민(플랫폼 운영자) 전용 wide 레이아웃 — common/layout.html(모바일 420px 고정폭, 소비자·사장님용)과는
+  별도 트랙이다. 운영자는 PC로 통계/회원/매장/신고/공지를 관리한다고 가정하고 사이드바 + 넓은 콘텐츠 영역으로 짠다.
+  두 레이아웃을 섞어 쓰지 않는다 — 슈퍼어드민 화면은 이 프래그먼트만, 나머지 전부는 common/layout.html만 쓴다.
+
+  사용법 (페이지 템플릿 예):
+  <html th:replace="~{common/layout-admin :: layoutAdmin('회원 관리', ~{:: #content}, 'members', '')}">
+    <body>
+      <div id="content" th:fragment="content"> ...페이지 본문... </div>
+    </body>
+  </html>
+
+  파라미터 (4개 전부 명시할 것 — common/layout.html과 동일한 이유로 위치 인자 생략 금지 컨벤션 유지:
+  layout()에서 badge 하나 빠뜨려 500 에러 났던 전례가 있다)
+   - title   : 상단바 제목 & <title>
+   - content : 본문 프래그먼트 (~{:: #content})
+   - active  : 좌측 사이드바 활성 메뉴값 ('dashboard' | 'members' | 'stores' | 'reports' | 'notices' | 'codes')
+   - badge   : 상단바 제목 옆 텍스트 뱃지 (예: '슈퍼어드민'), 안 쓰면 ''
+
+  권한 체크는 여기서 하지 않는다 — role 기준 접근 제어는 서버(시큐리티/컨트롤러) 레이어 책임이고
+  (CLAUDE.md "권한 체크는 항상 role 기준" 참고), 이 프래그먼트는 이미 통과한 요청의 화면만 그린다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:fragment="layoutAdmin(title, content, active, badge)" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${title} != null ? ${title} + ' · 운영자' : 'ギリギリ 운영자'">ギリギリ 운영자</title>
+  <link rel="stylesheet" th:href="@{/css/tokens.css}">
+  <link rel="stylesheet" th:href="@{/css/base.css}">
+  <link rel="stylesheet" th:href="@{/css/components.css}">
+  <link rel="stylesheet" th:href="@{/css/layout-admin.css}">
+</head>
+<body class="admin">
+  <div class="admin-shell">
+
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar__brand">
+        <span class="admin-sidebar__logo">ギリギリ</span>
+        <span class="badge badge--accent">운영자</span>
+      </div>
+      <nav class="admin-nav">
+        <a class="admin-nav__item" th:classappend="${active=='dashboard'} ? ' is-active'"
+           th:href="@{/superadmin/dashboard}">
+          <span class="admin-nav__ico">📊</span><span>통계 대시보드</span>
+        </a>
+        <a class="admin-nav__item" th:classappend="${active=='members'} ? ' is-active'"
+           th:href="@{/superadmin/members}">
+          <span class="admin-nav__ico">👤</span><span>회원 관리</span>
+        </a>
+        <a class="admin-nav__item" th:classappend="${active=='stores'} ? ' is-active'"
+           th:href="@{/superadmin/stores}">
+          <span class="admin-nav__ico">🏪</span><span>매장 관리</span>
+        </a>
+        <a class="admin-nav__item" th:classappend="${active=='reports'} ? ' is-active'"
+           th:href="@{/superadmin/reports}">
+          <span class="admin-nav__ico">🚨</span><span>신고 · 문의</span>
+        </a>
+        <a class="admin-nav__item" th:classappend="${active=='notices'} ? ' is-active'"
+           th:href="@{/superadmin/notices}">
+          <span class="admin-nav__ico">📢</span><span>공지사항</span>
+        </a>
+        <a class="admin-nav__item" th:classappend="${active=='codes'} ? ' is-active'"
+           th:href="@{/superadmin/codes}">
+          <span class="admin-nav__ico">🏷️</span><span>카테고리 · 코드</span>
+        </a>
+      </nav>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <h1 class="admin-topbar__title" th:text="${title}">제목</h1>
+        <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">뱃지</span>
+        <span class="u-grow"></span>
+        <!--/* 세션에 로그인 표기용 값이 아직 없어도 깨지지 않도록 방어 (문창호의 role/세션 작업 전) */-->
+        <span class="admin-topbar__user" th:text="${session.nickname} ?: '운영자'">운영자</span>
+        <form th:action="@{/auth/logout}" method="post">
+          <button type="submit" class="admin-topbar__action">로그아웃</button>
+        </form>
+      </header>
+
+      <main class="admin-content">
+        <div th:replace="${content}"></div>
+      </main>
+    </div>
+
+  </div>
+</body>
+</html>

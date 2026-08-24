@@ -24,16 +24,20 @@ DELETE FROM store;
 DELETE FROM users;
 
 -- ---------------------------------------------------------------------
--- users (일반 소비자 2명 + 점주 계정 소유주 1명)
+-- users (일반 소비자 2명 + 점주 계정 소유주 1명 + 운영자 1명 + 정지 회원 1명)
 -- 변경됨 (2026-08-21) — 왜: dev 브랜치에 OAuth2 소셜 로그인을 포팅하면서 UserEntity가
 -- login_id/password 없이 oauth_provider/oauth_id 필수 + email/region/profile_completed
 -- 컬럼을 갖게 됐고, role도 USER/ADMIN 2종에서 USER(일반)/OWNER(점주)/ADMIN(운영자) 3종으로 바뀌었다.
 -- 샘플 유저는 이미 온보딩을 마쳤다고 가정해 profile_completed=1로 넣는다.
+-- 변경됨 — 왜: 슈퍼어드민 회원 관리 화면(/superadmin/members)을 실 데이터로 연동하면서
+-- status(ACTIVE/SUSPENDED) 컬럼과, role/상태 다양성을 보여줄 ADMIN·정지 계정 샘플을 추가했다.
 -- ---------------------------------------------------------------------
-INSERT INTO users (id, oauth_provider, oauth_id, role, nickname, email, region, profile_completed, latitude, longitude, created_at, updated_at) VALUES
-(1, 'google', 'google_1001', 'USER', '구제왕나은', 'noeun@example.com', '서울 중구', 1, 37.566826, 126.978656, NOW(), NOW()),
-(2, 'kakao', 'kakao_1001', 'USER', '알뜰소비자김태훈', NULL, '서울 중구', 1, 37.550000, 126.990000, NOW(), NOW()),
-(3, 'google', 'google_1002', 'OWNER', '사장님송채현', 'songchaehyeon@example.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW());
+INSERT INTO users (id, oauth_provider, oauth_id, role, status, nickname, email, region, profile_completed, latitude, longitude, created_at, updated_at) VALUES
+(1, 'google', 'google_1001', 'USER', 'ACTIVE', '구제왕나은', 'noeun@example.com', '서울 중구', 1, 37.566826, 126.978656, NOW(), NOW()),
+(2, 'kakao', 'kakao_1001', 'USER', 'ACTIVE', '알뜰소비자김태훈', NULL, '서울 중구', 1, 37.550000, 126.990000, NOW(), NOW()),
+(3, 'google', 'google_1002', 'OWNER', 'ACTIVE', '사장님송채현', 'songchaehyeon@example.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW()),
+(4, 'email', 'admin@girigiri.com', 'ADMIN', 'ACTIVE', '운영자송보미', 'admin@girigiri.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW()),
+(5, 'kakao', 'kakao_1002', 'USER', 'SUSPENDED', '노쇼왕문창호', NULL, '서울 중구', 1, 37.552000, 126.988000, NOW(), NOW());
 
 -- ---------------------------------------------------------------------
 -- store (users.id=3 이 소유한 매장 1곳)

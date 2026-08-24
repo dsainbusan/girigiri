@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--/*
+  공지사항 관리. /superadmin/notices 로 접속.
+  TODO(송보미): 데모 데이터 → Notice Repository 연동, "새 공지 작성" 버튼은 등록 폼 붙을 때 활성화.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('공지사항', ~{:: #content}, 'notices', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <h2 class="section-title">공지사항<span class="section-title__count">2건</span></h2>
+  <div class="card" style="margin-bottom:var(--s-3)">
+    <button class="btn btn--accent btn--sm" type="button" disabled>+ 새 공지 작성</button>
+  </div>
+  <div class="card">
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">추석 연휴 픽업 운영 안내</div>
+        <div class="u-sub">2026-08-18 등록</div>
+      </div>
+      <span class="badge badge--success">게시중</span>
+    </div>
+    <div class="list-row">
+      <div class="list-row__body">
+        <div class="u-bold">서비스 정식 오픈 안내</div>
+        <div class="u-sub">2026-08-10 등록</div>
+      </div>
+      <span class="badge badge--success">게시중</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
