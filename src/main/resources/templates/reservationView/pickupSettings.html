@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('픽업 설정', ~{:: #content}, '', true, '관리자 모드', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
+	<!-- 방금 저장 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
+	<div th:if="${savedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">✅ 저장 완료</p>
+			<p class="banner__desc" th:text="${savedMessage}">픽업 설정을 저장했어요.</p>
+		</div>
+	</div>
+
+	<div class="card">
+		<p class="u-sub"><strong th:text="${storeName}">다이스키 베이커리</strong>의 당일 픽업 마감 기준을 설정해요.
+			손님에게 보이는 "예상 픽업 가능 시각"이 이 값으로 자동 계산돼요.</p>
+	</div>
+
+	<form th:action="@{/reservation/settings}" method="post" style="margin-top:var(--s-3)">
+		<div class="card field">
+			<label class="field__label" for="prepTimeMinutes">준비 시간 (분)</label>
+			<input type="number" id="prepTimeMinutes" name="prepTimeMinutes" class="input"
+				   min="1" max="180" th:value="${prepTimeMinutes}">
+			<p class="u-mut" style="font-size:var(--fs-xs)">주문이 들어온 뒤 상품을 준비하는 데 걸리는 시간이에요.
+				예상 픽업 가능 시각 = 지금 시각 + 이 시간</p>
+		</div>
+
+		<!-- 변경됨 (2026-08-21) — 왜: "마지막 픽업시간을 영업 종료시간이랑 따로 입력해야 해서 불편하다"는
+			피드백. 매장 정보에 이미 있는 영업시간(operatingHours)에서 종료시간을 서버가 뽑아내서,
+			"영업 종료 시간까지" 옵션을 고르면 그 값을 그대로 쓰게 했다 — operatingHours가 나중에
+			바뀌어도 저장 시점마다 다시 계산해서 따라간다(ReservationController.parseClosingTime 참고). -->
+		<div class="card field" style="margin-top:var(--s-3)">
+			<label class="field__label">마지막 픽업 시간</label>
+
+			<p class="u-mut" style="font-size:var(--fs-xs); margin-top:2px" th:if="${operatingHours != null and !operatingHours.isEmpty()}">
+				현재 영업시간: <strong th:text="${operatingHours}">09:00 ~ 22:00</strong>
+			</p>
+
+			<div style="display:flex; flex-direction:column; gap:var(--s-2); margin-top:var(--s-2)">
+				<label class="u-row" style="font-size:var(--fs-sm)">
+					<input type="radio" name="pickupTimeMode" value="manual" th:checked="${pickupTimeMode == 'manual'}">
+					<span>직접 입력</span>
+				</label>
+				<label class="u-row" style="font-size:var(--fs-sm)" th:if="${closingTimeDisplay != null}">
+					<input type="radio" name="pickupTimeMode" value="close" th:checked="${pickupTimeMode == 'close'}">
+					<span>영업 종료 시간까지 (<span th:text="${closingTimeDisplay}">22:00</span>)</span>
+				</label>
+				<label class="u-row" style="font-size:var(--fs-sm)">
+					<input type="radio" name="pickupTimeMode" value="unlimited" th:checked="${pickupTimeMode == 'unlimited'}">
+					<span>제한 없음 (하루 종일 주문 가능)</span>
+				</label>
+			</div>
+
+			<input type="time" id="lastPickupTime" name="lastPickupTime" class="input" style="margin-top:var(--s-2)"
+				   th:value="${lastPickupTime}" th:disabled="${pickupTimeMode != 'manual'}">
+
+			<p class="u-mut" style="font-size:var(--fs-xs); margin-top:var(--s-2)">이 시간 안에(준비 시간 포함) 픽업하러 올 수 있는 주문만 받아요.
+				지나면 오늘은 주문이 마감돼요.</p>
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-3)">저장</button>
+	</form>
+
+	<script th:inline="none">
+	(function () {
+		var radios = document.querySelectorAll('input[name="pickupTimeMode"]');
+		var timeInput = document.getElementById('lastPickupTime');
+
+		function updateTimeInputState() {
+			var selected = document.querySelector('input[name="pickupTimeMode"]:checked');
+			// "직접 입력"이 선택된 경우에만 시간 입력을 활성화(=폼 제출에 포함)한다.
+			// 나머지 두 옵션은 disabled로 바꿔서, 제출할 때 lastPickupTime 값이 아예 안 넘어가게 한다
+			// (서버가 pickupTimeMode 기준으로 알아서 계산/저장하므로 이 값은 "직접 입력"일 때만 쓰인다).
+			timeInput.disabled = !selected || selected.value !== 'manual';
+		}
+
+		radios.forEach(function (radio) {
+			radio.addEventListener('change', updateTimeInputState);
+		});
+		updateTimeInputState();
+	})();
+	</script>
+</div>
+</body>
+</html>

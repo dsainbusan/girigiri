@@ -3,6 +3,13 @@
       th:replace="~{common/layout :: layout('예약 확인', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<!-- 추가됨 (2026-08-21) — 왜: 아래 취소 완료 배너(.banner--danger)가 reservation.css에 정의돼
+		있는데 이 화면엔 그 스타일시트를 안 불러오고 있어서, 빠뜨렸던 걸 여기서 같이 고친다. -->
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
+	<div class="card" style="margin-bottom:var(--s-3)">
+		<a th:href="@{/reservation/settings}" class="u-primary u-bold" style="font-size:var(--fs-sm)">⚙️ 픽업 설정 (준비시간 · 마감시간)</a>
+	</div>
 
 	<!-- 방금 수락 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
 	<div th:if="${acceptedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">

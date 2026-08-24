@@ -17,6 +17,16 @@ public class ReceiptPdfGenerator {
 
 	private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+	// 추가됨 (2026-08-24) — 왜: PDF 기본 폰트(CSS의 sans-serif → PDF에 내장된 Helvetica 등)는 한글
+	// 글리프가 아예 없어서, 매장명/상품명 같은 한글이 전부 "#"으로 깨져서 나오는 버그가 있었다
+	// (openhtmltopdf/PDFBox가 폰트에 없는 글자를 "#"로 대체해서 렌더링함 — 스크린샷으로 확인됨).
+	// 그래서 한글이 포함된 무료 폰트(Noto Sans KR, SIL OFL 라이선스, 구글/어도비 배포)를 리소스에
+	// 직접 넣고 PDF에 명시적으로 등록해서 쓴다. 원본 폰트는 한자(漢字) 글리프까지 다 들어있어서
+	// 16MB가 넘길래, 실제로 쓰는 한글 음절/영문/숫자/기본 문장부호만 남기고 서브셋해서 1.7MB로
+	// 줄인 걸 리소스에 넣었다(src/main/resources/fonts/NotoSansKR-Regular.ttf).
+	private static final String FONT_FAMILY = "NotoSansKR";
+	private static final String FONT_RESOURCE_PATH = "/fonts/NotoSansKR-Regular.ttf";
+
 	private ReceiptPdfGenerator() {
 	}
 
@@ -36,6 +46,10 @@ public class ReceiptPdfGenerator {
 		try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 			PdfRendererBuilder builder = new PdfRendererBuilder();
 			builder.useFastMode();
+			// 클래스패스(jar 안)에서 폰트 파일을 바로 읽어오는 방식 — File 경로가 아니라
+			// InputStream 공급자(supplier)로 넘기면, jar로 패키징된 뒤에도(파일시스템 경로가 없어도)
+			// 똑같이 동작한다.
+			builder.useFont(() -> ReceiptPdfGenerator.class.getResourceAsStream(FONT_RESOURCE_PATH), FONT_FAMILY);
 			builder.withHtmlContent(html, null);
 			builder.toStream(out);
 			builder.run();   // openhtmltopdf가 내부적으로 checked Exception을 던지므로 아래에서 감싼다
@@ -70,10 +84,13 @@ public class ReceiptPdfGenerator {
 					""".formatted(noticeClass, d.noticeMessage());
 		}
 
+		// 변경됨 (2026-08-24) — 왜: body에 지정한 폰트(font-family)는 자식 요소(h1, table, td, div)로
+		// 전부 상속되니까, 여기 한 군데만 커스텀 한글 폰트(FONT_FAMILY)로 바꿔주면 문서 전체에 적용된다.
+		// 그 폰트로도 혹시 못 찾는 글자가 있을 경우를 대비해 sans-serif를 폴백으로 남겨뒀다.
 		return """
 				<html>
 				<head><style>
-					body { font-family: sans-serif; padding: 24px; }
+					body { font-family: '%s', sans-serif; padding: 24px; }
 					h1 { font-size: 20px; }
 					table { width: 100%%; border-collapse: collapse; margin-top: 16px; }
 					td { padding: 6px 0; }
@@ -99,6 +116,7 @@ public class ReceiptPdfGenerator {
 				</body>
 				</html>
 				""".formatted(
+				FONT_FAMILY,
 				noticeSection,
 				d.storeName(), d.productName(), d.quantity(), d.totalPrice(),
 				d.pickupTime().format(FORMAT), d.pickupCode(),

@@ -19,6 +19,7 @@ import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.ReceiptService;
 import net.dsa.girigiri.service.ReservationService;
+import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
 import net.dsa.girigiri.util.QrCodeUtil;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +35,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +73,13 @@ public class ReservationController {
 
 	// TODO(송보미 로그인 완료 후): 세션에서 실제 로그인한 userId를 꺼내오도록 교체
 	private Long resolveCurrentUserId() {
+		return 1L;
+	}
+
+	// TODO(송보미 로그인 완료 후): 세션(storeId)에서 실제 로그인한 매장 id를 꺼내오도록 교체.
+	// 지금은 resolveCurrentUserId()와 같은 방식으로, sql/sample-data.sql의 store id=1("다이스키 베이커리")을
+	// "로그인한 매장"으로 임시 취급한다.
+	private Long resolveCurrentStoreId() {
 		return 1L;
 	}
 
@@ -310,6 +319,81 @@ public class ReservationController {
 		reservationService.cancelByStore(id, reason);
 		redirectAttributes.addFlashAttribute("cancelledMessage", "예약을 취소했어요. 결제하신 금액은 환불됩니다.");
 		return "redirect:/reservation/incoming";
+	}
+
+	// 수정됨 (2026-08-24, 점검/정리) — 왜: 여기 직접 만들었던 정규식 기반 파서가
+	// ReservationService.isTooCloseToClosing()이 이미 쓰고 있던 net.dsa.girigiri.util.OperatingHoursUtil의
+	// parseClosingTime과 로직이 겹치면서(중복), 실패 시 동작도 서로 달랐다(이쪽은 null 반환, 저쪽은
+	// IllegalArgumentException 발생) — 같은 "영업시간 문자열 파싱"을 두 곳에서 다르게 하고 있던 셈이라
+	// 한쪽만 고치면 다른 쪽은 안 고쳐지는 버그가 나기 쉬웠다. OperatingHoursUtil을 유일한 파서로 쓰고,
+	// 여기서는 그 예외를 잡아서 이 화면이 원래 기대하던 "파싱 실패 시 null(= 이 옵션 숨김)" 동작만 감싸준다.
+	private LocalTime parseClosingTime(String operatingHours) {
+		try {
+			return OperatingHoursUtil.parseClosingTime(operatingHours);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	/**
+	 * 매장이 "준비 시간"/"마지막 픽업 시간"을 직접 설정하는 화면. (2026-08-21 추가, 이후 영업종료시간
+	 * 옵션 추가) 이 값들이 PickupAvailabilityUtil의 자동계산(체크아웃 화면 "예상 픽업 가능 시각") 기준이
+	 * 된다. 아직 설정 안 한 매장(마지막 픽업시간 NULL)은 "제한 없음"으로 취급된다 — StoreEntity 주석 참고.
+	 */
+	@GetMapping("/settings")
+	public String settingsForm(Model model) {
+		StoreEntity store = storeRepository.findById(resolveCurrentStoreId())
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId()));
+
+		LocalTime closingTime = parseClosingTime(store.getOperatingHours());
+
+		String pickupTimeMode;
+		if (store.getLastPickupTime() == null) {
+			pickupTimeMode = "unlimited";
+		} else if (closingTime != null && closingTime.equals(store.getLastPickupTime())) {
+			pickupTimeMode = "close";
+		} else {
+			pickupTimeMode = "manual";
+		}
+
+		model.addAttribute("storeName", store.getStoreName());
+		model.addAttribute("prepTimeMinutes",
+				store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : DEFAULT_PREP_TIME_MINUTES);
+		model.addAttribute("lastPickupTime", store.getLastPickupTime() != null ? store.getLastPickupTime().toString() : "");
+		model.addAttribute("operatingHours", store.getOperatingHours());
+		model.addAttribute("closingTimeDisplay", closingTime != null ? closingTime.toString() : null);
+		model.addAttribute("pickupTimeMode", pickupTimeMode);
+		return "reservationView/pickupSettings";
+	}
+
+	/**
+	 * "저장" 버튼 제출. pickupTimeMode: "manual"(직접 입력한 lastPickupTime 사용) /
+	 * "close"(영업 종료 시간을 매번 다시 계산해서 사용 — operatingHours가 나중에 바뀌어도 따라간다) /
+	 * "unlimited"(제한 없음, NULL 저장).
+	 */
+	@PostMapping("/settings")
+	public String saveSettings(@RequestParam int prepTimeMinutes,
+								@RequestParam(required = false) String lastPickupTime,
+								@RequestParam(defaultValue = "manual") String pickupTimeMode,
+								RedirectAttributes redirectAttributes) {
+		StoreEntity store = storeRepository.findById(resolveCurrentStoreId())
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId()));
+
+		// 방어적으로 최소값 보정 (0/음수/공란 입력 방지) — 준비시간이 0 이하면 픽업 가능 시각 계산이 의미없어진다.
+		store.setPrepTimeMinutes(Math.max(prepTimeMinutes, 1));
+
+		switch (pickupTimeMode) {
+			case "unlimited" -> store.setLastPickupTime(null);
+			// operatingHours 파싱 실패하면(예: 그 사이 매장이 영업시간을 이상한 형식으로 바꿨다면) 조용히
+			// 제한없음(null)으로 저장한다 — 화면에서 이 옵션은 파싱 성공했을 때만 보이므로 흔한 경우는 아니다.
+			case "close" -> store.setLastPickupTime(parseClosingTime(store.getOperatingHours()));
+			default -> store.setLastPickupTime(
+					(lastPickupTime == null || lastPickupTime.isBlank()) ? null : LocalTime.parse(lastPickupTime));
+		}
+
+		storeRepository.save(store);
+		redirectAttributes.addFlashAttribute("savedMessage", "픽업 설정을 저장했어요.");
+		return "redirect:/reservation/settings";
 	}
 
 	/** 사장님이 픽업 현장에서 픽업 코드를 입력하는 화면. */

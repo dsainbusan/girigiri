@@ -59,6 +59,24 @@
 		</div>
 	</div>
 
+	<!-- 변경됨 (2026-08-24) — 왜: 처음엔 작은 글씨 안내문(캡션)으로 넣었는데 "글씨가 작아서 눈에 잘
+		안 보인다, 팝업이 낫지 않겠냐"는 피드백을 받았다. 그래서 캡션 대신, "예약 확정하기"를 눌렀을 때
+		결제 전에 한 번 더 확인하는 팝업(모달)을 띄우는 방식으로 바꿨다 — 팝업에서 "확인했어요"를
+		눌러야만 실제로 예약이 진행된다(아래 스크립트에서 폼 제출(submit)을 가로채서 처리).
+		모달/팝업 자체는 공용 컴포넌트(common/components.html)에 아직 없어서(송보미 담당, 아직 미착수)
+		일단 이 화면 안에서만 쓰는 걸로 만들었다 — 나중에 공용 모달이 생기면 그걸로 바꿔도 된다. -->
+	<div id="cancel-notice-modal" class="modal-overlay" th:if="${!soldOut and canOrder}" style="display:none">
+		<div class="modal-box">
+			<p class="modal-box__icon">⚠️</p>
+			<p class="modal-box__title">결제 전에 확인해주세요</p>
+			<p class="modal-box__desc">결제 후 <strong th:text="${cancelWindowMinutes}">30</strong>분 이내에만 취소할 수 있어요.<br>신중하게 결제해주세요.</p>
+			<div class="modal-box__actions">
+				<button type="button" id="cancel-notice-confirm" class="btn btn--block">확인했어요, 예약 확정</button>
+				<button type="button" id="cancel-notice-close" class="btn btn--outline btn--block">다시 볼게요</button>
+			</div>
+		</div>
+	</div>
+
 	<script th:inline="javascript">
 	/*
 	 * 변경됨 (2026-08-21) — 왜: 이 스크립트가 있는 #content(main)가 실제 화면에서 하단 고정
@@ -67,6 +85,32 @@
 	 * 못 찾아서 에러가 나므로, 문서 전체가 다 만들어진 뒤(DOMContentLoaded)에 실행되게 감쌌다.
 	 */
 	document.addEventListener('DOMContentLoaded', function () {
+		// 결제 전 확인 팝업(모달) 연결 — soldOut이거나 canOrder가 false면 모달 자체가 화면에 없어서
+		// (th:if로 안 그려짐) checkoutForm/modal이 null이 되니, 그 경우엔 그냥 아무 것도 안 한다.
+		// (버튼도 그 상태에선 disabled라 애초에 제출 자체가 안 되니 문제 없음.)
+		var checkoutForm = document.getElementById('checkout-form');
+		var modal = document.getElementById('cancel-notice-modal');
+		if (checkoutForm && modal) {
+			var confirmBtn = document.getElementById('cancel-notice-confirm');
+			var closeBtn = document.getElementById('cancel-notice-close');
+
+			checkoutForm.addEventListener('submit', function (e) {
+				e.preventDefault();
+				modal.style.display = 'flex';
+			});
+
+			confirmBtn.addEventListener('click', function () {
+				modal.style.display = 'none';
+				// form.submit()은 (버튼 클릭이나 requestSubmit()과 다르게) submit 이벤트를 다시
+				// 일으키지 않아서, 위 리스너가 또 가로채 무한 루프가 되는 일 없이 바로 제출된다.
+				checkoutForm.submit();
+			});
+
+			closeBtn.addEventListener('click', function () {
+				modal.style.display = 'none';
+			});
+		}
+
 		var soldOut = /*[[${soldOut}]]*/ false;
 		if (soldOut) { return; }   // 품절이면 스테퍼 자체가 화면에 없으니 아무것도 안 한다
 

@@ -54,7 +54,9 @@ public class ReservationService {
 	public static final String TAB_CANCELLED = "cancelled";   // 노쇼·취소 통합
 
 	// 손님 취소 허용 창: 주문 후 이 시간 이내, 그리고 매장 마감 이 시간 전까지만 취소 가능 (둘 다 만족해야 함)
-	private static final int USER_CANCEL_WINDOW_MINUTES = 30;
+	// (2026-08-24) — public으로 바꿈: 체크아웃 화면에서 "결제 전 30분 이내에만 취소 가능해요" 안내 문구를
+	// 보여줄 때, "30"을 화면에 따로 하드코딩하지 않고 여기 값 하나만 그대로 가져다 쓰기 위해서.
+	public static final int USER_CANCEL_WINDOW_MINUTES = 30;
 	private static final int CLOSING_CUTOFF_MINUTES = 30;
 
 	private final StockService stockService;
@@ -297,9 +299,23 @@ public class ReservationService {
 		}
 	}
 
-	/** 매장 영업종료시간까지 30분 이내로 남았거나 이미 지났으면 true. */
+	/**
+	 * 매장 영업종료시간까지 30분 이내로 남았거나 이미 지났으면 true.
+	 *
+	 * 수정됨 (2026-08-24, 점검/정리) — 왜: OperatingHoursUtil.parseClosingTime은 operatingHours 형식이
+	 * 이상하면(매장 정보 화면 쪽에서 자유 텍스트로 입력받는 값이라 완벽한 형식 보장이 없음)
+	 * IllegalArgumentException을 던지는데, 여기서 그걸 안 잡고 있어서 손님이 "취소하기"를 눌렀을 때
+	 * (cancelReservation 경유) 이 값 하나 때문에 예외가 그대로 튀어나가 알 수 없는 오류 화면으로 떨어질
+	 * 위험이 있었다. 마감시간을 못 읽으면(파싱 실패) "마감이 임박했는지 알 수 없다"는 뜻이므로, 손님
+	 * 취소를 막을 근거가 없다고 보고 안전한 쪽(false = 마감 임박 아님, 취소 허용)으로 처리한다.
+	 */
 	private boolean isTooCloseToClosing(StoreEntity store, LocalDateTime now) {
-		LocalTime closingTime = OperatingHoursUtil.parseClosingTime(store.getOperatingHours());
+		LocalTime closingTime;
+		try {
+			closingTime = OperatingHoursUtil.parseClosingTime(store.getOperatingHours());
+		} catch (IllegalArgumentException e) {
+			return false;
+		}
 		LocalDateTime closingDateTime = LocalDateTime.of(LocalDate.now(), closingTime);
 		return closingDateTime.isBefore(now.plusMinutes(CLOSING_CUTOFF_MINUTES));
 	}
@@ -320,17 +336,17 @@ public class ReservationService {
 	}
 
 	/**
-	 * 픽업 마감시간이 지났는데도 아직 픽업 안 된(confirmed/ready 상태) 예약들을 전부 "noshowed"로 바꾼다.
-	 * NoShowScheduler가 주기적으로 이 메서드를 호출한다.
+	 * 주문일 다음날 자정(00:00)이 지났는데도 아직 픽업 안 된(confirmed/ready 상태) 예약들을 전부
+	 * "noshowed"로 바꾼다. NoShowScheduler가 주기적으로 이 메서드를 호출한다.
 	 *
-	 * 변경됨 (2026-08-21) — 왜: 픽업 시간을 손님이 고르지 않고 자동 계산(현재+준비시간)하는 구조로
-	 * 바뀌면서, reservation.pickupTime은 이제 "가장 빠른 픽업 가능 시각"일 뿐 마감 기준이 아니다.
-	 * 진짜 마감 기준은 매장의 lastPickupTime(마지막 픽업시간)이라서, 매장이 그 값을 설정해뒀으면
-	 * 그 기준으로 판단한다. 아직 매장 설정 화면이 없어서 값이 비어있는 매장(대부분의 기존 데이터)은
-	 * 예전처럼 reservation.pickupTime 기준으로 판단(하위 호환)한다.
+	 * 변경됨 (2026-08-24) — 왜: "당일 픽업 서비스니까 마감시간을 살짝 넘겨서라도 그날 안에 늦게
+	 * 픽업하러 올 수도 있는데, 마감시간 지나자마자 바로(또는 거기서 24시간 뒤에) 노쇼 처리하는 건
+	 * 기준이 애매하다. 그냥 날짜가 바뀌면(자정 지나면) 노쇼로 하자"는 피드백. 매장별 lastPickupTime은
+	 * 더 이상 노쇼 판단에 안 쓰고(화면에 보여주는 "예상 픽업 가능 시각" 계산에만 쓰임), 순수하게
+	 * 주문일 기준 다음날 00:00을 컷오프로 쓴다 — isPastPickupDeadline 참고.
 	 *
 	 * 손님 취소/매장 취소와 다르게, 노쇼는:
-	 *   - 재고를 복구하지 않는다 (노쇼가 감지되는 시점 자체가 이미 마감 임박/직후라, 다시 팔 시간이 없다고 봄)
+	 *   - 재고를 복구하지 않는다 (노쇼로 확정되는 시점엔 이미 날짜가 바뀌어서, 다시 팔 시간이 없다고 봄)
 	 *   - 결제를 환불하지 않는다 (손님이 안 나타난 거라 매장 손실을 메워주는 취지로 결제는 그대로 둔다)
 	 * 이 두 정책은 나중에 팀 논의에 따라 바뀔 수 있는 부분이라 여기 한곳에만 모아뒀다.
 	 *
@@ -358,17 +374,24 @@ public class ReservationService {
 		return overdue.size();
 	}
 
-	/** 매장의 lastPickupTime이 설정돼 있으면 그 기준으로, 아니면 예전처럼 reservation.pickupTime 기준으로 마감 여부 판단. */
+	/**
+	 * "노쇼로 확정"할지는 매장의 마감시간(lastPickupTime)이 아니라, 주문한 날짜가 지나 자정(밤 12시)을
+	 * 넘겼는지로 판단한다 — 주문일 다음날 00:00이 되는 순간 노쇼 확정.
+	 *
+	 * 변경됨 (2026-08-24) — 왜: 처음엔 "마감시각 + 24시간"으로 만들었는데, 그러면 마감시각이 몇 시냐에
+	 * 따라 실제 유예 시간이 매장마다 달라 보일 수 있고(예: 마감 22:00이면 다음날 22:00까지, 마감
+	 * 21:00이면 다음날 21:00까지 — 기준이 마감시각에 딸려 있어서 헷갈림), 정작 원하는 규칙은 "당일
+	 * 픽업 서비스니까 그날 안에만 오면 되고, 자정 넘어가면(=날짜가 바뀌면) 그냥 노쇼"라는 더 단순한
+	 * 기준이었다. 그래서 매장의 lastPickupTime/픽업 마감시각은 아예 안 보고, 주문일(reservedAt의
+	 * 날짜) 다음날 자정(00:00)을 그대로 컷오프로 쓴다.
+	 */
 	private boolean isPastPickupDeadline(ReservationEntity reservation, LocalDateTime now) {
-		StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
-
-		if (store != null && store.getLastPickupTime() != null && reservation.getReservedAt() != null) {
-			LocalDateTime lastPickupDateTime =
-					LocalDateTime.of(reservation.getReservedAt().toLocalDate(), store.getLastPickupTime());
-			return now.isAfter(lastPickupDateTime);
+		if (reservation.getReservedAt() == null) {
+			return false;   // 이론상 있을 수 없지만(reservedAt은 @CreatedDate), 방어적으로 판단 보류
 		}
 
-		return reservation.getPickupTime() != null && reservation.getPickupTime().isBefore(now);
+		LocalDateTime midnightAfterOrderDay = reservation.getReservedAt().toLocalDate().plusDays(1).atStartOfDay();
+		return !now.isBefore(midnightAfterOrderDay);
 	}
 
 	/**

@@ -6,6 +6,7 @@ import net.dsa.girigiri.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDateTime;
 
@@ -15,11 +16,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * 노쇼 자동 처리(processNoShows) 확인용 테스트.
  *
- * pickupTime은 reservedAt(@CreatedDate)과 다르게 updatable 제한이 없는 평범한 컬럼이라,
- * ReservationCancelRulesTest처럼 JdbcTemplate로 DB를 직접 건드릴 필요 없이
- * 엔티티 setter + save()로 그냥 "픽업 시간이 이미 지난" 예약을 만들 수 있다.
+ * 변경됨 (2026-08-24) — 왜: "마감시간 기준"(또는 그 뒤 24시간 유예)이 아니라 "주문일 다음날
+ * 자정(00:00)이 지나면 노쇼"로 규칙이 바뀌면서(ReservationService.isPastPickupDeadline 참고),
+ * 판단 기준이 pickupTime이 아니라 reservedAt(주문 시각)의 "날짜"가 됐다. reservedAt은
+ * @CreatedDate(updatable=false)라 엔티티 setter로는 안 바뀌어서, ReservationCancelRulesTest처럼
+ * JdbcTemplate로 DB를 직접 되돌려서 "어제 주문한 예약"을 만든다.
  *
  * 로컬 DB 연결 + sql/sample-data.sql 데이터가 들어있어야 동작한다.
+ * 주의: 이 테스트를 자정 근처(23:59~00:01)에 돌리면 "오늘 주문한 예약"이 테스트 실행 도중 날짜가
+ *      바뀌어버려 실패할 수 있어요 — 그 시간대를 피해서 돌리면 됩니다(버그 아니라 규칙이 의도대로
+ *      동작하는 거예요, ReservationCancelRulesTest의 21:30~22:00 주의사항과 같은 종류).
  */
 @SpringBootTest
 class ReservationNoShowTest {
@@ -30,16 +36,20 @@ class ReservationNoShowTest {
 	@Autowired
 	private ReservationRepository reservationRepository;
 
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
 	@Test
-	void 픽업시간이_지난_confirmed_예약은_노쇼로_처리된다() {
-		// 1. 정상적으로 예약을 하나 만든다 (지금은 픽업 시간이 미래).
+	void 어제_주문해서_자정이_지난_confirmed_예약은_노쇼로_처리된다() {
+		// 1. 정상적으로 예약을 하나 만든다.
 		ReservationEntity reservation = reservationService.createReservation(
 				1L, 1L, 1, LocalDateTime.now().plusHours(1));
 		assertEquals("confirmed", reservation.getStatus());
 
-		// 2. 픽업 시간을 강제로 과거로 되돌려서 "마감이 지났는데 안 픽업한" 상황을 만든다.
-		reservation.setPickupTime(LocalDateTime.now().minusMinutes(10));
-		reservationRepository.save(reservation);
+		// 2. 주문 시각을 어제로 되돌려서 "다음날(=오늘) 자정이 이미 지난" 상황을 만든다.
+		jdbcTemplate.update(
+				"UPDATE reservation SET reserved_at = ? WHERE id = ?",
+				LocalDateTime.now().minusDays(1), reservation.getId());
 
 		// 3. 스케줄러가 하는 일을 직접 호출해본다.
 		int noShowCount = reservationService.processNoShows();
@@ -51,7 +61,7 @@ class ReservationNoShowTest {
 	}
 
 	@Test
-	void 픽업시간이_아직_안_지난_예약은_노쇼_처리되지_않는다() {
+	void 오늘_주문한_예약은_아직_자정_전이라_노쇼_처리되지_않는다() {
 		ReservationEntity reservation = reservationService.createReservation(
 				1L, 1L, 1, LocalDateTime.now().plusHours(2));
 
