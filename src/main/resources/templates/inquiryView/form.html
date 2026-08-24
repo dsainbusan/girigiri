@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('문의하기', ~{:: #content}, 'home', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+	<a th:href="@{/user/inquiries}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
+
+	<p class="u-sub" th:if="${storeName != null}" style="margin-bottom:var(--s-3)"
+	   th:text="${storeName} + '에 대한 문의예요.'">가게에 대한 문의예요.</p>
+
+	<form th:action="@{/user/inquiries}" method="post">
+		<input type="hidden" name="storeId" th:if="${storeId != null}" th:value="${storeId}">
+		<div class="field" style="margin-bottom:var(--s-3)">
+			<label class="field__label">제목</label>
+			<input type="text" name="title" class="input" required maxlength="100" placeholder="문의 제목을 입력하세요">
+		</div>
+		<div class="field">
+			<label class="field__label">내용</label>
+			<textarea name="content" class="input" required maxlength="1000" style="min-height:140px;resize:vertical" placeholder="문의 내용을 입력하세요"></textarea>
+		</div>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">등록하기</button>
+	</form>
+</div>
+</body>
+</html>

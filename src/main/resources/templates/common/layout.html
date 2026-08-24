@@ -34,15 +34,18 @@
   <div class="app">
 
     <!--/*
-      강노은: 홈 화면(active=='home')만 위치+알림벨 전용 상단바(topbarHome)를 쓴다.
-      location/unreadCount는 layout(...) 파라미터가 아니라 컨트롤러가 model에 넣어준 값을 그대로 읽는다
-      (Thymeleaf fragment는 상위 model attribute에 계속 접근 가능하다) — 홈이 아닌 화면은 안 쓰므로 안전하다.
+      강노은: 위치+알림벨 전용 상단바(topbarHome)는 "진짜 홈 화면"에서만 쓴다.
+      active=='home'으로 판단하면 안 된다 — 하단 탭 강조 목적으로 다른 화면(가게 상세, 검색 결과 등)도
+      active='home'을 넘기게 되면서, 그 화면들까지 제목 없는 홈 전용 상단바로 바뀌어버리는 문제가 있었다
+      (직접 확인함). 그래서 HomeController만 채워주는 model attribute인 location의 존재 여부로 구분한다
+      — location/unreadCount는 layout(...) 파라미터가 아니라 컨트롤러가 model에 넣어준 값을 그대로 읽는다
+      (Thymeleaf fragment는 상위 model attribute에 계속 접근 가능하다).
       위와 같은 이유로 th:if와 th:replace를 같은 태그에 같이 쓰지 않는다 — 바깥 div(th:if)/안쪽 div(th:replace)로 분리.
     */-->
-    <div th:if="${active == 'home'}">
-      <div th:replace="~{common/header :: topbarHome(${location} ?: '내 동네', ${unreadCount} ?: 0)}"></div>
+    <div th:if="${location != null}">
+      <div th:replace="~{common/header :: topbarHome(${location}, ${unreadCount} ?: 0)}"></div>
     </div>
-    <div th:if="${active != 'home'}">
+    <div th:if="${location == null}">
       <div th:replace="~{common/header :: topbar(${title}, ${dark}, ${badge})}"></div>
     </div>
 

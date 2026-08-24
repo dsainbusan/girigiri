@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('내 문의내역', ~{:: #content}, 'home', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 고객지원으로</a>
+
+	<div class="u-row" style="justify-content:flex-end;margin-bottom:var(--s-3)">
+		<a th:href="@{/user/inquiries/new}" class="btn">문의하기</a>
+	</div>
+
+	<!--/* 강노은: 삭제 버튼은 <form>이라 행 전체를 <a>로 감싸면 안 된다(인터랙티브 요소 중첩) —
+	     제목 부분만 링크로 감싸고, 삭제 폼은 그 옆에 형제 요소로 둔다. */-->
+	<div style="display:flex;flex-direction:column;gap:0">
+		<div th:each="q : ${inquiries}" class="list-row">
+			<a th:href="@{/user/inquiries/{id}(id=${q.id})}" class="list-row__body" style="text-decoration:none;color:inherit">
+				<b style="font-size:14px" th:text="${q.title}">문의 제목</b>
+				<div class="u-mut" style="font-size:12px;margin-top:2px">
+					<span th:text="${q.authorName}">작성자</span>
+					<span th:if="${q.storeName != null}" th:text="' · ' + ${q.storeName}"> · 가게명</span>
+					<span th:text="' · ' + ${q.createdAtLabel}"> · 오늘</span>
+					<span th:if="${q.commentCount} > 0" th:text="' · 댓글 ' + ${q.commentCount}"> · 댓글 2</span>
+				</div>
+			</a>
+			<form th:if="${q.canDelete}" th:action="@{/user/inquiries/{id}/delete(id=${q.id})}" method="post"
+			      onsubmit="return confirm('문의를 삭제할까요? 댓글도 함께 삭제됩니다.')">
+				<button type="submit" class="btn btn--outline"
+				        style="padding:4px 10px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+			</form>
+		</div>
+		<p th:if="${#lists.isEmpty(inquiries)}" class="u-sub">아직 등록된 문의가 없어요.</p>
+	</div>
+</div>
+</body>
+</html>
