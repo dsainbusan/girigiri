@@ -32,9 +32,10 @@
   <span class="topbar__spacer"></span>
   <!--/* 강노은: /notifications는 실제로 없는 경로였다(하단 탭바는 /user/alerts를 씀) — 알림함을
        만들면서 통일했다. */-->
-  <a th:href="@{/user/alerts}" class="topbar__action" style="position:relative">
+  <!--/* id="alert-bell"/"alert-dot": home.html의 SSE 스크립트가 실시간으로 이 점을 붙였다 뗐다 한다. */-->
+  <a th:href="@{/user/alerts}" class="topbar__action" id="alert-bell" style="position:relative">
     🔔
-    <span th:if="${unreadCount} != null and ${unreadCount} > 0"
+    <span th:if="${unreadCount} != null and ${unreadCount} > 0" id="alert-dot"
           style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)"></span>
   </a>
 </header>

@@ -35,6 +35,28 @@
 		</div>
 	</div>
 
+	<!--/* 강노은: 이 화면을 보고 있는 동안 새 알림이 오면(SSE) 바로 목록을 새로고침하는 대신,
+	     스크롤 위치가 튀지 않게 눌러서 새로고침하는 배너만 살짝 띄운다. */-->
+	<script>
+		(function () {
+			if (!window.EventSource) return;
+			var source = new EventSource('/user/alerts/stream');
+			source.addEventListener('notification', function () {
+				if (document.getElementById('live-refresh-banner')) return;
+				var banner = document.createElement('a');
+				banner.id = 'live-refresh-banner';
+				banner.href = '/user/alerts';
+				banner.className = 'banner';
+				banner.style.cssText = 'display:flex;margin-top:10px;text-decoration:none';
+				banner.innerHTML = '<span style="font-size:16px">🔔</span>'
+					+ '<div><div class="banner__title">새 알림이 도착했어요</div>'
+					+ '<div class="banner__desc">눌러서 새로고침</div></div>';
+				var content = document.getElementById('content');
+				content.insertBefore(banner, content.children[1]);
+			});
+		})();
+	</script>
+
 </div>
 </body>
 </html>

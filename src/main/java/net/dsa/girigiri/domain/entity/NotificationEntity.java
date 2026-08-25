@@ -46,6 +46,14 @@ public class NotificationEntity {
 	@Column(name = "link_url", length = 200)
 	private String linkUrl;
 
+	// 추가됨 (강노은) — 왜: 알림 트리거를 "다른 사람 코드에 훅 삽입" 대신 "주기적으로 Repository를
+	// 읽어서 스캔"하는 방식으로 만들면서, 같은 사건(예: 이 예약의 노쇼 처리)에 대해 스캔할 때마다
+	// 알림이 중복 생성되지 않게 막을 방법이 필요했다. "사건 종류:대상id" 형태의 고유 키를 저장해두고,
+	// 새로 만들기 전에 이미 있는지만 확인하면 돼서(existsBySourceKey) 스캔 주기가 얼마나 자주 돌든
+	// 안전(idempotent)하다. 예: "like_open:7:42", "reservation_noshow:15".
+	@Column(name = "source_key", length = 100)
+	private String sourceKey;
+
 	@Builder.Default
 	@Column(name = "is_read", nullable = false)
 	private boolean read = false;

@@ -4,9 +4,12 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.NotificationSettingEntity;
 import net.dsa.girigiri.service.NotificationService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 강노은: 인앱 알림함 + 알림 설정. 알림이 실제로 생기는 트리거는 아직 안 붙어서(NotificationService
@@ -28,6 +31,20 @@ public class NotificationController {
 		model.addAttribute("notifications", notificationService.getNotifications(userId));
 		model.addAttribute("unreadCount", notificationService.getUnreadCount(userId));
 		return "alertView/list";
+	}
+
+	/**
+	 * 강노은: 실시간 알림(SSE) 구독. 브라우저의 EventSource가 이 연결을 열어두고 있다가,
+	 * 새 알림이 생기거나 읽음 처리될 때마다 서버가 최신 안읽음 개수를 밀어준다(NotificationService 참고).
+	 * 로그인 안 됐으면 리다이렉트가 의미 없는 응답 형식이라 401로 응답한다.
+	 */
+	@GetMapping("/stream")
+	public SseEmitter stream(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+		}
+		return notificationService.subscribe(userId);
 	}
 
 	/** 알림 클릭 시 진입점 — 읽음 처리 후 linkUrl로 보낸다(없으면 알림함에 그대로 머문다). */

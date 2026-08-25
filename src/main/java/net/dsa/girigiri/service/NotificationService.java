@@ -6,8 +6,10 @@ import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.NotificationSettingEntity;
 import net.dsa.girigiri.repository.NotificationRepository;
 import net.dsa.girigiri.repository.NotificationSettingRepository;
+import net.dsa.girigiri.util.SseEmitterRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,9 +18,11 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 강노은: 인앱 알림함 + 알림 설정. 알림이 실제로 "생기는" 트리거(찜한 가게 마감세일 시작,
- * 예약 상태 변경)는 아직 안 붙었다 — createNotification()은 트리거가 정해지면 호출부만
- * 추가하면 되도록 미리 만들어 둔 것. 지금은 알림함 UI/읽음 처리/설정만 완결적으로 동작한다.
+ * 강노은: 인앱 알림함 + 알림 설정 + 실시간 전송(SSE). 알림이 실제로 "생기는" 트리거는
+ * NotificationTriggerScheduler가 담당한다 — 다른 사람 코드(상품 등록·예약 상태 변경)에 훅을
+ * 심는 대신, 이미 있는 Repository를 주기적으로 읽기만 해서 변화를 감지하는 방식으로 팀 논의 후 결정했다.
+ * 여기 createNotification()은 그 스캐너가 호출하는 진입점 — 설정(push/찜알림 on-off) 확인, 저장,
+ * 열려있는 SSE 연결로 실시간 배지 갱신까지 한 번에 처리한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class NotificationService {
 
 	private final NotificationRepository notificationRepository;
 	private final NotificationSettingRepository notificationSettingRepository;
+	private final SseEmitterRegistry sseEmitterRegistry;
 
 	public List<NotificationRowDto> getNotifications(Long userId) {
 		return notificationRepository.findAll().stream()
@@ -52,6 +57,11 @@ public class NotificationService {
 				.count();
 	}
 
+	/** 로그인한 사용자용 SSE 구독. 서버가 이 연결을 붙잡아뒀다가 새 알림이 생기면 밀어준다. */
+	public SseEmitter subscribe(Long userId) {
+		return sseEmitterRegistry.register(userId);
+	}
+
 	/** 본인 알림이 아니면 조용히 무시(예외 없이 리턴) — 남의 알림 id를 끼워넣어도 아무 일도 안 일어나게. */
 	@Transactional
 	public String markRead(Long userId, Long notificationId) {
@@ -60,6 +70,7 @@ public class NotificationService {
 			return null;
 		}
 		notification.setRead(true);
+		sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
 		return notification.getLinkUrl();
 	}
 
@@ -69,11 +80,20 @@ public class NotificationService {
 				.filter(n -> userId.equals(n.getUserId()) && !n.isRead())
 				.toList();
 		unread.forEach(n -> n.setRead(true));
+		if (!unread.isEmpty()) {
+			sseEmitterRegistry.pushUnreadCount(userId, 0);
+		}
 	}
 
-	/** 트리거가 정해지면 이 메서드를 호출하는 쪽만 새로 생기면 된다. */
+	/**
+	 * NotificationTriggerScheduler가 호출하는 진입점. sourceKey는 같은 사건에 대한 중복 생성을
+	 * 막는 키 — 이미 있으면 조용히 건너뛴다(NotificationEntity.sourceKey 주석 참고).
+	 */
 	@Transactional
-	public void createNotification(Long userId, String type, String message, String linkUrl) {
+	public void createNotification(Long userId, String type, String message, String linkUrl, String sourceKey) {
+		if (sourceKey != null && notificationRepository.existsBySourceKey(sourceKey)) {
+			return;
+		}
 		NotificationSettingEntity settings = getOrCreateSettings(userId);
 		if (!settings.isPushEnabled()) {
 			return;
@@ -86,7 +106,9 @@ public class NotificationService {
 				.type(type)
 				.message(message)
 				.linkUrl(linkUrl)
+				.sourceKey(sourceKey)
 				.build());
+		sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
 	}
 
 	public NotificationSettingEntity getOrCreateSettings(Long userId) {

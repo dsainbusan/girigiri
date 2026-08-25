@@ -95,6 +95,30 @@
 			});
 		})();
 	</script>
+
+	<!--/* 강노은: 실시간 알림(SSE) 구독 — 새 알림이 생기거나 읽음 처리되면 서버가 최신 안읽음 개수를
+	     밀어준다(NotificationController#stream). 로그인 안 했으면 401만 받고 끝나는 게 낭비라 아예 안 연다.
+	     연결이 끊기면 EventSource가 알아서 재연결을 시도한다 — 별도 재시도 로직 안 짜도 된다. */-->
+	<script th:if="${loggedIn}">
+		(function () {
+			if (!window.EventSource) return;
+			var source = new EventSource('/user/alerts/stream');
+			source.addEventListener('notification', function (e) {
+				var count = parseInt(e.data, 10) || 0;
+				var bell = document.getElementById('alert-bell');
+				var dot = document.getElementById('alert-dot');
+				if (!bell) return;
+				if (count > 0 && !dot) {
+					dot = document.createElement('span');
+					dot.id = 'alert-dot';
+					dot.style.cssText = 'position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)';
+					bell.appendChild(dot);
+				} else if (count === 0 && dot) {
+					dot.remove();
+				}
+			});
+		})();
+	</script>
 </div>
 </body>
 </html>

@@ -49,6 +49,7 @@ public class HomeController {
 		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값.
 		model.addAttribute("location", "내 동네");
 		model.addAttribute("unreadCount", notificationService.getUnreadCount(userId));
+		model.addAttribute("loggedIn", userId != null); // SSE 알림 구독은 로그인했을 때만 열게(home.html)
 		return "home";
 	}
 
