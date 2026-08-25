@@ -30,7 +30,9 @@
     📍<span th:text="${location}">내 동네</span>
   </span>
   <span class="topbar__spacer"></span>
-  <a th:href="@{/notifications}" class="topbar__action" style="position:relative">
+  <!--/* 강노은: /notifications는 실제로 없는 경로였다(하단 탭바는 /user/alerts를 씀) — 알림함을
+       만들면서 통일했다. */-->
+  <a th:href="@{/user/alerts}" class="topbar__action" style="position:relative">
     🔔
     <span th:if="${unreadCount} != null and ${unreadCount} > 0"
           style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)"></span>

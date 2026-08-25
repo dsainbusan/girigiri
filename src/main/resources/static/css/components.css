@@ -188,6 +188,14 @@
   font-size: 26px; font-weight: var(--fw-black);
 }
 
+/* ---------------- Empty state (빈 목록 안내) ----------------
+   강노은: 원래 supportView/home.html 안에만 있던 페이지 전용 스타일이었는데, 알림함(알림 없음)에서도
+   똑같은 모양이 필요해져서 공용으로 옮겼다. supportView/home.html에도 같은 규칙이 남아있지만
+   완전히 동일해서 충돌 없이 겹쳐 적용될 뿐이다 — 굳이 그 파일을 다시 건드리지 않았다. */
+.support-empty { display: flex; flex-direction: column; align-items: center; padding: 80px var(--s-4) 40px; color: var(--c-text-mut); }
+.support-empty__ico { font-size: 40px; opacity: .5; }
+.support-empty__text { margin-top: var(--s-3); font-size: 14px; }
+
 /* ---------------- Thumbnail placeholder (이미지 준비 중) ---------------- */
 .thumb-placeholder {
   width: 100%;

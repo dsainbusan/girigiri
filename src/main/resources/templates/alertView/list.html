@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('알림', ~{:: #content}, 'alert', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<div class="u-row" style="justify-content:space-between">
+		<h1 style="font-size:18px">알림</h1>
+		<a th:href="@{/user/alerts/settings}" class="u-mut" style="font-size:12px;text-decoration:none">⚙ 알림 설정</a>
+	</div>
+
+	<form th:if="${unreadCount} > 0" th:action="@{/user/alerts/read-all}" method="post" style="margin-top:8px">
+		<button type="submit" class="btn btn--outline btn--block" style="padding:8px;font-size:13px">
+			안 읽은 알림 <span th:text="${unreadCount}">3</span>개 모두 읽음으로 표시
+		</button>
+	</form>
+
+	<div style="display:flex;flex-direction:column;gap:0;margin-top:14px">
+		<!--/* 강노은: 알림 클릭 → GET /user/alerts/{id}가 읽음 처리 후 linkUrl로 보낸다(없으면 알림함에 머묾).
+		     안 읽은 알림은 왼쪽에 점 표시 + 배경을 살짝 다르게 줘서 한눈에 구분되게 했다. */-->
+		<a th:each="n : ${notifications}" th:href="@{/user/alerts/{id}(id=${n.id})}" class="list-row"
+		   th:style="${n.read} ? '' : 'background:var(--c-primary-weak);border-radius:var(--r-md)'"
+		   style="text-decoration:none;color:inherit;padding:10px var(--s-2)">
+			<span class="list-row__ico" th:style="'background:' + (${n.read} ? 'var(--c-line-weak)' : 'var(--c-primary-border)')"
+			      th:text="${n.icon}">🔔</span>
+			<span class="list-row__body">
+				<span style="font-size:13px" th:classappend="${n.read} ? '' : ' u-primary'" th:text="${n.message}">알림 내용</span>
+				<div class="u-mut" style="font-size:11px;margin-top:2px" th:text="${n.createdAtLabel}">오늘</div>
+			</span>
+			<span th:if="${!n.read}" style="width:8px;height:8px;border-radius:999px;background:var(--c-danger);flex:0 0 auto"></span>
+		</a>
+		<div th:if="${#lists.isEmpty(notifications)}" class="support-empty">
+			<span class="support-empty__ico">🔔</span>
+			<p class="support-empty__text">아직 알림이 없어요</p>
+		</div>
+	</div>
+
+</div>
+</body>
+</html>

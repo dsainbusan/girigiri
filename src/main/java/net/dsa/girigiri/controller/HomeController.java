@@ -8,6 +8,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.HomeService;
 import net.dsa.girigiri.service.LikeService;
+import net.dsa.girigiri.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,6 +27,7 @@ public class HomeController {
 	private final StoreRepository storeRepository;
 	private final HomeService homeService;
 	private final LikeService likeService;
+	private final NotificationService notificationService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -44,9 +46,9 @@ public class HomeController {
 		model.addAttribute("storeCards", storeCards);
 		model.addAttribute("todayRescueCount", homeService.getTodayRescueCount());
 
-		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값. 알림 기능 붙으면 unreadCount도 실데이터로 교체.
+		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값.
 		model.addAttribute("location", "내 동네");
-		model.addAttribute("unreadCount", 0);
+		model.addAttribute("unreadCount", notificationService.getUnreadCount(userId));
 		return "home";
 	}
 
