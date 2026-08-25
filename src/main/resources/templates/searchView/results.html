@@ -14,10 +14,12 @@
 
 	<div class="u-row" style="justify-content:space-between">
 		<div class="u-row" style="gap:6px">
-			<a class="chip" th:classappend="${sort != 'price'} ? ' is-active'"
+			<a class="chip" th:classappend="${sort == null or sort == 'discount'} ? ' is-active'"
 			   th:href="@{/user/search(q=${keyword}, sort='discount', price=${price})}">할인율순</a>
 			<a class="chip" th:classappend="${sort == 'price'} ? ' is-active'"
 			   th:href="@{/user/search(q=${keyword}, sort='price', price=${price})}">가격낮은순</a>
+			<a class="chip" th:classappend="${sort == 'closing'} ? ' is-active'"
+			   th:href="@{/user/search(q=${keyword}, sort='closing', price=${price})}">마감임박순</a>
 			<button type="button" class="chip" id="filter-toggle-btn"
 			        th:classappend="${price != null and !#strings.isEmpty(price)} ? ' is-active'">필터 ▾</button>
 		</div>

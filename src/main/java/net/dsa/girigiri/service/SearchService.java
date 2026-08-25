@@ -9,6 +9,7 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,7 @@ public class SearchService {
 
 	/**
 	 * @param keyword     상품명/매장명/카테고리 부분일치(대소문자 무시). null/빈값이면 전체.
-	 * @param sort        "discount"(할인율순, 기본) | "price"(가격 낮은순)
+	 * @param sort        "discount"(할인율순, 기본) | "price"(가격 낮은순) | "closing"(마감임박순)
 	 * @param priceBucket "under5000" | "5000to10000" | "over10000" | null(전체)
 	 */
 	public List<StoreCardDto> search(String keyword, String sort, String priceBucket, Set<Long> likedStoreIds) {
@@ -46,7 +47,7 @@ public class SearchService {
 				.filter(p -> storesById.containsKey(p.getStoreId()))
 				.filter(p -> matchesKeyword(p, storesById.get(p.getStoreId()), kw))
 				.filter(p -> matchesPriceBucket(p, priceBucket))
-				.sorted(sortComparator(sort))
+				.sorted(sortComparator(sort, storesById))
 				.toList();
 
 		return filtered.stream()
@@ -83,11 +84,23 @@ public class SearchService {
 		};
 	}
 
-	private Comparator<ProductEntity> sortComparator(String sort) {
+	private Comparator<ProductEntity> sortComparator(String sort, Map<Long, StoreEntity> storesById) {
 		if ("price".equals(sort)) {
 			return Comparator.comparing(p -> p.getDiscountedPrice() == null ? Integer.MAX_VALUE : p.getDiscountedPrice());
 		}
+		if ("closing".equals(sort)) {
+			// 마감시각이 빠른(=임박한) 상품이 앞으로. 영업시간 정보가 없어 계산 불가한 상품은 맨 뒤로 보낸다.
+			return Comparator.comparing(p -> closingTime(storesById.get(p.getStoreId())));
+		}
 		return Comparator.comparingInt(this::discountRate).reversed();
+	}
+
+	private LocalDateTime closingTime(StoreEntity store) {
+		if (store == null) {
+			return LocalDateTime.MAX;
+		}
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		return closeAt != null ? closeAt : LocalDateTime.MAX;
 	}
 
 	private StoreCardDto toCardDto(StoreEntity store, ProductEntity product, Set<Long> likedStoreIds) {
