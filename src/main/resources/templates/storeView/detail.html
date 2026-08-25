@@ -64,6 +64,7 @@
 			<a th:href="@{/user/inquiries/new(storeId=${store.id})}" class="btn btn--outline u-grow">이 가게에 문의하기</a>
 			<a th:href="@{/user/support}" class="btn btn--outline u-grow">내 문의 내역</a>
 		</div>
+		<a th:if="${loggedIn}" th:href="@{/user/reviews/my}" class="btn btn--outline btn--block" style="margin-top:8px">내가 쓴 리뷰 관리</a>
 
 		<style>
 			/* 강노은: 리뷰 별점 선택 UI. 라디오를 숨기고 label(★)을 오른쪽부터 채워서
@@ -93,6 +94,7 @@
 					<input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
 				</div>
 				<textarea name="content" class="input" style="margin-top:10px;min-height:70px;resize:vertical" placeholder="가게는 어떠셨나요?"></textarea>
+				<input type="url" name="imageUrl" class="input" style="margin-top:8px" placeholder="사진 URL (선택)">
 				<button type="submit" class="btn btn--block" style="margin-top:10px">리뷰 등록하기</button>
 			</form>
 		</div>
@@ -109,6 +111,8 @@
 				</div>
 				<textarea name="content" class="input" style="margin-top:10px;min-height:70px;resize:vertical"
 				          placeholder="가게는 어떠셨나요?" th:text="${myContent}"></textarea>
+				<input type="url" name="imageUrl" class="input" style="margin-top:8px" placeholder="사진 URL (선택)" th:value="${myImageUrl}">
+				<p class="u-mut" style="font-size:11px;margin-top:4px">비워두고 저장하면 기존 사진이 없어져요.</p>
 				<button type="submit" class="btn btn--block" style="margin-top:10px">리뷰 수정하기</button>
 			</form>
 		</div>
@@ -131,6 +135,9 @@
 					</div>
 					<div style="color:var(--c-accent);font-size:13px;margin-top:2px" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
 					<p style="font-size:13px;margin-top:4px" th:text="${r.content}">리뷰 내용</p>
+					<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
+					     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
+					     style="margin-top:6px;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
 					<div class="u-row" style="gap:6px;margin-top:6px">
 						<button th:if="${r.mine}" type="button" class="btn btn--outline" data-edit-review-btn
 						        style="padding:4px 12px;font-size:12px">수정</button>

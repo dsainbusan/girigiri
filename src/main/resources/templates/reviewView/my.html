@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('내가 쓴 리뷰', ~{:: #content}, 'home', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<h1 style="font-size:18px">내가 쓴 리뷰</h1>
+	<p class="u-sub" style="font-size:13px;margin-top:2px">가게별로 하나씩, 총 <b th:text="${#lists.size(reviews)}">0</b>개 남겼어요.</p>
+
+	<div style="display:flex;flex-direction:column;gap:0;margin-top:14px">
+		<div th:each="r : ${reviews}" class="list-row" style="align-items:flex-start">
+			<div class="list-row__body">
+				<a th:href="@{/user/stores/{id}(id=${r.storeId})}" style="text-decoration:none;color:inherit">
+					<div class="u-row" style="justify-content:space-between">
+						<b style="font-size:14px" th:text="${r.storeName}">가게명</b>
+						<span class="u-mut" style="font-size:11px">
+							<span th:text="${r.createdAtLabel}">3일 전</span>
+							<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
+						</span>
+					</div>
+					<div style="color:var(--c-accent);font-size:13px;margin-top:2px" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
+					<p style="font-size:13px;margin-top:4px" th:text="${r.content}">리뷰 내용</p>
+					<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
+					     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
+					     style="margin-top:6px;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
+				</a>
+				<div class="u-row" style="gap:6px;margin-top:8px">
+					<a th:href="@{/user/stores/{id}(id=${r.storeId})}" class="btn btn--outline"
+					   style="padding:4px 12px;font-size:12px">가게에서 수정</a>
+					<form th:action="@{/user/stores/{id}/reviews/{reviewId}/delete(id=${r.storeId}, reviewId=${r.id})}"
+					      method="post" onsubmit="return confirm('리뷰를 삭제할까요?')">
+						<button type="submit" class="btn btn--outline"
+						        style="padding:4px 12px;font-size:12px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+					</form>
+				</div>
+			</div>
+		</div>
+		<p th:if="${#lists.isEmpty(reviews)}" class="u-sub">아직 쓴 리뷰가 없어요. 다녀온 가게에 리뷰를 남겨보세요!</p>
+	</div>
+
+</div>
+</body>
+</html>

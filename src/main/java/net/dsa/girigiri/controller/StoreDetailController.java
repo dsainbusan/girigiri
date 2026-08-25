@@ -58,6 +58,7 @@ public class StoreDetailController {
 		model.addAttribute("loggedIn", userId != null);
 		model.addAttribute("myRating", myReview.map(r -> r.getRating()).orElse(0));
 		model.addAttribute("myContent", myReview.map(r -> r.getContent()).orElse(""));
+		model.addAttribute("myImageUrl", myReview.map(r -> r.getImageUrl()).orElse(""));
 		model.addAttribute("closingLabel", closingInfo.label());
 		model.addAttribute("products", activeProducts.stream().map(this::toProductRow).toList());
 		model.addAttribute("liked", likeService.isLiked(userId, id));

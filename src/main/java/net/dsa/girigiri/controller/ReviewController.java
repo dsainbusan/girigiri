@@ -20,12 +20,13 @@ public class ReviewController {
 	public String submit(@PathVariable Long storeId,
 						  @RequestParam int rating,
 						  @RequestParam(required = false) String content,
+						  @RequestParam(required = false) String imageUrl,
 						  HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		reviewService.submitReview(userId, storeId, rating, content);
+		reviewService.submitReview(userId, storeId, rating, content, imageUrl);
 		return "redirect:/user/stores/" + storeId;
 	}
 
