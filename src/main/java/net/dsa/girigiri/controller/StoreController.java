@@ -83,7 +83,36 @@ public class StoreController {
 				.sum();
 		int sellingNowCount = (int) todayProducts.stream().filter(p -> "active".equals(p.getStatus())).count();
 		int expiredCount = (int) todayProducts.stream().filter(p -> "expired".equals(p.getStatus())).count();
-		int rescueRate = registeredCount == 0 ? 0 : (int) Math.round(100.0 * soldCount / registeredCount);
+
+		// 변경됨 — 왜: 구제율을 "판매수량 ÷ 상품 가짓수(registeredCount)"로 계산하고 있었다 — 수량을
+		// 가짓수로 나누는 단위 불일치 버그라, 상품 1종류를 10개 등록해서 다 팔리면 1000%처럼 나올 수
+		// 있었다. "오늘 판매 현황" 도넛 카드(아래)랑 분모를 맞추기 위해서라도, 등록 "수량 합계"
+		// (totalQuantity) 기준으로 고친다.
+		int totalQuantity = todayProducts.stream().mapToInt(ProductEntity::getQuantity).sum();
+		int rescueRate = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
+
+		// 추가됨 — 왜: "오늘 판매 현황" 도넛 카드 — 마감 전엔 판매(픽업완료)/예약됨(픽업대기)/남음(미정)
+		// 3단계로, 마감 후엔 판매(=픽업완료+픽업대기 합산, 어차피 결제된 거라 다 "살린 것")/폐기 2단계로
+		// 보여준다. "픽업했는지"는 ProductEntity엔 없는 개념이라, 오늘 등록 상품들에 걸린 예약을
+		// 따로 모아서 status로 구분해야 한다.
+		List<Long> todayProductIds = todayProducts.stream().map(ProductEntity::getId).toList();
+		List<ReservationEntity> todayProductReservations =
+				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds);
+		int pickedCount = todayProductReservations.stream()
+				.filter(r -> "picked".equals(r.getStatus()))
+				.mapToInt(ReservationEntity::getReservedQuantity)
+				.sum();
+		int reservedNotPickedCount = soldCount - pickedCount;   // confirmed/ready — 취소분은 이미 remainingQuantity 복구로 soldCount에서 빠져있다.
+		int idleCount = totalQuantity - soldCount;               // 아직 예약조차 안 된 수량
+
+		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
+		boolean isClosed = closingInfo.closeAt() != null && !closingInfo.closeAt().isAfter(LocalDateTime.now());
+
+		// conic-gradient에 바로 꽂을 수 있게 누적 퍼센트로 미리 계산해서 넘긴다 (Thymeleaf에서
+		// 정수 나눗셈/반올림을 직접 하면 실수하기 쉬워서 컨트롤러에서 끝내둔다).
+		int donutPickedPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * pickedCount / totalQuantity);
+		int donutReservedCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * (pickedCount + reservedNotPickedCount) / totalQuantity);
+		int donutSoldCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
 
 		List<ReservationEntity> todayReservations =
 				reservationRepository.findByStoreIdAndPickupTimeBetween(store.getId(), todayStart, todayEnd);
@@ -113,6 +142,16 @@ public class StoreController {
 		model.addAttribute("expiredCount", expiredCount);
 		model.addAttribute("rescueRate", rescueRate);
 		model.addAttribute("rescueGoal", rescueRate >= 70 ? "목표 70% 달성" : "목표 70%");
+
+		model.addAttribute("totalQuantity", totalQuantity);
+		model.addAttribute("pickedCount", pickedCount);
+		model.addAttribute("reservedNotPickedCount", reservedNotPickedCount);
+		model.addAttribute("idleCount", idleCount);
+		model.addAttribute("isClosed", isClosed);
+		model.addAttribute("closingCountdownLabel", closingInfo.label());
+		model.addAttribute("donutPickedPct", donutPickedPct);
+		model.addAttribute("donutReservedCumPct", donutReservedCumPct);
+		model.addAttribute("donutSoldCumPct", donutSoldCumPct);
 
 		return "storeView/dashboard";
 	}
@@ -278,5 +317,15 @@ public class StoreController {
 		model.addAttribute("expiredCount", 0);
 		model.addAttribute("rescueRate", 0);
 		model.addAttribute("rescueGoal", "목표 70%");
+
+		model.addAttribute("totalQuantity", 0);
+		model.addAttribute("pickedCount", 0);
+		model.addAttribute("reservedNotPickedCount", 0);
+		model.addAttribute("idleCount", 0);
+		model.addAttribute("isClosed", false);
+		model.addAttribute("closingCountdownLabel", "");
+		model.addAttribute("donutPickedPct", 0);
+		model.addAttribute("donutReservedCumPct", 0);
+		model.addAttribute("donutSoldCumPct", 0);
 	}
 }

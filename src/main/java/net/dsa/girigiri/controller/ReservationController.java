@@ -15,6 +15,8 @@ import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.ReceiptEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.exception.AcceptNotAllowedException;
+import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
@@ -293,8 +295,8 @@ public class ReservationController {
 	 * 입력하는 걸 막을 수 있다.
 	 */
 	@GetMapping("/store-cancel")
-	public String storeCancelForm(Model model) {
-		List<CancellableReservationDto> cancellable = reservationService.getCancellableReservations();
+	public String storeCancelForm(HttpSession session, Model model) {
+		List<CancellableReservationDto> cancellable = reservationService.getCancellableReservations(resolveCurrentStoreId(session));
 		model.addAttribute("cancellable", cancellable);
 		return "reservationView/storeCancel";
 	}
@@ -336,13 +338,22 @@ public class ReservationController {
 	/**
 	 * 매장 취소 처리: 시간 제한 없이 언제든 가능하고, ReservationService.cancelByStore가 환불 처리까지 담당한다.
 	 * 결과 화면에서 "뭘 취소한 건지" 바로 보이게, 상품/매장 정보도 같이 조회해서 넘긴다.
+	 *
+	 * 추가됨 — 왜: pickupCode로만 예약을 찾아서, 다른 매장의 픽업 코드를 알기만 하면(또는 목록
+	 * 필터링 버그로 노출됐던 다른 매장 코드로) 취소시킬 수 있는 구멍이 있었다. 로그인한 점주의
+	 * 매장 소유가 아니면 막는다.
 	 */
 	@PostMapping("/store-cancel")
 	public String storeCancel(@RequestParam String pickupCode,
 							   @RequestParam(required = false) String reason,
+							   HttpSession session,
 							   Model model) {
 		ReservationEntity target = reservationRepository.findByPickupCode(pickupCode)
 				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
+
+		if (!target.getStoreId().equals(resolveCurrentStoreId(session))) {
+			throw new CancellationNotAllowedException("다른 매장의 예약은 취소할 수 없어요.");
+		}
 
 		ReservationEntity cancelled = reservationService.cancelByStore(target.getId(), reason);
 
@@ -363,13 +374,14 @@ public class ReservationController {
 	 * (2026-08-21 추가) 매장이 여기서 "수락" 버튼을 눌러야(ready로 전환) 손님이 픽업하러 올 수 있다.
 	 */
 	@GetMapping("/incoming")
-	public String incoming(Model model) {
-		List<ReservationIncomingItemDto> incoming = reservationService.getIncomingReservations();
+	public String incoming(HttpSession session, Model model) {
+		Long storeId = resolveCurrentStoreId(session);
+		List<ReservationIncomingItemDto> incoming = reservationService.getIncomingReservations(storeId);
 		model.addAttribute("incoming", incoming);
 
 		// 추가됨 — 왜: 수락(ready)까지는 됐는데 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된
 		// 예약을 확인할 방법이 없었다. "확인할 새 주문" 목록 화면에 자연스럽게 이어 붙인다.
-		model.addAttribute("ready", reservationService.getReadyReservations());
+		model.addAttribute("ready", reservationService.getReadyReservations(storeId));
 
 		return "reservationView/incoming";
 	}
@@ -383,9 +395,19 @@ public class ReservationController {
 		return "reservationView/completed";
 	}
 
-	/** "수락" 버튼 제출: confirmed -> ready로 전환한다. 이후부터 픽업 화면에서 이 예약을 처리할 수 있다. */
+	/**
+	 * "수락" 버튼 제출: confirmed -> ready로 전환한다. 이후부터 픽업 화면에서 이 예약을 처리할 수 있다.
+	 * 추가됨 — 왜: id만 받아서 다른 매장 예약도 수락시킬 수 있는 구멍이 있었다. 로그인한 점주의
+	 * 매장 소유가 아니면 막는다.
+	 */
 	@PostMapping("/{id}/accept")
-	public String accept(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+	public String accept(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
+		ReservationEntity reservation = reservationRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
+			throw new AcceptNotAllowedException("다른 매장의 예약은 수락할 수 없어요.");
+		}
+
 		reservationService.acceptReservation(id);
 		redirectAttributes.addFlashAttribute("acceptedMessage", "예약을 확인했어요. 이제 손님이 픽업하러 올 수 있어요.");
 		return "redirect:/reservation/incoming";
@@ -396,11 +418,21 @@ public class ReservationController {
 	 * 매장 취소 화면은 성격이 달라서 계속 따로 두되, 새 주문이 들어온 그 자리에서 바로 거절도 할 수
 	 * 있게 이 버튼만 추가했다.) 실제 취소 처리는 매장 취소 화면과 동일하게 cancelByStore를 그대로
 	 * 재사용한다 — 재고 복구/환불 표시/상태 변경 로직을 중복 작성하지 않기 위함.
+	 *
+	 * 추가됨 — 왜: id만 받아서 다른 매장 예약도 취소시킬 수 있는 구멍이 있었다. 로그인한 점주의
+	 * 매장 소유가 아니면 막는다.
 	 */
 	@PostMapping("/{id}/store-cancel")
 	public String storeCancelById(@PathVariable Long id,
 								   @RequestParam(required = false) String reason,
+								   HttpSession session,
 								   RedirectAttributes redirectAttributes) {
+		ReservationEntity reservation = reservationRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
+			throw new CancellationNotAllowedException("다른 매장의 예약은 취소할 수 없어요.");
+		}
+
 		reservationService.cancelByStore(id, reason);
 		redirectAttributes.addFlashAttribute("cancelledMessage", "예약을 취소했어요. 결제하신 금액은 환불됩니다.");
 		return "redirect:/reservation/incoming";

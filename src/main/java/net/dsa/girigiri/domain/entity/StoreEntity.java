@@ -28,12 +28,6 @@ public class StoreEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "login_id", length = 50, unique = true)
-	private String loginId;
-
-	@Column(name = "password", length = 100)
-	private String password;
-
 	@Column(name = "store_name", nullable = false, length = 50)
 	private String storeName;
 
@@ -80,9 +74,11 @@ public class StoreEntity {
 	@Column(name = "approval_status", length = 20)
 	private String approvalStatus = STATUS_PENDING;
 
-	// TODO(송보미): CLAUDE.md 스펙상 Store가 자체 loginId/password/role=ADMIN을 갖는 것과,
-	// 세션 설계({ userId, role, viewMode, storeId })가 암시하는 "User가 storeId로 Store를 소유"하는
-	// 모델이 서로 어긋난다. ERD 확정 시 둘 중 하나로 정리 필요.
+	// 변경됨 — 왜: Store가 자체 loginId/password를 갖는 "독립 계정" 모델(안A)과, 세션 설계
+	// ({ userId, role, viewMode, storeId })가 암시하는 "User가 storeId로 Store를 소유"하는 모델(안B)이
+	// 어긋난다는 지적으로 확정함: 안B로 정리(Store는 로그인 주체가 아니고, User(role=OWNER)가
+	// owner_id로 소유하는 데이터일 뿐). login_id/password 컬럼은 그래서 제거했다 — 실제로 어디서도
+	// 참조하지 않던 죽은 컬럼이었다(로그인은 전부 User 쪽 OAuth2/이메일로만 이뤄짐).
 	@Column(name = "owner_id")
 	private Long ownerId;
 

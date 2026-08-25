@@ -328,9 +328,10 @@ public class ReservationService {
 
 	/**
 	 * 사장님용 "들어온 예약 확인/수락" 목록 — 아직 수락 안 한(confirmed) 주문들을 오래된 순으로 보여준다.
+	 * 변경됨 — 왜: storeId 조건이 없어서 전체 매장 예약이 다 섞여서 나오던 버그를 고쳤다.
 	 */
-	public List<ReservationIncomingItemDto> getIncomingReservations() {
-		List<ReservationEntity> incoming = reservationRepository.findByStatusOrderByReservedAtAsc("confirmed");
+	public List<ReservationIncomingItemDto> getIncomingReservations(Long storeId) {
+		List<ReservationEntity> incoming = reservationRepository.findByStoreIdAndStatusOrderByReservedAtAsc(storeId, "confirmed");
 		return incoming.stream().map(this::toIncomingItemDto).toList();
 	}
 
@@ -338,9 +339,10 @@ public class ReservationService {
 	 * 추가됨 — 왜: 매장이 수락(ready)했지만 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된 예약들을
 	 * 볼 방법이 없었다 — "손님이 안 왔나?" 확인하려면 이 목록이 필요하다. getIncomingReservations()와
 	 * 데이터 모양이 완전히 같아서(상품/수량/금액/픽업코드/주문시각) DTO를 그대로 재사용한다.
+	 * 변경됨 — 왜: 위와 동일한 이유로 storeId 조건 추가.
 	 */
-	public List<ReservationIncomingItemDto> getReadyReservations() {
-		List<ReservationEntity> ready = reservationRepository.findByStatusOrderByReservedAtAsc("ready");
+	public List<ReservationIncomingItemDto> getReadyReservations(Long storeId) {
+		List<ReservationEntity> ready = reservationRepository.findByStoreIdAndStatusOrderByReservedAtAsc(storeId, "ready");
 		return ready.stream().map(this::toIncomingItemDto).toList();
 	}
 
@@ -461,10 +463,11 @@ public class ReservationService {
 	/**
 	 * 매장 취소 화면용 "취소 가능한 예약" 목록 — checkCancellableState와 동일한 기준(픽업/취소/노쇼가
 	 * 아닌 예약)으로, 오래된 주문부터 보여준다. 픽업 코드를 직접 타이핑하지 않고 여기서 골라 취소한다.
+	 * 변경됨 — 왜: storeId 조건이 없어서 전체 매장 예약이 다 섞여서 나오던 버그를 고쳤다.
 	 */
-	public List<CancellableReservationDto> getCancellableReservations() {
+	public List<CancellableReservationDto> getCancellableReservations(Long storeId) {
 		List<ReservationEntity> cancellable =
-				reservationRepository.findByStatusInOrderByReservedAtAsc(List.of("pending", "confirmed", "ready"));
+				reservationRepository.findByStoreIdAndStatusInOrderByReservedAtAsc(storeId, List.of("pending", "confirmed", "ready"));
 		return cancellable.stream().map(this::toCancellableDto).toList();
 	}
 

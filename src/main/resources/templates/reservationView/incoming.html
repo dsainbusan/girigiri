@@ -75,10 +75,12 @@
 				<button type="button" class="chip reject-chip is-active" data-reason="매장 사정으로 취소">매장 사정으로 취소</button>
 				<button type="button" class="chip reject-chip" data-reason="재고 부족/품절">재고 부족/품절</button>
 				<button type="button" class="chip reject-chip" data-reason="준비 시간 부족">준비 시간 부족</button>
+				<button type="button" class="chip reject-chip" data-reason="">기타 (직접 입력)</button>
 			</div>
 			<form th:action="@{/reservation/{id}/store-cancel(id=${r.reservationId})}" method="post">
-				<input type="hidden" name="reason" class="reject-reason-input" value="매장 사정으로 취소">
-				<button type="submit" class="btn btn--block" style="background:var(--c-danger)">이 예약 취소하기</button>
+				<input type="text" name="reason" class="input reject-reason-input" style="margin-bottom:var(--s-3)"
+				       placeholder="취소 사유 (예: 재고 부족)" value="매장 사정으로 취소">
+				<button type="submit" class="btn btn--block btn--danger">취소 처리</button>
 			</form>
 		</div>
 	</div>
@@ -120,12 +122,16 @@
 		});
 		document.querySelectorAll('.reject-panel').forEach(function (panel) {
 			var chips = panel.querySelectorAll('.reject-chip');
-			var hiddenInput = panel.querySelector('.reject-reason-input');
+			var reasonInput = panel.querySelector('.reject-reason-input');
 			chips.forEach(function (chip) {
 				chip.addEventListener('click', function () {
 					chips.forEach(function (c) { c.classList.remove('is-active'); });
 					chip.classList.add('is-active');
-					hiddenInput.value = chip.getAttribute('data-reason');
+					var preset = chip.getAttribute('data-reason');
+					reasonInput.value = preset;
+					if (!preset) {
+						reasonInput.focus();
+					}
 				});
 			});
 		});
