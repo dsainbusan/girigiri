@@ -10,16 +10,23 @@
 		       style="border:none;background:transparent;outline:none;width:100%;font-size:var(--fs-md);color:var(--c-text)">
 		<input type="hidden" name="sort" th:value="${sort}">
 		<input type="hidden" name="price" th:value="${price}">
+		<input type="hidden" name="lat" th:value="${lat}">
+		<input type="hidden" name="lng" th:value="${lng}">
 	</form>
 
 	<div class="u-row" style="justify-content:space-between">
-		<div class="u-row" style="gap:6px">
+		<div class="u-row" style="gap:6px;flex-wrap:wrap">
 			<a class="chip" th:classappend="${sort == null or sort == 'discount'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='discount', price=${price})}">할인율순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='discount', price=${price}, lat=${lat}, lng=${lng})}">할인율순</a>
 			<a class="chip" th:classappend="${sort == 'price'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='price', price=${price})}">가격낮은순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='price', price=${price}, lat=${lat}, lng=${lng})}">가격낮은순</a>
 			<a class="chip" th:classappend="${sort == 'closing'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='closing', price=${price})}">마감임박순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='closing', price=${price}, lat=${lat}, lng=${lng})}">마감임박순</a>
+			<!--/* 강노은: 좌표가 아직 없으면 클릭 시 JS가 위치 권한을 먼저 물어보고(getCurrentPosition),
+			     받은 좌표를 붙여서 다시 이 링크로 이동한다 — data-has-coords로 두 케이스를 구분한다. */-->
+			<a class="chip" id="sort-distance-chip" th:classappend="${sort == 'distance'} ? ' is-active'"
+			   th:attr="data-has-coords=${lat != null and lng != null}"
+			   th:href="@{/user/search(q=${keyword}, sort='distance', price=${price}, lat=${lat}, lng=${lng})}">거리순</a>
 			<button type="button" class="chip" id="filter-toggle-btn"
 			        th:classappend="${price != null and !#strings.isEmpty(price)} ? ' is-active'">필터 ▾</button>
 		</div>
@@ -33,11 +40,11 @@
 			<label class="field__label">가격대</label>
 			<div class="u-row" style="gap:8px;flex-wrap:wrap">
 				<a class="chip" th:classappend="${price == 'under5000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='under5000')}">5천원 이하</a>
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='under5000', lat=${lat}, lng=${lng})}">5천원 이하</a>
 				<a class="chip" th:classappend="${price == '5000to10000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='5000to10000')}">5천~1만원</a>
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='5000to10000', lat=${lat}, lng=${lng})}">5천~1만원</a>
 				<a class="chip" th:classappend="${price == 'over10000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='over10000')}">1만원 이상</a>
+				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='over10000', lat=${lat}, lng=${lng})}">1만원 이상</a>
 			</div>
 		</div>
 		<div class="field">
@@ -65,6 +72,32 @@
 			if (!btn || !panel) return;
 			btn.addEventListener('click', function () {
 				panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+			});
+		})();
+
+		/* 강노은: "거리순" 클릭 시 좌표가 없으면 위치 권한부터 물어보고, 받은 좌표를 붙여 다시 이동한다.
+		   이미 좌표가 URL에 있으면(다른 정렬/필터로 이동했다가 돌아온 경우) 그냥 링크대로 이동한다. */
+		(function () {
+			var chip = document.getElementById('sort-distance-chip');
+			if (!chip) return;
+			chip.addEventListener('click', function (e) {
+				if (chip.dataset.hasCoords === 'true') return;
+				e.preventDefault();
+				if (!navigator.geolocation) {
+					alert('이 브라우저에서는 위치 정보를 사용할 수 없어요.');
+					return;
+				}
+				var originalText = chip.textContent;
+				chip.textContent = '위치 확인 중…';
+				navigator.geolocation.getCurrentPosition(function (pos) {
+					var url = new URL(chip.href, window.location.origin);
+					url.searchParams.set('lat', pos.coords.latitude);
+					url.searchParams.set('lng', pos.coords.longitude);
+					window.location.href = url.toString();
+				}, function () {
+					chip.textContent = originalText;
+					alert('위치 권한이 없어 거리순 정렬을 쓸 수 없어요. 브라우저 설정에서 위치 권한을 허용해주세요.');
+				});
 			});
 		})();
 	</script>

@@ -49,8 +49,10 @@
               th:classappend="${store.liked} ? ' is-liked'"
               th:attr="data-store-id=${store.storeId}">&hearts;</button>
     </span>
+    <!--/* 강노은: distance는 사용자 위치 권한을 받았을 때만 채워진다. 없으면(빈 문자열) " · "가
+         덩그러니 남지 않도록 구분자 자체를 생략한다. */-->
     <span class="store-card__meta"
-          th:text="${store.category} + ' · ' + ${store.distance}">베이커리 · 320m</span>
+          th:text="${store.category} + (${#strings.isEmpty(store.distance)} ? '' : ' · ' + ${store.distance})">베이커리 · 320m</span>
     <span class="price" style="margin-top:2px">
       <span class="badge badge--discount" th:text="${store.discountRate}">-51%</span>
       <span class="price__orig" th:text="${store.origPrice}">12,000원</span>
