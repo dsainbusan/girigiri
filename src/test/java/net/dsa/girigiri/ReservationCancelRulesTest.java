@@ -1,6 +1,7 @@
 package net.dsa.girigiri;
 
 import net.dsa.girigiri.domain.dto.StoreCancelStatsDto;
+import net.dsa.girigiri.domain.entity.PayStatus;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
@@ -80,7 +81,8 @@ class ReservationCancelRulesTest {
 		ReservationEntity prepared = reservationService.prepareReservation(userId, productId, quantity, pickupTime);
 		PaymentEntity payment = paymentRepository.findByReservationId(prepared.getId()).orElseThrow();
 		when(portOneClient.verifyPayment(eq(payment.getMerchantUid()), anyInt()))
-				.thenReturn(PortOneClient.PortOneVerifyResult.success("test-tx-" + prepared.getId(), prepared.getTotalPrice()));
+				.thenReturn(PortOneClient.PortOneVerifyResult.success(
+						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
 		when(portOneClient.cancelPayment(anyString(), anyString()))
 				.thenReturn(PortOneClient.PortOneCancelResult.success());
 		return reservationService.confirmPayment(prepared.getId(), payment.getMerchantUid());
@@ -108,7 +110,8 @@ class ReservationCancelRulesTest {
 				1L, 1L, 1, LocalDateTime.now().plusHours(1));
 		PaymentEntity readyPayment = paymentRepository.findByReservationId(prepared.getId()).orElseThrow();
 		when(portOneClient.verifyPayment(eq(readyPayment.getMerchantUid()), anyInt()))
-				.thenReturn(PortOneClient.PortOneVerifyResult.success("test-tx-" + prepared.getId(), prepared.getTotalPrice()));
+				.thenReturn(PortOneClient.PortOneVerifyResult.success(
+						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
 		ReservationEntity reservation = reservationService.confirmPayment(prepared.getId(), readyPayment.getMerchantUid());
 
 		// 환불 API 자체가 실패하는 상황(네트워크 오류, PortOne 쪽 일시적 문제 등)을 가정한다.
@@ -122,7 +125,7 @@ class ReservationCancelRulesTest {
 		assertEquals("cancelled", cancelled.getStatus());
 
 		PaymentEntity paymentAfter = paymentRepository.findByReservationId(reservation.getId()).orElseThrow();
-		assertEquals("cancelled", paymentAfter.getPayStatus());
+		assertEquals(PayStatus.CANCELLED, paymentAfter.getPayStatus());
 		assertTrue(paymentAfter.getFailReason() != null && paymentAfter.getFailReason().contains("환불 실패"));
 
 		System.out.println("환불 API가 실패해도 예약은 정상적으로 취소 처리됨 — failReason: " + paymentAfter.getFailReason());

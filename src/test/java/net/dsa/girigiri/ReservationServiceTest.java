@@ -1,5 +1,6 @@
 package net.dsa.girigiri;
 
+import net.dsa.girigiri.domain.entity.PayStatus;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReceiptEntity;
@@ -96,7 +97,7 @@ class ReservationServiceTest {
 
 		// 5. 결제 기록이 이 예약에 연결돼서 아직 "ready"(결제 대기) 상태로 저장됐는지
 		PaymentEntity payment = paymentRepository.findByReservationId(reservation.getId()).orElseThrow();
-		assertEquals("ready", payment.getPayStatus());
+		assertEquals(PayStatus.READY, payment.getPayStatus());
 		assertEquals(reservation.getTotalPrice(), payment.getAmount());
 		assertNotNull(payment.getMerchantUid());
 
@@ -118,7 +119,8 @@ class ReservationServiceTest {
 
 		// PortOne 서버에 실제로 물어보는 대신, "결제 완료(PAID)였다"고 답한 것으로 가정한다.
 		when(portOneClient.verifyPayment(eq(readyPayment.getMerchantUid()), anyInt()))
-				.thenReturn(PortOneClient.PortOneVerifyResult.success("test-tx-" + prepared.getId(), prepared.getTotalPrice()));
+				.thenReturn(PortOneClient.PortOneVerifyResult.success(
+						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
 
 		ReservationEntity confirmed = reservationService.confirmPayment(prepared.getId(), readyPayment.getMerchantUid());
 
@@ -127,7 +129,7 @@ class ReservationServiceTest {
 
 		// 2. 결제 기록이 "paid"로 갱신되고 PortOne 거래번호(impUid)가 채워졌는지
 		PaymentEntity paidPayment = paymentRepository.findByReservationId(confirmed.getId()).orElseThrow();
-		assertEquals("paid", paidPayment.getPayStatus());
+		assertEquals(PayStatus.PAID, paidPayment.getPayStatus());
 		assertNotNull(paidPayment.getPaidAt());
 		assertEquals("test-tx-" + prepared.getId(), paidPayment.getImpUid());
 
@@ -181,5 +183,58 @@ class ReservationServiceTest {
 		assertEquals("SYSTEM", afterFail.getCancelledBy());
 		assertEquals(stockBeforePrepare,
 				productRepository.findById(productId).orElseThrow().getRemainingQuantity());
+	}
+
+	/**
+	 * 추가됨 (2026-08-24) — 왜: 결제창(PortOne)이 실패/취소로 끝났을 때 프론트가 바로 부르는
+	 * cancelPendingReservation() 확인용. 예전엔 이 호출이 없어서 손님이 결제창을 닫아도 재고가
+	 * 최대 15분+ 지나서야(스케줄러) 풀렸다 — "결제 안 했는데 남은 수량이 안 돌아온다" 피드백으로 추가.
+	 */
+	@Test
+	void 결제창에서_실패하면_pending_예약이_즉시_취소되고_재고도_바로_복구된다() {
+		Long productId = 1L;
+		int quantity = 1;
+
+		ProductEntity before = productRepository.findById(productId).orElseThrow();
+		int stockBefore = before.getRemainingQuantity();
+
+		ReservationEntity prepared = reservationService.prepareReservation(
+				1L, productId, quantity, LocalDateTime.now().plusHours(2));
+
+		// 재고가 이미 차감된 상태(결제 전)인 걸 먼저 확인
+		assertEquals(stockBefore - quantity,
+				productRepository.findById(productId).orElseThrow().getRemainingQuantity());
+
+		ReservationEntity cancelled = reservationService.cancelPendingReservation(prepared.getId());
+
+		assertEquals("cancelled", cancelled.getStatus());
+		assertEquals("SYSTEM", cancelled.getCancelledBy());
+
+		// 재고가 즉시(스케줄러 안 기다리고) 원래대로 복구됐는지
+		assertEquals(stockBefore,
+				productRepository.findById(productId).orElseThrow().getRemainingQuantity());
+
+		PaymentEntity payment = paymentRepository.findByReservationId(prepared.getId()).orElseThrow();
+		assertEquals(PayStatus.CANCELLED, payment.getPayStatus());
+
+		System.out.println("결제 미완료로 즉시 취소됨 — 재고: " + stockBefore + "개로 바로 복구");
+	}
+
+	/** 이미 confirmed로 처리된(=더 이상 pending이 아닌) 예약은 손대지 않고 그대로 돌려줘야 한다. */
+	@Test
+	void 이미_처리된_예약에_cancelPendingReservation을_불러도_그대로_둔다() {
+		Long productId = 1L;
+
+		ReservationEntity prepared = reservationService.prepareReservation(
+				1L, productId, 1, LocalDateTime.now().plusHours(2));
+		PaymentEntity readyPayment = paymentRepository.findByReservationId(prepared.getId()).orElseThrow();
+		when(portOneClient.verifyPayment(eq(readyPayment.getMerchantUid()), anyInt()))
+				.thenReturn(PortOneClient.PortOneVerifyResult.success(
+						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
+		ReservationEntity confirmed = reservationService.confirmPayment(prepared.getId(), readyPayment.getMerchantUid());
+
+		ReservationEntity untouched = reservationService.cancelPendingReservation(confirmed.getId());
+
+		assertEquals("confirmed", untouched.getStatus());
 	}
 }

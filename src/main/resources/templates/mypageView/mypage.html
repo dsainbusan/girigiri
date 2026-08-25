@@ -3,8 +3,9 @@
       th:replace="~{common/layout :: layout('마이페이지', ~{:: #content}, 'my', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/chat.css}">
 
-	<!--/* 
+	<!--/*
 	  마이페이지 메인 화면
 	  담당: 문창호 (WBS 6.1 절약 가계부 · 마이페이지)
 	*/-->
@@ -47,47 +48,47 @@
 	</div>
 
 	<!-- 3. 메뉴 리스트 카드 -->
-	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden; display: flex; flex-direction: column;">
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
 		<!-- 예약 내역 -->
-		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🧾</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">예약 내역</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<a href="#" class="list-menu-item">
+			<span class="list-menu-item__icon">🧾</span>
+			<span class="list-menu-item__title">예약 내역</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 찜한 가게 -->
-		<a th:href="@{/user/likes}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🖤</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">찜한 가게</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<a th:href="@{/user/likes}" class="list-menu-item">
+			<span class="list-menu-item__icon">🖤</span>
+			<span class="list-menu-item__title">찜한 가게</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 내가 쓴 리뷰 -->
-		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">⭐</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">내가 쓴 리뷰</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<a href="#" class="list-menu-item">
+			<span class="list-menu-item__icon">⭐</span>
+			<span class="list-menu-item__title">내가 쓴 리뷰</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 알림 설정 -->
-		<a th:href="@{/user/alerts}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">🔔</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">알림 설정</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<a th:href="@{/user/alerts}" class="list-menu-item">
+			<span class="list-menu-item__icon">🔔</span>
+			<span class="list-menu-item__title">알림 설정</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 고객 지원 -->
-		<a href="#" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); border-bottom: 1px solid var(--c-line-weak); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">💬</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">고객 지원</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<!-- 고객 지원 (챗봇 위젯 열기, 담당: 송채현 WBS 6.5) -->
+		<a href="javascript:void(0)" id="chat-open-btn" class="list-menu-item">
+			<span class="list-menu-item__icon">💬</span>
+			<span class="list-menu-item__title">고객 지원</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 회원정보 수정 -->
-		<a th:href="@{/mypage/edit}" class="list-menu-item" style="display: flex; align-items: center; padding: 16px var(--s-4); text-decoration: none; color: var(--c-text);">
-			<span style="font-size: 18px; width: 28px; display: flex; align-items: center;">⚙️</span>
-			<span style="font-size: var(--fs-md); font-weight: var(--fw-medium); flex-grow: 1;">회원정보 수정</span>
-			<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+		<!-- 회원정보 수정 (구현 완료) -->
+		<a th:href="@{/mypage/edit}" class="list-menu-item" style="border-bottom: none;">
+			<span class="list-menu-item__icon">⚙️</span>
+			<span class="list-menu-item__title">회원정보 수정</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 	</div>
 
@@ -98,7 +99,7 @@
 				<p class="u-bold" th:text="${store.storeName}">내 매장</p>
 				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px;">점주 모드로 이동하여 재고 및 매장을 관리하세요.</p>
 			</div>
-			<a th:href="@{/store/dashboard}" class="btn btn--sm">점주 모드</a>
+			<a th:href="@{/store/dashboard}" class="btn btn--sm">관리자 모드</a>
 		</div>
 	</div>
 
@@ -111,6 +112,138 @@
 		</form>
 	</div>
 
+	<!-- 6. 고객 지원 챗봇 위젯 (담당: 송채현, WBS 6.5) -->
+	<!--/*
+	  로그인한 사용자에게만 노출된다(REQ-F-120) — 이 마이페이지 화면 자체가 비로그인 시
+	  /auth/loginForm으로 리다이렉트되므로(MypageController.mypage 참고) 별도 로그인 체크는
+	  화면 쪽엔 필요 없다(서버 API는 세션을 한 번 더 확인한다 — ChatController 참고).
+	  대화 내역은 서버에 저장하지 않고 이 화면의 JS 변수(chatHistory)에만 담아두며, "새 대화
+	  시작" 버튼을 누르면 이 배열만 비운다(REQ-F-125). role=OWNER면 사장님용, 그 외엔 손님용
+	  시스템 프롬프트로 서버(ChatService)가 알아서 답한다 — 화면에서 따로 구분해서 보낼 필요 없음.
+	*/-->
+	<div id="chat-panel" class="chat-panel" style="display: none;">
+		<div class="chat-panel__header">
+			<span class="chat-panel__title">고객 지원 챗봇</span>
+			<div class="chat-panel__header-actions">
+				<button type="button" id="chat-reset-btn" class="chat-panel__icon-btn" title="새 대화 시작">↺</button>
+				<button type="button" id="chat-close-btn" class="chat-panel__icon-btn" title="닫기">✕</button>
+			</div>
+		</div>
+		<div id="chat-messages" class="chat-panel__messages">
+			<div class="chat-bubble chat-bubble--bot">안녕하세요! 예약, 픽업, 결제·환불 관련해서 궁금한 점을 물어보세요.</div>
+		</div>
+		<form id="chat-form" class="chat-panel__input-row">
+			<input type="text" id="chat-input" class="chat-panel__input" placeholder="메시지를 입력하세요" autocomplete="off">
+			<button type="submit" class="chat-panel__send-btn">전송</button>
+		</form>
+	</div>
+
+	<script>
+		(function () {
+			var chatHistory = [];
+			var panel = document.getElementById('chat-panel');
+			var openBtn = document.getElementById('chat-open-btn');
+			var closeBtn = document.getElementById('chat-close-btn');
+			var resetBtn = document.getElementById('chat-reset-btn');
+			var messagesEl = document.getElementById('chat-messages');
+			var form = document.getElementById('chat-form');
+			var input = document.getElementById('chat-input');
+
+			if (!panel || !openBtn) { return; }
+
+			function appendMessage(who, text) {
+				var bubble = document.createElement('div');
+				bubble.className = who === 'user' ? 'chat-bubble chat-bubble--user' : 'chat-bubble chat-bubble--bot';
+				bubble.textContent = text;
+				messagesEl.appendChild(bubble);
+				messagesEl.scrollTop = messagesEl.scrollHeight;
+				return bubble;
+			}
+
+			openBtn.addEventListener('click', function () {
+				panel.style.display = 'flex';
+				input.focus();
+			});
+
+			closeBtn.addEventListener('click', function () {
+				panel.style.display = 'none';
+			});
+
+			// "새 대화 시작" (REQ-F-125) — 서버엔 저장된 게 없어서 프론트가 들고 있는 history만 비우면 된다.
+			resetBtn.addEventListener('click', function () {
+				chatHistory = [];
+				messagesEl.innerHTML = '';
+				appendMessage('bot', '안녕하세요! 예약, 픽업, 결제·환불 관련해서 궁금한 점을 물어보세요.');
+			});
+
+			form.addEventListener('submit', async function (e) {
+				e.preventDefault();
+				var text = input.value.trim();
+				if (!text) { return; }
+
+				appendMessage('user', text);
+				input.value = '';
+				var loadingBubble = appendMessage('bot', '...');
+
+				try {
+					var res = await fetch('/mypage/chat/message', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ message: text, history: chatHistory })
+					});
+
+					if (res.status === 401) {
+						loadingBubble.textContent = '로그인이 필요해요.';
+						return;
+					}
+
+					var data = await res.json();
+					if (data.success) {
+						loadingBubble.textContent = data.reply;
+						chatHistory.push({ role: 'user', content: text });
+						chatHistory.push({ role: 'assistant', content: data.reply });
+					} else {
+						loadingBubble.textContent = data.errorMessage || '답변을 가져오지 못했어요. 다시 시도해주세요.';
+					}
+				} catch (err) {
+					loadingBubble.textContent = '답변을 가져오지 못했어요. 잠시 후 다시 시도해주세요.';
+				}
+			});
+		})();
+	</script>
+
 </div>
+
+<style>
+	.list-menu-item {
+		display: flex;
+		align-items: center;
+		padding: 16px var(--s-4);
+		border-bottom: 1px solid var(--c-line-weak);
+		text-decoration: none;
+		color: var(--c-text);
+		transition: background-color 0.15s ease;
+	}
+	.list-menu-item:active {
+		background-color: var(--c-bg);
+	}
+	.list-menu-item__icon {
+		font-size: 18px;
+		width: 28px;
+		display: flex;
+		align-items: center;
+	}
+	.list-menu-item__title {
+		font-size: var(--fs-md);
+		font-weight: var(--fw-medium);
+		flex-grow: 1;
+	}
+	.list-menu-item__arrow {
+		color: var(--c-text-mut);
+		font-size: 18px;
+		font-weight: var(--fw-bold);
+	}
+</style>
+
 </body>
 </html>

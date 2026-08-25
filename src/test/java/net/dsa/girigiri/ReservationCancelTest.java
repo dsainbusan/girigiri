@@ -1,5 +1,6 @@
 package net.dsa.girigiri;
 
+import net.dsa.girigiri.domain.entity.PayStatus;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
@@ -57,7 +58,7 @@ class ReservationCancelTest {
 		assertEquals(stockBeforeCancel + before.getReservedQuantity(), productAfter.getRemainingQuantity());
 
 		paymentRepository.findByReservationId(1L).ifPresentOrElse(
-				payment -> assertEquals("cancelled", payment.getPayStatus()),
+				payment -> assertEquals(PayStatus.CANCELLED, payment.getPayStatus()),
 				() -> System.out.println("이 예약은 결제 기록이 없어서(=sample-data로 직접 넣은 데이터) 건너뜀 — 정상이에요.")
 		);
 
