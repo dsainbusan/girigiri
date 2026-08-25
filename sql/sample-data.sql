@@ -67,8 +67,8 @@ INSERT INTO reservation (id, user_id, product_id, product_name, store_id, reserv
 -- ---------------------------------------------------------------------
 -- review (픽업 완료 건에 대한 리뷰)
 -- ---------------------------------------------------------------------
-INSERT INTO review (id, user_id, store_id, rating, content, created_at) VALUES
-(1, 2, 1, 5, '빵이 신선하고 마감할인이라 정말 저렴했어요!', NOW());
+INSERT INTO review (id, user_id, store_id, rating, content, edited, created_at) VALUES
+(1, 2, 1, 5, '빵이 신선하고 마감할인이라 정말 저렴했어요!', 0, NOW());
 
 -- ---------------------------------------------------------------------
 -- likes (찜한 매장)

@@ -75,6 +75,7 @@ CREATE TABLE product (
     description         VARCHAR(500),
     status              VARCHAR(20) NOT NULL COMMENT 'active / sold / expired',
     registered_at       DATETIME,
+    updated_at          DATETIME COMMENT '상품 수정 + 재고 변동(예약/취소)에도 갱신됨 (2026-08-25 추가)',
     FOREIGN KEY (store_id) REFERENCES store(id)
 );
 
