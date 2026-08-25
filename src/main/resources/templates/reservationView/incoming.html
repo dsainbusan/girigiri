@@ -8,8 +8,24 @@
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
 	<div class="card" style="margin-bottom:var(--s-3)">
-		<a th:href="@{/reservation/settings}" class="u-primary u-bold" style="font-size:var(--fs-sm)">⚙️ 픽업 설정 (준비시간 · 마감시간)</a>
+		<a th:href="@{/reservation/settings}" class="u-primary u-bold" style="font-size:var(--fs-sm)">⚙️ 주문 마감 설정 (준비시간 · 마감시간)</a>
 	</div>
+
+	<!-- 추가됨 — 왜: 상단바 뒤로가기(common/header.html)는 공용 컴포넌트라 브라우저 history 기반으로
+		동작한다(app.js의 data-back). 이 화면에선 어디서 들어왔든 항상 점주 대시보드로 돌아가야 해서,
+		공용 헤더는 안 건드리고 이 화면에서만 그 버튼의 동작을 오버라이드한다. app.js가 data-back을
+		읽어서 history.back()을 바인딩하기 전에(app.js는 body 맨 끝에서 로드됨) data-back 속성을 먼저
+		지워서, app.js가 이 버튼엔 바인딩을 안 하게 막고 여기서 직접 이동시킨다. -->
+	<script th:inline="none">
+	(function () {
+		var backBtn = document.querySelector('.topbar__back');
+		if (!backBtn) { return; }
+		backBtn.removeAttribute('data-back');
+		backBtn.addEventListener('click', function () {
+			location.href = '/store/dashboard';
+		});
+	})();
+	</script>
 
 	<!-- 방금 수락 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
 	<div th:if="${acceptedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
@@ -68,6 +84,31 @@
 			</form>
 		</div>
 	</div>
+
+	<!-- 추가됨 — 왜: 수락(ready)까지는 됐는데 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된
+		예약을 볼 방법이 없었다. "손님이 아직 안 왔나?" 확인용 — 실제 픽업 처리(QR 스캔/코드입력)는
+		여기서 바로 안 하고 /reservation/pickup으로 보낸다(그 화면 로직을 중복 구현하지 않기 위해). -->
+	<div class="card" style="margin-top:var(--s-5)">
+		<p class="u-bold">픽업 대기중 (수락됨 · 손님 미방문)</p>
+		<p class="u-sub" style="font-size:var(--fs-sm); margin-top:2px">수락은 됐지만 아직 QR/코드로 픽업 처리가 안 된 예약이에요.</p>
+	</div>
+
+	<div th:if="${#lists.isEmpty(ready)}" class="empty-state">
+		픽업 대기중인 예약이 없어요.
+	</div>
+
+	<div class="card" th:each="r : ${ready}" style="margin-top:var(--s-3)">
+		<p class="u-bold" style="font-size:var(--fs-lg)">
+			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
+		</p>
+		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
+		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
+		<p class="u-sub">주문 시각: <strong th:text="${r.reservedAtDisplay}">08월 21일 15:00</strong></p>
+	</div>
+
+	<a th:if="${!#lists.isEmpty(ready)}" th:href="@{/reservation/pickup}" class="btn btn--block" style="margin-top:var(--s-3)">
+		QR/코드로 픽업 처리하러 가기
+	</a>
 
 	<script th:inline="none">
 	(function () {

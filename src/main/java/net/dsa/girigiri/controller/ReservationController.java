@@ -3,10 +3,28 @@ package net.dsa.girigiri.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.dto.*;
-import net.dsa.girigiri.domain.entity.*;
-import net.dsa.girigiri.exception.*;
-import net.dsa.girigiri.repository.*;
+import net.dsa.girigiri.domain.dto.CancellableReservationDto;
+import net.dsa.girigiri.domain.dto.PaymentConfirmResponseDto;
+import net.dsa.girigiri.domain.dto.PickupBatchItemResultDto;
+import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
+import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
+import net.dsa.girigiri.domain.dto.ReservationListItemDto;
+import net.dsa.girigiri.domain.dto.ReservationPrepareResponseDto;
+import net.dsa.girigiri.domain.entity.PaymentEntity;
+import net.dsa.girigiri.domain.entity.ProductEntity;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
+import net.dsa.girigiri.domain.entity.ReceiptEntity;
+import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.exception.AcceptNotAllowedException;
+import net.dsa.girigiri.exception.CancellationNotAllowedException;
+import net.dsa.girigiri.exception.OrderNotAllowedException;
+import net.dsa.girigiri.exception.PaymentVerificationException;
+import net.dsa.girigiri.exception.PickupNotAllowedException;
+import net.dsa.girigiri.repository.PaymentRepository;
+import net.dsa.girigiri.repository.ProductRepository;
+import net.dsa.girigiri.repository.ReceiptRepository;
+import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.ReceiptService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.util.OperatingHoursUtil;
@@ -69,11 +87,14 @@ public class ReservationController {
 		return 1L;
 	}
 
-	// TODO(송보미 로그인 완료 후): 세션(storeId)에서 실제 로그인한 매장 id를 꺼내오도록 교체.
-	// 지금은 resolveCurrentUserId()와 같은 방식으로, sql/sample-data.sql의 store id=1("다이스키 베이커리")을
-	// "로그인한 매장"으로 임시 취급한다.
-	private Long resolveCurrentStoreId() {
-		return 1L;
+	// 변경됨 — 왜: 매장별로 필터링하는 화면(완료된 거래 내역 등)에서 하드코딩된 store id=1이 실제
+	// 로그인한 점주의 매장(예: id=2)과 안 맞아서 데이터가 안 보이는 문제가 있었다. StoreController가
+	// 이미 쓰는 패턴(session.userId → storeRepository.findByOwnerId)과 동일하게 세션 기반으로 바꿨다.
+	private Long resolveCurrentStoreId(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		return storeRepository.findByOwnerId(userId)
+				.orElseThrow(() -> new EntityNotFoundException("로그인한 점주의 매장을 찾을 수 없습니다."))
+				.getId();
 	}
 
 	/**
@@ -214,14 +235,12 @@ public class ReservationController {
 	public String complete(@PathVariable Long id, Model model) {
 		ReservationEntity reservation = reservationRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
-		ProductEntity product = productRepository.findById(reservation.getProductId())
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + reservation.getProductId()));
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
 		model.addAttribute("reservationId", reservation.getId());
 		model.addAttribute("storeName", store.getStoreName());
-		model.addAttribute("productName", product.getName());
+		model.addAttribute("productName", reservation.getProductName());
 		model.addAttribute("quantity", reservation.getReservedQuantity());
 		model.addAttribute("totalPrice", reservation.getTotalPrice());
 		model.addAttribute("pickupTime", reservation.getPickupTime().format(DISPLAY_FORMAT));
@@ -307,12 +326,11 @@ public class ReservationController {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}
 
-		ProductEntity product = productRepository.findById(reservation.getProductId()).orElse(null);
 		StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
 
 		return PickupLookupResponseDto.success(
 				store != null ? store.getStoreName() : "-",
-				product != null ? product.getName() : "-",
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice());
 	}
@@ -339,12 +357,11 @@ public class ReservationController {
 
 		ReservationEntity cancelled = reservationService.cancelByStore(target.getId(), reason);
 
-		ProductEntity product = productRepository.findById(cancelled.getProductId()).orElse(null);
 		StoreEntity store = storeRepository.findById(cancelled.getStoreId()).orElse(null);
 
 		model.addAttribute("pickupCode", cancelled.getPickupCode());
 		model.addAttribute("cancelReason", cancelled.getCancelReason());
-		model.addAttribute("productName", product != null ? product.getName() : "-");
+		model.addAttribute("productName", cancelled.getProductName());
 		model.addAttribute("quantity", cancelled.getReservedQuantity());
 		model.addAttribute("totalPrice", cancelled.getTotalPrice());
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "-");
@@ -441,9 +458,9 @@ public class ReservationController {
 	 * 된다. 아직 설정 안 한 매장(마지막 픽업시간 NULL)은 "제한 없음"으로 취급된다 — StoreEntity 주석 참고.
 	 */
 	@GetMapping("/settings")
-	public String settingsForm(Model model) {
-		StoreEntity store = storeRepository.findById(resolveCurrentStoreId())
-				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId()));
+	public String settingsForm(HttpSession session, Model model) {
+		StoreEntity store = storeRepository.findById(resolveCurrentStoreId(session))
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId(session)));
 
 		LocalTime closingTime = parseClosingTime(store.getOperatingHours());
 
@@ -475,9 +492,10 @@ public class ReservationController {
 	public String saveSettings(@RequestParam int prepTimeMinutes,
 								@RequestParam(required = false) String lastPickupTime,
 								@RequestParam(defaultValue = "manual") String pickupTimeMode,
+								HttpSession session,
 								RedirectAttributes redirectAttributes) {
-		StoreEntity store = storeRepository.findById(resolveCurrentStoreId())
-				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId()));
+		StoreEntity store = storeRepository.findById(resolveCurrentStoreId(session))
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + resolveCurrentStoreId(session)));
 
 		// 방어적으로 최소값 보정 (0/음수/공란 입력 방지) — 준비시간이 0 이하면 픽업 가능 시각 계산이 의미없어진다.
 		store.setPrepTimeMinutes(Math.max(prepTimeMinutes, 1));
@@ -492,7 +510,7 @@ public class ReservationController {
 		}
 
 		storeRepository.save(store);
-		redirectAttributes.addFlashAttribute("savedMessage", "픽업 설정을 저장했어요.");
+		redirectAttributes.addFlashAttribute("savedMessage", "주문 마감 설정을 저장했어요.");
 		return "redirect:/reservation/settings";
 	}
 
@@ -527,12 +545,11 @@ public class ReservationController {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}
 
-		ProductEntity product = productRepository.findById(reservation.getProductId()).orElse(null);
 		StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
 
 		return PickupLookupResponseDto.success(
 				store != null ? store.getStoreName() : "-",
-				product != null ? product.getName() : "-",
+				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice());
 	}
@@ -551,10 +568,9 @@ public class ReservationController {
 		for (String pickupCode : pickupCodes) {
 			try {
 				ReservationEntity reservation = reservationService.confirmPickup(pickupCode);
-				ProductEntity product = productRepository.findById(reservation.getProductId()).orElse(null);
 				results.add(PickupBatchItemResultDto.success(
 						pickupCode,
-						product != null ? product.getName() : "-",
+						reservation.getProductName(),
 						reservation.getReservedQuantity()));
 			} catch (EntityNotFoundException | PickupNotAllowedException e) {
 				results.add(PickupBatchItemResultDto.failure(pickupCode, e.getMessage()));
@@ -576,12 +592,11 @@ public class ReservationController {
 	public String pickup(@RequestParam String pickupCode, Model model) {
 		ReservationEntity reservation = reservationService.confirmPickup(pickupCode);
 
-		ProductEntity product = productRepository.findById(reservation.getProductId()).orElse(null);
 		StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
 
 		model.addAttribute("pickupCode", reservation.getPickupCode());
 		model.addAttribute("pickedAt", reservation.getPickedAt().format(DISPLAY_FORMAT));
-		model.addAttribute("productName", product != null ? product.getName() : "-");
+		model.addAttribute("productName", reservation.getProductName());
 		model.addAttribute("quantity", reservation.getReservedQuantity());
 		model.addAttribute("totalPrice", reservation.getTotalPrice());
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "-");

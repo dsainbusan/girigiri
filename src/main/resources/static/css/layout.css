@@ -65,6 +65,7 @@
   color: #fff;
 }
 .topbar--dark .topbar__title { color: #fff; }
+.topbar--dark .topbar__back  { color: #fff; }
 
 /* ---------- 하단 탭바 ---------- */
 .bottomnav {

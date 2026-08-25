@@ -27,6 +27,12 @@ public class ReservationEntity {
 	@Column(name = "product_id", nullable = false)
 	private Long productId;
 
+	// 추가됨 — 왜: 주문 당시 상품명 스냅샷. product_id로 매번 product 테이블을 JOIN해서 이름을
+	// 가져오면, 나중에 상품명이 바뀌거나 상품이 삭제될 때 과거 거래 기록까지 덩달아 바뀌거나 깨진다.
+	// 실제 커머스의 "주문 내역"이 다 이렇게 스냅샷을 남기는 것과 같은 이유.
+	@Column(name = "product_name", length = 100)
+	private String productName;
+
 	@Column(name = "store_id", nullable = false)
 	private Long storeId;
 

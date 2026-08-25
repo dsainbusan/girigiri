@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('픽업 설정', ~{:: #content}, '', true, '관리자 모드', null)}">
+      th:replace="~{common/layout :: layout('주문 마감 설정', ~{:: #content}, '', true, '관리자 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
@@ -9,7 +9,7 @@
 	<div th:if="${savedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
 		<div>
 			<p class="banner__title">✅ 저장 완료</p>
-			<p class="banner__desc" th:text="${savedMessage}">픽업 설정을 저장했어요.</p>
+			<p class="banner__desc" th:text="${savedMessage}">주문 마감 설정을 저장했어요.</p>
 		</div>
 	</div>
 
@@ -45,7 +45,7 @@
 				</label>
 				<label class="u-row" style="font-size:var(--fs-sm)" th:if="${closingTimeDisplay != null}">
 					<input type="radio" name="pickupTimeMode" value="close" th:checked="${pickupTimeMode == 'close'}">
-					<span>영업 종료 시간까지 (<span id="closing-time-value" th:text="${closingTimeDisplay}">22:00</span>)</span>
+					<span>영업 종료 시간까지 (<span th:text="${closingTimeDisplay}">22:00</span>)</span>
 				</label>
 				<label class="u-row" style="font-size:var(--fs-sm)">
 					<input type="radio" name="pickupTimeMode" value="unlimited" th:checked="${pickupTimeMode == 'unlimited'}">
@@ -67,43 +67,14 @@
 	(function () {
 		var radios = document.querySelectorAll('input[name="pickupTimeMode"]');
 		var timeInput = document.getElementById('lastPickupTime');
-		// "영업 종료 시간까지" 라디오 옆에 서버가 미리 계산해서 보여주는 시각(예: "22:00")을 그대로 읽어온다
-		// — th:inline="none"이라 Thymeleaf 변수를 JS로 직접 못 받아서, 이미 화면에 찍혀 있는 텍스트를 재사용.
-		var closingTimeEl = document.getElementById('closing-time-value');
-		var closingTime = closingTimeEl ? closingTimeEl.textContent.trim() : '';
-
-		// 변경됨 (2026-08-24) — 왜: "영업 종료 시간까지"나 "제한 없음"을 고르면 disabled만 될 뿐 값
-		// 표시는 그대로 남아 있어서, 직접 입력으로 아무 시각(예: 09:47)을 넣어놓고 다른 옵션을 눌러도
-		// 그 값이 그대로 보이는 문제가 있었다. 이제 옵션을 바꿀 때마다 박스에 보이는 값도 그 옵션에
-		// 맞게 바꿔준다. "직접 입력"으로 다시 돌아왔을 때는 사용자가 마지막으로 직접 타이핑했던 값을
-		// 그대로 복원해준다(manualValue에 따로 기억해둠 — 다른 옵션 눌렀다고 지워지면 불편하니까).
-		var manualValue = timeInput.value;
 
 		function updateTimeInputState() {
 			var selected = document.querySelector('input[name="pickupTimeMode"]:checked');
-			var mode = selected ? selected.value : 'manual';
-
 			// "직접 입력"이 선택된 경우에만 시간 입력을 활성화(=폼 제출에 포함)한다.
 			// 나머지 두 옵션은 disabled로 바꿔서, 제출할 때 lastPickupTime 값이 아예 안 넘어가게 한다
 			// (서버가 pickupTimeMode 기준으로 알아서 계산/저장하므로 이 값은 "직접 입력"일 때만 쓰인다).
-			timeInput.disabled = mode !== 'manual';
-
-			if (mode === 'manual') {
-				timeInput.value = manualValue;
-			} else if (mode === 'close') {
-				timeInput.value = closingTime;
-			} else {
-				timeInput.value = '';   // 제한 없음: 특정 시각이 없으니 비워서 보여준다
-			}
+			timeInput.disabled = !selected || selected.value !== 'manual';
 		}
-
-		// "직접 입력" 상태에서 사용자가 실제로 고친 값만 "마지막으로 입력한 값"으로 기억해둔다.
-		timeInput.addEventListener('input', function () {
-			var selected = document.querySelector('input[name="pickupTimeMode"]:checked');
-			if (selected && selected.value === 'manual') {
-				manualValue = timeInput.value;
-			}
-		});
 
 		radios.forEach(function (radio) {
 			radio.addEventListener('change', updateTimeInputState);
