@@ -32,7 +32,7 @@
 
 	<div id="store-card-list" style="display:flex;flex-direction:column;gap:var(--s-3)">
 		<div th:each="card : ${storeCards}" th:attr="data-category=${card.category}">
-			<div th:replace="~{common/components :: storeCard(${card})}"></div>
+			<div th:replace="~{common/components :: storeCard(${card}, true)}"></div>
 		</div>
 		<p th:if="${#lists.isEmpty(storeCards)}" class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
 	</div>

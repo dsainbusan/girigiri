@@ -34,6 +34,14 @@ button {
 
 ul, ol { margin: 0; padding: 0; list-style: none; }
 
+/* 버그 수정 (강노은): 이 프로젝트 컴포넌트들(.btn, .review-upload__preview 등)이 각자 명시적으로
+   display:inline-flex/flex 등을 지정해두는데, 이게 브라우저 기본 [hidden]{display:none} 규칙과
+   명시도(0,1,0)가 같아서 author stylesheet인 우리 쪽이 항상 이겨버린다 — 그 결과 JS로 .hidden=true를
+   줘도(또는 서버에서 th:hidden으로 hidden 속성을 붙여도) 실제로는 계속 보이는 상태가 된다.
+   (리뷰 "작성"/"수정" 버튼이 폼을 펼친 뒤에도 안 사라지던 버그가 이 때문이었다.)
+   HTML 스펙대로 hidden이 항상 이기게 여기 base 레이어에서 한 번에 강제한다. */
+[hidden] { display: none !important; }
+
 input, textarea, select {
   font-family: inherit;
   font-size: var(--fs-md);

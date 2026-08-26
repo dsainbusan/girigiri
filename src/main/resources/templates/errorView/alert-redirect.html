@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--/*
+  강노은: 삭제된 리뷰/문의/가게 등을 브라우저 "뒤로가기"로 다시 요청했을 때처럼 "그냥 존재하지 않는
+  대상"에 접근한 경우, custom-error-page(딱딱한 안내 페이지)보다 알림창 한 번 띄우고 바로 홈으로
+  보내는 쪽이 자연스러워서 별도로 만들었다. 앱 껍데기(common/layout)를 씌우지 않는다 — 어차피
+  화면에 머물지 않고 즉시 이동해서 헤더/하단탭이 보일 새도 없다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+	<meta charset="UTF-8">
+	<title>오류</title>
+</head>
+<body>
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+		alert(/*[[${message}]]*/ '요청하신 내용을 찾을 수 없어요.');
+		location.href = '/';
+		/*]]>*/
+	</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -46,16 +47,18 @@ public class InquiryController {
 		return "inquiryView/form";
 	}
 
+	// 변경됨 (강노은) — 왜: 문의에 사진 첨부 기능 추가(수정은 없어서 새 파일 업로드만 받으면 됨).
 	@PostMapping
 	public String create(@RequestParam(required = false) Long storeId,
 						  @RequestParam String title,
 						  @RequestParam String content,
+						  @RequestParam(required = false) MultipartFile imagePhoto,
 						  HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		Long inquiryId = inquiryService.createInquiry(userId, storeId, title, content);
+		Long inquiryId = inquiryService.createInquiry(userId, storeId, title, content, imagePhoto);
 		return "redirect:/user/inquiries/" + inquiryId;
 	}
 
@@ -111,7 +114,9 @@ public class InquiryController {
 		}
 		String role = (String) session.getAttribute("role");
 		inquiryService.deleteInquiry(userId, role, id);
-		return "redirect:/user/inquiries";
+		// 강노은: 원래 있던 "고객센터"(/user/support)의 "내 문의내역" 탭으로 돌려보낸다 — 이 컨트롤러의
+		// list()/inquiryView/list.html은 그 화면과 중복이라 삭제 후에도 더는 거치지 않는다.
+		return "redirect:/user/support";
 	}
 
 	@PostMapping("/{id}/comments/{commentId}/delete")

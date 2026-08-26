@@ -52,4 +52,8 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 대시보드 "오늘 판매 현황" 도넛 카드용 — 오늘 등록된 상품들의 예약을 한 번에 조회해서
 	// "판매(픽업완료)"와 "예약됨(픽업대기)"을 구분하는 데 쓴다.
 	List<ReservationEntity> findByProductIdIn(List<Long> productIds);
+
+	// 추가됨 (강노은) — 왜: 리뷰는 그 가게에서 실제로 예약·픽업까지 완료한 사용자만 쓸 수 있게 제한한다
+	// (ReviewService#canWriteReview). status="picked"로 호출.
+	boolean existsByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
 }

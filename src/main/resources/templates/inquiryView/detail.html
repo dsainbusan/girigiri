@@ -3,7 +3,9 @@
       th:replace="~{common/layout :: layout(${inquiry.title}, ~{:: #content}, 'home', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<a th:href="@{/user/inquiries}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
+	<!--/* 강노은: 원래 있던 "고객센터"(/user/support) 화면의 "내 문의내역" 탭으로 연결한다 —
+	     InquiryController가 따로 갖고 있던 문의 목록(/user/inquiries)은 이 화면과 중복이라 안 쓴다. */-->
+	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
 
 	<div class="card">
 		<div class="u-row" style="justify-content:space-between;align-items:flex-start">
@@ -19,6 +21,9 @@
 			<span th:text="' · ' + ${createdAtDisplay}"></span>
 		</div>
 		<p style="margin-top:var(--s-3);font-size:14px;white-space:pre-wrap" th:text="${inquiry.content}">문의 내용</p>
+		<img th:if="${inquiry.imageUrl != null and !#strings.isEmpty(inquiry.imageUrl)}" th:src="${inquiry.imageUrl}"
+		     alt="문의 사진" loading="lazy" onerror="this.style.display='none'"
+		     style="margin-top:var(--s-3);width:100%;max-width:280px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
 	</div>
 
 	<div class="section-title" style="font-size:15px">

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @ControllerAdvice
@@ -66,6 +67,35 @@ public class GlobalExceptionHandler {
 		log.debug("> [GlobalException] PaymentVerificationException: {}", e.getMessage());
 		model.addAttribute("message", e.getMessage());
 		return "errorView/custom-error-page";
+	}
+
+	// 리뷰 사진 업로드 실패 (이미지가 아닌 파일 / 용량 초과)
+	@ExceptionHandler(InvalidImageFileException.class)
+	public String handleInvalidImageFile(InvalidImageFileException e, Model model) {
+		log.debug("> [GlobalException] InvalidImageFileException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
+	// 리뷰 작성 불가 (그 가게에서 예약·픽업 완료 이력이 없음 — 화면에서 버튼을 숨겨도 폼 직접 제출은 막아야 함)
+	@ExceptionHandler(ReviewNotAllowedException.class)
+	public String handleReviewNotAllowed(ReviewNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] ReviewNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
+	// 추가됨 (강노은) — 왜: 삭제된 리뷰/문의/가게 등을 (예: 브라우저 "뒤로가기"로 지운 문의 상세를
+	// 다시 요청하는 경우) findById(...).orElseThrow(() -> new ResponseStatusException(NOT_FOUND, ...))
+	// 형태로 여기저기서 던지고 있는데, 지금까지는 이게 EntityNotFoundException이 아니라서 저 위
+	// 핸들러에 안 잡히고 맨 아래 handleException(Exception)의 "알 수 없는 오류가 발생했습니다"
+	// 딱딱한 에러 페이지로 떨어졌었다. 이런 "그냥 없는 걸 다시 봤을 뿐" 케이스는 페이지에 머무르게
+	// 하기보다 알림창을 한 번 띄우고 홈으로 돌려보내는 게 자연스러워서 전용 처리를 추가한다.
+	@ExceptionHandler(ResponseStatusException.class)
+	public String handleResponseStatusException(ResponseStatusException e, Model model) {
+		log.debug("> [GlobalException] ResponseStatusException: {}", e.getReason());
+		model.addAttribute("message", e.getReason() != null ? e.getReason() : "요청하신 내용을 찾을 수 없어요.");
+		return "errorView/alert-redirect";
 	}
 
 	// 그 외 처리되지 않은 예외

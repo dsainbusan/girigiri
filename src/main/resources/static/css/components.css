@@ -212,3 +212,81 @@
   font-size: var(--fs-sm);
   margin-bottom: var(--s-4);
 }
+
+/* ---------------- Star rating input (리뷰 별점 선택) ----------------
+   강노은: 원래 storeView/detail.html 안에만 있던 페이지 전용 스타일이었는데, "내 리뷰 관리"
+   페이지에서 인라인 수정 폼에도 똑같은 게 필요해져서 공용으로 옮겼다(위 support-empty와 같은 이유).
+   라디오를 숨기고 label(★)을 오른쪽부터 채워서 :checked ~ label / :hover ~ label로
+   "N번째까지 채우기"를 흉내낸다. */
+.star-input { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; font-size: 26px; }
+.star-input input { position: absolute; opacity: 0; width: 0; height: 0; }
+.star-input label { color: var(--c-line); cursor: pointer; }
+.star-input input:checked ~ label,
+.star-input input:hover ~ label,
+.star-input label:hover ~ label { color: var(--c-accent); }
+
+/* ---------------- Review photo upload (리뷰 사진 업로드 dropzone) ----------------
+   강노은: storeView/detail.html과 reviewView/my.html(내 리뷰 관리 인라인 수정) 양쪽에서 써서 공용으로 뺐다.
+   참고 디자인(연한 초록 카드 + 아이콘 배지 + 알약형 "Choose files" 버튼 + 박스 바깥의 안내문구) 톤을
+   우리 토큰(--c-primary가 이미 초록 계열)으로 재현했다.
+   상태 2가지: idle(사진 없음/선택 전) ↔ preview(사진 있음 — 기존 사진이거나 새로 고른 파일).
+   "제거"를 누르면 별도 안내 없이 곧장 idle로 돌아간다. div 클릭/드래그 앤 드롭 동작은 app.js 참고. */
+.review-upload {
+  display: block;
+  cursor: pointer;
+  border: 1.5px dashed var(--c-primary-border);
+  border-radius: var(--r-lg);
+  background: var(--c-primary-weak);
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  transition: border-color .15s ease, background-color .15s ease, transform .1s ease;
+}
+.review-upload:hover { border-color: var(--c-primary); }
+.review-upload:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+.review-upload.is-dragover {
+  border-color: var(--c-primary);
+  border-style: solid;
+  transform: scale(1.01);
+}
+.review-upload__input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); }
+/* [hidden]이 display:inline-flex 등에 밀려 무시되던 문제는 base.css의 전역 [hidden] 규칙으로 해결됨. */
+
+/* 원형 아이콘 배지 — 이 앱 다른 곳(store-card__thumb, mode-card__ico)과 같은 "색 배경 + 이모지" 패턴 */
+.review-upload__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: var(--r-lg);
+  background: var(--c-primary); font-size: 20px;
+  box-shadow: var(--shadow-card);
+}
+.review-upload__text { margin-top: var(--s-3); font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--c-text-sub); }
+.review-upload.is-dragover .review-upload__text { color: var(--c-primary); font-weight: var(--fw-bold); }
+
+/* "Choose files" 알약 버튼 — 실제 클릭은 부모 dropzone 전체가 받으므로 여긴 시각 전용(span). */
+.review-upload__choose {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: var(--s-3);
+  padding: 8px var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  box-shadow: var(--shadow-card);
+}
+.review-upload:hover .review-upload__choose { border-color: var(--c-primary); color: var(--c-primary); }
+
+/* 박스 바깥에 붙는 안내문구 */
+.review-upload-hint { margin-top: var(--s-2); font-size: var(--fs-xs); color: var(--c-text-mut); text-align: center; }
+
+.review-upload__preview { display: inline-flex; flex-direction: column; align-items: center; gap: var(--s-2); }
+.review-upload__preview-img { width: 150px; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--r-md); box-shadow: var(--shadow-card); }
+.review-upload__filename { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--c-text-sub); }
+.review-upload__remove {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  background: var(--c-surface); border: 1px solid var(--c-line);
+  color: var(--c-danger); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+.review-upload__remove:hover { border-color: var(--c-danger); }

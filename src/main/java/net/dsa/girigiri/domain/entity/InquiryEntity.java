@@ -36,6 +36,12 @@ public class InquiryEntity {
 	@Column(name = "content", nullable = false, length = 1000)
 	private String content;
 
+	// 추가됨 (강노은) — 왜: 문의에 사진을 첨부할 수 있게(예: 상품 하자 사진 등). 리뷰 사진과 같은 방식
+	// (FileStorageUtil, upload/inquiries/...)으로 로컬에 저장하고 웹 경로만 저장한다.
+	// null/빈 값이면 사진 없는 문의. 수정 기능은 없어서(문의는 등록만 가능) 삭제 시에도 그대로 지운다.
+	@Column(name = "image_url", length = 500)
+	private String imageUrl;
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

@@ -5,7 +5,7 @@
   사용 예:
     <div th:replace="~{common/components :: btn('예약하고 결제하기','primary','/user/pay')}"></div>
     <div th:replace="~{common/components :: chip('베이커리', true)}"></div>
-    <div th:replace="~{common/components :: storeCard(${store})}"></div>
+    <div th:replace="~{common/components :: storeCard(${store}, true)}"></div>
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <body>
@@ -36,8 +36,15 @@
 <!--/*
   가게 카드. store 객체 필드 예: thumbText, thumbColor, name, category, distance,
   origPrice, salePrice, discountRate, leftLabel, urgent(boolean)
+
+  linkToStore: true면 가게 상세(/user/stores/{storeId})로, false/생략이면 이 카드가 대표하는
+  상품 상세(/user/products/{id})로 바로 이동한다.
+  강노은 — 왜: 홈 화면은 "가게를 둘러보다가 상품을 고르는" 흐름이라 가게 상세를 거치게 하고
+  (storeId 사용), 검색 결과는 "이미 찾던 상품을 눌렀는데" 다른 화면(가게 상세)으로 새는 게
+  어색해서 기존처럼 그 상품 상세로 바로 보낸다(id 사용, 기본값).
 */-->
-<a th:fragment="storeCard(store)" class="store-card" th:href="@{/user/products/{id}(id=${store.id})}">
+<a th:fragment="storeCard(store, linkToStore)" class="store-card"
+   th:href="${linkToStore} ? @{/user/stores/{storeId}(storeId=${store.storeId})} : @{/user/products/{id}(id=${store.id})}">
   <span class="store-card__thumb"
         th:style="'background:' + ${store.thumbColor}"
         th:text="${store.thumbText}">빵</span>

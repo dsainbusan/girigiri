@@ -59,6 +59,11 @@ public class StoreDetailController {
 		model.addAttribute("myRating", myReview.map(r -> r.getRating()).orElse(0));
 		model.addAttribute("myContent", myReview.map(r -> r.getContent()).orElse(""));
 		model.addAttribute("myImageUrl", myReview.map(r -> r.getImageUrl()).orElse(""));
+		// 강노은: (2026-08-26) 원래는 이 가게에서 예약 후 픽업까지 완료한 사람만 새 리뷰를 쓸 수
+		// 있어야 하지만(reviewService.canWriteReview), 예약·픽업 플로우가 아직 테스트가 안 된
+		// 상태라 요청으로 이 제한을 임시로 꺼둔다. 테스트 끝나면 아래 줄만 원래대로 되돌리면 됨:
+		// model.addAttribute("canReview", reviewService.canWriteReview(userId, id));
+		model.addAttribute("canReview", true);
 		model.addAttribute("closingLabel", closingInfo.label());
 		model.addAttribute("products", activeProducts.stream().map(this::toProductRow).toList());
 		model.addAttribute("liked", likeService.isLiked(userId, id));

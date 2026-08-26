@@ -11,8 +11,10 @@ import net.dsa.girigiri.repository.InquiryCommentRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.FileStorageUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,6 +32,10 @@ public class InquiryService {
 	private final InquiryCommentRepository inquiryCommentRepository;
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
+	private final FileStorageUtil fileStorageUtil;
+
+	// 강노은: 문의 사진 파일이 저장되는 하위 디렉터리 이름 (upload/inquiries/...)
+	private static final String INQUIRY_IMAGE_SUBDIR = "inquiries";
 
 	/**
 	 * 작성자 본인 / 문의 대상 가게의 사장님 / 관리자만 열람 가능하다는 요구사항에 맞춰
@@ -147,13 +153,16 @@ public class InquiryService {
 				.toList();
 	}
 
+	// 변경됨 (강노은) — 왜: 문의에 사진 첨부 기능 추가(예: 상품 하자 사진 등). 문의는 수정 기능이 없어서
+	// (등록만 가능) 리뷰처럼 "새 파일로 교체/제거" 같은 분기 없이 등록 시 한 번만 저장하면 된다.
 	@Transactional
-	public Long createInquiry(Long userId, Long storeId, String title, String content) {
+	public Long createInquiry(Long userId, Long storeId, String title, String content, MultipartFile imagePhoto) {
 		InquiryEntity inquiry = InquiryEntity.builder()
 				.userId(userId)
 				.storeId(storeId)
 				.title(title == null ? "" : title.trim())
 				.content(content == null ? "" : content.trim())
+				.imageUrl(fileStorageUtil.store(imagePhoto, INQUIRY_IMAGE_SUBDIR))
 				.build();
 		return inquiryRepository.save(inquiry).getId();
 	}
@@ -185,6 +194,7 @@ public class InquiryService {
 				.filter(c -> inquiryId.equals(c.getInquiryId()))
 				.toList();
 		inquiryCommentRepository.deleteAll(comments);
+		fileStorageUtil.deleteIfOwned(inquiry.getImageUrl(), INQUIRY_IMAGE_SUBDIR);
 		inquiryRepository.delete(inquiry);
 	}
 

@@ -60,7 +60,7 @@
 
 	<div style="display:flex;flex-direction:column;gap:12px;margin-top:var(--s-3)">
 		<div th:each="card : ${results}">
-			<div th:replace="~{common/components :: storeCard(${card})}"></div>
+			<div th:replace="~{common/components :: storeCard(${card}, false)}"></div>
 		</div>
 		<p th:if="${#lists.isEmpty(results)}" class="u-sub">검색 결과가 없어요.</p>
 	</div>
