@@ -212,9 +212,11 @@
 		})();
 	</script>
 
-</div>
-
-<style>
+	<!--/* 강노은: 원래 이 <style>이 #content div 바깥(닫는 </div> 뒤)에 있어서, 이 화면을 감싸는
+	     th:replace="~{:: #content}"가 #content 안쪽만 뽑아가는 바람에 이 스타일이 실제로는 한 번도
+	     적용된 적이 없었다(마이페이지 메뉴 목록이 카드/구분선 없이 밋밋하게 보이던 원인).
+	     #content 안쪽으로 옮겨서 고쳤다. */-->
+	<style>
 	.list-menu-item {
 		display: flex;
 		align-items: center;
@@ -243,7 +245,8 @@
 		font-size: 18px;
 		font-weight: var(--fw-bold);
 	}
-</style>
+	</style>
+</div>
 
 </body>
 </html>
