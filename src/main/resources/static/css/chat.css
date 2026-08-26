@@ -6,6 +6,30 @@
    mypageView/mypage.html의 #content 안에서만 <link>로 불러온다(다른 화면에는 없음).
    ===================================================================== */
 
+/* 챗봇 플로팅 버튼 — 마이페이지 화면 우측 하단에 고정.
+   .bottomnav/.bottom-cta와 같은 트릭(50% + 앱 최대폭 절반만큼 빼기)으로 앱의 고정폭(420px)
+   컨테이너 기준 오른쪽에 붙인다 — 그냥 right:16px만 쓰면 데스크탑 브라우저의 넓은 화면
+   오른쪽 끝에 붙어버려서, 가운데 떠 있는 420px 폰 화면과 멀리 떨어져 보이는 문제가 있다. */
+.chat-fab {
+	position: fixed;
+	right: calc(50% - (var(--app-max) / 2) + var(--s-4));
+	bottom: calc(var(--bottomnav-h) + var(--s-4));
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: var(--c-primary);
+	color: #fff;
+	border: none;
+	font-size: 24px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: var(--shadow-nav);
+	cursor: pointer;
+	z-index: 40;
+}
+
 .chat-panel {
 	position: fixed;
 	left: 50%;

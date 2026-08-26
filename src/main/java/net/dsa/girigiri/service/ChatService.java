@@ -5,15 +5,20 @@ import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.ChatRequestDto;
 import net.dsa.girigiri.domain.dto.ChatResponseDto;
 import net.dsa.girigiri.domain.entity.UserEntity;
-import net.dsa.girigiri.util.ClaudeClient;
+import net.dsa.girigiri.util.GeminiClient;
 import org.springframework.stereotype.Service;
 
 /**
  * 고객 지원 챗봇 서비스.
  * 담당: 송채현 (WBS 6.5 고객 지원 챗봇)
  *
- * 로그인한 사용자의 role(USER/OWNER/ADMIN)에 따라 서로 다른 시스템 프롬프트를 골라 Claude API에
+ * 로그인한 사용자의 role(USER/OWNER/ADMIN)에 따라 서로 다른 시스템 프롬프트를 골라 Gemini API에
  * 보낸다 — role=OWNER면 사장님 전용 안내를, 그 외(USER/ADMIN)에는 손님용 안내를 준다.
+ *
+ * 변경됨 (2026-08-26) — 왜: 원래는 ClaudeClient(Claude API)를 썼는데, Claude API는 신규 계정에
+ * 자동 무료 크레딧이 없어 카드 등록 + 최소 결제가 필요했다. 개발/테스트 단계에서 비용 없이 쓸 수
+ * 있는 GeminiClient(Gemini API, 무료 티어)로 교체했다 — CLAUDE.md 기획서(WBS 6.5)엔 "Claude API
+ * 연동"이라고 적혀 있으니 팀에 공유하고 문서 업데이트 여부를 논의할 것.
  *
  * 추가됨 (2026-08-25) — 왜: CLAUDE.md의 dual-mode 세션 구조(role 고정 + viewMode 가변)상으로는
  * "화면 분기는 viewMode 기준"이 원칙이지만, 작성 시점엔 viewMode가 아직 세션에 연결돼 있지 않다
@@ -23,7 +28,7 @@ import org.springframework.stereotype.Service;
  * REQ-F-120 설명 참고)
  *
  * FAQ/시스템 프롬프트 내용(REQ-F-121)은 우선 예약·결제·픽업 등 채채님 담당 영역 위주로 채워뒀다.
- * 로그인/지도·찜하기/마이페이지·절약가계부/리뷰 등 다른 팀원 담당 영역은 자리만 만들어뒀으니,
+ * 로그인/지도·찜하기/마이페이지/절약가계부/리뷰 등 다른 팀원 담당 영역은 자리만 만들어뒀으니,
  * 각 담당자(문창호/강노은/김태훈)에게 자주 나오는 질문·답변을 받는 대로 아래 프롬프트에 채워
  * 넣을 것 — 그전까지는 그 영역 질문엔 "정확히 확인이 어렵다"고 답하도록 프롬프트에 명시해뒀다.
  */
@@ -32,7 +37,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ChatService {
 
-	private final ClaudeClient claudeClient;
+	private final GeminiClient geminiClient;
 
 	private static final String CUSTOMER_SYSTEM_PROMPT = """
 			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
@@ -45,6 +50,8 @@ public class ChatService {
 			  처리할 수 없으니, 화면의 해당 버튼을 이용하거나 1:1 문의 게시판을 이용하도록 안내만
 			  하세요. 직접 처리해준 것처럼 답하면 안 됩니다.
 			- 서비스와 무관한 질문(일반 상식, 다른 회사 서비스 등)에는 정중히 답변을 거절하세요.
+			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
+			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
 
 			[서비스 이용 안내]
 			- 회원가입/로그인: 별도 회원가입 없이 구글/카카오/라인 소셜 로그인만 지원해요. 처음
@@ -75,6 +82,8 @@ public class ChatService {
 			- 실제 예약 승인/거절, 정산 처리처럼 시스템을 직접 조작해야 하는 요청은 챗봇이 처리할
 			  수 없으니, 대시보드의 해당 버튼을 이용하거나 1:1 문의 게시판을 이용하도록 안내만
 			  하세요.
+			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
+			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
 
 			[사장님 기능 안내]
 			- 상품(재고) 등록: 대시보드에서 마감 임박 상품의 사진, 품목, 원가/할인가, 수량을
@@ -96,11 +105,11 @@ public class ChatService {
 
 		String systemPrompt = UserEntity.ROLE_OWNER.equals(role) ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
 
-		ClaudeClient.ChatResult result =
-				claudeClient.sendMessage(systemPrompt, request.getHistory(), request.getMessage());
+		GeminiClient.ChatResult result =
+				geminiClient.sendMessage(systemPrompt, request.getHistory(), request.getMessage());
 
 		if (!result.success()) {
-			log.warn("> [ChatService] Claude API 응답 실패 - role={}, 사유={}", role, result.failReason());
+			log.warn("> [ChatService] Gemini API 응답 실패 - role={}, 사유={}", role, result.failReason());
 			return ChatResponseDto.failed(result.failReason());
 		}
 

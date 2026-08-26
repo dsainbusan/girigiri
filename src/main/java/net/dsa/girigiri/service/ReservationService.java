@@ -26,7 +26,10 @@ import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PortOneClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.TransactionDefinition;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -88,6 +91,35 @@ public class ReservationService {
 	private final PaymentCancelRepository paymentCancelRepository;
 	private final ReceiptService receiptService;
 	private final PortOneClient portOneClient;
+	private final PlatformTransactionManager transactionManager;
+
+	// 결제 실패 처리(재고복구·결제실패기록·예약취소)를 confirmPayment()의 메인 트랜잭션과
+	// 분리된 "독립 트랜잭션"으로 즉시 커밋하기 위한 템플릿.
+	//
+	// 왜 필요한가 (2026-08-26 발견된 버그 수정) — confirmPayment()는 @Transactional인데, 결제
+	// 검증 실패 시 재고복구+취소 처리를 저장한 다음 PaymentVerificationException을 던진다.
+	// 이 예외가 @Transactional 메서드 밖으로 나가면 Spring이 그 메서드 안에서 한 저장을
+	// "전부 실패"로 보고 롤백해버려서, 실제로는 재고복구·취소 처리가 하나도 반영되지 않고
+	// 예약이 pending인 채로 재고를 계속 붙잡고 있는 문제가 있었다.
+	// PROPAGATION_REQUIRES_NEW로 별도 트랜잭션을 만들면, confirmPayment()가 나중에 예외를
+	// 던져서 자기 트랜잭션을 롤백하더라도 이 안에서 한 저장은 이미 커밋된 뒤라 영향을 안 받는다.
+	// (같은 클래스 안에서 private 메서드에 @Transactional(REQUIRES_NEW)를 붙이기만 하면 Spring의
+	// self-invocation 문제로 조용히 무시되므로, 프록시를 안 타는 TransactionTemplate으로 직접 처리한다.)
+	private void markPaymentFailedInNewTransaction(PaymentEntity payment, ReservationEntity reservation, String failReason) {
+		TransactionTemplate requiresNew = new TransactionTemplate(transactionManager);
+		requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		requiresNew.executeWithoutResult(status -> {
+			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
+
+			payment.fail(failReason);
+			paymentRepository.save(payment);
+
+			reservation.setStatus("cancelled");
+			reservation.setCancelledBy("SYSTEM");
+			reservation.setCancelReason("결제 실패: " + failReason);
+			reservationRepository.save(reservation);
+		});
+	}
 
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
@@ -171,15 +203,10 @@ public class ReservationService {
 		if (!result.paid()) {
 			// 결제 실패/취소 -> 재고를 다시 돌려놓고, 예약도 취소된 걸로 확정지어야 한다
 			// (pending으로 계속 남겨두면 재고를 영구히 붙잡고 있는 셈이라 다른 손님이 못 산다).
-			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
-
-			payment.fail(result.failReason());
-			paymentRepository.save(payment);
-
-			reservation.setStatus("cancelled");
-			reservation.setCancelledBy("SYSTEM");
-			reservation.setCancelReason("결제 실패: " + result.failReason());
-			reservationRepository.save(reservation);
+			// 아래에서 바로 예외를 던지면 이 메서드의 @Transactional이 방금 한 저장까지 통째로
+			// 롤백해버리므로, 별도 트랜잭션(markPaymentFailedInNewTransaction)으로 먼저 확실히
+			// 커밋해둔 다음에 예외를 던진다.
+			markPaymentFailedInNewTransaction(payment, reservation, result.failReason());
 
 			throw new PaymentVerificationException(result.failReason());
 		}

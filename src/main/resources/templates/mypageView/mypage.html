@@ -77,8 +77,9 @@
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 고객 지원 (챗봇 위젯 열기, 담당: 송채현 WBS 6.5) -->
-		<a href="javascript:void(0)" id="chat-open-btn" class="list-menu-item">
+		<!-- 고객 지원 (문의 게시판 — WBS 6.0 강노은 담당, 아직 미구현이라 다른 항목처럼 자리만 잡아둠.
+		     챗봇은 이제 우측 하단 플로팅 버튼(#chat-fab-btn)에서만 연다 — 이 항목은 챗봇이랑 분리함) -->
+		<a href="#" class="list-menu-item">
 			<span class="list-menu-item__icon">💬</span>
 			<span class="list-menu-item__title">고객 지원</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
@@ -121,6 +122,11 @@
 	  시작" 버튼을 누르면 이 배열만 비운다(REQ-F-125). role=OWNER면 사장님용, 그 외엔 손님용
 	  시스템 프롬프트로 서버(ChatService)가 알아서 답한다 — 화면에서 따로 구분해서 보낼 필요 없음.
 	*/-->
+	<!-- 챗봇 플로팅 버튼 — 마이페이지 화면 우측 하단에 항상 떠 있는 채팅 열기 버튼.
+	     위 메뉴 리스트의 "고객 지원" 항목(문의 게시판, WBS 6.0 강노은 담당)과는 별개다 —
+	     챗봇은 이 버튼에서만 열리도록 분리함. -->
+	<button type="button" id="chat-fab-btn" class="chat-fab" title="고객 지원 챗봇 열기">💬</button>
+
 	<div id="chat-panel" class="chat-panel" style="display: none;">
 		<div class="chat-panel__header">
 			<span class="chat-panel__title">고객 지원 챗봇</span>
@@ -142,14 +148,14 @@
 		(function () {
 			var chatHistory = [];
 			var panel = document.getElementById('chat-panel');
-			var openBtn = document.getElementById('chat-open-btn');
+			var fabBtn = document.getElementById('chat-fab-btn');
 			var closeBtn = document.getElementById('chat-close-btn');
 			var resetBtn = document.getElementById('chat-reset-btn');
 			var messagesEl = document.getElementById('chat-messages');
 			var form = document.getElementById('chat-form');
 			var input = document.getElementById('chat-input');
 
-			if (!panel || !openBtn) { return; }
+			if (!panel || !fabBtn) { return; }
 
 			function appendMessage(who, text) {
 				var bubble = document.createElement('div');
@@ -160,10 +166,11 @@
 				return bubble;
 			}
 
-			openBtn.addEventListener('click', function () {
+			function openPanel() {
 				panel.style.display = 'flex';
 				input.focus();
-			});
+			}
+			fabBtn.addEventListener('click', openPanel);
 
 			closeBtn.addEventListener('click', function () {
 				panel.style.display = 'none';
