@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('재고 관리', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	점주 상품(재고) 관리 목록 — WBS 3.0 (원래 김태훈 담당 → 2026-08-26 문창호 인계).
+	현재 목업 단계 — StoreProductController가 하드코딩 샘플(items)을 렌더한다.
+	실데이터 배선 시: items 는 ProductRepository.findByStoreId 결과를 StockItemDto로 매핑,
+	품절/삭제 form 의 POST 엔드포인트를 StoreProductController에 추가.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<div class="u-row" style="justify-content: space-between; margin-bottom: var(--s-3)">
+		<span class="u-sub" style="font-size: var(--fs-xs)"
+		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
+		<a th:href="@{/store/dashboard}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">대시보드</a>
+	</div>
+
+	<form th:action="@{/store/products}" method="get" class="search" style="margin-bottom: var(--s-3)">
+		<span>🔎</span>
+		<input type="text" name="q" th:value="${param.q}" placeholder="품목명으로 검색"
+		       style="flex:1; border:none; background:none; outline:none; color:var(--c-text)">
+	</form>
+
+	<a th:href="@{/store/products/new}" class="btn btn--block" style="margin-bottom: var(--s-4)">+ 상품 등록</a>
+
+	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+		아직 등록된 상품이 없어요.<br>위 <b>+ 상품 등록</b>으로 첫 상품을 올려보세요.
+	</div>
+
+	<ul>
+		<li th:each="item : ${items}" class="stock-item" th:classappend="${item.statusVariant == 'soldout'} ? ' is-dim'">
+			<div class="stock-item__head">
+				<div class="stock-item__thumb" th:style="${item.imageUrl == null ? 'background:' + item.thumbColor : null}">
+					<img th:if="${item.imageUrl != null}" th:src="${item.imageUrl}" th:alt="${item.name}">
+					<span th:unless="${item.imageUrl != null}" th:text="${item.thumbEmoji}">🥐</span>
+				</div>
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${item.name}">오늘의 모둠빵 세트</span>
+						<span class="stock-item__status" th:classappend="' stock-item__status--' + ${item.statusVariant}"
+						      th:text="${item.statusLabel}">판매중</span>
+					</div>
+					<div class="price" style="margin-top: 2px">
+						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
+						<span class="price__orig" th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
+						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
+					</div>
+					<span class="stock-item__meta"
+					      th:text="'재고 ' + ${item.remainingQuantity} + ' / ' + ${item.quantity} + '개 · ' + ${item.registeredLabel}">재고 3 / 10개 · 오늘 14:20 등록</span>
+				</div>
+			</div>
+
+			<div class="stock-item__actions">
+				<a th:href="@{/store/products/{id}/edit(id=${item.id})}" class="btn btn--sm btn--outline">수정</a>
+				<form th:if="${item.statusVariant != 'soldout'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
+					<button type="submit" class="btn btn--sm btn--outline">품절</button>
+				</form>
+				<form th:action="@{/store/products/{id}/delete(id=${item.id})}" method="post"
+				      onsubmit="return confirm('이 상품을 삭제할까요? 되돌릴 수 없어요.')">
+					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
+				</form>
+			</div>
+		</li>
+	</ul>
+</div>
+</body>
+</html>

@@ -15,8 +15,8 @@
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<div class="u-row" style="justify-content: space-between; align-items: flex-start; margin-bottom: var(--s-4)">
-		<p class="u-sub" th:text="${closingLabel}">마감 21:00</p>
+	<div class="u-row" style="justify-content: flex-end; gap: var(--s-3); margin-bottom: var(--s-4)">
+		<a th:href="@{/store/products}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">재고 관리</a>
 		<a th:href="@{/store/edit}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">매장 정보 수정</a>
 	</div>
 
@@ -24,7 +24,7 @@
 		<div class="stat-card">
 			<span class="stat-card__label">오늘 매출</span>
 			<span class="stat-card__value" th:text="${todaySales}">286,400원</span>
-			<span class="stat-card__delta u-primary" th:text="${salesDelta}">▲ 어제 대비 +18%</span>
+			<span class="stat-card__delta" th:classappend="' ' + ${salesDeltaClass}" th:text="${salesDelta}">▲ 어제 대비 +18%</span>
 		</div>
 		<div class="stat-card">
 			<span class="stat-card__label">판매 / 등록</span>
@@ -39,7 +39,12 @@
 		<div class="stat-card">
 			<span class="stat-card__label">폐기 절감(구제율)</span>
 			<span class="stat-card__value" th:text="${rescueRate} + '%'">75%</span>
-			<span class="stat-card__delta u-primary" th:text="${rescueGoal}">목표 70% 달성</span>
+			<div class="u-row" style="gap: 4px; align-items: center;">
+				<span class="stat-card__delta u-primary" id="rescue-goal-text" th:text="${rescueGoal}">목표 70% 달성</span>
+				<button type="button" id="rescue-goal-edit-btn" class="rescue-goal-edit-btn"
+				        th:attr="data-rescue-rate=${rescueRate},data-goal-percent=${rescueGoalPercent}"
+				        title="구제율 목표 수정">✏️</button>
+			</div>
 		</div>
 	</div>
 
@@ -58,35 +63,53 @@
 			<span class="pill" th:text="${closingCountdownLabel}">마감까지 1시간 56분</span>
 		</div>
 
-		<div class="donut-wrap">
-			<div class="donut"
-			     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutPickedPct} + '%, var(--c-primary-mid) ' + ${donutPickedPct} + '% ' + ${donutReservedCumPct} + '%, var(--c-idle) ' + ${donutReservedCumPct} + '% 100%)'">
-				<div class="donut__center">
-					<span class="donut__label">남음</span>
-					<span class="donut__value donut__value--idle"><span th:text="${idleCount}">3</span><small>개</small></span>
-					<span class="donut__note" th:text="${totalQuantity} + '개 중'">14개 중</span>
+		<div class="today-view">
+			<div class="donut-wrap">
+				<div class="donut"
+				     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutPickedPct} + '%, var(--c-primary-mid) ' + ${donutPickedPct} + '% ' + ${donutReservedCumPct} + '%, var(--c-idle) ' + ${donutReservedCumPct} + '% 100%)'">
+					<div class="donut__center">
+						<span class="donut__label">남음</span>
+						<span class="donut__value donut__value--idle"><span th:text="${idleCount}">3</span><small>개</small></span>
+						<span class="donut__note" th:text="${totalQuantity} + '개 중'">14개 중</span>
+					</div>
+				</div>
+				<div class="tally">
+					<div class="tally__row tally__row--sold">
+						<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
+						<div class="tally__num"><span th:text="${pickedCount}">8</span><small>개</small></div>
+					</div>
+					<div class="tally__row tally__row--reserved">
+						<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary-mid)"></span><span class="tally__name">예약됨</span></div>
+						<div class="tally__num"><span th:text="${reservedNotPickedCount}">3</span><small>개</small></div>
+					</div>
+					<div class="tally__row tally__row--idle">
+						<div class="tally__top"><span class="tally__dot" style="background:var(--c-idle)"></span><span class="tally__name">남음</span></div>
+						<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
+					</div>
 				</div>
 			</div>
-			<div class="tally">
-				<div class="tally__row tally__row--sold">
-					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
-					<div class="tally__num"><span th:text="${pickedCount}">8</span><small>개</small></div>
-				</div>
-				<div class="tally__row tally__row--reserved">
-					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary-mid)"></span><span class="tally__name">예약됨</span></div>
-					<div class="tally__num"><span th:text="${reservedNotPickedCount}">3</span><small>개</small></div>
-				</div>
-				<div class="tally__row tally__row--idle">
-					<div class="tally__top"><span class="tally__dot" style="background:var(--c-idle)"></span><span class="tally__name">남음</span></div>
-					<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
-				</div>
+
+			<div class="u-row" style="justify-content: space-between; margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line); font-size: var(--fs-xs); color: var(--c-text-sub);">
+				<span>마감 후 남은 수량은 폐기로 집계돼요</span>
+				<span>남은 <strong th:text="${idleCount} + '개'" style="color: var(--c-text)">3개</strong></span>
 			</div>
 		</div>
 
-		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line); font-size: var(--fs-xs); color: var(--c-text-sub);">
-			<span>마감 후 남은 수량은 폐기로 집계돼요</span>
-			<span>남은 <strong th:text="${idleCount} + '개'" style="color: var(--c-text)">3개</strong></span>
+		<div class="bar-chart-wrap" style="display:none">
+			<div class="bar-chart">
+				<div class="bar-chart__col" th:each="d : ${weeklySalesBars}">
+					<div class="bar-chart__value" th:text="${d.count}">5</div>
+					<div class="bar-chart__track">
+						<div class="bar-chart__fill" th:classappend="${d.isToday} ? ' bar-chart__fill--today' : ''"
+						     th:style="'height:' + ${d.heightPercent} + '%'"></div>
+					</div>
+					<div class="bar-chart__label" th:text="${d.dateLabel}">08/20</div>
+				</div>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-3); text-align: center" th:text="'최근 7일 총 ' + ${weeklyTotalCount} + '개 판매'">최근 7일 총 42개 판매</p>
 		</div>
+
+		<button type="button" class="btn btn--outline btn--sm view-toggle-btn" style="width: 100%; margin-top: var(--s-3)">최근 7일 보기</button>
 	</div>
 
 	<div class="card" style="margin-top: var(--s-4)" th:if="${isClosed}">
@@ -98,28 +121,46 @@
 			<span class="pill pill--done" th:text="'구제율 ' + ${rescueRate} + '%'">구제율 79%</span>
 		</div>
 
-		<div class="donut-wrap">
-			<div class="donut"
-			     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutSoldCumPct} + '%, var(--c-danger) ' + ${donutSoldCumPct} + '% 100%)'">
-				<div class="donut__center">
-					<span class="donut__label">구제율</span>
-					<span class="donut__value donut__value--sold"><span th:text="${rescueRate}">79</span><small>%</small></span>
-					<span class="donut__note" th:text="${totalQuantity} + '개 중 ' + ${soldCount} + '개'">14개 중 11개</span>
+		<div class="today-view">
+			<div class="donut-wrap">
+				<div class="donut"
+				     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutSoldCumPct} + '%, var(--c-danger) ' + ${donutSoldCumPct} + '% 100%)'">
+					<div class="donut__center">
+						<span class="donut__label">구제율</span>
+						<span class="donut__value donut__value--sold"><span th:text="${rescueRate}">79</span><small>%</small></span>
+						<span class="donut__note" th:text="${totalQuantity} + '개 중 ' + ${soldCount} + '개'">14개 중 11개</span>
+					</div>
 				</div>
-			</div>
-			<div class="tally">
-				<div class="tally__row tally__row--sold">
-					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
-					<div class="tally__num"><span th:text="${soldCount}">11</span><small>개</small></div>
-					<div class="tally__sub">할인 판매로 살린 음식</div>
-				</div>
-				<div class="tally__row tally__row--waste">
-					<div class="tally__top"><span class="tally__dot" style="background:var(--c-danger)"></span><span class="tally__name">폐기</span></div>
-					<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
-					<div class="tally__sub">마감까지 안 팔린 음식</div>
+				<div class="tally">
+					<div class="tally__row tally__row--sold">
+						<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
+						<div class="tally__num"><span th:text="${soldCount}">11</span><small>개</small></div>
+						<div class="tally__sub">할인 판매로 살린 음식</div>
+					</div>
+					<div class="tally__row tally__row--waste">
+						<div class="tally__top"><span class="tally__dot" style="background:var(--c-danger)"></span><span class="tally__name">폐기</span></div>
+						<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
+						<div class="tally__sub">마감까지 안 팔린 음식</div>
+					</div>
 				</div>
 			</div>
 		</div>
+
+		<div class="bar-chart-wrap" style="display:none">
+			<div class="bar-chart">
+				<div class="bar-chart__col" th:each="d : ${weeklySalesBars}">
+					<div class="bar-chart__value" th:text="${d.count}">5</div>
+					<div class="bar-chart__track">
+						<div class="bar-chart__fill" th:classappend="${d.isToday} ? ' bar-chart__fill--today' : ''"
+						     th:style="'height:' + ${d.heightPercent} + '%'"></div>
+					</div>
+					<div class="bar-chart__label" th:text="${d.dateLabel}">08/20</div>
+				</div>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-3); text-align: center" th:text="'최근 7일 총 ' + ${weeklyTotalCount} + '개 판매'">최근 7일 총 42개 판매</p>
+		</div>
+
+		<button type="button" class="btn btn--outline btn--sm view-toggle-btn" style="width: 100%; margin-top: var(--s-3)">최근 7일 보기</button>
 	</div>
 
 	<!-- 추가됨 — 왜: 픽업 확인(/reservation/pickup)·매장 취소(/reservation/store-cancel) 화면은
@@ -163,6 +204,68 @@
 	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4)">
 		<button type="submit" class="btn btn--outline btn--block">유저 모드로 전환</button>
 	</form>
+
+	<!-- 추가됨 — 왜: "오늘 판매 현황" 카드 안에서 오늘 도넛 ↔ 최근 7일 막대그래프를 토글 버튼으로
+	     전환한다. isClosed에 따라 카드 두 개 중 하나만 렌더링되므로(위 th:if 참고) 버튼/영역이 항상
+	     하나씩만 존재해 querySelectorAll로 일괄 처리해도 충돌하지 않는다. -->
+	<script th:inline="none">
+	(function () {
+		document.querySelectorAll('.view-toggle-btn').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var card = btn.closest('.card');
+				var todayView = card.querySelector('.today-view');
+				var barChart = card.querySelector('.bar-chart-wrap');
+				var showingWeek = barChart.style.display !== 'none';
+				if (showingWeek) {
+					barChart.style.display = 'none';
+					todayView.style.display = '';
+					btn.textContent = '최근 7일 보기';
+				} else {
+					barChart.style.display = '';
+					todayView.style.display = 'none';
+					btn.textContent = '오늘 현황 보기';
+				}
+			});
+		});
+	})();
+	</script>
+
+	<!-- 추가됨 — 왜: "폐기 절감(구제율)" 목표치(70%)가 하드코딩이었는데, 별도 설정 화면을 만들 정도의
+	     값은 아니라서 연필 아이콘 → prompt() → /store/rescue-goal로 바로 저장하는 방식으로 처리한다.
+	     성공하면 새로고침 없이 목표 텍스트만 즉시 갱신한다(구제율 자체는 이미 서버에서 계산해서 넘어와
+	     있으니 data-rescue-rate로 재사용, 새로 요청할 필요 없음). -->
+	<script th:inline="none">
+	(function () {
+		var editBtn = document.getElementById('rescue-goal-edit-btn');
+		if (!editBtn) { return; }
+
+		editBtn.addEventListener('click', function () {
+			var currentGoal = editBtn.getAttribute('data-goal-percent');
+			var input = window.prompt('구제율 목표를 입력하세요 (1~100)', currentGoal);
+			if (input === null) { return; }
+
+			var percent = parseInt(input, 10);
+			if (isNaN(percent) || percent < 1 || percent > 100) {
+				window.alert('1~100 사이의 숫자를 입력해주세요.');
+				return;
+			}
+
+			fetch('/store/rescue-goal', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: 'percent=' + percent
+			}).then(function (res) {
+				if (!res.ok) { throw new Error('저장 실패'); }
+				var rescueRate = parseInt(editBtn.getAttribute('data-rescue-rate'), 10);
+				var goalText = document.getElementById('rescue-goal-text');
+				goalText.textContent = rescueRate >= percent ? ('목표 ' + percent + '% 달성') : ('목표 ' + percent + '%');
+				editBtn.setAttribute('data-goal-percent', percent);
+			}).catch(function () {
+				window.alert('목표 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+			});
+		});
+	})();
+	</script>
 
 </div>
 </body>

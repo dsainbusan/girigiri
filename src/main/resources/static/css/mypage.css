@@ -1,0 +1,30 @@
+/* 마이페이지 전용 스타일 (담당: 문창호, WBS 6.1) */
+
+.list-menu-item {
+	display: flex;
+	align-items: center;
+	padding: 16px var(--s-4);
+	border-bottom: 1px solid var(--c-line-weak);
+	text-decoration: none;
+	color: var(--c-text);
+	transition: background-color 0.15s ease;
+}
+.list-menu-item:active {
+	background-color: var(--c-bg);
+}
+.list-menu-item__icon {
+	font-size: 18px;
+	width: 28px;
+	display: flex;
+	align-items: center;
+}
+.list-menu-item__title {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-medium);
+	flex-grow: 1;
+}
+.list-menu-item__arrow {
+	color: var(--c-text-mut);
+	font-size: 18px;
+	font-weight: var(--fw-bold);
+}

@@ -56,6 +56,7 @@ CREATE TABLE store (
     operating_hours  VARCHAR(100),
     prep_time_minutes INT COMMENT '채현 기본 준비시간(분). NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
     last_pickup_time TIME COMMENT '채현 마지막 픽업시간. NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
+    rescue_goal_percent INT DEFAULT 70 COMMENT '대시보드 구제율 목표치(%). 연필 아이콘으로 점주가 직접 수정 (문창호 추가)',
     role             VARCHAR(20) NOT NULL COMMENT '= OWNER. 보류: users.role과 중복 정보라 실사용 여부 확인 필요',
     owner_id         BIGINT NOT NULL COMMENT 'users.id 참조 (안B 확정) — 이 매장을 소유한 점주(role=OWNER) 계정',
     created_at       DATETIME,

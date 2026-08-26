@@ -4,6 +4,7 @@
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/chat.css}">
+	<link rel="stylesheet" th:href="@{/css/mypage.css}">
 
 	<!--/*
 	  마이페이지 메인 화면
@@ -219,40 +220,6 @@
 		})();
 	</script>
 
-	<!--/* 강노은: 원래 이 <style>이 #content div 바깥(닫는 </div> 뒤)에 있어서, 이 화면을 감싸는
-	     th:replace="~{:: #content}"가 #content 안쪽만 뽑아가는 바람에 이 스타일이 실제로는 한 번도
-	     적용된 적이 없었다(마이페이지 메뉴 목록이 카드/구분선 없이 밋밋하게 보이던 원인).
-	     #content 안쪽으로 옮겨서 고쳤다. */-->
-	<style>
-	.list-menu-item {
-		display: flex;
-		align-items: center;
-		padding: 16px var(--s-4);
-		border-bottom: 1px solid var(--c-line-weak);
-		text-decoration: none;
-		color: var(--c-text);
-		transition: background-color 0.15s ease;
-	}
-	.list-menu-item:active {
-		background-color: var(--c-bg);
-	}
-	.list-menu-item__icon {
-		font-size: 18px;
-		width: 28px;
-		display: flex;
-		align-items: center;
-	}
-	.list-menu-item__title {
-		font-size: var(--fs-md);
-		font-weight: var(--fw-medium);
-		flex-grow: 1;
-	}
-	.list-menu-item__arrow {
-		color: var(--c-text-mut);
-		font-size: 18px;
-		font-weight: var(--fw-bold);
-	}
-	</style>
 </div>
 
 </body>

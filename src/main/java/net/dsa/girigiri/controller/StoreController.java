@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.DailySalesBarDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
@@ -27,7 +28,10 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 점주 대시보드 (WBS 3.0 매장 운영 — 문창호 담당: POS json 연동, 할인율 자동계산, 판매/등록 현황
@@ -47,7 +51,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StoreController {
 
-	private static final DateTimeFormatter CLOSE_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+	private static final DateTimeFormatter DAY_LABEL_FORMAT = DateTimeFormatter.ofPattern("MM/dd");
 
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
@@ -65,7 +69,6 @@ public class StoreController {
 
 		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "매장 정보 없음");
-		model.addAttribute("closingLabel", closingLabel(store));
 
 		if (store == null) {
 			addEmptyStats(model);
@@ -130,8 +133,38 @@ public class StoreController {
 				.mapToLong(ReservationEntity::getTotalPrice)
 				.sum();
 
+		// 추가됨 — 왜: "오늘 매출"과 완전히 같은 방식(pickupTime 기준, 취소/대기 제외)으로 어제 매출을
+		// 한 번 더 구해서 증감률을 낸다. 어제 매출이 0원이면 나눗셈이 안 되니 "신규 매출"로 따로 표시.
+		LocalDateTime yesterdayStart = todayStart.minusDays(1);
+		List<ReservationEntity> yesterdayReservations =
+				reservationRepository.findByStoreIdAndPickupTimeBetween(store.getId(), yesterdayStart, todayStart);
+		long yesterdaySales = yesterdayReservations.stream()
+				.filter(r -> !"cancelled".equals(r.getStatus()) && !"pending".equals(r.getStatus()))
+				.mapToLong(ReservationEntity::getTotalPrice)
+				.sum();
+
+		String salesDelta;
+		String salesDeltaClass;
+		if (yesterdaySales == 0) {
+			salesDelta = todaySales == 0 ? "" : "어제 대비 신규 매출";
+			salesDeltaClass = todaySales == 0 ? "u-mut" : "u-primary";
+		} else {
+			int changePct = (int) Math.round(100.0 * (todaySales - yesterdaySales) / yesterdaySales);
+			if (changePct == 0) {
+				salesDelta = "어제와 동일";
+				salesDeltaClass = "u-mut";
+			} else if (changePct > 0) {
+				salesDelta = "▲ 어제 대비 +" + changePct + "%";
+				salesDeltaClass = "u-primary";
+			} else {
+				salesDelta = "▼ 어제 대비 " + changePct + "%";
+				salesDeltaClass = "u-danger";
+			}
+		}
+
 		model.addAttribute("todaySales", formatWon(todaySales));
-		model.addAttribute("salesDelta", ""); // TODO(문창호): 어제 매출 대비 증감 — 히스토리 데이터 쌓이면 계산
+		model.addAttribute("salesDelta", salesDelta);
+		model.addAttribute("salesDeltaClass", salesDeltaClass);
 		model.addAttribute("soldCount", soldCount);
 		model.addAttribute("registeredCount", registeredCount);
 		model.addAttribute("sellingNowCount", sellingNowCount);
@@ -140,8 +173,12 @@ public class StoreController {
 		model.addAttribute("reservationDone", reservationDone);
 		model.addAttribute("reservationCancelled", reservationCancelled);
 		model.addAttribute("expiredCount", expiredCount);
+		int rescueGoalPercent = store.getRescueGoalPercent() != null ? store.getRescueGoalPercent() : 70;
 		model.addAttribute("rescueRate", rescueRate);
-		model.addAttribute("rescueGoal", rescueRate >= 70 ? "목표 70% 달성" : "목표 70%");
+		model.addAttribute("rescueGoalPercent", rescueGoalPercent);
+		model.addAttribute("rescueGoal", rescueRate >= rescueGoalPercent
+				? "목표 " + rescueGoalPercent + "% 달성"
+				: "목표 " + rescueGoalPercent + "%");
 
 		model.addAttribute("totalQuantity", totalQuantity);
 		model.addAttribute("pickedCount", pickedCount);
@@ -153,7 +190,34 @@ public class StoreController {
 		model.addAttribute("donutReservedCumPct", donutReservedCumPct);
 		model.addAttribute("donutSoldCumPct", donutSoldCumPct);
 
+		List<DailySalesBarDto> weeklySalesBars = buildWeeklySalesBars(store.getId());
+		int weeklyTotalCount = weeklySalesBars.stream().mapToInt(DailySalesBarDto::count).sum();
+		model.addAttribute("weeklySalesBars", weeklySalesBars);
+		model.addAttribute("weeklyTotalCount", weeklyTotalCount);
+
 		return "storeView/dashboard";
+	}
+
+	/**
+	 * 추가됨 — 왜: "폐기 절감(구제율)" 카드의 목표치(70%)가 하드코딩이라 점주가 못 바꿨다. 별도 설정
+	 * 화면을 만들 정도의 값은 아니라서, 대시보드 pill 옆 연필 아이콘 → prompt() → 이 엔드포인트로
+	 * 바로 저장하는 가벼운 방식으로 처리한다.
+	 */
+	@PostMapping("/rescue-goal")
+	public ResponseEntity<Void> updateRescueGoal(@RequestParam int percent, HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+
+		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		if (store == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+
+		store.setRescueGoalPercent(Math.max(1, Math.min(100, percent)));
+		storeRepository.save(store);
+		return ResponseEntity.ok().build();
 	}
 
 	/**
@@ -292,12 +356,43 @@ public class StoreController {
 				.toList();
 	}
 
-	private String closingLabel(StoreEntity store) {
-		if (store == null) {
-			return "";
+	/**
+	 * 추가됨 — 왜: "오늘 판매 현황" 도넛 옆에 최근 7일 판매 개수를 막대그래프로 보여달라는 요청.
+	 * 새 컬럼/새 리포지토리 메서드 없이, 이미 있는 findByStoreIdAndPickupTimeBetween 조회 기간만
+	 * 7일로 넓혀서 재사용하고 날짜별 합산은 여기서 처리한다 — "오늘 매출"을 product.registeredAt이
+	 * 아니라 reservation 기준으로 고친 것과 같은 이유로, 여기도 픽업 일자(pickupTime) 기준으로 묶는다.
+	 */
+	private List<DailySalesBarDto> buildWeeklySalesBars(Long storeId) {
+		LocalDate today = LocalDate.now();
+		LocalDateTime rangeStart = today.minusDays(6).atStartOfDay();
+		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
+
+		List<ReservationEntity> weekReservations =
+				reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd);
+
+		Map<LocalDate, Integer> countsByDate = new HashMap<>();
+		for (ReservationEntity r : weekReservations) {
+			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
+				continue;
+			}
+			LocalDate date = r.getPickupTime().toLocalDate();
+			countsByDate.merge(date, r.getReservedQuantity(), Integer::sum);
 		}
-		StoreHoursUtil.ClosingInfo info = StoreHoursUtil.parse(store.getOperatingHours(), 60);
-		return info.closeAt() != null ? "마감 " + info.closeAt().format(CLOSE_TIME_FORMAT) : "";
+
+		int maxCount = countsByDate.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+
+		List<DailySalesBarDto> bars = new ArrayList<>();
+		for (int i = 6; i >= 0; i--) {
+			LocalDate date = today.minusDays(i);
+			int count = countsByDate.getOrDefault(date, 0);
+			int heightPercent = maxCount == 0 ? 0 : (int) Math.round(100.0 * count / maxCount);
+			// 판매가 있었는데도 비율이 너무 작아 막대가 안 보이면 "데이터 없음"과 구분이 안 되니 최소 높이를 준다.
+			if (count > 0 && heightPercent < 6) {
+				heightPercent = 6;
+			}
+			bars.add(new DailySalesBarDto(date.format(DAY_LABEL_FORMAT), count, heightPercent, date.equals(today)));
+		}
+		return bars;
 	}
 
 	private String formatWon(long amount) {
@@ -307,6 +402,7 @@ public class StoreController {
 	private void addEmptyStats(Model model) {
 		model.addAttribute("todaySales", formatWon(0));
 		model.addAttribute("salesDelta", "");
+		model.addAttribute("salesDeltaClass", "u-mut");
 		model.addAttribute("soldCount", 0);
 		model.addAttribute("registeredCount", 0);
 		model.addAttribute("sellingNowCount", 0);
@@ -316,6 +412,7 @@ public class StoreController {
 		model.addAttribute("reservationCancelled", 0);
 		model.addAttribute("expiredCount", 0);
 		model.addAttribute("rescueRate", 0);
+		model.addAttribute("rescueGoalPercent", 70);
 		model.addAttribute("rescueGoal", "목표 70%");
 
 		model.addAttribute("totalQuantity", 0);
@@ -327,5 +424,8 @@ public class StoreController {
 		model.addAttribute("donutPickedPct", 0);
 		model.addAttribute("donutReservedCumPct", 0);
 		model.addAttribute("donutSoldCumPct", 0);
+
+		model.addAttribute("weeklySalesBars", List.of());
+		model.addAttribute("weeklyTotalCount", 0);
 	}
 }

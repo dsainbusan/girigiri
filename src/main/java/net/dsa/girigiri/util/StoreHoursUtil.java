@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * StoreEntity.operatingHours("09:00 ~ 22:00" 형태)에서 마감 시각을 계산하는 공용 유틸.
@@ -12,6 +14,12 @@ import java.time.format.DateTimeFormatter;
 public final class StoreHoursUtil {
 
 	private static final DateTimeFormatter HOUR_FORMAT = DateTimeFormatter.ofPattern("H:mm");
+
+	// 변경됨 — 왜: 매장 정보 수정 폼(storeView/edit.html)의 placeholder가 "09:00 ~ 21:00 (마감 세일
+	// 19:00~)"처럼 마감 시각 뒤에 괄호 설명을 붙이는 걸 유도하는데, 아래 파싱이 "~" 뒤 문자열
+	// 전체를 그대로 LocalTime.parse에 넘기면 괄호 때문에 항상 실패해서 대시보드 마감 배지가 빈
+	// 채로 나왔다(직접 재현해서 확인함). "~" 뒤에서 첫 번째로 나오는 "H:mm" 패턴만 뽑아 쓰도록 고친다.
+	private static final Pattern TIME_TOKEN = Pattern.compile("(\\d{1,2}:\\d{2})");
 
 	private StoreHoursUtil() {
 	}
@@ -28,7 +36,11 @@ public final class StoreHoursUtil {
 		}
 		try {
 			String closePart = operatingHours.split("~")[1].trim();
-			LocalTime closeTime = LocalTime.parse(closePart, HOUR_FORMAT);
+			Matcher matcher = TIME_TOKEN.matcher(closePart);
+			if (!matcher.find()) {
+				return new ClosingInfo("", false, null);
+			}
+			LocalTime closeTime = LocalTime.parse(matcher.group(1), HOUR_FORMAT);
 			LocalDateTime close = LocalDateTime.now().toLocalDate().atTime(closeTime);
 			LocalDateTime now = LocalDateTime.now();
 

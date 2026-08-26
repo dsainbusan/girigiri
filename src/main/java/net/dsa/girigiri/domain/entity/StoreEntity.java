@@ -58,6 +58,12 @@ public class StoreEntity {
 	@Column(name = "last_pickup_time")
 	private LocalTime lastPickupTime;   // 마지막 픽업시간: 이 시간 이후로는 오늘 주문/픽업 마감
 
+	// 추가됨 — 왜: 대시보드 "폐기 절감(구제율)" 카드의 목표치(70%)가 코드에 하드코딩돼 있었는데,
+	// 매장 옆 연필 아이콘으로 점주가 직접 바꿀 수 있게 컬럼으로 뺐다.
+	@Builder.Default
+	@Column(name = "rescue_goal_percent")
+	private Integer rescueGoalPercent = 70;
+
 	@Column(name = "role", nullable = false, length = 20)
 	private String role;   // = OWNER (점주 매장)
 
