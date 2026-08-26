@@ -12,6 +12,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /**
@@ -113,6 +116,12 @@ public class PortOneClient {
 			String status = body.path("status").asText("");
 			int actualAmount = body.path("amount").path("total").asInt(-1);
 			String transactionId = body.path("transactionId").asText(null);
+			// (2026-08-25 추가) 실제 결제수단/결제승인시각 — payMethod는 지금까지 어디서도 값을 안 채워주고
+			// 있던 필드였고(진짜 버그), paidAt도 예전엔 우리 서버가 검증하는 순간의 now()를 그대로 썼는데
+			// (카드 승인 시각이 아니라 "우리가 확인한 시각"이라 미세하게 늦다), 이제 PortOne 응답에서
+			// 실제 값을 파싱해서 쓴다.
+			String payMethod = body.path("method").path("type").asText(null);
+			LocalDateTime pgPaidAt = parsePaidAt(body.path("paidAt").asText(null));
 
 			if (!"PAID".equals(status)) {
 				return PortOneVerifyResult.failed("결제가 완료되지 않았어요 (status=" + status + ")");
@@ -122,7 +131,7 @@ public class PortOneClient {
 						"결제 금액이 일치하지 않아요 (요청 금액=" + expectedAmount + "원, 실제 결제 금액=" + actualAmount + "원)");
 			}
 
-			return PortOneVerifyResult.success(transactionId, actualAmount);
+			return PortOneVerifyResult.success(transactionId, actualAmount, payMethod, pgPaidAt);
 		} catch (IOException | InterruptedException e) {
 			if (e instanceof InterruptedException) {
 				Thread.currentThread().interrupt();
@@ -131,14 +140,32 @@ public class PortOneClient {
 		}
 	}
 
+	/**
+	 * PortOne이 실제로 받은 결제 응답에서 결제승인시각(ISO-8601)을 파싱한다. 필드가 비어있거나
+	 * 파싱에 실패하면(응답 스키마가 예상과 다른 경우 등) 서버가 지금 확인한 시각으로 대체한다 —
+	 * "정확한 카드 승인 시각을 못 구했다"가 "결제 승인 자체가 안 됐다"는 뜻은 아니기 때문에,
+	 * 이 파싱 실패만으로 결제 검증 전체를 실패시키면 안 된다.
+	 */
+	private LocalDateTime parsePaidAt(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return LocalDateTime.now();
+		}
+		try {
+			return OffsetDateTime.parse(raw).toLocalDateTime();
+		} catch (DateTimeParseException e) {
+			return LocalDateTime.now();
+		}
+	}
+
 	/** paid=true여야 진짜 결제 성공. false면 failReason에 사람이 읽을 수 있는 실패 사유가 담긴다. */
-	public record PortOneVerifyResult(boolean paid, String transactionId, Integer amount, String failReason) {
-		public static PortOneVerifyResult success(String transactionId, int amount) {
-			return new PortOneVerifyResult(true, transactionId, amount, null);
+	public record PortOneVerifyResult(boolean paid, String transactionId, Integer amount,
+	                                   String payMethod, LocalDateTime pgPaidAt, String failReason) {
+		public static PortOneVerifyResult success(String transactionId, int amount, String payMethod, LocalDateTime pgPaidAt) {
+			return new PortOneVerifyResult(true, transactionId, amount, payMethod, pgPaidAt, null);
 		}
 
 		public static PortOneVerifyResult failed(String reason) {
-			return new PortOneVerifyResult(false, null, null, reason);
+			return new PortOneVerifyResult(false, null, null, null, null, reason);
 		}
 	}
 

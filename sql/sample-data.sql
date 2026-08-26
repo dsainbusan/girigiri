@@ -42,8 +42,11 @@ INSERT INTO users (id, oauth_provider, oauth_id, role, status, nickname, email, 
 -- ---------------------------------------------------------------------
 -- store (users.id=3 이 소유한 매장 1곳)
 -- ---------------------------------------------------------------------
-INSERT INTO store (id, login_id, password, store_name, category, address, latitude, longitude, operating_hours, role, owner_id, created_at, updated_at) VALUES
-(1, 'store01', 'test1234', '다이스키 베이커리', '베이커리', '서울시 중구 을지로 100', 37.560000, 126.985000, '09:00 ~ 22:00', 'ADMIN', 3, NOW(), NOW());
+-- 변경됨 — 왜: login_id/password는 안A(Store 독립 계정) 흔적으로 제거 확정(안B로 정리, StoreEntity.java 참고).
+-- role='ADMIN'도 CLAUDE.md 원안 표기가 남아있던 것 — 실제 점주 role은 users.role='OWNER'가 기준이라
+-- 여기 role은 그대로 두되(제거 보류 중) 값만 'OWNER'로 맞춘다.
+INSERT INTO store (id, store_name, category, address, latitude, longitude, operating_hours, role, owner_id, created_at, updated_at) VALUES
+(1, '다이스키 베이커리', '베이커리', '서울시 중구 을지로 100', 37.560000, 126.985000, '09:00 ~ 22:00', 'OWNER', 3, NOW(), NOW());
 
 -- ---------------------------------------------------------------------
 -- product (store.id=1의 마감세일 상품)
@@ -64,8 +67,8 @@ INSERT INTO reservation (id, user_id, product_id, product_name, store_id, reserv
 -- ---------------------------------------------------------------------
 -- review (픽업 완료 건에 대한 리뷰)
 -- ---------------------------------------------------------------------
-INSERT INTO review (id, user_id, store_id, rating, content, created_at) VALUES
-(1, 2, 1, 5, '빵이 신선하고 마감할인이라 정말 저렴했어요!', NOW());
+INSERT INTO review (id, user_id, store_id, rating, content, edited, created_at) VALUES
+(1, 2, 1, 5, '빵이 신선하고 마감할인이라 정말 저렴했어요!', 0, NOW());
 
 -- ---------------------------------------------------------------------
 -- likes (찜한 매장)

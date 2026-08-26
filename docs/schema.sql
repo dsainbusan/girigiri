@@ -42,10 +42,12 @@ CREATE TABLE users (
     updated_at      DATETIME
 );
 
+-- 변경됨 — 왜: Store 자체 로그인 계정 모델(안A, login_id/password)과 "User가 storeId로 Store를
+-- 소유"하는 모델(안B, owner_id)이 섞여있다는 지적으로 안B 확정. login_id/password는 실제로 어디서도
+-- 참조 안 되던 죽은 컬럼이라 제거(로그인은 전부 users 쪽 OAuth2/이메일로만 이뤄짐). owner_id가 진짜
+-- 관계(users.id 참조)로 확정.
 CREATE TABLE store (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
-    login_id         VARCHAR(50) UNIQUE,
-    password         VARCHAR(100),
     store_name       VARCHAR(50) NOT NULL,
     category         VARCHAR(30),
     address          VARCHAR(200),
@@ -54,8 +56,8 @@ CREATE TABLE store (
     operating_hours  VARCHAR(100),
     prep_time_minutes INT COMMENT '채현 기본 준비시간(분). NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
     last_pickup_time TIME COMMENT '채현 마지막 픽업시간. NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
-    role             VARCHAR(20) NOT NULL COMMENT '= ADMIN',
-    owner_id         BIGINT COMMENT '미확정: users.id 참조 (안A/안B 결정 전)',
+    role             VARCHAR(20) NOT NULL COMMENT '= OWNER. 보류: users.role과 중복 정보라 실사용 여부 확인 필요',
+    owner_id         BIGINT NOT NULL COMMENT 'users.id 참조 (안B 확정) — 이 매장을 소유한 점주(role=OWNER) 계정',
     created_at       DATETIME,
     updated_at       DATETIME,
     FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -73,6 +75,7 @@ CREATE TABLE product (
     description         VARCHAR(500),
     status              VARCHAR(20) NOT NULL COMMENT 'active / sold / expired',
     registered_at       DATETIME,
+    updated_at          DATETIME COMMENT '상품 수정 + 재고 변동(예약/취소)에도 갱신됨 (2026-08-25 추가)',
     FOREIGN KEY (store_id) REFERENCES store(id)
 );
 

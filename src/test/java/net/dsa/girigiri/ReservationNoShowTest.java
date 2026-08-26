@@ -63,7 +63,8 @@ class ReservationNoShowTest {
 		ReservationEntity prepared = reservationService.prepareReservation(userId, productId, quantity, pickupTime);
 		PaymentEntity payment = paymentRepository.findByReservationId(prepared.getId()).orElseThrow();
 		when(portOneClient.verifyPayment(eq(payment.getMerchantUid()), anyInt()))
-				.thenReturn(PortOneClient.PortOneVerifyResult.success("test-tx-" + prepared.getId(), prepared.getTotalPrice()));
+				.thenReturn(PortOneClient.PortOneVerifyResult.success(
+						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
 		return reservationService.confirmPayment(prepared.getId(), payment.getMerchantUid());
 	}
 

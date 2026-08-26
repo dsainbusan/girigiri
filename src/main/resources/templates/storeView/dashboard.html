@@ -13,6 +13,7 @@
 	진짜 "관리자(어드민)" 화면이 별도로 있어서 명칭이 겹치면 안 된다(CLAUDE.md 참고).
 */-->
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<div class="u-row" style="justify-content: space-between; align-items: flex-start; margin-bottom: var(--s-4)">
 		<p class="u-sub" th:text="${closingLabel}">마감 21:00</p>
@@ -42,23 +43,82 @@
 		</div>
 	</div>
 
-	<div class="card" style="margin-top: var(--s-4)">
-		<div class="u-row" style="justify-content: space-between">
-			<p class="u-bold">오늘 판매 vs 폐기</p>
-			<span class="u-bold u-primary" th:text="'구제율 ' + ${rescueRate} + '%'">구제율 75%</span>
+	<!-- 변경됨 — 왜: 기존 진행률 바 하나였던 "오늘 판매 vs 폐기" 카드를, 마감 전/후 상태에 따라
+		의미가 달라지는 도넛 카드로 교체했다(사용자 목업 기반). "마감 전"엔 아직 결과가 안 나서
+		남은 수량을 회색(미정)으로 비워두고, "마감 후"엔 그 회색이 빨강(폐기 확정)으로 바뀐다 —
+		화면을 숨기거나 시간대별로 안 보여주는 게 아니라, 항상 같은 자리에서 "지금 상태"를 정직하게
+		보여주는 방식이라 사장님이 언제 들어오든 볼 수 있다. 실제 conic-gradient % 값은
+		StoreController에서 미리 계산해서 넘긴다(Thymeleaf에서 정수 나눗셈 직접 하면 실수하기 쉬움). -->
+	<div class="card" style="margin-top: var(--s-4)" th:if="${!isClosed}">
+		<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
+			<div>
+				<p class="u-bold">오늘 판매 현황</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</p>
+			</div>
+			<span class="pill" th:text="${closingCountdownLabel}">마감까지 1시간 56분</span>
 		</div>
-		<div class="progress" style="margin-top: var(--s-3)">
-			<div class="progress__bar" th:style="'width:' + ${rescueRate} + '%'"></div>
+
+		<div class="donut-wrap">
+			<div class="donut"
+			     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutPickedPct} + '%, var(--c-primary-mid) ' + ${donutPickedPct} + '% ' + ${donutReservedCumPct} + '%, var(--c-idle) ' + ${donutReservedCumPct} + '% 100%)'">
+				<div class="donut__center">
+					<span class="donut__label">남음</span>
+					<span class="donut__value donut__value--idle"><span th:text="${idleCount}">3</span><small>개</small></span>
+					<span class="donut__note" th:text="${totalQuantity} + '개 중'">14개 중</span>
+				</div>
+			</div>
+			<div class="tally">
+				<div class="tally__row tally__row--sold">
+					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
+					<div class="tally__num"><span th:text="${pickedCount}">8</span><small>개</small></div>
+				</div>
+				<div class="tally__row tally__row--reserved">
+					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary-mid)"></span><span class="tally__name">예약됨</span></div>
+					<div class="tally__num"><span th:text="${reservedNotPickedCount}">3</span><small>개</small></div>
+				</div>
+				<div class="tally__row tally__row--idle">
+					<div class="tally__top"><span class="tally__dot" style="background:var(--c-idle)"></span><span class="tally__name">남음</span></div>
+					<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
+				</div>
+			</div>
 		</div>
-		<div class="u-row" style="gap: var(--s-4); margin-top: var(--s-2); font-size: var(--fs-xs)">
-			<span class="u-row" style="gap: 4px">
-				<span style="width:8px; height:8px; border-radius:50%; background:var(--c-primary); display:inline-block"></span>
-				<span th:text="'판매 ' + ${soldCount} + '개'">판매 18개</span>
-			</span>
-			<span class="u-row" style="gap: 4px">
-				<span style="width:8px; height:8px; border-radius:50%; background:var(--c-danger); display:inline-block"></span>
-				<span th:text="'폐기 예상 ' + ${expiredCount} + '개'">폐기 예상 6개</span>
-			</span>
+
+		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line); font-size: var(--fs-xs); color: var(--c-text-sub);">
+			<span>마감 후 남은 수량은 폐기로 집계돼요</span>
+			<span>남은 <strong th:text="${idleCount} + '개'" style="color: var(--c-text)">3개</strong></span>
+		</div>
+	</div>
+
+	<div class="card" style="margin-top: var(--s-4)" th:if="${isClosed}">
+		<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
+			<div>
+				<p class="u-bold">오늘 마감 결과</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</p>
+			</div>
+			<span class="pill pill--done" th:text="'구제율 ' + ${rescueRate} + '%'">구제율 79%</span>
+		</div>
+
+		<div class="donut-wrap">
+			<div class="donut"
+			     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutSoldCumPct} + '%, var(--c-danger) ' + ${donutSoldCumPct} + '% 100%)'">
+				<div class="donut__center">
+					<span class="donut__label">구제율</span>
+					<span class="donut__value donut__value--sold"><span th:text="${rescueRate}">79</span><small>%</small></span>
+					<span class="donut__note" th:text="${totalQuantity} + '개 중 ' + ${soldCount} + '개'">14개 중 11개</span>
+				</div>
+			</div>
+			<div class="tally">
+				<div class="tally__row tally__row--sold">
+					<div class="tally__top"><span class="tally__dot" style="background:var(--c-primary)"></span><span class="tally__name">판매</span></div>
+					<div class="tally__num"><span th:text="${soldCount}">11</span><small>개</small></div>
+					<div class="tally__sub">할인 판매로 살린 음식</div>
+				</div>
+				<div class="tally__row tally__row--waste">
+					<div class="tally__top"><span class="tally__dot" style="background:var(--c-danger)"></span><span class="tally__name">폐기</span></div>
+					<div class="tally__num"><span th:text="${idleCount}">3</span><small>개</small></div>
+					<div class="tally__sub">마감까지 안 팔린 음식</div>
+				</div>
+			</div>
 		</div>
 	</div>
 

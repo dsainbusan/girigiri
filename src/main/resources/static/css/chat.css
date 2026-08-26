@@ -1,0 +1,108 @@
+/* =====================================================================
+   chat.css — 고객 지원 챗봇 위젯 (마이페이지 전용)
+   담당: 송채현 (WBS 6.5 고객 지원 챗봇)
+
+   챗봇은 로그인한 사용자에게만 마이페이지 안에서 노출된다(REQ-F-120) — 그래서 이 파일도
+   mypageView/mypage.html의 #content 안에서만 <link>로 불러온다(다른 화면에는 없음).
+   ===================================================================== */
+
+.chat-panel {
+	position: fixed;
+	left: 50%;
+	top: 0;
+	transform: translateX(-50%);
+	width: 100%;
+	max-width: var(--app-max);
+	height: 100%;
+	height: 100dvh;
+	z-index: 50;
+	background: var(--c-surface);
+	flex-direction: column;
+	/* 기본 숨김은 마크업의 인라인 style(display:none)이 맡고, 열릴 때 JS가 display:flex로 바꾼다 */
+}
+
+.chat-panel__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--s-4) var(--s-5);
+	border-bottom: 1px solid var(--c-line);
+	flex-shrink: 0;
+}
+
+.chat-panel__title {
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-bold);
+}
+
+.chat-panel__header-actions {
+	display: flex;
+	gap: var(--s-2);
+}
+
+.chat-panel__icon-btn {
+	background: none;
+	border: none;
+	font-size: 18px;
+	color: var(--c-text-mut);
+	cursor: pointer;
+	padding: 4px 8px;
+}
+
+.chat-panel__messages {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: var(--s-4) var(--s-5);
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-3);
+}
+
+.chat-bubble {
+	max-width: 80%;
+	padding: 10px 14px;
+	border-radius: var(--r-lg);
+	font-size: var(--fs-sm);
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.chat-bubble--bot {
+	align-self: flex-start;
+	background: var(--c-bg);
+	color: var(--c-text);
+}
+
+.chat-bubble--user {
+	align-self: flex-end;
+	background: var(--c-primary);
+	color: #fff;
+}
+
+.chat-panel__input-row {
+	display: flex;
+	gap: var(--s-2);
+	padding: var(--s-3) var(--s-4);
+	border-top: 1px solid var(--c-line);
+	flex-shrink: 0;
+}
+
+.chat-panel__input {
+	flex: 1 1 auto;
+	padding: 10px 14px;
+	border: 1px solid var(--c-line);
+	border-radius: var(--r-pill);
+	font-size: var(--fs-sm);
+}
+
+.chat-panel__send-btn {
+	background: var(--c-primary);
+	color: #fff;
+	border: none;
+	border-radius: var(--r-pill);
+	padding: 10px 16px;
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	cursor: pointer;
+}
