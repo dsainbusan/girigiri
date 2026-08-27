@@ -15,4 +15,7 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
 
 	// 추가됨 (2026-08-21) — 왜: 슈퍼어드민(WBS 7.2 송보미) 입점 심사 대기 목록 조회용
 	List<StoreEntity> findByApprovalStatus(String approvalStatus);
+
+	// 추가됨 (2026-08-27) — 왜: ListingDraftScheduler가 POS 연동 + 재고 스냅샷 시각이 설정된 매장을 훑는다.
+	List<StoreEntity> findByPosProviderIsNotNullAndPosDraftPromptTimeIsNotNull();
 }

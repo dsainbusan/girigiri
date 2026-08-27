@@ -16,6 +16,11 @@
 	<form th:action="${mode == 'edit'} ? @{/store/products/{id}(id=${productId})} : @{/store/products}"
 	      method="post" enctype="multipart/form-data" id="productForm">
 
+		<!-- 초안(오늘의 구제) 수정이면 저장과 동시에 발행한다 -->
+		<input th:if="${isDraft}" type="hidden" name="publishAfter" value="true">
+		<!-- POS 카탈로그에서 넘어온 경우 사진 URL을 유지 (새 파일을 올리면 그게 우선) -->
+		<input th:if="${form.currentImageUrl != null}" type="hidden" name="currentImageUrl" th:value="${form.currentImageUrl}">
+
 		<!-- 1. 상품 사진 -->
 		<div class="field">
 			<label class="field__label" for="image">상품 사진</label>
@@ -26,9 +31,13 @@
 				<span id="uploaderHint" class="uploader__hint"
 				      th:classappend="${form.currentImageUrl != null} ? ' is-hidden'">📷<br>사진 추가</span>
 			</label>
-			<input type="file" id="image" name="image" accept="image/*" class="is-hidden">
+			<input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp,image/gif" class="is-hidden">
+			<input th:if="${mode == 'edit'}" type="hidden" name="removeImage" id="removeImage" value="false">
+			<button type="button" id="imageRemoveBtn"
+			        th:if="${mode == 'edit' and form.currentImageUrl != null}"
+			        class="btn btn--sm btn--outline stock-item__del" style="align-self: flex-start; margin-top: 6px">사진 삭제</button>
 			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">
-				10MB 이하 이미지 1장 (선택). 안 올리면 카테고리 기본 이미지가 표시돼요.
+				5MB 이하 이미지 1장 (jpg·png·webp·gif, 선택). 안 올리면 카테고리 기본 이미지가 표시돼요.
 			</p>
 		</div>
 
@@ -69,18 +78,22 @@
 			<div class="u-grow">
 				<div class="banner__title" style="color: var(--c-info)">할인가는 자동으로 계산돼요</div>
 				<div class="banner__desc" style="color: var(--c-text-sub)">
-					마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −10%. 마감이 가까울수록 더 할인됩니다.
+					마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −20%. 마감이 가까울수록 더 할인됩니다.
 				</div>
 			</div>
 		</div>
 
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)"
-		        th:text="${mode == 'edit'} ? '저장하기' : '등록하기'">등록하기</button>
+		        th:text="${isDraft} ? '수정 후 발행' : (${mode == 'edit'} ? '저장하기' : '등록하기')">등록하기</button>
 	</form>
 
-	<form th:if="${mode == 'edit'}" th:action="@{/store/products/{id}/delete(id=${productId})}" method="post"
+	<form th:if="${mode == 'edit' and !isDraft}" th:action="@{/store/products/{id}/delete(id=${productId})}" method="post"
 	      onsubmit="return confirm('이 상품을 삭제할까요? 되돌릴 수 없어요.')" style="margin-top: var(--s-3)">
 		<button type="submit" class="btn btn--block btn--outline stock-item__del">상품 삭제</button>
+	</form>
+	<form th:if="${isDraft}" th:action="@{/store/products/{id}/discard(id=${productId})}" method="post"
+	      onsubmit="return confirm('오늘은 이 상품을 안 올릴까요?')" style="margin-top: var(--s-3)">
+		<button type="submit" class="btn btn--block btn--outline">오늘 안 함</button>
 	</form>
 
 	<script>
@@ -88,6 +101,9 @@
 			var input = document.getElementById('image');
 			var preview = document.getElementById('imagePreview');
 			var hint = document.getElementById('uploaderHint');
+			var removeBtn = document.getElementById('imageRemoveBtn');
+			var removeFlag = document.getElementById('removeImage');
+
 			if (input) {
 				input.addEventListener('change', function () {
 					var file = input.files && input.files[0];
@@ -95,6 +111,19 @@
 					preview.src = URL.createObjectURL(file);
 					preview.classList.remove('is-hidden');
 					hint.classList.add('is-hidden');
+					if (removeFlag) removeFlag.value = 'false';   // 새로 올린 파일이 우선
+					if (removeBtn) removeBtn.classList.remove('is-hidden');
+				});
+			}
+
+			if (removeBtn) {
+				removeBtn.addEventListener('click', function () {
+					preview.src = '';
+					preview.classList.add('is-hidden');
+					hint.classList.remove('is-hidden');
+					if (input) input.value = '';
+					if (removeFlag) removeFlag.value = 'true';
+					removeBtn.classList.add('is-hidden');
 				});
 			}
 

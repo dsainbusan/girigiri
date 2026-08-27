@@ -21,4 +21,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
 	// 점주 대시보드용 (StoreController, WBS 3.0 문창호 담당)
 	List<ProductEntity> findByStoreId(Long storeId);
+
+	// 점주 재고 관리 목록용 (StoreProductController) — 최근 등록순
+	List<ProductEntity> findByStoreIdOrderByRegisteredAtDesc(Long storeId);
 }
