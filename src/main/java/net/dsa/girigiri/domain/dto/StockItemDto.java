@@ -9,7 +9,11 @@ package net.dsa.girigiri.domain.dto;
  * 할인율/할인가는 DiscountRateCalculator로 계산해서 채운다 (PosApiController와 동일 정책).
  *
  * statusVariant: selling(판매중) / soldout(품절) / closed(마감) — store.css의 .stock-item__status--* 와 매칭.
+ * manualSoldOut: 사장님이 "품절" 버튼으로 직접 내린 것(status='sold'). true면 "판매 재개" 버튼을 보여준다.
+ *                (재고가 0이라 자연 품절된 건 재개할 게 없으므로 false.)
  * imageUrl 이 null 이면 화면에서 thumbEmoji + thumbColor 로 대체 썸네일을 그린다.
+ * source: 이 상품/초안이 어디서 왔는지 — "pos"(POS 재고 스냅샷) / "template"(자동 등록 템플릿) / "manual"(직접 등록).
+ *         발행 대기 초안 카드에 출처 뱃지를 붙이는 데 쓴다. (2026-08-27 문창호)
  */
 public record StockItemDto(
 		Long id,
@@ -19,11 +23,13 @@ public record StockItemDto(
 		String thumbColor,
 		String statusLabel,
 		String statusVariant,
+		boolean manualSoldOut,
 		int discountRate,
 		int originalPrice,
 		int discountedPrice,
 		int remainingQuantity,
 		int quantity,
-		String registeredLabel
+		String registeredLabel,
+		String source
 ) {
 }

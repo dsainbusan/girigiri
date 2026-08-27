@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.DailySalesBarDto;
+import net.dsa.girigiri.domain.dto.WeeklySavingsDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
@@ -56,6 +57,7 @@ public class StoreController {
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
 	private final ReservationRepository reservationRepository;
+	private final net.dsa.girigiri.repository.MenuItemRepository menuItemRepository;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -190,10 +192,27 @@ public class StoreController {
 		model.addAttribute("donutReservedCumPct", donutReservedCumPct);
 		model.addAttribute("donutSoldCumPct", donutSoldCumPct);
 
-		List<DailySalesBarDto> weeklySalesBars = buildWeeklySalesBars(store.getId());
-		int weeklyTotalCount = weeklySalesBars.stream().mapToInt(DailySalesBarDto::count).sum();
+		List<DailySalesBarDto> weeklySalesBars = buildWeeklySalesBars(store.getId(), isClosed);
 		model.addAttribute("weeklySalesBars", weeklySalesBars);
-		model.addAttribute("weeklyTotalCount", weeklyTotalCount);
+		model.addAttribute("weeklySoldTotal", weeklySalesBars.stream().mapToInt(DailySalesBarDto::soldCount).sum());
+		model.addAttribute("weeklyWasteTotal", weeklySalesBars.stream().mapToInt(DailySalesBarDto::wasteCount).sum());
+
+		WeeklySavingsDto savings = buildWeeklySavings(store.getId());
+		model.addAttribute("weeklyRescuedCount", savings.rescuedCount());
+		model.addAttribute("weeklyRecoveredAmount", formatWon(savings.recoveredAmount()));
+		model.addAttribute("weeklyCo2Kg", String.format("%.1f", savings.co2Kg()));
+		model.addAttribute("todayCo2Kg", String.format("%.1f", soldCount * CO2_KG_PER_ITEM));
+
+		// 추가됨 (2026-08-27) — 왜: "마감 상품 자동 등록" 알림을 손님용 알림함(/user/alerts) 대신
+		// 대시보드 최상단 "처리할 일" 배너로 보여준다 (점주 화면엔 알림함 진입점이 없어서).
+		// 발행 대기 초안 수 + 매장 수락 대기(confirmed) 예약 수.
+		long draftPendingCount = productRepository.findByStoreId(store.getId()).stream()
+				.filter(p -> "draft".equals(p.getStatus()))
+				.count();
+		int incomingReservationCount =
+				reservationRepository.findByStoreIdAndStatusOrderByReservedAtAsc(store.getId(), "confirmed").size();
+		model.addAttribute("draftPendingCount", draftPendingCount);
+		model.addAttribute("incomingReservationCount", incomingReservationCount);
 
 		return "storeView/dashboard";
 	}
@@ -303,7 +322,16 @@ public class StoreController {
 
 		model.addAttribute("store", store);
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
+
+		// POS 연동 상태 요약 (자세한 관리는 /store/pos) — 2026-08-27 문창호
+		model.addAttribute("posConnected", store.getPosProvider() != null);
+		model.addAttribute("posProviderLabel", posProviderLabel(store.getPosProvider()));
+		model.addAttribute("posMenuCount", menuItemRepository.countByStoreId(store.getId()));
 		return "storeView/edit";
+	}
+
+	private String posProviderLabel(String provider) {
+		return net.dsa.girigiri.service.PosCatalogService.providerLabel(provider);
 	}
 
 	/**
@@ -350,49 +378,102 @@ public class StoreController {
 
 	private List<ProductEntity> fetchTodayProducts(Long storeId, LocalDateTime todayStart, LocalDateTime todayEnd) {
 		return productRepository.findByStoreId(storeId).stream()
+				// "오늘의 구제" 초안(draft) / 오늘 안 함(skipped)은 실제 판매가 아니므로 등록/판매/폐기 집계에서 제외.
+				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
 				.filter(p -> p.getRegisteredAt() != null
 						&& !p.getRegisteredAt().isBefore(todayStart)
 						&& p.getRegisteredAt().isBefore(todayEnd))
 				.toList();
 	}
 
+	// 음식 1개를 구제할 때 절감되는 CO₂ 환산량(kg). TODO(팀): 근거 있는 계수로 조정 — 지금은 임의값.
+	private static final double CO2_KG_PER_ITEM = 0.5;
+
 	/**
-	 * 추가됨 — 왜: "오늘 판매 현황" 도넛 옆에 최근 7일 판매 개수를 막대그래프로 보여달라는 요청.
-	 * 새 컬럼/새 리포지토리 메서드 없이, 이미 있는 findByStoreIdAndPickupTimeBetween 조회 기간만
-	 * 7일로 넓혀서 재사용하고 날짜별 합산은 여기서 처리한다 — "오늘 매출"을 product.registeredAt이
-	 * 아니라 reservation 기준으로 고친 것과 같은 이유로, 여기도 픽업 일자(pickupTime) 기준으로 묶는다.
+	 * 추가됨 — 왜: "오늘 판매 현황" 도넛 옆 최근 7일 막대그래프.
+	 * 변경됨 (2026-08-27) — 왜: WBS "판매/폐기 절감 통계 그래프" 항목명대로 판매만이 아니라 폐기도
+	 * 같이 봐야 해서 판매(초록)/폐기(빨강) 2색 스택으로 바꿨다.
+	 * - 판매: 픽업 일자(pickupTime) 기준, 취소/미결제 제외 ("오늘 매출"과 동일 정책)
+	 * - 폐기:
+	 *   1) 과거 날짜(어제~6일 전) 상품: 마감일이 지났으므로 미판매 잔여 수량(remainingQuantity)을 폐기로 집계.
+	 *   2) 오늘 상품: 명시적 status='expired' 이거나 당일 영업 마감(isClosed=true)일 때 폐기로 집계.
 	 */
-	private List<DailySalesBarDto> buildWeeklySalesBars(Long storeId) {
+	private List<DailySalesBarDto> buildWeeklySalesBars(Long storeId, boolean isClosed) {
 		LocalDate today = LocalDate.now();
-		LocalDateTime rangeStart = today.minusDays(6).atStartOfDay();
+		LocalDate windowStart = today.minusDays(6);
+		LocalDateTime rangeStart = windowStart.atStartOfDay();
 		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
 
-		List<ReservationEntity> weekReservations =
-				reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd);
-
-		Map<LocalDate, Integer> countsByDate = new HashMap<>();
-		for (ReservationEntity r : weekReservations) {
+		Map<LocalDate, Integer> soldByDate = new HashMap<>();
+		for (ReservationEntity r : reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd)) {
 			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
 				continue;
 			}
-			LocalDate date = r.getPickupTime().toLocalDate();
-			countsByDate.merge(date, r.getReservedQuantity(), Integer::sum);
+			soldByDate.merge(r.getPickupTime().toLocalDate(), r.getReservedQuantity(), Integer::sum);
 		}
 
-		int maxCount = countsByDate.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+		Map<LocalDate, Integer> wasteByDate = new HashMap<>();
+		for (ProductEntity p : productRepository.findByStoreId(storeId)) {
+			if ("draft".equals(p.getStatus()) || "skipped".equals(p.getStatus()) || p.getRegisteredAt() == null) {
+				continue;
+			}
+			LocalDate d = p.getRegisteredAt().toLocalDate();
+			if (d.isBefore(windowStart) || d.isAfter(today)) {
+				continue;
+			}
+			int remaining = p.getRemainingQuantity() == null ? 0 : p.getRemainingQuantity();
+			if (remaining <= 0) {
+				continue;
+			}
+			if (d.isBefore(today)) {
+				// 과거 일자에 등록되어 남은 수량은 마감일이 지났으므로 폐기 집계
+				wasteByDate.merge(d, remaining, Integer::sum);
+			} else if ("expired".equals(p.getStatus()) || isClosed) {
+				// 오늘 등록 상품은 마감 완료(isClosed) 또는 명시적 expired 상태일 때 폐기 집계
+				wasteByDate.merge(d, remaining, Integer::sum);
+			}
+		}
+
+		int maxTotal = 0;
+		for (int i = 0; i <= 6; i++) {
+			LocalDate d = today.minusDays(i);
+			maxTotal = Math.max(maxTotal, soldByDate.getOrDefault(d, 0) + wasteByDate.getOrDefault(d, 0));
+		}
 
 		List<DailySalesBarDto> bars = new ArrayList<>();
 		for (int i = 6; i >= 0; i--) {
 			LocalDate date = today.minusDays(i);
-			int count = countsByDate.getOrDefault(date, 0);
-			int heightPercent = maxCount == 0 ? 0 : (int) Math.round(100.0 * count / maxCount);
-			// 판매가 있었는데도 비율이 너무 작아 막대가 안 보이면 "데이터 없음"과 구분이 안 되니 최소 높이를 준다.
-			if (count > 0 && heightPercent < 6) {
-				heightPercent = 6;
-			}
-			bars.add(new DailySalesBarDto(date.format(DAY_LABEL_FORMAT), count, heightPercent, date.equals(today)));
+			int sold = soldByDate.getOrDefault(date, 0);
+			int waste = wasteByDate.getOrDefault(date, 0);
+			int soldPct = maxTotal == 0 ? 0 : (int) Math.round(100.0 * sold / maxTotal);
+			int wastePct = maxTotal == 0 ? 0 : (int) Math.round(100.0 * waste / maxTotal);
+			// 값이 있는데 막대가 안 보일 만큼 작으면 "0"과 구분이 안 되니 최소 높이를 준다.
+			if (sold > 0 && soldPct < 4) soldPct = 4;
+			if (waste > 0 && wastePct < 4) wastePct = 4;
+			bars.add(new DailySalesBarDto(date.format(DAY_LABEL_FORMAT), sold, waste, soldPct, wastePct, date.equals(today)));
 		}
 		return bars;
+	}
+
+	/**
+	 * 추가됨 (2026-08-27) — 왜: WBS "판매/폐기 절감 통계 그래프" + "음식 구제 개수·환경 뱃지".
+	 * 최근 7일간 앱 판매로 폐기를 면한 개수 / 회수 매출 / CO₂ 절감량.
+	 */
+	private WeeklySavingsDto buildWeeklySavings(Long storeId) {
+		LocalDate today = LocalDate.now();
+		LocalDateTime rangeStart = today.minusDays(6).atStartOfDay();
+		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
+
+		int rescued = 0;
+		long recovered = 0;
+		for (ReservationEntity r : reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd)) {
+			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
+				continue;
+			}
+			rescued += r.getReservedQuantity();
+			recovered += r.getTotalPrice();
+		}
+		return new WeeklySavingsDto(rescued, recovered, rescued * CO2_KG_PER_ITEM);
 	}
 
 	private String formatWon(long amount) {
@@ -426,6 +507,13 @@ public class StoreController {
 		model.addAttribute("donutSoldCumPct", 0);
 
 		model.addAttribute("weeklySalesBars", List.of());
-		model.addAttribute("weeklyTotalCount", 0);
+		model.addAttribute("weeklySoldTotal", 0);
+		model.addAttribute("weeklyWasteTotal", 0);
+		model.addAttribute("weeklyRescuedCount", 0);
+		model.addAttribute("weeklyRecoveredAmount", formatWon(0));
+		model.addAttribute("weeklyCo2Kg", "0.0");
+		model.addAttribute("todayCo2Kg", "0.0");
+		model.addAttribute("draftPendingCount", 0L);
+		model.addAttribute("incomingReservationCount", 0);
 	}
 }

@@ -96,6 +96,21 @@
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">저장</button>
 	</form>
 
+	<!-- POS 연동 (2026-08-27 문창호) — 한 번 연동하면 거의 안 바꾸는 설정이라 대시보드가 아니라
+	     매장 설정인 이 화면에 둔다. 상태만 요약하고 실제 연동/해제/재동기화는 /store/pos 전용 화면에서. -->
+	<div class="card" style="margin-top: var(--s-6); background: var(--c-bg); border-color: var(--c-line);">
+		<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
+			<div>
+				<p class="u-bold" style="font-size: var(--fs-sm)">POS 연동</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px"
+				   th:text="${posConnected ? posProviderLabel + ' 연동됨 · 메뉴 ' + posMenuCount + '개' : 'POS를 연동하면 메뉴·가격을 자동으로 불러와요'}">POS를 연동하면 메뉴·가격을 자동으로 불러와요</p>
+			</div>
+			<span th:if="${posConnected}" class="badge badge--success">연동됨</span>
+		</div>
+		<a th:href="@{/store/pos}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-3)"
+		   th:text="${posConnected} ? 'POS 연동 관리' : 'POS 연동하기'">POS 연동하기</a>
+	</div>
+
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
 	<script th:inline="javascript">
 		kakao.maps.load(function () {
@@ -152,6 +167,17 @@
 				});
 			});
 		});
+	</script>
+
+	<!-- 뒤로가기는 브라우저 히스토리 대신 항상 대시보드로 (매장 정보 수정은 대시보드에서만 진입).
+	     app.js(하단)보다 먼저 실행돼서 data-back을 미리 떼면 history.back() 핸들러가 이 버튼엔 안 붙는다. -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) return;
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
 	</script>
 
 </div>

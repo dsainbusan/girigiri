@@ -7,6 +7,44 @@
    th:style로 인라인 지정한다 — 여기 있는 CSS는 위치/크기/색상 토큰만 담당.
    ===================================================================== */
 
+/* ---------- 통계 카드 탭 토글 (오늘 현황 vs 최근 7일) ---------- */
+.stat-toggle-tabs {
+  display: flex;
+  background: var(--c-bg);
+  padding: 3px;
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+  gap: 3px;
+}
+.stat-toggle-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 7px 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-mut);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all .15s ease;
+  text-align: center;
+}
+.stat-toggle-tab:hover {
+  color: var(--c-text);
+}
+.stat-toggle-tab.is-active {
+  background: var(--c-surface);
+  color: var(--c-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+.stat-panel {
+  animation: fadeIn 0.2s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0.5; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- 상태 배지 (마감까지 N분 / 구제율 N%) ---------- */
 .pill { flex: none; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 5px 11px; border-radius: var(--r-pill); background: var(--c-bg); color: var(--c-text-sub); border: 1px solid var(--c-line); }
 .pill--done { background: var(--c-primary-weak); color: var(--c-primary); border-color: var(--c-primary-border); }
@@ -44,14 +82,96 @@
 .tally__num small { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-mut); margin-left: 2px; }
 .tally__sub { flex-basis: 100%; font-size: 10px; color: var(--c-text-mut); margin-top: 2px; }
 
-/* ---------- 최근 7일 판매 막대그래프 ---------- */
-.bar-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-1); height: 120px; margin-top: var(--s-4); }
+/* ---------- 최근 7일 판매/폐기 막대그래프 (판매=초록, 폐기=빨강 스택) ---------- */
+.bar-chart { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-1); height: 120px; margin-top: var(--s-3); }
 .bar-chart__col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.bar-chart__value { font-size: 10px; color: var(--c-text-mut); font-variant-numeric: tabular-nums; }
-.bar-chart__track { flex: 1; width: 18px; display: flex; align-items: flex-end; background: var(--c-bg); border-radius: var(--r-sm); overflow: hidden; margin-top: 2px; }
-.bar-chart__fill { width: 100%; min-height: 2px; background: var(--c-primary-mid); border-radius: var(--r-sm) var(--r-sm) 0 0; transition: height 0.2s ease; }
-.bar-chart__fill--today { background: var(--c-primary); }
+.bar-chart__value { font-size: 10px; color: var(--c-text-mut); font-variant-numeric: tabular-nums; min-height: 12px; }
+.bar-chart__track {
+  flex: 1; width: 18px; margin-top: 2px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: var(--c-bg); border-radius: var(--r-sm); overflow: hidden;
+}
+.bar-chart__seg { width: 100%; transition: height .2s ease; }
+.bar-chart__seg--sold  { background: var(--c-primary); }
+.bar-chart__seg--waste { background: var(--c-danger); }
 .bar-chart__label { font-size: 10px; color: var(--c-text-mut); margin-top: var(--s-1); }
+.bar-chart__label.is-today { color: var(--c-text); font-weight: var(--fw-bold); }
+
+/* ---------- 대시보드 "처리할 일" 배너 ---------- */
+.todo-banner {
+  border: 1px solid var(--c-primary-border);
+  border-radius: var(--r-lg);
+  background: var(--c-primary-weak);
+  overflow: hidden;
+  margin-bottom: var(--s-4);
+}
+.todo-banner__row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary-strong);
+}
+.todo-banner__row + .todo-banner__row { border-top: 1px solid var(--c-primary-border); }
+.todo-banner__row b { color: var(--c-primary); }
+.todo-banner__go { font-size: var(--fs-lg); color: var(--c-primary); }
+
+/* ---------- "오늘의 구제" 상단 POS 상태 스트립 ---------- */
+.pos-strip {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+}
+.pos-strip--on { border-color: var(--c-primary-border); background: var(--c-primary-weak); }
+.pos-strip__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.pos-strip--on .pos-strip__title { color: var(--c-primary-strong); }
+.pos-strip__desc { font-size: var(--fs-xs); color: var(--c-text-sub); margin-top: 2px; line-height: 1.5; }
+.pos-strip__link {
+  display: inline-block; margin-top: var(--s-2);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  color: var(--c-primary); text-decoration: underline;
+}
+
+/* 발행 대기 초안의 출처 뱃지 (POS 재고 / 템플릿 / 직접) */
+.draft-src {
+  flex-shrink: 0;
+  font-size: var(--fs-xs); color: var(--c-text-sub);
+  background: var(--c-surface); border: 1px solid var(--c-line);
+  border-radius: var(--r-sm); padding: 1px 6px;
+}
+
+/* POS 메뉴별 설정 — 라벨 붙은 할인율 / 앱 판매 수량 칸 */
+.pos-menu-fields {
+  display: flex; align-items: flex-end; gap: var(--s-2);
+  flex-wrap: wrap; margin-top: 6px;
+}
+.pos-menu-field {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);
+}
+.pos-menu-field__input { position: relative; display: inline-block; }
+.pos-menu-field__input .input { width: 96px; padding: 6px 22px 6px 8px; }
+.pos-menu-field__input i {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-style: normal; font-size: var(--fs-xs); color: var(--c-text-sub);
+}
+
+/* ---------- POS 시뮬레이터 (시연용, 단말기 느낌) ---------- */
+.pos-sim__screen {
+  background: var(--c-dark); color: #e5e7eb;
+  border-radius: var(--r-lg); padding: var(--s-4);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.pos-sim__brand { font-size: var(--fs-md); font-weight: var(--fw-black); letter-spacing: .02em; }
+.pos-sim__note { font-size: var(--fs-xs); color: #9ca3af; margin-top: var(--s-2); line-height: 1.6; }
+.pos-sim__note code { background: rgba(255,255,255,.1); padding: 1px 4px; border-radius: 4px; }
+
+/* ---------- 최근 7일 통계 카드 (막대 + 절감 요약, 얇은 선 구분) ---------- */
+.saving-week__rule { border-top: 1px solid var(--c-line-weak); margin: var(--s-4) 0 var(--s-3); }
+.saving-week__grid { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
+.saving-week__item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.saving-week__value { font-size: var(--fs-lg); font-weight: var(--fw-black); white-space: nowrap; letter-spacing: -.02em; }
+.saving-week__label { font-size: var(--fs-xs); color: var(--c-text-mut); }
 
 /* ---------- 구제율 목표 수정 버튼 ---------- */
 .rescue-goal-edit-btn { flex: none; border: none; background: none; padding: 0; font-size: 11px; line-height: 1; cursor: pointer; opacity: 0.6; }
@@ -85,11 +205,15 @@
 .stock-item__status--soldout { background: var(--c-danger-weak); color: var(--c-danger); }
 .stock-item__status--closed  { background: var(--c-bg); color: var(--c-text-sub); }
 
-/* 액션 버튼 줄 (수정 / 품절 / 삭제 — 3등분) */
+/* 액션 버튼 줄 — 항목이 <a class="btn"> 이거나 <form><button class="btn"> 라 섞여 있어서,
+   "직접 자식은 1/3씩" + "form 안 버튼은 form을 꽉 채움"을 flex로만 일관되게 처리한다.
+   (width:%를 섞으면 flex-basis와 충돌해 특정 버튼만 넓어지는 문제가 있었음) */
 .stock-item__actions { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
-.stock-item__actions > * { flex: 1 1 0; }
-.stock-item__actions form { display: flex; }
-.stock-item__actions .btn { width: 100%; }
+.stock-item__actions > * { flex: 1 1 0; min-width: 0; width: auto; }
+.stock-item__actions > form { display: flex; }
+.stock-item__actions > form > .btn { flex: 1 1 0; min-width: 0; }
+.stock-item__actions > .btn { overflow: hidden; }
+.stock-item__actions .btn { white-space: nowrap; padding-left: 4px; padding-right: 4px; }
 .stock-item__del { color: var(--c-danger); }
 
 /* ---------- 사진 업로더 (등록/수정 폼) ---------- */
@@ -104,3 +228,21 @@
 
 /* ---------- 설명 입력창 (내용만큼 세로로 자동 확장) ---------- */
 .js-autogrow { resize: none; overflow-y: auto; max-height: 40vh; }
+
+/* ---------- 오늘의 구제 자동 등록 (템플릿 / 발행 대기) ---------- */
+.draft-box { border: 1px solid var(--c-primary-border); border-radius: var(--r-lg); background: var(--c-surface); padding: var(--s-3); }
+.draft-box .stock-item { border: 0; padding: var(--s-2) 0 0; }
+.draft-box .stock-item + .stock-item { margin-top: var(--s-3); border-top: 1px dashed var(--c-primary-border); }
+
+/* 템플릿 폼 — 요일 선택 토글 */
+.weekday-row { display: flex; gap: var(--s-2); }
+.weekday { flex: 1; }
+.weekday input { position: absolute; opacity: 0; pointer-events: none; }
+.weekday span {
+  display: flex; align-items: center; justify-content: center;
+  padding: 9px 0; border-radius: var(--r-md);
+  border: 1px solid var(--c-line); background: var(--c-surface);
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-sub);
+  cursor: pointer;
+}
+.weekday input:checked + span { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }

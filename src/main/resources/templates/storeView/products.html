@@ -1,15 +1,78 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('재고 관리', ~{:: #content}, '', true, '점주 모드', null)}">
+      th:replace="~{common/layout :: layout('오늘의 구제', ~{:: #content}, '', true, '점주 모드', null)}">
 <body>
 <!--/*
-	점주 상품(재고) 관리 목록 — WBS 3.0 (원래 김태훈 담당 → 2026-08-26 문창호 인계).
-	현재 목업 단계 — StoreProductController가 하드코딩 샘플(items)을 렌더한다.
-	실데이터 배선 시: items 는 ProductRepository.findByStoreId 결과를 StockItemDto로 매핑,
-	품절/삭제 form 의 POST 엔드포인트를 StoreProductController에 추가.
+	점주 메인 작업 화면 — "오늘의 구제" (WBS 3.0, 2026-08-26 김태훈→문창호 인계).
+	2026-08-27 통합형 IA로 재편: POS 자동 연동이 메인, 직접 등록은 보조.
+	- 상단 POS 상태 스트립: 초안이 어디서 오는지(POS 재고 / 템플릿 / 없음) 한눈에
+	- drafts: "오늘의 구제" 자동 초안(status='draft'). [바로 올리기]/[수정]/[오늘 안 함]
+	- items: 실제 판매중/품절 상품 (draft·skipped 제외)
+	- 직접 등록은 목록 맨 아래 작은 링크로
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<p class="u-primary" th:if="${param.drafted != null and param.drafted[0] != '0'}" style="margin-bottom: var(--s-3)"
+	   th:text="'POS 재고로 ' + ${param.drafted[0]} + '개 메뉴를 발행 대기에 올렸어요.'">POS 재고로 5개 메뉴를 발행 대기에 올렸어요.</p>
+	<p class="u-sub" th:if="${param.drafted != null and param.drafted[0] == '0'}" style="margin-bottom: var(--s-3)">
+		새로 올릴 재고가 없어요 (앱 판매 켠 메뉴가 없거나, 재고 0이거나, 오늘 이미 올렸어요).
+	</p>
+
+	<!-- POS 상태 스트립 — 초안 소스를 점주가 알 수 있게 -->
+	<div class="pos-strip" th:classappend="${posConnected} ? ' pos-strip--on'">
+		<div th:if="${posConnected}">
+			<p class="pos-strip__title" th:text="'✅ ' + ${posProviderLabel} + ' 연동됨'">✅ 오케이포스 연동됨</p>
+			<p class="pos-strip__desc" th:if="${posDraftPromptLabel != null}"
+			   th:text="'매일 ' + ${posDraftPromptLabel} + '에 POS 재고로 오늘의 구제를 자동 준비해요'">매일 20:00에 POS 재고로 오늘의 구제를 자동 준비해요</p>
+			<p class="pos-strip__desc" th:if="${posDraftPromptLabel == null}">재고 확인 시각을 정하면 매일 자동으로 준비돼요.</p>
+			<a th:href="@{/store/pos}" class="pos-strip__link">POS 설정 ›</a>
+		</div>
+		<div th:unless="${posConnected}">
+			<p class="pos-strip__title">🔌 POS를 연동하면 재고가 자동으로 올라와요</p>
+			<p class="pos-strip__desc">마감 무렵 남은 재고로 "오늘의 구제" 초안이 저절로 만들어져요.</p>
+			<div class="u-row" style="gap: var(--s-3); flex-wrap: wrap">
+				<a th:href="@{/store/pos}" class="pos-strip__link">POS 연동하기 ›</a>
+				<a th:href="@{/store/templates}" class="pos-strip__link">POS 없이 자동 등록(템플릿) ›</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- 발행 대기: "오늘의 구제" 자동 초안 -->
+	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
+		<p class="u-bold" style="margin-bottom: var(--s-2)">📦 오늘의 구제 — 발행 대기</p>
+		<div th:each="d : ${drafts}" class="stock-item" style="border-color: var(--c-primary-border); background: var(--c-primary-weak);">
+			<div class="stock-item__head">
+				<div class="stock-item__thumb" th:style="${d.imageUrl == null ? 'background:' + d.thumbColor : null}">
+					<img th:if="${d.imageUrl != null}" th:src="${d.imageUrl}" th:alt="${d.name}">
+					<span th:unless="${d.imageUrl != null}" th:text="${d.thumbEmoji}">🥐</span>
+				</div>
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${d.name}">오늘의 마감 빵 세트</span>
+						<span class="draft-src"
+						      th:text="${d.source == 'pos' ? 'POS 재고' : (d.source == 'template' ? '템플릿' : '직접')}">POS 재고</span>
+					</div>
+					<div class="price" style="margin-top: 2px">
+						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
+						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
+					</div>
+					<span class="stock-item__meta" th:text="${d.quantity} + '개로 준비됐어요'">3개로 준비됐어요</span>
+				</div>
+			</div>
+			<div class="stock-item__actions">
+				<form th:action="@{/store/products/{id}/publish(id=${d.id})}" method="post">
+					<button type="submit" class="btn btn--sm">바로 올리기</button>
+				</form>
+				<a th:href="@{/store/products/{id}/edit(id=${d.id})}" class="btn btn--sm btn--outline">수정</a>
+				<form th:action="@{/store/products/{id}/discard(id=${d.id})}" method="post"
+				      onsubmit="return confirm('오늘은 이 상품을 안 올릴까요?')">
+					<button type="submit" class="btn btn--sm btn--outline">오늘 안 함</button>
+				</form>
+			</div>
+		</div>
+	</div>
 
 	<div class="u-row" style="justify-content: space-between; margin-bottom: var(--s-3)">
 		<span class="u-sub" style="font-size: var(--fs-xs)"
@@ -23,10 +86,8 @@
 		       style="flex:1; border:none; background:none; outline:none; color:var(--c-text)">
 	</form>
 
-	<a th:href="@{/store/products/new}" class="btn btn--block" style="margin-bottom: var(--s-4)">+ 상품 등록</a>
-
 	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 등록된 상품이 없어요.<br>위 <b>+ 상품 등록</b>으로 첫 상품을 올려보세요.
+		아직 판매 중인 상품이 없어요.<br>POS 재고가 올라오면 위 <b>발행 대기</b>에서 확인할 수 있어요.
 	</div>
 
 	<ul>
@@ -54,8 +115,11 @@
 
 			<div class="stock-item__actions">
 				<a th:href="@{/store/products/{id}/edit(id=${item.id})}" class="btn btn--sm btn--outline">수정</a>
-				<form th:if="${item.statusVariant != 'soldout'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
+				<form th:if="${item.statusVariant == 'selling'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
 					<button type="submit" class="btn btn--sm btn--outline">품절</button>
+				</form>
+				<form th:if="${item.manualSoldOut}" th:action="@{/store/products/{id}/resume(id=${item.id})}" method="post">
+					<button type="submit" class="btn btn--sm btn--outline">판매 재개</button>
 				</form>
 				<form th:action="@{/store/products/{id}/delete(id=${item.id})}" method="post"
 				      onsubmit="return confirm('이 상품을 삭제할까요? 되돌릴 수 없어요.')">
@@ -64,6 +128,24 @@
 			</div>
 		</li>
 	</ul>
+
+	<!-- 직접 등록은 보조 수단 — 작은 링크로 -->
+	<div class="u-row" style="justify-content: center; gap: var(--s-4); margin-top: var(--s-5)">
+		<a th:href="@{/store/products/new}" class="u-sub" style="font-size: var(--fs-sm); text-decoration: underline;">+ 직접 등록</a>
+		<a th:href="@{/store/templates}" class="u-sub" style="font-size: var(--fs-sm); text-decoration: underline;">자동 등록 템플릿</a>
+	</div>
+
+	<!-- 뒤로가기는 브라우저 히스토리 대신 항상 대시보드로 (이 화면은 대시보드에서만 진입).
+	     이 인라인 스크립트는 layout 하단의 app.js보다 먼저 실행되므로, data-back을 미리 떼서
+	     app.js의 history.back() 핸들러가 이 버튼엔 안 붙게 한다. -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) return;
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
 </div>
 </body>
 </html>

@@ -80,6 +80,25 @@ public class StoreEntity {
 	@Column(name = "approval_status", length = 20)
 	private String approvalStatus = STATUS_PENDING;
 
+	// 추가됨 (2026-08-27, 문창호) — 왜: "POS json 카탈로그 연동 (가정)". 진짜 POS 단말은 없어서,
+	// 점주가 연동 화면에서 POS사 + 매장 코드를 넣으면 mock으로 샘플 메뉴 카탈로그(MenuItemEntity)를
+	// 불러온다. posProvider가 null이면 미연동.
+	@Column(name = "pos_provider", length = 30)
+	private String posProvider;           // 'okpos' / 'posbank' / 'unionpos' / 'etc'
+
+	@Column(name = "pos_store_code", length = 50)
+	private String posStoreCode;
+
+	@Column(name = "pos_connected_at")
+	private LocalDateTime posConnectedAt;
+
+	@Column(name = "pos_last_sync_at")
+	private LocalDateTime posLastSyncAt;
+
+	// 매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안을 자동 생성한다 (B안). null이면 자동 생성 안 함.
+	@Column(name = "pos_draft_prompt_time")
+	private java.time.LocalTime posDraftPromptTime;
+
 	// 변경됨 — 왜: Store가 자체 loginId/password를 갖는 "독립 계정" 모델(안A)과, 세션 설계
 	// ({ userId, role, viewMode, storeId })가 암시하는 "User가 storeId로 Store를 소유"하는 모델(안B)이
 	// 어긋난다는 지적으로 확정함: 안B로 정리(Store는 로그인 주체가 아니고, User(role=OWNER)가

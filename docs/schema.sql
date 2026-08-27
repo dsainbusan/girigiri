@@ -57,11 +57,52 @@ CREATE TABLE store (
     prep_time_minutes INT COMMENT '채현 기본 준비시간(분). NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
     last_pickup_time TIME COMMENT '채현 마지막 픽업시간. NULL이면 매장이 아직 설정 전 (2026-08-21 추가)',
     rescue_goal_percent INT DEFAULT 70 COMMENT '대시보드 구제율 목표치(%). 연필 아이콘으로 점주가 직접 수정 (문창호 추가)',
+    pos_provider     VARCHAR(30) COMMENT 'POS 연동사(okpos/posbank/unionpos/etc). NULL이면 미연동 (2026-08-27 문창호 추가)',
+    pos_store_code   VARCHAR(50) COMMENT 'POS 매장 코드 (2026-08-27 문창호 추가)',
+    pos_connected_at DATETIME COMMENT 'POS 연동 시각 (2026-08-27 문창호 추가)',
+    pos_last_sync_at DATETIME COMMENT 'POS 마지막 동기화 시각 (2026-08-27 문창호 추가)',
+    pos_draft_prompt_time TIME COMMENT '매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안 자동 생성. NULL이면 안 함 (B안, 2026-08-27 문창호)',
     role             VARCHAR(20) NOT NULL COMMENT '= OWNER. 보류: users.role과 중복 정보라 실사용 여부 확인 필요',
     owner_id         BIGINT NOT NULL COMMENT 'users.id 참조 (안B 확정) — 이 매장을 소유한 점주(role=OWNER) 계정',
     created_at       DATETIME,
     updated_at       DATETIME,
     FOREIGN KEY (owner_id) REFERENCES users(id)
+);
+
+-- "오늘의 구제 자동 등록" 템플릿 (2026-08-26 문창호 추가, WBS엔 없는 신규 기능)
+-- 사장님이 한 번 등록 → ListingDraftScheduler가 매일 promptTime에 product(status='draft') 초안 생성 + 알림
+CREATE TABLE listing_template (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id         BIGINT NOT NULL,
+    name             VARCHAR(100) NOT NULL,
+    original_price   INT NOT NULL,
+    image_url        VARCHAR(255),
+    description      VARCHAR(500),
+    default_quantity INT NOT NULL,
+    weekdays         VARCHAR(20) NOT NULL COMMENT 'ISO 요일 CSV, 1=월 … 7=일. 예 "1,2,3,4,5"',
+    prompt_time      TIME NOT NULL COMMENT '매일 이 시각에 초안 생성 + 알림',
+    active           TINYINT(1) NOT NULL DEFAULT 1,
+    created_at       DATETIME,
+    updated_at       DATETIME,
+    FOREIGN KEY (store_id) REFERENCES store(id)
+);
+
+-- POS 카탈로그 메뉴 (2026-08-27 문창호 추가, "POS json 카탈로그 연동 (가정)")
+-- 매장의 영속 메뉴 목록 + 현재 재고. POS가 재고를 push하면(B안) 마감 무렵 이 재고로 초안 자동 생성.
+CREATE TABLE menu_item (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id         BIGINT NOT NULL,
+    pos_sku          VARCHAR(50) COMMENT 'POS 원본 식별자. upsert 기준',
+    name             VARCHAR(100) NOT NULL,
+    original_price   INT NOT NULL,
+    image_url        VARCHAR(255),
+    stock_quantity   INT COMMENT 'POS가 push한 현재 재고. NULL이면 재고 정보 없음 (2026-08-27 문창호)',
+    app_sale_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT '마감 무렵 이 메뉴를 초안으로 자동 생성할지 (2026-08-27 문창호)',
+    discount_rate    INT COMMENT '앱 판매 시 할인율(%). NULL이면 마감시간 기준 자동(20/30/50). 값이 있어도 자동값보다 낮으면 자동값으로 올려서 적용(덜 깎기 금지) (2026-08-27 문창호)',
+    app_sale_quantity INT COMMENT '앱에 올릴 최대 수량. NULL이면 POS 재고 전량. 초안 수량 = MIN(재고, 이 값) (2026-08-27 문창호)',
+    created_at       DATETIME,
+    updated_at       DATETIME,
+    FOREIGN KEY (store_id) REFERENCES store(id)
 );
 
 CREATE TABLE product (
@@ -74,10 +115,14 @@ CREATE TABLE product (
     remaining_quantity  INT NOT NULL,
     image_url           VARCHAR(255),
     description         VARCHAR(500),
-    status              VARCHAR(20) NOT NULL COMMENT 'active / sold / expired',
+    status              VARCHAR(20) NOT NULL COMMENT 'draft / active / sold / expired / skipped (draft=자동 초안, skipped="오늘 안 함" 처리해 재생성 방지 — 2026-08-26~27 문창호)',
+    template_id         BIGINT COMMENT '템플릿 방식 초안이면 listing_template.id (2026-08-26 문창호)',
+    menu_item_id        BIGINT COMMENT 'POS 재고 스냅샷 방식 초안이면 menu_item.id (2026-08-27 문창호)',
     registered_at       DATETIME,
     updated_at          DATETIME COMMENT '상품 수정 + 재고 변동(예약/취소)에도 갱신됨 (2026-08-25 추가)',
-    FOREIGN KEY (store_id) REFERENCES store(id)
+    FOREIGN KEY (store_id) REFERENCES store(id),
+    FOREIGN KEY (template_id) REFERENCES listing_template(id),
+    FOREIGN KEY (menu_item_id) REFERENCES menu_item(id)
 );
 
 CREATE TABLE reservation (
