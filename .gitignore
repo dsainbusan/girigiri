@@ -42,3 +42,6 @@ out/
 /upload/
 
 receipts/
+
+*.class
+chatbot-test/

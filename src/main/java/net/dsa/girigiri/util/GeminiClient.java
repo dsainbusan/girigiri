@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -66,23 +65,18 @@ public class GeminiClient {
 	private static final String API_URL_TEMPLATE =
 			"https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
-	static {
-		// 추가됨 (2026-08-26) — 왜: HttpTimeoutException으로 계속 실패하는 문제를 겪었는데, 혹시
-		// 개발 환경(학교/기관 네트워크)에 프록시가 설정돼 있을 수도 있어서 시도해본 것. 자바는 이
-		// 시스템 프로퍼티를 켜주지 않으면 윈도우의 프록시 설정을 무시하고 직접 나가려다 막힐 수
-		// 있다. (프록시가 없는 일반 네트워크에서는 부작용 없이 그냥 직접 연결하니 남겨둔다.)
-		System.setProperty("java.net.useSystemProxies", "true");
-	}
-
-	// 추가됨 (2026-08-26) — 왜: 프록시 설정을 켜도 여전히 HttpTimeoutException이 나서 다시 조사함.
-	// curl로 같은 구글 API 주소에 GET 요청을 보내면 즉시 성공하는데, 이 자바 코드의 POST 요청만
-	// 계속 응답 없이 멈추는 걸 보고 원인을 좁혔다 — 자바의 HttpClient는 기본적으로 HTTP/2 방식을
-	// 먼저 시도하는데, 일부 네트워크의 방화벽/보안 프로그램이 HTTP/2를 제대로 처리하지 못해서
-	// 응답도 에러도 없이 그냥 무한정 멈춰버리는 경우가 있다(반면 curl은 보통 HTTP/1.1을 쓴다).
-	// version(HTTP_1_1)로 자바도 curl과 같은 방식을 쓰도록 강제해서 이 문제를 우회한다.
+	// 추가됨 (2026-08-26) — 왜: 계속되는 HttpTimeoutException을 추적하다가, 이 컴퓨터의 윈도우
+	// 프록시 설정이 "프록시 서버 사용"은 켜져 있는데 정작 프록시 주소/포트는 비어있는 고장난
+	// 상태라는 걸 발견했다("자동으로 설정 검색"도 켜져 있었음). curl은 이런 시스템 프록시 설정을
+	// 안 따라가서 항상 직접 연결에 성공했는데, 자바는 (예전엔 useSystemProxies=true로 이 설정을
+	// 따라가게 해뒀었다) 이 고장난 프록시 설정 때문에 어디로 연결해야 할지 못 정하고 응답 없이
+	// 멈춰있었던 것으로 보인다. proxy(HttpClient.Builder.NO_PROXY)로 윈도우 프록시 설정을 아예
+	// 무시하고 curl처럼 항상 직접 연결하도록 강제한다.
+	// (HTTP/2 대신 HTTP/1.1을 강제하는 것도 앞서 시도했던 처방인데, 프록시 원인이 확인된 지금도
+	// 안전하게 같이 유지한다 — curl과 최대한 동일한 조건으로 맞춰두는 것도 나쁘지 않다.)
 	private final HttpClient httpClient = HttpClient.newBuilder()
 			.connectTimeout(Duration.ofSeconds(10))
-			.proxy(ProxySelector.getDefault())
+			.proxy(HttpClient.Builder.NO_PROXY)
 			.version(HttpClient.Version.HTTP_1_1)
 			.build();
 	private final ObjectMapper objectMapper = new ObjectMapper();
@@ -105,96 +99,150 @@ public class GeminiClient {
 		return apiKey != null && !apiKey.isBlank();
 	}
 
+	// 재시도 관련 상수 (2026-08-26 추가) — 왜: HttpTimeoutException의 진짜 원인을 끝까지 추적해보니
+	// 이 컴퓨터/네트워크 문제가 아니라, 구글 Gemini 무료 모델 서버가 사용자가 몰릴 때 일시적으로
+	// "503 UNAVAILABLE - This model is currently experiencing high demand" 로 거절하거나, 아예
+	// 응답을 안 주다가 우리 쪽 20초 타임아웃으로 이어지는 경우였다(원인은 하나인데 증상이 둘로
+	// 나타난 것). 구글 에러 메시지 자체가 "일시적이니 나중에 다시 시도하라"고 안내하므로, 실패하면
+	// 잠깐 기다렸다가 자동으로 한두 번 더 시도하는 재시도 로직을 추가한다.
+	private static final int MAX_ATTEMPTS = 3;
+	private static final long RETRY_DELAY_MS = 1500;
+
 	/**
 	 * 시스템 프롬프트 + 지금까지의 대화 내역(history) + 이번에 새로 보낸 메시지를 Gemini API에 보내고
 	 * 응답 텍스트를 받아온다. history는 프론트가 매 요청마다 통째로 다시 보내주는 값이라(서버 세션/DB
 	 * 저장 없음), 여기서는 그대로 contents 배열 맨 뒤에 이번 메시지만 덧붙여 보낸다.
+	 *
+	 * 일시적인 실패(네트워크 예외, 503 과부하, 429 요청 과다)는 내부에서 최대 MAX_ATTEMPTS번까지
+	 * 자동 재시도한다 — 그 외 실패(잘못된 키, 잘못된 모델명 등)는 재시도해도 어차피 똑같이 실패하니
+	 * 바로 실패를 돌려준다.
 	 */
 	public ChatResult sendMessage(String systemPrompt, List<ChatMessageDto> history, String userMessage) {
 		if (!isConfigured()) {
 			return ChatResult.failed("챗봇이 아직 준비중이에요. 잠시 후 다시 시도해주세요.");
 		}
 
+		ArrayNode contents = objectMapper.createArrayNode();
+		if (history != null) {
+			for (ChatMessageDto turn : history) {
+				if (turn == null || turn.getRole() == null || turn.getContent() == null) {
+					continue;
+				}
+				contents.add(toContentNode(
+						"assistant".equals(turn.getRole()) ? "model" : "user", turn.getContent()));
+			}
+		}
+		contents.add(toContentNode("user", userMessage));
+
+		ObjectNode body = objectMapper.createObjectNode();
+		body.set("contents", contents);
+
+		ObjectNode systemInstruction = objectMapper.createObjectNode();
+		ArrayNode systemParts = objectMapper.createArrayNode();
+		ObjectNode systemPart = objectMapper.createObjectNode();
+		systemPart.put("text", systemPrompt);
+		systemParts.add(systemPart);
+		systemInstruction.set("parts", systemParts);
+		body.set("systemInstruction", systemInstruction);
+
+		ObjectNode generationConfig = objectMapper.createObjectNode();
+		generationConfig.put("maxOutputTokens", maxOutputTokens);
+		// thinkingBudget=0 — 2.5/3.x flash 계열은 기본적으로 "생각(thinking)" 과정에도
+		// maxOutputTokens를 같이 소모한다. 이 챗봇은 짧은 FAQ 답변만 하면 되고 복잡한 추론이
+		// 필요 없는데, thinking을 끄지 않으면 그 "생각" 토큰이 maxOutputTokens를 다 써버려서
+		// 정작 사용자에게 보여줄 답변 텍스트가 0글자로 나오는 문제가 있었다(응답은 200
+		// 정상인데 내용이 비어서 실패 처리됨). thinkingBudget:0으로 꺼서 모든 토큰이 실제
+		// 답변에만 쓰이게 한다.
+		ObjectNode thinkingConfig = objectMapper.createObjectNode();
+		thinkingConfig.put("thinkingBudget", 0);
+		generationConfig.set("thinkingConfig", thinkingConfig);
+		body.set("generationConfig", generationConfig);
+
+		String url = String.format(API_URL_TEMPLATE, model, apiKey);
+		String requestJson;
 		try {
-			ArrayNode contents = objectMapper.createArrayNode();
-			if (history != null) {
-				for (ChatMessageDto turn : history) {
-					if (turn == null || turn.getRole() == null || turn.getContent() == null) {
+			requestJson = objectMapper.writeValueAsString(body);
+		} catch (IOException e) {
+			log.warn("> [GeminiClient] 요청 바디 생성 실패", e);
+			return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+		}
+
+		for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+			try {
+				HttpRequest request = HttpRequest.newBuilder()
+						.uri(URI.create(url))
+						.timeout(Duration.ofSeconds(20))
+						.header("content-type", "application/json")
+						.POST(HttpRequest.BodyPublishers.ofString(requestJson, StandardCharsets.UTF_8))
+						.build();
+
+				HttpResponse<String> response =
+						httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+				if (response.statusCode() == 503 || response.statusCode() == 429) {
+					log.warn("> [GeminiClient] 일시적 실패(재시도 대상) - attempt={}/{}, status={}, body={}",
+							attempt, MAX_ATTEMPTS, response.statusCode(), response.body());
+					if (attempt < MAX_ATTEMPTS) {
+						sleepBeforeRetry(attempt);
 						continue;
 					}
-					contents.add(toContentNode(
-							"assistant".equals(turn.getRole()) ? "model" : "user", turn.getContent()));
+					return ChatResult.failed(
+							"지금 챗봇 사용자가 많아서 답변이 지연되고 있어요. 잠시 후 다시 시도해주세요.");
 				}
-			}
-			contents.add(toContentNode("user", userMessage));
 
-			ObjectNode body = objectMapper.createObjectNode();
-			body.set("contents", contents);
+				if (response.statusCode() / 100 != 2) {
+					log.warn("> [GeminiClient] 응답 실패 - status={}, body={}", response.statusCode(), response.body());
+					return ChatResult.failed(
+							"답변을 가져오지 못했어요 (status=" + response.statusCode() + "). 다시 시도해주세요.");
+				}
 
-			ObjectNode systemInstruction = objectMapper.createObjectNode();
-			ArrayNode systemParts = objectMapper.createArrayNode();
-			ObjectNode systemPart = objectMapper.createObjectNode();
-			systemPart.put("text", systemPrompt);
-			systemParts.add(systemPart);
-			systemInstruction.set("parts", systemParts);
-			body.set("systemInstruction", systemInstruction);
-
-			ObjectNode generationConfig = objectMapper.createObjectNode();
-			generationConfig.put("maxOutputTokens", maxOutputTokens);
-			// thinkingBudget=0 — 2.5/3.x flash 계열은 기본적으로 "생각(thinking)" 과정에도
-			// maxOutputTokens를 같이 소모한다. 이 챗봇은 짧은 FAQ 답변만 하면 되고 복잡한 추론이
-			// 필요 없는데, thinking을 끄지 않으면 그 "생각" 토큰이 maxOutputTokens를 다 써버려서
-			// 정작 사용자에게 보여줄 답변 텍스트가 0글자로 나오는 문제가 있었다(응답은 200
-			// 정상인데 내용이 비어서 실패 처리됨). thinkingBudget:0으로 꺼서 모든 토큰이 실제
-			// 답변에만 쓰이게 한다.
-			ObjectNode thinkingConfig = objectMapper.createObjectNode();
-			thinkingConfig.put("thinkingBudget", 0);
-			generationConfig.set("thinkingConfig", thinkingConfig);
-			body.set("generationConfig", generationConfig);
-
-			String url = String.format(API_URL_TEMPLATE, model, apiKey);
-
-			HttpRequest request = HttpRequest.newBuilder()
-					.uri(URI.create(url))
-					.timeout(Duration.ofSeconds(20))
-					.header("content-type", "application/json")
-					.POST(HttpRequest.BodyPublishers.ofString(
-							objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
-					.build();
-
-			HttpResponse<String> response =
-					httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-
-			if (response.statusCode() / 100 != 2) {
-				log.warn("> [GeminiClient] 응답 실패 - status={}, body={}", response.statusCode(), response.body());
-				return ChatResult.failed(
-						"답변을 가져오지 못했어요 (status=" + response.statusCode() + "). 다시 시도해주세요.");
-			}
-
-			JsonNode responseBody = objectMapper.readTree(response.body());
-			JsonNode candidates = responseBody.path("candidates");
-			StringBuilder text = new StringBuilder();
-			if (candidates.isArray() && !candidates.isEmpty()) {
-				JsonNode parts = candidates.get(0).path("content").path("parts");
-				if (parts.isArray()) {
-					for (JsonNode part : parts) {
-						text.append(part.path("text").asText(""));
+				JsonNode responseBody = objectMapper.readTree(response.body());
+				JsonNode candidates = responseBody.path("candidates");
+				StringBuilder text = new StringBuilder();
+				if (candidates.isArray() && !candidates.isEmpty()) {
+					JsonNode parts = candidates.get(0).path("content").path("parts");
+					if (parts.isArray()) {
+						for (JsonNode part : parts) {
+							text.append(part.path("text").asText(""));
+						}
 					}
 				}
-			}
 
-			if (text.isEmpty()) {
-				log.warn("> [GeminiClient] 답변 텍스트가 비어있음 - 원본 응답={}", response.body());
+				if (text.isEmpty()) {
+					log.warn("> [GeminiClient] 답변 텍스트가 비어있음 - 원본 응답={}", response.body());
+					return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				}
+
+				return ChatResult.success(text.toString());
+			} catch (IOException | InterruptedException e) {
+				if (e instanceof InterruptedException) {
+					Thread.currentThread().interrupt();
+					return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				}
+				log.warn("> [GeminiClient] 요청 중 예외 발생(재시도 대상) - attempt={}/{}", attempt, MAX_ATTEMPTS, e);
+				if (attempt < MAX_ATTEMPTS) {
+					sleepBeforeRetry(attempt);
+					continue;
+				}
 				return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 			}
+		}
 
-			return ChatResult.success(text.toString());
-		} catch (IOException | InterruptedException e) {
-			if (e instanceof InterruptedException) {
-				Thread.currentThread().interrupt();
-			}
-			log.warn("> [GeminiClient] 요청 중 예외 발생", e);
-			return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+		// 이론상 도달하지 않는다 (루프 안에서 항상 return됨) — 컴파일러를 위한 안전망.
+		return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+	}
+
+	/**
+	 * 재시도 사이에 잠깐 대기한다. attempt가 늘어날수록 조금씩 더 오래 기다린다(1.5초, 3초, ...).
+	 * 대기 중 인터럽트(InterruptedException)는 여기서 직접 처리한다 — catch 블록 안에서도 이
+	 * 메서드를 호출하는데, catch 블록 자체는 try로 보호되는 범위가 아니라서 이 메서드가
+	 * InterruptedException을 밖으로 던지면 그 호출부에서 다시 처리해줘야 하는 번거로움이 있다.
+	 */
+	private void sleepBeforeRetry(int attempt) {
+		try {
+			Thread.sleep(RETRY_DELAY_MS * attempt);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 

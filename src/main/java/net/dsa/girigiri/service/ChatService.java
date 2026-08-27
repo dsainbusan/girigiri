@@ -39,6 +39,11 @@ public class ChatService {
 
 	private final GeminiClient geminiClient;
 
+	// 추가됨 (2026-08-27) — 왜: 프론트(mypage.html)엔 입력창 maxlength=500을 걸어뒀지만, 그건
+	// 브라우저 UI 제한이라 API를 직접 호출하면 얼마든지 우회할 수 있다. 너무 긴 메시지는 구글
+	// API 비용/지연을 늘리고 악용 소지도 있어서, 서버에서도 한 번 더 길이를 막아준다.
+	private static final int MAX_MESSAGE_LENGTH = 500;
+
 	private static final String CUSTOMER_SYSTEM_PROMPT = """
 			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
 			'기리기리(끼리끼리)'의 고객 지원 챗봇입니다. 친절하고 간결한 한국어 존댓말로 답하세요.
@@ -101,6 +106,9 @@ public class ChatService {
 	public ChatResponseDto sendMessage(String role, ChatRequestDto request) {
 		if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
 			return ChatResponseDto.failed("메시지를 입력해주세요.");
+		}
+		if (request.getMessage().length() > MAX_MESSAGE_LENGTH) {
+			return ChatResponseDto.failed("메시지가 너무 길어요. " + MAX_MESSAGE_LENGTH + "자 이내로 입력해주세요.");
 		}
 
 		String systemPrompt = UserEntity.ROLE_OWNER.equals(role) ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
