@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('POS 연동', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	점주 "POS 연동 관리" — 2026-08-27 신규 (문창호, "POS json 카탈로그 연동 (가정)").
+	진짜 POS 단말이 없어서 [연동하기]는 mock: 카테고리에 맞는 샘플 메뉴 카탈로그를 불러온다.
+	실제 연동이면 이 자리에서 POS사 API를 호출한다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<div class="u-row" style="justify-content: flex-end; margin-bottom: var(--s-3)">
+		<a th:href="@{/store/edit}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">매장 정보 수정</a>
+	</div>
+
+	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'rate'}" style="margin-bottom: var(--s-4)">
+		할인율은 마감시간 기준 자동값보다 낮출 수 없어요. 더 깎는 건 가능해요.
+	</p>
+	<p class="u-danger" th:if="${param.error != null and param.error[0] != 'rate'}" style="margin-bottom: var(--s-4)">값을 다시 확인해 주세요.</p>
+	<p class="u-primary" th:if="${param.connected}" style="margin-bottom: var(--s-4)">연동 완료! 메뉴·재고를 불러왔어요.</p>
+	<p class="u-primary" th:if="${param.synced}" style="margin-bottom: var(--s-4)">메뉴를 다시 불러왔어요.</p>
+	<p class="u-primary u-bold" th:if="${param.saved}" style="margin-bottom: var(--s-4)">저장되었습니다.</p>
+
+	<!-- 미연동 -->
+	<div th:unless="${connected}">
+		<div class="banner banner--info" style="margin-bottom: var(--s-4)">
+			<span style="font-size: 16px">🔌</span>
+			<div class="u-grow">
+				<div class="banner__title" style="color: var(--c-info)">POS를 연동하면 메뉴를 매번 입력 안 해도 돼요</div>
+				<div class="banner__desc" style="color: var(--c-text-sub)">POS에 등록된 품목·가격을 불러와서, 등록할 땐 수량만 넣으면 됩니다.</div>
+			</div>
+		</div>
+
+		<form th:action="@{/store/pos/connect}" method="post">
+			<div class="field">
+				<label class="field__label" for="provider">POS사 <span class="u-accent">*</span></label>
+				<select class="input" id="provider" name="provider" required>
+					<option value="">POS사를 선택해 주세요</option>
+					<option value="okpos">오케이포스</option>
+					<option value="posbank">포스뱅크</option>
+					<option value="unionpos">유니온포스</option>
+					<option value="etc">기타</option>
+				</select>
+			</div>
+			<div class="field" style="margin-top: var(--s-4)">
+				<label class="field__label" for="storeCode">매장 코드 <span class="u-accent">*</span></label>
+				<input class="input" type="text" id="storeCode" name="storeCode"
+				       placeholder="POS사 포털에서 발급받은 코드" required maxlength="50">
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">데모라 아무 값이나 넣어도 연동됩니다.</p>
+			</div>
+			<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">연동하기</button>
+		</form>
+
+		<a th:href="@{/store/products/new}" class="u-sub u-center"
+		   style="display:block; margin-top: var(--s-4); font-size: var(--fs-sm); text-decoration: underline;">
+			POS 없이 직접 등록할게요
+		</a>
+	</div>
+
+	<!-- 연동됨 -->
+	<div th:if="${connected}">
+		<div class="card" style="border-color: var(--c-primary-border); background: var(--c-primary-weak);">
+			<p class="u-bold" style="color: var(--c-primary)" th:text="'✅ ' + ${providerLabel} + ' 연동됨'">✅ 오케이포스 연동됨</p>
+			<p class="u-sub" style="font-size: var(--fs-sm); margin-top: 4px"
+			   th:text="'메뉴 ' + ${#lists.size(menuItems)} + '개 불러옴 · 마지막 동기화 ' + ${lastSyncLabel}">메뉴 8개 불러옴 · 마지막 동기화 8/27 20:10</p>
+			<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
+				<form th:action="@{/store/pos/resync}" method="post" style="flex:1">
+					<button type="submit" class="btn btn--outline btn--block">메뉴 다시 불러오기</button>
+				</form>
+				<form th:action="@{/store/pos/disconnect}" method="post" style="flex:1"
+				      onsubmit="return confirm('연동을 해제할까요? 불러온 메뉴 목록이 삭제돼요 (등록된 상품은 그대로).')">
+					<button type="submit" class="btn btn--ghost btn--block">연동 해제</button>
+				</form>
+			</div>
+		</div>
+
+		<!-- 재고 확인 시각 (B안) -->
+		<form th:action="@{/store/pos/prompt-time}" method="post" class="card" style="margin-top: var(--s-3)">
+			<p class="u-bold" style="font-size: var(--fs-sm)">마감 무렵 재고 확인</p>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin: 2px 0 var(--s-3); line-height: 1.6">
+				매일 이 시각에 POS 재고를 확인해서 "지금 이만큼 남았는데 팔래요?"를 물어봐요.<br>
+				<b>마감 1~1.5시간 전을 권장</b>해요 — 그때 남은 재고가 곧 폐기분이고, 할인율도
+				그 시각 기준으로 정해져서 더 깊게 잡혀요(자동값 −50%). 한 번 올린 상품 가격은 이후 자동으로 안 바뀝니다.
+				비워 두면 자동 생성을 안 해요.
+			</p>
+			<div class="u-row" style="gap: var(--s-2)">
+				<input class="input" type="time" name="promptTime" th:value="${promptTime}" style="flex:1">
+				<button type="submit" class="btn btn--sm">저장</button>
+			</div>
+			<p class="u-primary u-bold" th:if="${param.timeSaved}" style="font-size: var(--fs-xs); margin-top: 4px">저장되었습니다.</p>
+		</form>
+
+		<a th:href="@{/store/pos/sim}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-3)">🖥️ POS 시뮬레이터 (시연용)</a>
+
+		<p class="section-title" style="padding-bottom: var(--s-2)">메뉴 · 재고 · 앱 판매 설정</p>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2); line-height: 1.6">
+			"마감 무렵 앱에 올리기"를 켠 메뉴만 자동으로 물어봐요. 파는 개수는 POS 재고를 그대로 쓰고,
+			아래 두 칸으로 조절해요.<br>
+			· <b>할인율</b> — 비우면 자동(마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −20%). 자동값보다 더 깎는 것만 돼요.<br>
+			· <b>앱 판매 수량</b> — 비우면 재고 전량. 값을 넣으면 그만큼만 (재고가 더 적은 날은 재고만큼).<br>
+			정가는 POS 연동값으로 고정돼요.
+		</p>
+
+		<ul>
+			<li th:each="m : ${menuItems}" class="stock-item">
+				<div class="stock-item__head">
+					<div class="stock-item__thumb" th:style="${m.imageUrl == null ? 'background:var(--c-line-weak)' : null}">
+						<img th:if="${m.imageUrl != null}" th:src="${m.imageUrl}" th:alt="${m.name}">
+						<span th:unless="${m.imageUrl != null}">🍽️</span>
+					</div>
+					<div class="stock-item__body">
+						<span class="stock-item__name" th:text="${m.name}">크루아상</span>
+						<span class="stock-item__meta"
+						      th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원 · POS 재고 ' + (${m.stockQuantity != null} ? ${m.stockQuantity} : '?') + '개'">3,500원 · POS 재고 12개</span>
+					</div>
+				</div>
+				<form th:action="@{/store/pos/menu/{id}/settings(id=${m.id})}" method="post" style="margin-top: var(--s-2)">
+					<label class="u-row" style="gap: 4px; font-size: var(--fs-xs); font-weight: var(--fw-bold)">
+						<input type="checkbox" name="appSaleEnabled" value="true" th:checked="${m.appSaleEnabled}"> 마감 무렵 앱에 올리기
+					</label>
+					<div class="pos-menu-fields">
+						<label class="pos-menu-field">
+							<span>할인율</span>
+							<span class="pos-menu-field__input">
+								<input class="input" type="number" name="discountRate" th:value="${m.discountRate}"
+								       placeholder="자동" min="0" max="90">
+								<i>%</i>
+							</span>
+						</label>
+						<label class="pos-menu-field">
+							<span>앱 판매 수량</span>
+							<span class="pos-menu-field__input">
+								<input class="input" type="number" name="appSaleQuantity" th:value="${m.appSaleQuantity}"
+								       placeholder="전량" min="1">
+								<i>개</i>
+							</span>
+						</label>
+						<button type="submit" class="btn btn--sm btn--outline">저장</button>
+					</div>
+					<a th:href="@{/store/products/new(menuItemId=${m.id})}" class="u-sub"
+					   style="font-size: var(--fs-xs); text-decoration: underline; display: inline-block; margin-top: 6px">지금 직접 등록하기</a>
+				</form>
+			</li>
+		</ul>
+	</div>
+
+	<!-- 뒤로가기: 항상 매장 정보 수정으로 -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) return;
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/edit'; });
+	})();
+	</script>
+</div>
+</body>
+</html>

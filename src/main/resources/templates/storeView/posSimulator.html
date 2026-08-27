@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('POS 시뮬레이터', ~{:: #content}, '', true, '시연용', null)}">
+<body>
+<!--/*
+	POS 시뮬레이터 — 2026-08-27 신규 (문창호). 시연/개발용.
+	진짜 매장 POS 단말이 없어서, 이 화면이 "매장 POS"인 척한다. 버튼들은 전부 진짜 엔드포인트
+	(/api/pos/stock 등)를 호출한다 — 실제 POS사가 이 규격으로 붙이면 그대로 동작한다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-3)">값을 확인해 주세요.</p>
+
+	<div th:unless="${connected}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+		먼저 <a th:href="@{/store/pos}" style="text-decoration: underline">POS 연동</a>을 해주세요.
+	</div>
+
+	<div th:if="${connected}">
+		<div class="pos-sim__screen">
+			<div class="pos-sim__brand">🖥️ <span th:text="${storeName} + ' POS'">○○상회 POS</span></div>
+			<p class="pos-sim__note">
+				이건 <b>매장 POS 시뮬레이터</b>입니다. 실제로는 매장 POS가 이 재고 데이터를
+				<code>POST /api/pos/stock</code> 로 기리기리에 보냅니다.
+			</p>
+		</div>
+
+		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3); flex-wrap: wrap">
+			<form th:action="@{/store/pos/sim/restock}" method="post" style="flex:1 1 45%">
+				<button type="submit" class="btn btn--outline btn--block btn--sm">🌅 아침 생산 (재고 채우기)</button>
+			</form>
+			<form th:action="@{/store/pos/sim/selldown}" method="post" style="flex:1 1 45%">
+				<button type="submit" class="btn btn--outline btn--block btn--sm">⏩ 하루 장사 빨리감기</button>
+			</form>
+		</div>
+
+		<form th:action="@{/store/pos/sim/prompt}" method="post" style="margin-top: var(--s-2)">
+			<button type="submit" class="btn btn--block">📤 마감 임박 → 앱에 물어보기</button>
+		</form>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; text-align: center">
+			지금 재고로 "오늘의 구제" 초안을 만들어서 발행 대기에 올립니다.
+		</p>
+
+		<p class="section-title" style="padding-bottom: var(--s-2)">현재 재고</p>
+		<ul>
+			<li th:each="m : ${menuItems}" class="stock-item">
+				<div class="u-row" style="justify-content: space-between; gap: var(--s-3)">
+					<div class="stock-item__body">
+						<span class="stock-item__name" th:text="${m.name}">크루아상</span>
+						<span class="stock-item__meta">
+							<span th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">3,500원</span>
+							<span th:if="${m.appSaleEnabled}" class="badge badge--success" style="margin-left: 4px">앱 판매</span>
+						</span>
+					</div>
+					<form th:action="@{/store/pos/sim/stock/{id}(id=${m.id})}" method="post" class="u-row" style="gap: 4px">
+						<input class="input" type="number" name="remaining" th:value="${m.stockQuantity}"
+						       min="0" style="width: 68px; padding: 6px 8px; text-align: right">
+						<button type="submit" class="btn btn--sm btn--outline">저장</button>
+					</form>
+				</div>
+			</li>
+		</ul>
+
+		<a th:href="@{/store/pos}" class="btn btn--ghost btn--block btn--sm" style="margin-top: var(--s-3)">← POS 연동 관리로</a>
+	</div>
+</div>
+</body>
+</html>

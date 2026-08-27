@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout(${mode == 'edit'} ? '자동 등록 템플릿 수정' : '자동 등록 템플릿 추가', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	"오늘의 구제 자동 등록" 템플릿 등록/수정 폼 — 2026-08-26 신규 (문창호).
+	한 번 등록해두면 매일 정해진 요일·시각에 앱이 "구제 초안"을 만들고 알림을 보낸다.
+	사진은 upload/template/ 에 저장 (상품 사진과 폴더 분리 — ListingTemplateService 주석 참고).
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">필수 항목을 모두 올바르게 입력해 주세요.</p>
+
+	<div class="banner banner--info" style="margin-bottom: var(--s-4)">
+		<span style="font-size: 16px">🔁</span>
+		<div class="u-grow">
+			<div class="banner__title" style="color: var(--c-info)">한 번만 설정하면 매일 자동으로 준비돼요</div>
+			<div class="banner__desc" style="color: var(--c-text-sub)">
+				알림 시각에 "이렇게 올릴까요?" 알림이 와요. 확인 한 번이면 판매 시작.
+			</div>
+		</div>
+	</div>
+
+	<form th:action="${mode == 'edit'} ? @{/store/templates/{id}(id=${template.id})} : @{/store/templates}"
+	      method="post" enctype="multipart/form-data">
+
+		<div class="field">
+			<label class="field__label" for="image">대표 사진</label>
+			<label class="uploader" for="image">
+				<img id="imagePreview" class="uploader__preview"
+				     th:src="${template != null ? template.imageUrl : null}"
+				     th:classappend="${template == null or template.imageUrl == null} ? ' is-hidden'" alt="미리보기">
+				<span id="uploaderHint" class="uploader__hint"
+				      th:classappend="${template != null and template.imageUrl != null} ? ' is-hidden'">📷<br>사진 추가</span>
+			</label>
+			<input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp,image/gif" class="is-hidden">
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">5MB 이하 (선택). 매일 이 사진으로 등록돼요.</p>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="name">품목명 <span class="u-accent">*</span></label>
+			<input class="input" type="text" id="name" name="name" th:value="${template != null ? template.name : ''}"
+			       placeholder="예: 오늘의 마감 빵 세트" required maxlength="100">
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="originalPrice">원가(정상가) <span class="u-accent">*</span></label>
+			<input class="input" type="number" id="originalPrice" name="originalPrice"
+			       th:value="${template != null ? template.originalPrice : ''}"
+			       placeholder="원 단위 숫자만" required min="1" inputmode="numeric">
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="defaultQuantity">기본 수량 <span class="u-accent">*</span></label>
+			<input class="input" type="number" id="defaultQuantity" name="defaultQuantity"
+			       th:value="${template != null ? template.defaultQuantity : ''}"
+			       placeholder="매일 이 개수로 초안이 만들어져요" required min="1" inputmode="numeric">
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label">판매 요일 <span class="u-accent">*</span></label>
+			<div class="weekday-row">
+				<label class="weekday" th:each="d : ${ {1,2,3,4,5,6,7} }">
+					<input type="checkbox" name="weekdays" th:value="${d}"
+					       th:checked="${template != null and template.weekdays != null and #strings.contains(',' + template.weekdays + ',', ',' + d + ',')}">
+					<span th:text="${ {'','월','화','수','목','금','토','일'}[d] }">월</span>
+				</label>
+			</div>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="promptTime">알림 받을 시각 <span class="u-accent">*</span></label>
+			<input class="input" type="time" id="promptTime" name="promptTime"
+			       th:value="${template != null ? template.promptTime : '20:00'}" required>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">마감 1~2시간 전으로 잡는 걸 권장해요.</p>
+		</div>
+
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="description">상품 설명</label>
+			<textarea class="input js-autogrow" id="description" name="description" rows="2"
+			          placeholder="구성, 알레르기 정보 등 (선택)" maxlength="500"
+			          th:text="${template != null ? template.description : ''}"></textarea>
+		</div>
+
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)"
+		        th:text="${mode == 'edit'} ? '저장하기' : '템플릿 만들기'">템플릿 만들기</button>
+	</form>
+
+	<form th:if="${mode == 'edit'}" th:action="@{/store/templates/{id}/delete(id=${template.id})}" method="post"
+	      onsubmit="return confirm('이 템플릿을 삭제할까요? 이미 발행된 상품은 그대로 남아요.')" style="margin-top: var(--s-3)">
+		<button type="submit" class="btn btn--block btn--outline stock-item__del">템플릿 삭제</button>
+	</form>
+
+	<script>
+		(function () {
+			var input = document.getElementById('image');
+			var preview = document.getElementById('imagePreview');
+			var hint = document.getElementById('uploaderHint');
+			if (input) {
+				input.addEventListener('change', function () {
+					var file = input.files && input.files[0];
+					if (!file) return;
+					preview.src = URL.createObjectURL(file);
+					preview.classList.remove('is-hidden');
+					hint.classList.add('is-hidden');
+				});
+			}
+			document.querySelectorAll('.js-autogrow').forEach(function (el) {
+				function fit() { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+				el.addEventListener('input', fit);
+				fit();
+			});
+		})();
+	</script>
+</div>
+</body>
+</html>

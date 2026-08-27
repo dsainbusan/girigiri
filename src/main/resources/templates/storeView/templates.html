@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('자동 등록 템플릿', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	"오늘의 구제 자동 등록" 템플릿 목록 — 2026-08-26 신규 (문창호).
+	활성 템플릿은 매일 promptTime에 ListingDraftScheduler가 "구제 초안"을 만들고 알림을 보낸다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<div class="u-row" style="justify-content: space-between; margin-bottom: var(--s-3)">
+		<span class="u-sub" style="font-size: var(--fs-xs)">한 번 만들어두면 매일 자동으로 준비돼요</span>
+		<a th:href="@{/store/products}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">오늘의 구제</a>
+	</div>
+
+	<div class="pos-strip" style="margin-bottom: var(--s-4)">
+		<p class="pos-strip__title">🖥️ POS가 있다면 템플릿 없이도 돼요</p>
+		<p class="pos-strip__desc">POS를 연동하면 실제 남은 재고로 "오늘의 구제"가 자동 생성돼요. 템플릿은 POS 없는 매장용 백업입니다.</p>
+		<a th:href="@{/store/pos}" class="pos-strip__link">POS 연동하기 ›</a>
+	</div>
+
+	<a th:href="@{/store/templates/new}" class="btn btn--block" style="margin-bottom: var(--s-4)">+ 템플릿 추가</a>
+
+	<div th:if="${#lists.isEmpty(templates)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+		아직 템플릿이 없어요.<br>자주 내놓는 마감 상품을 템플릿으로 만들면<br>매일 알림만 확인하면 돼요.
+	</div>
+
+	<ul>
+		<li th:each="t : ${templates}" class="stock-item" th:classappend="${!t.active} ? ' is-dim'">
+			<div class="stock-item__head">
+				<div class="stock-item__thumb" th:style="${t.imageUrl == null ? 'background:var(--c-line-weak)' : null}">
+					<img th:if="${t.imageUrl != null}" th:src="${t.imageUrl}" th:alt="${t.name}">
+					<span th:unless="${t.imageUrl != null}">📦</span>
+				</div>
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${t.name}">오늘의 마감 빵 세트</span>
+						<span class="stock-item__status"
+						      th:classappend="' stock-item__status--' + (${t.active} ? 'selling' : 'closed')"
+						      th:text="${t.active} ? '켜짐' : '꺼짐'">켜짐</span>
+					</div>
+					<span class="stock-item__meta"
+					      th:text="'정상가 ' + ${#numbers.formatInteger(t.originalPrice, 0, 'COMMA')} + '원 · 기본 ' + ${t.defaultQuantity} + '개'">정상가 12,000원 · 기본 3개</span>
+					<span class="stock-item__meta"
+					      th:text="${t.weekdaysLabel} + ' · ' + ${t.promptTimeLabel} + ' 알림'">평일 · 20:00 알림</span>
+				</div>
+			</div>
+			<div class="stock-item__actions">
+				<a th:href="@{/store/templates/{id}/edit(id=${t.id})}" class="btn btn--sm btn--outline">수정</a>
+				<form th:action="@{/store/templates/{id}/toggle(id=${t.id})}" method="post">
+					<button type="submit" class="btn btn--sm btn--outline" th:text="${t.active} ? '끄기' : '켜기'">끄기</button>
+				</form>
+				<form th:action="@{/store/templates/{id}/delete(id=${t.id})}" method="post"
+				      onsubmit="return confirm('이 템플릿을 삭제할까요?')">
+					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
+				</form>
+			</div>
+		</li>
+	</ul>
+
+	<!-- 뒤로가기는 항상 재고 관리로 (자동 등록 템플릿은 재고 관리에서만 진입).
+	     app.js(하단)보다 먼저 실행돼서 data-back을 떼두면 history.back()이 안 붙는다. -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) return;
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/products'; });
+	})();
+	</script>
+</div>
+</body>
+</html>
