@@ -28,6 +28,7 @@ public class NotificationEntity {
 	public static final String TYPE_RESERVATION_CONFIRMED = "RESERVATION_CONFIRMED"; // 예약 확정
 	public static final String TYPE_RESERVATION_PICKUP_SOON = "RESERVATION_PICKUP_SOON"; // 픽업 임박
 	public static final String TYPE_RESERVATION_NOSHOW = "RESERVATION_NOSHOW";     // 노쇼 처리
+	public static final String TYPE_INQUIRY_COMMENT = "INQUIRY_COMMENT";           // 문의에 새 댓글(강노은)
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,6 +5,7 @@ import net.dsa.girigiri.domain.dto.InquiryCommentRowDto;
 import net.dsa.girigiri.domain.dto.InquiryRowDto;
 import net.dsa.girigiri.domain.entity.InquiryCommentEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
+import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.InquiryCommentRepository;
@@ -33,6 +34,7 @@ public class InquiryService {
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
 	private final FileStorageUtil fileStorageUtil;
+	private final NotificationService notificationService;
 
 	// 강노은: 문의 사진 파일이 저장되는 하위 디렉터리 이름 (upload/inquiries/...)
 	private static final String INQUIRY_IMAGE_SUBDIR = "inquiries";
@@ -167,13 +169,55 @@ public class InquiryService {
 		return inquiryRepository.save(inquiry).getId();
 	}
 
+	// 변경됨 (강노은) — 왜: "댓글 알림 발송" 요구사항. 문의 게시판은 내 코드라 다른 사람 파일에 훅을
+	// 심을 필요 없이 여기서 바로 알림을 만든다(예약·상품처럼 남의 코드를 스캔하는 방식과는 다름).
 	@Transactional
 	public void addComment(Long userId, Long inquiryId, String content) {
-		inquiryCommentRepository.save(InquiryCommentEntity.builder()
+		InquiryCommentEntity comment = inquiryCommentRepository.save(InquiryCommentEntity.builder()
 				.inquiryId(inquiryId)
 				.userId(userId)
 				.content(content == null ? "" : content.trim())
 				.build());
+		notifyOtherParty(userId, inquiryId, comment.getId());
+	}
+
+	/**
+	 * 댓글이 달리면 "댓글 단 사람 말고" 이 문의의 다른 당사자에게 알린다.
+	 * 작성자가 아닌 사람(가게 사장님/운영자)이 댓글을 달면 → 작성자에게.
+	 * 작성자 본인이 후속 댓글을 달면 → 그 문의 대상 가게 사장님에게(운영자용 일반 문의는 대상 없음).
+	 */
+	private void notifyOtherParty(Long commenterId, Long inquiryId, Long commentId) {
+		InquiryEntity inquiry = inquiryRepository.findById(inquiryId).orElse(null);
+		// 강노은: 리뷰 지적 사항 — commenterId/inquiry.getUserId()가 null이면 이 아래
+		// notificationService.createNotification(null, ...) 이 SseEmitterRegistry의
+		// ConcurrentHashMap.get(null)에서 NPE를 던진다(HashMap과 달리 null 키를 못 받음).
+		// 지금은 컨트롤러가 항상 로그인된 userId만 넘겨서 실제로는 안 터지지만, 방어적으로 막아둔다.
+		if (inquiry == null || commenterId == null || inquiry.getUserId() == null) {
+			return;
+		}
+		String linkUrl = "/user/inquiries/" + inquiryId;
+		String message = "\"" + shorten(inquiry.getTitle()) + "\"에 새 댓글이 달렸어요.";
+
+		if (!commenterId.equals(inquiry.getUserId())) {
+			notificationService.createNotification(inquiry.getUserId(), NotificationEntity.TYPE_INQUIRY_COMMENT,
+					message, linkUrl, "inquiry_comment:" + commentId + ":author");
+			return;
+		}
+		if (inquiry.getStoreId() == null) {
+			return; // 운영자 대상 일반 문의라 알릴 "가게 사장님"이 없음
+		}
+		storeRepository.findById(inquiry.getStoreId())
+				.map(StoreEntity::getOwnerId)
+				.filter(ownerId -> ownerId != null && !ownerId.equals(commenterId))
+				.ifPresent(ownerId -> notificationService.createNotification(ownerId, NotificationEntity.TYPE_INQUIRY_COMMENT,
+						message, linkUrl, "inquiry_comment:" + commentId + ":owner"));
+	}
+
+	private String shorten(String title) {
+		if (title == null) {
+			return "";
+		}
+		return title.length() > 20 ? title.substring(0, 20) + "…" : title;
 	}
 
 	public InquiryCommentEntity getComment(Long commentId) {

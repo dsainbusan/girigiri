@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * TODO(강노은): 지금은 매장 전체를 좌표만 보고 뿌린다(지도).
@@ -56,7 +58,11 @@ public class HomeController {
 		model.addAttribute("storeCards", storeCards);
 		model.addAttribute("todayRescueCount", homeService.getTodayRescueCount());
 		// 강노은: 개인화 추천 섹션 (WBS 4.0 탐색·검색, 맨 마지막으로 미뤄뒀던 항목) — RecommendationService 참고.
-		model.addAttribute("recommendation", recommendationService.getRecommendations(userId, likedStoreIds));
+		// 메인 목록(storeCards)에 이미 나온 매장은 추천에서 제외하고, 위치 정보도 그대로 넘겨서
+		// 추천 카드도 메인 카드처럼 실제 거리/마감임박이 표시되게 한다.
+		Set<Long> shownStoreIds = storeCards.stream().map(StoreCardDto::getStoreId).collect(Collectors.toSet());
+		model.addAttribute("recommendation",
+				recommendationService.getRecommendations(userId, likedStoreIds, shownStoreIds, lat, lng));
 
 		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값.
 		model.addAttribute("location", "내 동네");

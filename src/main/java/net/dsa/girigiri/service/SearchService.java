@@ -6,6 +6,7 @@ import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.DistanceUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 
@@ -99,7 +100,11 @@ public class SearchService {
 		}
 		if ("distance".equals(sort) && userLat != null && userLng != null) {
 			// 가까운(=거리값 작은) 상품이 앞으로. 좌표 없는 매장은 맨 뒤로.
-			return Comparator.comparingDouble(p -> distanceKm(storesById.get(p.getStoreId()), userLat, userLng));
+			return Comparator.comparingDouble(p -> {
+				StoreEntity store = storesById.get(p.getStoreId());
+				return DistanceUtil.km(userLat, userLng, store == null ? null : store.getLatitude(),
+						store == null ? null : store.getLongitude());
+			});
 		}
 		return Comparator.comparingInt(this::discountRate).reversed();
 	}
@@ -112,37 +117,10 @@ public class SearchService {
 		return closeAt != null ? closeAt : LocalDateTime.MAX;
 	}
 
-	/**
-	 * 두 좌표 사이 직선 거리(km) — Haversine 공식. 좌표가 없는 매장은 Double.MAX_VALUE로 보내
-	 * 거리순 정렬에서 맨 뒤로 가게 한다.
-	 */
-	private double distanceKm(StoreEntity store, double userLat, double userLng) {
-		if (store == null || store.getLatitude() == null || store.getLongitude() == null) {
-			return Double.MAX_VALUE;
-		}
-		double earthRadiusKm = 6371.0;
-		double dLat = Math.toRadians(store.getLatitude() - userLat);
-		double dLng = Math.toRadians(store.getLongitude() - userLng);
-		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-				+ Math.cos(Math.toRadians(userLat)) * Math.cos(Math.toRadians(store.getLatitude()))
-				* Math.sin(dLng / 2) * Math.sin(dLng / 2);
-		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-		return earthRadiusKm * c;
-	}
-
-	/** "350m" | "1.2km" 형태 라벨. 좌표가 없어 계산 불가하면 빈 문자열. */
-	private String distanceLabel(StoreEntity store, Double userLat, Double userLng) {
-		if (userLat == null || userLng == null || store == null
-				|| store.getLatitude() == null || store.getLongitude() == null) {
-			return "";
-		}
-		double km = distanceKm(store, userLat, userLng);
-		return km < 1 ? Math.round(km * 1000) + "m" : String.format("%.1fkm", km);
-	}
-
 	private StoreCardDto toCardDto(StoreEntity store, ProductEntity product, Set<Long> likedStoreIds,
 									Double userLat, Double userLng) {
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
+		String distance = DistanceUtil.label(DistanceUtil.km(userLat, userLng, store.getLatitude(), store.getLongitude()));
 
 		return StoreCardDto.builder()
 				.id(product.getId())
@@ -152,7 +130,7 @@ public class SearchService {
 				.thumbColor(thumbColor(store.getCategory()))
 				.name(store.getStoreName())
 				.category(store.getCategory())
-				.distance(distanceLabel(store, userLat, userLng))
+				.distance(distance)
 				.origPrice(formatWon(product.getOriginalPrice()))
 				.salePrice(formatWon(product.getDiscountedPrice()))
 				.discountRate("-" + discountRate(product) + "%")

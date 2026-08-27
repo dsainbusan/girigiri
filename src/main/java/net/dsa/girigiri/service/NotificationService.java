@@ -133,6 +133,7 @@ public class NotificationService {
 			case NotificationEntity.TYPE_RESERVATION_CONFIRMED -> "✅";
 			case NotificationEntity.TYPE_RESERVATION_PICKUP_SOON -> "⏰";
 			case NotificationEntity.TYPE_RESERVATION_NOSHOW -> "⚠️";
+			case NotificationEntity.TYPE_INQUIRY_COMMENT -> "💬";
 			default -> "🔔";
 		};
 	}
