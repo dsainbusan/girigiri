@@ -4,30 +4,20 @@
 <body>
 <div id="content" th:fragment="content">
 
-	<style>
-		/* 강노은: 고객센터 탭 바. 페이지 이동 없이 JS로 세 탭(FAQ/내 문의내역/문의하기)을 전환한다. */
-		.support-tabs { display: flex; border-bottom: 1px solid var(--c-line); }
-		.support-tab {
-			flex: 1; text-align: center; padding: var(--s-4) 0;
-			color: var(--c-text-mut); font-weight: 700; font-size: 14px;
-			border-bottom: 2px solid transparent; margin-bottom: -1px;
-		}
-		.support-tab.is-active { color: var(--c-text); border-color: var(--c-text); }
-		.support-empty { display: flex; flex-direction: column; align-items: center; padding: 80px var(--s-4) 40px; color: var(--c-text-mut); }
-		.support-empty__ico { font-size: 40px; opacity: .5; }
-		.support-empty__text { margin-top: var(--s-3); font-size: 14px; }
-	</style>
+	<!--/* 강노은: .tabs/.tab, .support-empty는 가게 상세 페이지 등 다른 화면에서도 필요해져서
+	     components.css로 옮겼다 (해당 파일 참고). */-->
 
 	<!--/* 강노은: "내 문의 내역" 버튼을 눌러 들어오는 화면이라, 기본으로 보여지는 탭도 FAQ가 아니라
-	     "내 문의내역"이어야 한다 — 아래 is-active/display 기본값을 그 탭에 맞췄다. */-->
-	<div class="support-tabs" id="support-tabs">
-		<button type="button" class="support-tab" data-tab="faq">FAQ</button>
-		<button type="button" class="support-tab is-active" data-tab="inquiries">내 문의내역</button>
-		<button type="button" class="support-tab" data-tab="new">문의하기</button>
+	     "내 문의내역"이어야 한다 — 아래 is-active/hidden 기본값을 그 탭에 맞췄다. 탭 전환 자체는
+	     [data-tabs]/[data-tab]/[data-tab-panel] 공통 핸들러(app.js)가 처리한다. */-->
+	<div class="tabs" data-tabs>
+		<button type="button" class="tab" data-tab="faq">FAQ</button>
+		<button type="button" class="tab is-active" data-tab="inquiries">내 문의내역</button>
+		<button type="button" class="tab" data-tab="new">문의하기</button>
 	</div>
 
 	<!-- ================= FAQ ================= -->
-	<div class="page" id="tab-faq" style="display:none">
+	<div class="page" data-tab-panel="faq" hidden>
 		<!--/* 강노은: 지금은 고정 텍스트다. 문의량이 늘어서 운영자가 직접 관리해야 하면 CMS/엔티티로
 		     옮기는 게 맞는데, 그건 슈퍼어드민(송보미) 영역이라 지금 단계에선 정적으로 둔다. */-->
 		<div style="display:flex;flex-direction:column;gap:8px">
@@ -65,7 +55,7 @@
 	</div>
 
 	<!-- ================= 내 문의내역 ================= -->
-	<div class="page" id="tab-inquiries">
+	<div class="page" data-tab-panel="inquiries">
 		<div th:if="${!loggedIn}" class="support-empty">
 			<span class="support-empty__ico">🔒</span>
 			<p class="support-empty__text">
@@ -94,7 +84,7 @@
 	</div>
 
 	<!-- ================= 문의하기 (운영자에게) ================= -->
-	<div class="page" id="tab-new" style="display:none">
+	<div class="page" data-tab-panel="new" hidden>
 		<div th:if="${!loggedIn}" class="support-empty">
 			<span class="support-empty__ico">🔒</span>
 			<p class="support-empty__text">
@@ -116,24 +106,7 @@
 		</form>
 	</div>
 
-	<script>
-		(function () {
-			var tabBar = document.getElementById('support-tabs');
-			var panels = { faq: document.getElementById('tab-faq'), inquiries: document.getElementById('tab-inquiries'), new: document.getElementById('tab-new') };
-
-			tabBar.addEventListener('click', function (e) {
-				var btn = e.target.closest('.support-tab');
-				if (!btn) return;
-
-				tabBar.querySelectorAll('.support-tab').forEach(function (b) { b.classList.remove('is-active'); });
-				btn.classList.add('is-active');
-
-				Object.keys(panels).forEach(function (key) {
-					panels[key].style.display = key === btn.dataset.tab ? 'block' : 'none';
-				});
-			});
-		})();
-	</script>
+	<!--/* 강노은: 탭 전환 자체는 app.js의 [data-tabs]/[data-tab]/[data-tab-panel] 공용 핸들러가 처리한다. */-->
 </div>
 </body>
 </html>

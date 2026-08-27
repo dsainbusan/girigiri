@@ -290,3 +290,16 @@
   cursor: pointer;
 }
 .review-upload__remove:hover { border-color: var(--c-danger); }
+
+/* ---------------- Tabs (탭 전환) ----------------
+   강노은: 원래 supportView/home.html(고객센터)에만 있던 페이지 전용 스타일이었는데, 가게 상세
+   페이지(정보/상품/리뷰)에도 똑같은 탭이 필요해져서 공용으로 옮겼다(위 review-upload/support-empty와
+   같은 이유). 클릭 동작은 app.js의 [data-tabs]/[data-tab]/[data-tab-panel] 핸들러가 공통 처리한다. */
+.tabs { display: flex; border-bottom: 1px solid var(--c-line); }
+.tab {
+  flex: 1; text-align: center; padding: var(--s-4) 0;
+  color: var(--c-text-mut); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.tab.is-active { color: var(--c-text); border-color: var(--c-text); }

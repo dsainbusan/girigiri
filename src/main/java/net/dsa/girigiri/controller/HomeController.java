@@ -9,10 +9,12 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.HomeService;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.NotificationService;
+import net.dsa.girigiri.service.RecommendationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -28,23 +30,33 @@ public class HomeController {
 	private final HomeService homeService;
 	private final LikeService likeService;
 	private final NotificationService notificationService;
+	private final RecommendationService recommendationService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
 
+	// 추가됨 (강노은) — 왜: "현재 위치 기준 거리순 카드 목록" 요구사항 — 서버는 사용자 위치를 모르니
+	// home.html의 JS가 브라우저 Geolocation으로 좌표를 받아 이 파라미터를 붙여 자동으로 한 번 다시
+	// 불러온다(검색 페이지의 거리순 정렬과 같은 방식). 좌표가 없으면(권한 거부/미지원) 기존처럼
+	// 마감임박순으로 폴백 — HomeService.getActiveStoreCards 참고.
 	@GetMapping("/")
-	public String home(HttpSession session, Model model) {
+	public String home(@RequestParam(required = false) Double lat,
+						@RequestParam(required = false) Double lng,
+						HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
+		var likedStoreIds = likeService.getLikedStoreIds(userId);
 		List<StoreMapDto> stores = storeRepository.findAll().stream()
 				.filter(store -> store.getLatitude() != null && store.getLongitude() != null)
 				.map(this::toMapDto)
 				.toList();
-		List<StoreCardDto> storeCards = homeService.getActiveStoreCards(likeService.getLikedStoreIds(userId));
+		List<StoreCardDto> storeCards = homeService.getActiveStoreCards(likedStoreIds, lat, lng);
 
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
 		model.addAttribute("stores", stores);
 		model.addAttribute("storeCards", storeCards);
 		model.addAttribute("todayRescueCount", homeService.getTodayRescueCount());
+		// 강노은: 개인화 추천 섹션 (WBS 4.0 탐색·검색, 맨 마지막으로 미뤄뒀던 항목) — RecommendationService 참고.
+		model.addAttribute("recommendation", recommendationService.getRecommendations(userId, likedStoreIds));
 
 		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값.
 		model.addAttribute("location", "내 동네");

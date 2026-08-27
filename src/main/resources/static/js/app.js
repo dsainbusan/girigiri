@@ -17,6 +17,25 @@
     });
   });
 
+  // 강노은: 범용 탭 전환. [data-tabs] 컨테이너 안의 버튼(data-tab="이름")을 누르면, 같은
+  // 부모 아래 있는 [data-tab-panel="이름"] 패널만 보이고 나머지는 숨는다. 페이지 이동 없이
+  // 클릭만으로 전환 — 원래 supportView/home.html(고객센터)에만 있던 걸 가게 상세 페이지
+  // (정보/상품/리뷰 탭)에도 재사용하면서 공용으로 뺐다.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-tab]");
+    if (!btn) return;
+    var tabBar = btn.closest("[data-tabs]");
+    if (!tabBar || !tabBar.parentElement) return;
+
+    tabBar.querySelectorAll("[data-tab]").forEach(function (b) { b.classList.remove("is-active"); });
+    btn.classList.add("is-active");
+
+    var name = btn.getAttribute("data-tab");
+    tabBar.parentElement.querySelectorAll("[data-tab-panel]").forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-tab-panel") !== name;
+    });
+  });
+
   // 강노은: "접힌 걸 눌러서 펼치기" 공통 패턴 (가게 상세의 "리뷰 작성"/"내 리뷰 수정하기",
   // 내 리뷰 관리의 리뷰별 인라인 수정 폼 등 — 여러 개 있을 수 있는 패널이라 id로 대상을 지정한다).
   // data-toggle-target="엘리먼트id" 버튼을 누르면 해당 id의 hidden을 벗기고 화면 중앙으로 스크롤한다.

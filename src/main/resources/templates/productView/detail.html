@@ -43,7 +43,10 @@
 			</div>
 		</div>
 
-		<div class="u-row" style="justify-content:space-between;margin-top:14px">
+		<!--/* 강노은: 품절(재고 0)이면 수량 선택 자체가 의미 없어서 안내 문구로 대체하고,
+		     아래 actionbar의 "예약하기"도 비활성화한다. */-->
+		<div class="u-row" style="justify-content:space-between;margin-top:14px"
+		     th:if="${product.remainingQuantity != null and product.remainingQuantity > 0}">
 			<b style="font-size:14px">수량</b>
 			<div class="stepper" id="qty-stepper">
 				<span class="stepper__btn" id="qty-minus">−</span>
@@ -51,6 +54,10 @@
 				<span class="stepper__btn" id="qty-plus">+</span>
 			</div>
 		</div>
+		<p class="u-sub" style="margin-top:14px;font-size:13px"
+		   th:unless="${product.remainingQuantity != null and product.remainingQuantity > 0}">
+			품절된 상품이에요.
+		</p>
 
 		<div class="banner" style="margin-top:14px" th:if="${savedAmount} > 0">
 			<span style="font-size:16px">💰</span>
@@ -71,6 +78,9 @@
 			var minusBtn = document.getElementById('qty-minus');
 			var plusBtn = document.getElementById('qty-plus');
 			var qty = 1;
+
+			// 강노은: 품절이면 수량 스테퍼 자체가 화면에 없다(위 th:if 참고) — null 가드.
+			if (!qtyVal || !minusBtn || !plusBtn) { return; }
 
 			function render() {
 				qtyVal.textContent = qty;
@@ -93,11 +103,16 @@
 		<small>총 결제 금액</small>
 		<strong th:text="${product.discountedPrice} + '원'">5,900원</strong>
 	</div>
-	<form th:action="@{/reservation/checkout}" method="get" style="margin-left:auto">
+	<!--/* 강노은: 품절(재고 0)이면 "예약하기" 자체를 비활성화한다 — 서버(ReservationService)도
+	     OutOfStockException으로 막아주긴 하지만, 눌러보기 전에 화면에서 바로 알 수 있어야 한다. */-->
+	<form th:if="${product.remainingQuantity != null and product.remainingQuantity > 0}"
+	      th:action="@{/reservation/checkout}" method="get" style="margin-left:auto">
 		<input type="hidden" name="productId" th:value="${product.id}">
 		<input type="hidden" name="quantity" id="reserve-quantity" value="1">
 		<button type="submit" class="btn">예약하기</button>
 	</form>
+	<button th:unless="${product.remainingQuantity != null and product.remainingQuantity > 0}"
+	        type="button" class="btn btn--ghost" disabled style="margin-left:auto;cursor:not-allowed">품절</button>
 </div>
 </body>
 </html>

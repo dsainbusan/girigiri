@@ -64,8 +64,8 @@
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 내가 쓴 리뷰 -->
-		<a href="#" class="list-menu-item">
+		<!-- 내가 쓴 리뷰 (구현 완료 — 강노은) -->
+		<a th:href="@{/user/reviews/my}" class="list-menu-item">
 			<span class="list-menu-item__icon">⭐</span>
 			<span class="list-menu-item__title">내가 쓴 리뷰</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
@@ -78,9 +78,9 @@
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 고객 지원 (문의 게시판 — WBS 6.0 강노은 담당, 아직 미구현이라 다른 항목처럼 자리만 잡아둠.
-		     챗봇은 이제 우측 하단 플로팅 버튼(#chat-fab-btn)에서만 연다 — 이 항목은 챗봇이랑 분리함) -->
-		<a href="#" class="list-menu-item">
+		<!-- 고객 지원 (문의 게시판 — 구현 완료, 강노은. FAQ/내 문의내역/문의하기 탭 화면.
+		     챗봇은 우측 하단 플로팅 버튼(#chat-fab-btn)에서만 연다 — 이 항목은 챗봇이랑 분리함) -->
+		<a th:href="@{/user/support}" class="list-menu-item">
 			<span class="list-menu-item__icon">💬</span>
 			<span class="list-menu-item__title">고객 지원</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>

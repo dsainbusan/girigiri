@@ -37,6 +37,41 @@
 		<p th:if="${#lists.isEmpty(storeCards)}" class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
 	</div>
 
+	<!--/* 강노은: 개인화 추천 섹션 (WBS 4.0 탐색·검색, 맨 마지막으로 미뤄뒀던 항목).
+	     구매 이력(픽업 완료)에서 가장 많이 산 카테고리를 뽑아 추천하고, 이력이 없는 신규 유저는
+	     RecommendationService가 "지금 인기있는 마감세일"로 폴백해준다 — 추천 카드가 하나도 없을
+	     때만(=지금 판매 중인 마감세일 자체가 없을 때) 섹션 자체를 감춘다. */-->
+	<div th:if="${!#lists.isEmpty(recommendation.cards())}">
+		<div class="section-title" style="padding-top:var(--s-2)" th:text="${recommendation.title()}">
+			베이커리 좋아하시는군요, 이건 어때요?
+		</div>
+		<div style="display:flex;flex-direction:column;gap:var(--s-3)">
+			<div th:each="card : ${recommendation.cards()}">
+				<div th:replace="~{common/components :: storeCard(${card}, true)}"></div>
+			</div>
+		</div>
+	</div>
+
+	<!--/* 강노은: "현재 위치 기준 거리순 카드 목록" — URL에 좌표가 아직 없으면 Geolocation으로
+	     한 번 조용히 물어보고, 받으면 그 좌표를 붙여 페이지를 자동으로 다시 불러온다(검색 페이지의
+	     "거리순" 버튼과 같은 방식이지만 여기는 메인 화면이라 버튼 없이 최초 진입 시 자동으로 시도).
+	     거부/미지원이면 그냥 조용히 넘어간다 — HomeService가 좌표 없을 때 기존 마감임박순으로
+	     폴백해주므로 화면이 깨지지 않는다. */-->
+	<script>
+		(function () {
+			if (!navigator.geolocation) return;
+			var params = new URLSearchParams(window.location.search);
+			if (params.has('lat') && params.has('lng')) return; // 이미 좌표로 들어온 상태 — 재요청 안 함
+			navigator.geolocation.getCurrentPosition(function (pos) {
+				params.set('lat', pos.coords.latitude);
+				params.set('lng', pos.coords.longitude);
+				window.location.search = params.toString();
+			}, function () {
+				// 위치 권한 거부/실패 — 조용히 무시(기존 마감임박순 그대로 유지)
+			});
+		})();
+	</script>
+
 	<!--/* th:replace="~{:: #content}"는 이 div 안쪽만 가져간다 — 스크립트도 반드시 여기 안에 있어야 렌더링된다. */-->
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services,clusterer'}"></script>
 	<script th:inline="javascript">
