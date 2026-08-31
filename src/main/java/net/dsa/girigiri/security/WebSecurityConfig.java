@@ -16,6 +16,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -94,6 +97,22 @@ public class WebSecurityConfig {
 				.authorizeHttpRequests(author -> author
 						.requestMatchers(PUBLIC_URLS.toArray(String[]::new)).permitAll()
 						.anyRequest().authenticated()
+				)
+
+				// 추가됨 (2026-08-31) — 왜: REQ-NF-112 검증(비로그인 상태로 챗봇 API를 직접 호출하면
+				// 401/403이 와야 함). /mypage/**가 PUBLIC_URLS에 없어서 비로그인 요청은 인증 필터가
+				// 먼저 걸러내는데, 기본 동작은 로그인 화면(/auth/loginForm)으로 302 리다이렉트라
+				// ChatController의 수동 401 체크(위 클래스 주석 참고)까지 요청이 도달하지 못했다.
+				// 챗봇 API 경로(/mypage/chat/**)만 화면 이동 대신 401을 그대로 돌려주도록 지정한다.
+				// (부가 효과: 챗봇 사용 중 세션이 만료돼도 프론트가 401을 받아 "로그인이 필요해요"를
+				// 보여줄 수 있다 — mypage.html의 res.status===401 분기 참고.)
+				.exceptionHandling(exceptions -> exceptions
+						.defaultAuthenticationEntryPointFor(
+								new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+								// 참고: AntPathRequestMatcher는 향후 제거 예정(deprecated for removal)
+								// 경고가 뜨지만, 이 Spring Security 버전에서는 정상적으로 동작한다.
+								new AntPathRequestMatcher("/mypage/chat/**")
+						)
 				)
 
 				// formLogin을 대체하는 소셜 로그인 설정.
