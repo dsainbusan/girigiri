@@ -15,6 +15,14 @@ import java.time.LocalTime;
  */
 public class PickupAvailabilityUtil {
 
+	// 강노은 — 왜: StoreEntity.prepTimeMinutes가 null일 때 쓰는 기본 준비시간. 원래 ReservationController에만
+	// 로컬 상수로 있었는데 SearchService(픽업시간 필터)도 같은 기본값이 필요해서 여기 공용 유틸로 옮겼다.
+	// StoreEntity.prepTimeMinutes의 @Builder.Default(20)와 반드시 같은 값으로 맞춘다.
+	// 참고: ReservationController.DEFAULT_PREP_TIME_MINUTES는 예약 로직 담당(문창호) 파일이라 손 안 대고
+	// 그대로 남겨뒀다 — 값이 같은 한 문제는 없지만, 완전히 한 곳으로 합치려면 그쪽에서 이 상수를
+	// 참조하도록 바꿔야 한다.
+	public static final int DEFAULT_PREP_TIME_MINUTES = 20;
+
 	private PickupAvailabilityUtil() {
 	}
 

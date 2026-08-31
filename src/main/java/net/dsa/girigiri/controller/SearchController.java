@@ -13,11 +13,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-/**
- * TODO(강노은): "픽업 가능 시간" 필터(지금 바로/저녁 18~21시/마감임박 21시~)는 목업엔 있지만
- * 상품에 픽업 시간대 데이터가 없어서 아직 시각적 요소만 두고 실제 필터링은 연결하지 않았다.
- * Product/Store에 픽업 가능 시간대 필드가 생기면 SearchService에 조건을 추가할 것.
- */
 @Controller
 @RequestMapping("/user/search")
 @RequiredArgsConstructor
@@ -30,6 +25,9 @@ public class SearchController {
 	public String search(@RequestParam(required = false) String q,
 						  @RequestParam(required = false, defaultValue = "discount") String sort,
 						  @RequestParam(required = false) String price,
+						  // 추가됨 (강노은) — 왜: "픽업 가능 시간" 필터. StoreEntity.lastPickupTime/prepTimeMinutes를
+						  // 재사용해 판단한다(SearchService.matchesPickupBucket 참고). "now"|"evening"|"late"|null.
+						  @RequestParam(required = false) String pickup,
 						  // 추가됨 (강노은) — 왜: 거리순 정렬용. 서버는 사용자 위치를 모르니 브라우저 Geolocation API로
 						  // 받은 좌표를 쿼리 파라미터로 넘겨받는다. 둘 다 없으면 거리 계산 자체를 건너뛴다.
 						  @RequestParam(required = false) Double lat,
@@ -37,11 +35,12 @@ public class SearchController {
 						  HttpSession session,
 						  Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		List<StoreCardDto> results = searchService.search(q, sort, price, likeService.getLikedStoreIds(userId), lat, lng);
+		List<StoreCardDto> results = searchService.search(q, sort, price, pickup, likeService.getLikedStoreIds(userId), lat, lng);
 
 		model.addAttribute("keyword", q == null ? "" : q);
 		model.addAttribute("sort", sort);
 		model.addAttribute("price", price);
+		model.addAttribute("pickup", pickup);
 		model.addAttribute("lat", lat);
 		model.addAttribute("lng", lng);
 		model.addAttribute("results", results);
