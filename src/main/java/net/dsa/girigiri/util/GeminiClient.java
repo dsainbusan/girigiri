@@ -99,6 +99,24 @@ public class GeminiClient {
 		return apiKey != null && !apiKey.isBlank();
 	}
 
+	// 추가됨 (2026-08-31, 챗봇 기능 연동/function calling) — 왜: 예약 취소 가능 여부를 물어보면
+	// 그동안은 시스템 프롬프트에 적힌 "30분 이내" 같은 일반 안내만 반복했다. 실제 그 사람의 그
+	// 예약이 지금 취소 가능한지는 DB를 봐야 알 수 있어서, Gemini의 function calling으로 실제
+	// 데이터를 조회해서 답하도록 확장한다. 이 tool은 조회만 하고 실제 취소는 처리하지 않는다
+	// (실제 취소는 항상 마이페이지 버튼으로만 — 챗봇이 직접 시스템을 조작하지 않는다는 기존
+	// 원칙 그대로 유지).
+	private static final String RESERVATION_TOOL_NAME = "getMyActiveReservations";
+
+	/**
+	 * 예약 조회 tool의 실제 실행부. ChatService가 로그인 세션의 진짜 userId로 구현을 넘겨준다 —
+	 * Gemini가 함수 호출에 userId를 실어 보내더라도 여기서는 절대 그 값을 쓰지 않는다(본인 예약만
+	 * 조회되도록 보장하기 위해 항상 서버가 이미 알고 있는 세션 userId만 사용).
+	 */
+	public interface ReservationToolExecutor {
+		/** 지금 시점 기준, 이 사용자의 진행중인 예약과 취소 가능 여부를 JSON 문자열로 돌려준다. */
+		String getMyActiveReservationsJson();
+	}
+
 	// 재시도 관련 상수 (2026-08-26 추가) — 왜: HttpTimeoutException의 진짜 원인을 끝까지 추적해보니
 	// 이 컴퓨터/네트워크 문제가 아니라, 구글 Gemini 무료 모델 서버가 사용자가 몰릴 때 일시적으로
 	// "503 UNAVAILABLE - This model is currently experiencing high demand" 로 거절하거나, 아예
@@ -118,6 +136,18 @@ public class GeminiClient {
 	 * 바로 실패를 돌려준다.
 	 */
 	public ChatResult sendMessage(String systemPrompt, List<ChatMessageDto> history, String userMessage) {
+		return sendMessage(systemPrompt, history, userMessage, null);
+	}
+
+	/**
+	 * 예약 조회 tool(RESERVATION_TOOL_NAME)을 같이 쓸 수 있는 버전. toolExecutor가 null이면 tool을
+	 * 아예 요청에 안 실어서 기존과 100% 동일하게 동작한다(사장님 채팅 등 이 tool이 필요 없는
+	 * 흐름은 영향이 없다). null이 아니면 Gemini에게 이 함수의 존재를 알려주고, 모델이 필요하다고
+	 * 판단해서 함수 호출을 요청하면 여기서 toolExecutor를 직접 실행해 실제 예약 데이터를 가져온
+	 * 뒤, 그 결과를 다시 Gemini에 보내 최종 답변 텍스트를 받아온다(최대 2번 왕복).
+	 */
+	public ChatResult sendMessage(String systemPrompt, List<ChatMessageDto> history, String userMessage,
+			ReservationToolExecutor toolExecutor) {
 		if (!isConfigured()) {
 			return ChatResult.failed("챗봇이 아직 준비중이에요. 잠시 후 다시 시도해주세요.");
 		}
@@ -134,6 +164,78 @@ public class GeminiClient {
 		}
 		contents.add(toContentNode("user", userMessage));
 
+		boolean useTools = toolExecutor != null;
+		GeminiCallResult result = callWithRetry(buildRequestBody(systemPrompt, contents, useTools));
+
+		if (!result.success()) {
+			return ChatResult.failed(result.failReason());
+		}
+
+		if (result.functionCallPart() != null) {
+			return handleFunctionCall(systemPrompt, contents, useTools, result.functionCallPart(), toolExecutor);
+		}
+
+		if (result.text() == null || result.text().isEmpty()) {
+			return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+		}
+		return ChatResult.success(result.text());
+	}
+
+	/**
+	 * 모델이 함수 호출을 요청했을 때: 실제로 그 함수를 실행하고, "모델이 이 함수를 호출했다" +
+	 * "그 결과는 이거다"를 대화 내역(contents)에 이어붙여서 Gemini에 다시 보낸다. Gemini API는
+	 * 이 과정을 하나의 대화 맥락 안에서 처리하도록 설계돼 있어서(펑션콜 자체도 "모델의 한 턴"으로
+	 * 취급), 최종 응답도 systemInstruction/tools를 그대로 유지한 채 같은 대화의 연장으로 요청한다.
+	 */
+	private ChatResult handleFunctionCall(String systemPrompt, ArrayNode contents, boolean useTools,
+			JsonNode functionCallPart, ReservationToolExecutor toolExecutor) {
+		String functionName = functionCallPart.path("functionCall").path("name").asText("");
+
+		String toolResultJson = RESERVATION_TOOL_NAME.equals(functionName) && toolExecutor != null
+				? toolExecutor.getMyActiveReservationsJson()
+				: "{\"error\":\"알 수 없는 함수예요.\"}";
+
+		ObjectNode modelTurn = objectMapper.createObjectNode();
+		modelTurn.put("role", "model");
+		ArrayNode modelParts = objectMapper.createArrayNode();
+		modelParts.add(functionCallPart);
+		modelTurn.set("parts", modelParts);
+		contents.add(modelTurn);
+
+		ObjectNode functionResponseTurn = objectMapper.createObjectNode();
+		functionResponseTurn.put("role", "user");
+		ArrayNode frParts = objectMapper.createArrayNode();
+		ObjectNode frPart = objectMapper.createObjectNode();
+		ObjectNode functionResponse = objectMapper.createObjectNode();
+		functionResponse.put("name", functionName);
+		ObjectNode responseWrapper = objectMapper.createObjectNode();
+		try {
+			responseWrapper.set("result", objectMapper.readTree(toolResultJson));
+		} catch (IOException e) {
+			responseWrapper.put("result", toolResultJson);
+		}
+		functionResponse.set("response", responseWrapper);
+		frPart.set("functionResponse", functionResponse);
+		frParts.add(frPart);
+		functionResponseTurn.set("parts", frParts);
+		contents.add(functionResponseTurn);
+
+		GeminiCallResult second = callWithRetry(buildRequestBody(systemPrompt, contents, useTools));
+		if (!second.success()) {
+			return ChatResult.failed(second.failReason());
+		}
+		// 이론상 모델이 함수 결과를 받고 또 함수 호출을 요청할 수도 있는 스펙이지만, 지금 tool은
+		// 1개뿐이고 그마저도 "결과를 보고 다시 조회할" 이유가 없는 단순 조회라 여기서는 두 번째
+		// 응답이 곧바로 최종 텍스트라고 가정한다(두 번째도 functionCall이면 실패로 처리).
+		if (second.functionCallPart() != null || second.text() == null || second.text().isEmpty()) {
+			log.warn("> [GeminiClient] 함수 호출 후 두 번째 응답이 텍스트가 아님 - functionCall={}",
+					second.functionCallPart());
+			return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+		}
+		return ChatResult.success(second.text());
+	}
+
+	private ObjectNode buildRequestBody(String systemPrompt, ArrayNode contents, boolean includeTools) {
 		ObjectNode body = objectMapper.createObjectNode();
 		body.set("contents", contents);
 
@@ -158,13 +260,49 @@ public class GeminiClient {
 		generationConfig.set("thinkingConfig", thinkingConfig);
 		body.set("generationConfig", generationConfig);
 
+		if (includeTools) {
+			body.set("tools", buildReservationTool());
+		}
+
+		return body;
+	}
+
+	/** 예약 조회 tool 하나짜리 Gemini function-declarations 스펙. */
+	private ArrayNode buildReservationTool() {
+		ObjectNode function = objectMapper.createObjectNode();
+		function.put("name", RESERVATION_TOOL_NAME);
+		function.put("description",
+				"로그인한 손님 본인의 진행중인 예약과, 각 예약을 지금 취소할 수 있는 상태인지를 실제 " +
+				"데이터로 조회한다. 예약 취소 가능 여부나 취소까지 남은 시간을 사용자가 물어보면 " +
+				"추측하지 말고 반드시 이 함수를 먼저 호출해서 확인한 뒤 답하라. 이 함수는 조회만 " +
+				"하며 실제로 예약을 취소하지는 않는다 — 결과가 취소 가능이면 마이페이지에서 취소하는 " +
+				"방법을 안내하고, 취소 불가능이면 그 사유(reasonIfNotEligible)를 그대로 풀어서 " +
+				"설명하라. reservations가 빈 배열이면 진행중인 예약이 없다는 뜻이다.");
+		ObjectNode parameters = objectMapper.createObjectNode();
+		parameters.put("type", "OBJECT");
+		parameters.set("properties", objectMapper.createObjectNode());
+		function.set("parameters", parameters);
+
+		ArrayNode functionDeclarations = objectMapper.createArrayNode();
+		functionDeclarations.add(function);
+
+		ObjectNode toolEntry = objectMapper.createObjectNode();
+		toolEntry.set("functionDeclarations", functionDeclarations);
+
+		ArrayNode tools = objectMapper.createArrayNode();
+		tools.add(toolEntry);
+		return tools;
+	}
+
+	/** sendMessage()의 재시도 루프를 그대로 옮긴 것 — 함수 호출 왕복까지 지원하려고 재사용 가능하게 분리했다. */
+	private GeminiCallResult callWithRetry(ObjectNode body) {
 		String url = String.format(API_URL_TEMPLATE, model, apiKey);
 		String requestJson;
 		try {
 			requestJson = objectMapper.writeValueAsString(body);
 		} catch (IOException e) {
 			log.warn("> [GeminiClient] 요청 바디 생성 실패", e);
-			return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+			return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 		}
 
 		for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -186,50 +324,77 @@ public class GeminiClient {
 						sleepBeforeRetry(attempt);
 						continue;
 					}
-					return ChatResult.failed(
+					return GeminiCallResult.failed(
 							"지금 챗봇 사용자가 많아서 답변이 지연되고 있어요. 잠시 후 다시 시도해주세요.");
 				}
 
 				if (response.statusCode() / 100 != 2) {
 					log.warn("> [GeminiClient] 응답 실패 - status={}, body={}", response.statusCode(), response.body());
-					return ChatResult.failed(
+					return GeminiCallResult.failed(
 							"답변을 가져오지 못했어요 (status=" + response.statusCode() + "). 다시 시도해주세요.");
 				}
 
 				JsonNode responseBody = objectMapper.readTree(response.body());
 				JsonNode candidates = responseBody.path("candidates");
+				if (!candidates.isArray() || candidates.isEmpty()) {
+					log.warn("> [GeminiClient] 답변 후보가 없음 - 원본 응답={}", response.body());
+					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				}
+
+				JsonNode parts = candidates.get(0).path("content").path("parts");
 				StringBuilder text = new StringBuilder();
-				if (candidates.isArray() && !candidates.isEmpty()) {
-					JsonNode parts = candidates.get(0).path("content").path("parts");
-					if (parts.isArray()) {
-						for (JsonNode part : parts) {
+				JsonNode functionCallPart = null;
+				if (parts.isArray()) {
+					for (JsonNode part : parts) {
+						if (part.has("functionCall")) {
+							functionCallPart = part;
+						} else {
 							text.append(part.path("text").asText(""));
 						}
 					}
 				}
 
-				if (text.isEmpty()) {
-					log.warn("> [GeminiClient] 답변 텍스트가 비어있음 - 원본 응답={}", response.body());
-					return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				if (functionCallPart != null) {
+					return GeminiCallResult.functionCall(functionCallPart);
 				}
 
-				return ChatResult.success(text.toString());
+				if (text.isEmpty()) {
+					log.warn("> [GeminiClient] 답변 텍스트가 비어있음 - 원본 응답={}", response.body());
+					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				}
+
+				return GeminiCallResult.text(text.toString());
 			} catch (IOException | InterruptedException e) {
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
-					return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 				}
 				log.warn("> [GeminiClient] 요청 중 예외 발생(재시도 대상) - attempt={}/{}", attempt, MAX_ATTEMPTS, e);
 				if (attempt < MAX_ATTEMPTS) {
 					sleepBeforeRetry(attempt);
 					continue;
 				}
-				return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+				return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 			}
 		}
 
 		// 이론상 도달하지 않는다 (루프 안에서 항상 return됨) — 컴파일러를 위한 안전망.
-		return ChatResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+		return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
+	}
+
+	/** callWithRetry()의 내부 결과 — 텍스트 답변인지, 함수 호출 요청인지, 실패인지 셋 중 하나. */
+	private record GeminiCallResult(boolean success, String failReason, String text, JsonNode functionCallPart) {
+		static GeminiCallResult failed(String reason) {
+			return new GeminiCallResult(false, reason, null, null);
+		}
+
+		static GeminiCallResult text(String text) {
+			return new GeminiCallResult(true, null, text, null);
+		}
+
+		static GeminiCallResult functionCall(JsonNode part) {
+			return new GeminiCallResult(true, null, null, part);
+		}
 	}
 
 	/**

@@ -550,6 +550,51 @@ public class ReservationService {
 		);
 	}
 
+	/**
+	 * 추가됨 (2026-08-31, 챗봇 "예약 조회" tool용) — 왜: 챗봇이 "지금 취소할 수 있나요?" 같은 질문에
+	 * 추측으로 답하지 않고, cancelReservation()이 실제로 쓰는 것과 완전히 같은 두 가지 조건(주문 후
+	 * USER_CANCEL_WINDOW_MINUTES분 이내 / 매장 마감 CLOSING_CUTOFF_MINUTES분 전까지)으로 지금
+	 * 시점 기준 취소 가능 여부만 조회한다. 실제로 취소를 처리하지는 않는다(읽기 전용) — 조회
+	 * 결과에 따라 챗봇은 안내만 하고, 진짜 취소는 항상 마이페이지 버튼으로만 하게 한다.
+	 *
+	 * userId는 반드시 로그인 세션에서 가져온 값만 넘겨야 한다 — Gemini(모델)가 주는 값을 그대로
+	 * 믿고 쓰면 다른 사람 예약을 조회할 수 있게 되므로, 이 메서드를 호출하는 ChatService가 그
+	 * 책임을 진다(본인 예약만 조회).
+	 */
+	public List<net.dsa.girigiri.domain.dto.ReservationCancelStatusDto> getCancelEligibilityForUser(Long userId) {
+		List<ReservationEntity> active = reservationRepository.findByUserIdAndStatusInOrderByReservedAtDesc(
+				userId, List.of("pending", "confirmed", "ready"));
+
+		LocalDateTime now = LocalDateTime.now();
+
+		return active.stream().map(reservation -> {
+			StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
+			String storeName = store != null ? store.getStoreName() : "-";
+
+			boolean pastWindow = reservation.getReservedAt() != null
+					&& Duration.between(reservation.getReservedAt(), now).toMinutes() >= USER_CANCEL_WINDOW_MINUTES;
+			boolean closingSoon = store != null && isTooCloseToClosing(store, now);
+			boolean eligible = !pastWindow && !closingSoon;
+
+			String reason = null;
+			if (pastWindow) {
+				reason = "주문 후 " + USER_CANCEL_WINDOW_MINUTES + "분이 지나서 취소할 수 없어요.";
+			} else if (closingSoon) {
+				reason = "매장 마감 " + CLOSING_CUTOFF_MINUTES + "분 전이라 취소할 수 없어요.";
+			}
+
+			return new net.dsa.girigiri.domain.dto.ReservationCancelStatusDto(
+					reservation.getId(),
+					reservation.getProductName(),
+					storeName,
+					reservation.getStatus(),
+					reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+					eligible,
+					reason
+			);
+		}).toList();
+	}
+
 	/** 픽업/취소/노쇼처럼 이미 끝난 예약을 또 취소하려는 걸 막는 공통 상태 체크. */
 	private void checkCancellableState(ReservationEntity reservation) {
 		switch (reservation.getStatus()) {

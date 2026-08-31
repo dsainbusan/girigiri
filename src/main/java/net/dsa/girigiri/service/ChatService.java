@@ -1,12 +1,17 @@
 package net.dsa.girigiri.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.ChatRequestDto;
 import net.dsa.girigiri.domain.dto.ChatResponseDto;
+import net.dsa.girigiri.domain.dto.ReservationCancelStatusDto;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.util.GeminiClient;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * 고객 지원 챗봇 서비스.
@@ -38,6 +43,11 @@ import org.springframework.stereotype.Service;
 public class ChatService {
 
 	private final GeminiClient geminiClient;
+	// 추가됨 (2026-08-31, 챗봇 기능 연동/function calling) — 왜: "지금 이 예약 취소할 수 있어요?" 같은
+	// 질문에 실제 DB 데이터로 답하려면 예약 조회가 필요해서 주입했다. 챗봇이 이 서비스로 직접
+	// 취소를 처리하지는 않는다 — 조회 전용 메서드(getCancelEligibilityForUser)만 사용한다.
+	private final ReservationService reservationService;
+	private final ObjectMapper objectMapper = new ObjectMapper();
 
 	// 추가됨 (2026-08-27) — 왜: 프론트(mypage.html)엔 입력창 maxlength=500을 걸어뒀지만, 그건
 	// 브라우저 UI 제한이라 API를 직접 호출하면 얼마든지 우회할 수 있다. 너무 긴 메시지는 구글
@@ -57,6 +67,10 @@ public class ChatService {
 			- 서비스와 무관한 질문(일반 상식, 다른 회사 서비스 등)에는 정중히 답변을 거절하세요.
 			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
 			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
+			- 예약 취소가 지금 가능한지, 취소까지 얼마나 남았는지를 물어보면 아래 안내 문구로
+			  대충 답하지 말고, 제공된 예약 조회 함수를 호출해서 실제 데이터를 확인한 뒤 그 결과
+			  그대로 답하세요. 이 함수는 조회만 할 뿐 실제로 예약을 취소하지는 않으니, 취소가
+			  가능하다고 확인되면 마이페이지에서 취소하는 방법을 안내해주세요.
 
 			[서비스 이용 안내]
 			- 회원가입/로그인: 별도 회원가입 없이 구글/카카오/라인 소셜 로그인만 지원해요. 처음
@@ -93,6 +107,8 @@ public class ChatService {
 			[사장님 기능 안내]
 			- 상품(재고) 등록: 대시보드에서 마감 임박 상품의 사진, 품목, 원가/할인가, 수량을
 			  등록할 수 있어요.
+			- 판매금액/상품정보 수정: 이미 등록한 상품도 대시보드에서 원가, 할인가, 수량 등을
+			  다시 수정할 수 있어요.
 			- 예약 확인: 손님이 예약을 넣으면 '들어온 예약' 목록에서 확인 후 수락하거나 거절할 수
 			  있어요.
 			- 픽업 확인: 손님이 보여주는 QR코드를 스캔하거나 코드를 입력하면 픽업 완료로
@@ -103,7 +119,7 @@ public class ChatService {
 			  일간/주간 리포트를 Excel·PDF로 다운로드할 수 있어요.
 			""";
 
-	public ChatResponseDto sendMessage(String role, ChatRequestDto request) {
+	public ChatResponseDto sendMessage(Long userId, String role, ChatRequestDto request) {
 		if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
 			return ChatResponseDto.failed("메시지를 입력해주세요.");
 		}
@@ -111,10 +127,16 @@ public class ChatService {
 			return ChatResponseDto.failed("메시지가 너무 길어요. " + MAX_MESSAGE_LENGTH + "자 이내로 입력해주세요.");
 		}
 
-		String systemPrompt = UserEntity.ROLE_OWNER.equals(role) ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
+		boolean isOwner = UserEntity.ROLE_OWNER.equals(role);
+		String systemPrompt = isOwner ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
 
-		GeminiClient.ChatResult result =
-				geminiClient.sendMessage(systemPrompt, request.getHistory(), request.getMessage());
+		// 예약 조회 tool은 손님 전용이다(WBS "챗봇 기능 연동" — 본인 예약만 조회). 사장님 채팅에는
+		// tool을 아예 안 실어서(null) GeminiClient가 예전과 완전히 동일하게 동작한다.
+		GeminiClient.ReservationToolExecutor toolExecutor =
+				isOwner ? null : () -> buildReservationStatusJson(userId);
+
+		GeminiClient.ChatResult result = geminiClient.sendMessage(
+				systemPrompt, request.getHistory(), request.getMessage(), toolExecutor);
 
 		if (!result.success()) {
 			log.warn("> [ChatService] Gemini API 응답 실패 - role={}, 사유={}", role, result.failReason());
@@ -122,5 +144,22 @@ public class ChatService {
 		}
 
 		return ChatResponseDto.success(result.reply());
+	}
+
+	/**
+	 * 예약 조회 tool의 실제 실행부. userId는 반드시 컨트롤러가 세션에서 꺼낸 실제 로그인 사용자
+	 * id여야 한다(GeminiClient.ReservationToolExecutor 참고) — 모델이 함수 호출에 다른 값을 실어
+	 * 보내더라도 여기서는 그 값을 쓰지 않고 항상 이 메서드 호출 시점에 넘어온 userId만 쓴다.
+	 */
+	private String buildReservationStatusJson(Long userId) {
+		List<ReservationCancelStatusDto> statuses = reservationService.getCancelEligibilityForUser(userId);
+		try {
+			ObjectNode node = objectMapper.createObjectNode();
+			node.set("reservations", objectMapper.valueToTree(statuses));
+			return objectMapper.writeValueAsString(node);
+		} catch (Exception e) {
+			log.warn("> [ChatService] 예약 조회 tool 결과 직렬화 실패 - userId={}", userId, e);
+			return "{\"reservations\":[],\"error\":\"조회 중 오류가 발생했어요.\"}";
+		}
 	}
 }

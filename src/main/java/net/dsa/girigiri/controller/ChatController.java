@@ -35,7 +35,7 @@ public class ChatController {
 		}
 
 		String role = (String) session.getAttribute("role");
-		ChatResponseDto response = chatService.sendMessage(role, request);
+		ChatResponseDto response = chatService.sendMessage(userId, role, request);
 		return ResponseEntity.ok(response);
 	}
 }
