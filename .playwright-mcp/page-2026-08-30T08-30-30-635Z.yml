@@ -1,0 +1,30 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "예약 확인" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 관리자 모드
+    - button "유저 모드로" [ref=f1e9] [cursor=pointer]
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - link "⚙️ 주문 마감 설정 (준비시간 · 마감시간)" [ref=f1e13] [cursor=pointer]:
+        - /url: /reservation/settings
+      - paragraph [ref=f1e15]: 결제가 끝난 새 주문들이에요. 확인되면 "수락", 어려우면 바로 "취소"할 수 있어요.
+      - generic [ref=f1e16]:
+        - paragraph [ref=f1e17]: 버튼테스트 상품 × 1개
+        - paragraph [ref=f1e18]:
+          - text: "결제 금액:"
+          - strong [ref=f1e19]: 3,500
+          - text: 원
+        - paragraph [ref=f1e20]:
+          - text: "픽업 코드:"
+          - strong [ref=f1e21]: PICK-BTNTEST
+        - paragraph [ref=f1e22]:
+          - text: "주문 시각:"
+          - strong [ref=f1e23]: 08월 30일 17:29
+        - generic [ref=f1e24]:
+          - button "수락" [ref=f1e26] [cursor=pointer]
+          - button "취소" [ref=f1e28] [cursor=pointer]
+      - generic [ref=f1e29]:
+        - paragraph [ref=f1e30]: 픽업 대기중 (수락됨 · 손님 미방문)
+        - paragraph [ref=f1e31]: 수락은 됐지만 아직 QR/코드로 픽업 처리가 안 된 예약이에요.
+      - generic [ref=f1e32]: 픽업 대기중인 예약이 없어요.

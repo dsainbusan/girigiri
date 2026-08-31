@@ -1,0 +1,89 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e4]:
+    - button "뒤로" [ref=f2e5] [cursor=pointer]: ‹
+    - heading "매장 정산" [level=1] [ref=f2e6]
+    - generic [ref=f2e7]: 점주 모드
+    - button "유저 모드로" [ref=f2e9] [cursor=pointer]
+  - main [ref=f2e10]:
+    - generic [ref=f2e11]:
+      - generic [ref=f2e12]:
+        - generic [ref=f2e13]:
+          - generic [ref=f2e14]: 🧾 매장 정산서
+          - generic [ref=f2e15]: 테스트 베이커리(dashfix)
+        - generic [ref=f2e16]:
+          - generic [ref=f2e17]:
+            - generic [ref=f2e18]: 정산 기간
+            - generic [ref=f2e19]: 2026-08-25 ~ 2026-08-31 (최근 7일)
+          - generic [ref=f2e20]:
+            - generic [ref=f2e21]: 플랫폼 수수료율
+            - generic [ref=f2e22]: 10%
+      - generic [ref=f2e23]:
+        - generic [ref=f2e24]: 기간
+        - link "오늘" [ref=f2e25] [cursor=pointer]:
+          - /url: /store/settlement?period=today
+        - link "최근 7일" [ref=f2e26] [cursor=pointer]:
+          - /url: /store/settlement?period=week
+        - link "이번 달" [ref=f2e27] [cursor=pointer]:
+          - /url: /store/settlement?period=month
+      - generic [ref=f2e28]:
+        - generic [ref=f2e29]:
+          - generic [ref=f2e30]: 총 결제액
+          - generic [ref=f2e31]: +16,500원
+        - generic [ref=f2e32]:
+          - generic [ref=f2e33]: 환불
+          - generic [ref=f2e34]: −3,000원
+        - generic [ref=f2e35]:
+          - generic [ref=f2e36]: 순 결제액
+          - generic [ref=f2e37]: 13,500원
+        - generic [ref=f2e38]:
+          - generic [ref=f2e39]:
+            - text: 플랫폼 수수료
+            - emphasis [ref=f2e40]: 10%
+          - generic [ref=f2e41]: −1,350원
+        - generic [ref=f2e42]:
+          - generic [ref=f2e43]: 정산 예정액
+          - generic [ref=f2e44]: 12,150원
+      - paragraph [ref=f2e45]: 매월 10일, 전월에 확정된 정산 예정액을 등록된 계좌로 입금해요. 환불된 결제엔 수수료를 매기지 않아요. (수수료율 10%는 팀 확정 전 임시값 · 결제 승인일 기준 집계)
+      - paragraph [ref=f2e46]: 정산 대상 거래 · 3건
+      - list [ref=f2e47]:
+        - listitem [ref=f2e48]:
+          - generic [ref=f2e49]:
+            - generic [ref=f2e50]: 08/28
+            - generic [ref=f2e51]: 식빵 마감세트
+            - generic [ref=f2e52]: 3,000원
+          - generic [ref=f2e53]:
+            - generic [ref=f2e54]: 픽업 완료
+            - generic [ref=f2e55]: 수수료 −300 · 정산 2,700원
+        - listitem [ref=f2e56]:
+          - generic [ref=f2e57]:
+            - generic [ref=f2e58]: 08/29
+            - generic [ref=f2e59]: 크루아상 세트
+            - generic [ref=f2e60]: 4,500원
+          - generic [ref=f2e61]:
+            - generic [ref=f2e62]: 픽업 완료
+            - generic [ref=f2e63]: 수수료 −450 · 정산 4,050원
+        - listitem [ref=f2e64]:
+          - generic [ref=f2e65]:
+            - generic [ref=f2e66]: 08/30
+            - generic [ref=f2e67]: 소금빵 묶음
+            - generic [ref=f2e68]: 6,000원
+          - generic [ref=f2e69]:
+            - generic [ref=f2e70]: 노쇼 (환불 없음)
+            - generic [ref=f2e71]: 수수료 −600 · 정산 5,400원
+      - generic [ref=f2e72]:
+        - generic [ref=f2e73]: 합계
+        - generic [ref=f2e74]: 결제 13,500 · 수수료 −1,350 · 정산 12,150원
+      - generic [ref=f2e75]:
+        - paragraph [ref=f2e76]: 환불 내역 · 1건
+        - list [ref=f2e77]:
+          - listitem [ref=f2e78]:
+            - generic [ref=f2e79]:
+              - generic [ref=f2e80]: 08/27
+              - generic [ref=f2e81]: 식빵 마감세트
+              - generic [ref=f2e82]: −3,000원
+            - generic [ref=f2e83]: 환불 완료 · 수수료 없음
+      - generic [ref=f2e85]:
+        - link "정산서 Excel" [ref=f2e86] [cursor=pointer]:
+          - /url: /store/settlement/excel?period=week
+        - link "정산서 PDF" [ref=f2e87] [cursor=pointer]:
+          - /url: /store/settlement/pdf?period=week

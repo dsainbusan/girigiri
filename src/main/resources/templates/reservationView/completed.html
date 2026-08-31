@@ -1,39 +1,75 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('완료된 거래 내역', ~{:: #content}, '', true, '관리자 모드', null)}">
+      th:replace="~{common/layout :: layout('완료된 거래 내역', ~{:: #content}, '', true, '점주 모드', null)}">
 <body>
+<!--/*
+	완료된 거래 내역 (송채현 화면 · 2026-08-30 문창호가 날짜 그룹 + 날짜/시간대 필터 추가).
+	- 기본: 픽업 완료(picked) 전체, 최신순, 날짜별로 묶어서 보여줌
+	- 필터: 특정 날짜 / 그 날의 시간대(예: 8/26 10:00~12:00) — 편의점 POS "시간대별 조회" 감각
+*/-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
-	<!-- 추가됨 — 왜: 이 화면은 대시보드에서만 들어오는 단일 진입점이라, incoming.html과 같은 이유로
-		상단바 뒤로가기를 브라우저 history 대신 항상 대시보드로 고정한다. -->
+	<!-- 이 화면은 대시보드에서만 진입 → 뒤로가기를 항상 대시보드로 고정 -->
 	<script th:inline="none">
 	(function () {
 		var backBtn = document.querySelector('.topbar__back');
 		if (!backBtn) { return; }
 		backBtn.removeAttribute('data-back');
-		backBtn.addEventListener('click', function () {
-			location.href = '/store/dashboard';
-		});
+		backBtn.addEventListener('click', function () { location.href = '/store/dashboard'; });
 	})();
 	</script>
 
-	<div class="card">
-		<p class="u-sub">손님이 실제로 픽업해간 거래 내역이에요. 최근 완료된 순서로 보여줘요.</p>
-	</div>
+	<!-- 필터 -->
+	<form method="get" th:action="@{/reservation/completed}" class="card">
+		<div class="field">
+			<label class="field__label" for="f-date">날짜</label>
+			<input class="input" type="date" id="f-date" name="date" th:value="${filterDate}">
+		</div>
+		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
+			<div class="field" style="flex:1">
+				<label class="field__label" for="f-from">시작 시각</label>
+				<input class="input" type="time" id="f-from" name="from" th:value="${filterFrom}">
+			</div>
+			<div class="field" style="flex:1">
+				<label class="field__label" for="f-to">끝 시각</label>
+				<input class="input" type="time" id="f-to" name="to" th:value="${filterTo}">
+			</div>
+		</div>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">날짜만 골라도 되고, 시간대까지 좁혀도 돼요. (픽업 완료 시각 기준)</p>
+		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
+			<button type="submit" class="btn btn--block">조회</button>
+			<a th:href="@{/reservation/completed}" class="btn btn--outline btn--block">전체 보기</a>
+		</div>
+	</form>
 
-	<div th:if="${#lists.isEmpty(completed)}" class="empty-state">
-		아직 완료된 거래가 없어요.
+	<!-- 결과 요약 -->
+	<div class="card" style="margin-top: var(--s-3); display:flex; justify-content:space-between; align-items:center">
+		<span class="u-sub" th:text="${filterActive} ? '조회 결과' : '픽업까지 끝난 거래'">픽업까지 끝난 거래</span>
+		<span class="u-bold" th:text="${totalCount} + '건 · ' + ${#numbers.formatInteger(totalAmount, 0, 'COMMA')} + '원'">3건 · 26,400원</span>
 	</div>
+	<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">노쇼·취소된 예약은 여기 나오지 않아요.</p>
 
-	<div class="card" th:each="r : ${completed}" style="margin-top:var(--s-3)">
-		<p class="u-bold" style="font-size:var(--fs-lg)">
-			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
-		</p>
-		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
-		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
-		<p class="u-sub">주문 시각: <span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span></p>
-		<p class="u-sub">픽업 완료: <strong class="u-primary" th:text="${r.pickedAtDisplay}">08월 21일 15:20</strong></p>
+	<div th:if="${totalCount == 0}" class="empty-state"
+	     th:text="${filterActive} ? '이 조건에 맞는 거래가 없어요.' : '아직 완료된 거래가 없어요.'">아직 완료된 거래가 없어요.</div>
+
+	<!-- 날짜별 그룹 -->
+	<div th:each="group : ${groups}">
+		<p class="u-bold" style="font-size: var(--fs-sm); margin: var(--s-4) 0 var(--s-2)" th:text="${group.key}">08월 26일 (화)</p>
+
+		<div class="card" th:each="r : ${group.value}" style="margin-top: var(--s-2)">
+			<div class="u-row" style="justify-content: space-between; align-items: baseline">
+				<span class="u-bold" style="font-size: var(--fs-md)">
+					<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
+				</span>
+				<span class="u-sub" style="font-size: var(--fs-sm)" th:text="${r.pickedTime}">10:35</span>
+			</div>
+			<p class="u-sub" style="margin-top: 4px">
+				결제 <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원
+				· 코드 <strong th:text="${r.pickupCode}">PICK-1001</strong>
+			</p>
+			<p class="u-sub" style="font-size: var(--fs-xs)">주문 <span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span></p>
+		</div>
 	</div>
 </div>
 </body>

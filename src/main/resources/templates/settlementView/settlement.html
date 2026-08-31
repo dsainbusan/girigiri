@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('매장 정산', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	매장 정산 페이지 — WBS 2.0 "매장 정산 페이지 (기간별 결제 집계 / 수수료·정산 예정액 / 정산 내역 목록)"
+	문창호, 2026-08-31.
+
+	판매·폐기 리포트(/store/report)와 헷갈리지 않게 일부러 다르게 생겼다:
+	 - 리포트 = 운영·환경 성적표 (구제율 hero, 초록, 막대·도넛)
+	 - 정산 = "정산서" 문서 (검은 헤더 바 + 세로 계산식 원장 + 거래 명세 리스트)
+	집계 기준은 결제 승인일(payment.paid_at). period: today / week / month(기본).
+	화면·Excel·PDF 숫자는 SettlementService 하나에서 나온다.
+	⚠️ 지금은 MySQL 조회. 나중에 SettlementService 조회부만 Supabase REST(JSON)로 교체 예정.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<!-- 정산서 문서 헤더 (리포트엔 없는 요소 — "이건 회계 문서다"를 바로 보여준다) -->
+	<div class="settle-doc">
+		<div class="settle-doc__bar">
+			<span class="settle-doc__title">🧾 매장 정산서</span>
+			<span class="settle-doc__store" th:text="${settlement.storeName}">○○베이커리</span>
+		</div>
+		<div class="settle-doc__meta">
+			<div><span>정산 기간</span><b th:text="${settlement.periodLabel}">2026-08 (이번 달)</b></div>
+			<div><span>플랫폼 수수료율</span><b th:text="${settlement.commissionRatePercent} + '%'">10%</b></div>
+		</div>
+	</div>
+
+	<!-- 기간 선택 — 리포트의 풀폭 세그먼트 토글과 다르게 작은 인라인 pill + 날짜 직접 선택 -->
+	<div class="settle-period">
+		<span class="settle-period__label">기간</span>
+		<a th:href="@{/store/settlement(period='today')}" class="settle-period__pill"
+		   th:classappend="${period == 'today'} ? ' is-active'">오늘</a>
+		<a th:href="@{/store/settlement(period='week')}" class="settle-period__pill"
+		   th:classappend="${period == 'week'} ? ' is-active'">최근 7일</a>
+		<a th:href="@{/store/settlement(period='month')}" class="settle-period__pill"
+		   th:classappend="${period == 'month'} ? ' is-active'">이번 달</a>
+	</div>
+	<form method="get" th:action="@{/store/settlement}" class="settle-range">
+		<input type="date" name="from" th:value="${from}" class="settle-range__date" aria-label="시작일" required>
+		<span class="settle-range__tilde">~</span>
+		<input type="date" name="to" th:value="${to}" class="settle-range__date" aria-label="종료일" required>
+		<button type="submit" class="settle-range__btn"
+		        th:classappend="${period == 'custom'} ? ' is-active'">조회</button>
+	</form>
+
+	<!-- 정산 계산 원장 — 세로 계산식(+/−/=). 정산 페이지의 핵심이자 리포트와 가장 다른 부분. -->
+	<div class="settle-ledger">
+		<div class="settle-ledger__line">
+			<span>총 결제액</span>
+			<span class="settle-num" th:text="'+' + ${#numbers.formatInteger(settlement.gross, 0, 'COMMA')} + '원'">+37,600원</span>
+		</div>
+		<div class="settle-ledger__line">
+			<span>환불</span>
+			<span class="settle-num settle-num--minus"
+			      th:text="(${settlement.refund} > 0 ? '−' : '') + ${#numbers.formatInteger(settlement.refund, 0, 'COMMA')} + '원'">−5,400원</span>
+		</div>
+		<div class="settle-ledger__line settle-ledger__line--subtotal">
+			<span>순 결제액</span>
+			<span class="settle-num" th:text="${#numbers.formatInteger(settlement.net, 0, 'COMMA')} + '원'">32,200원</span>
+		</div>
+		<div class="settle-ledger__line">
+			<span>플랫폼 수수료 <em th:text="${settlement.commissionRatePercent} + '%'">10%</em></span>
+			<span class="settle-num settle-num--minus"
+			      th:text="(${settlement.commission} > 0 ? '−' : '') + ${#numbers.formatInteger(settlement.commission, 0, 'COMMA')} + '원'">−3,220원</span>
+		</div>
+		<div class="settle-ledger__total">
+			<span>정산 예정액</span>
+			<span class="settle-num" th:text="${#numbers.formatInteger(settlement.payout, 0, 'COMMA')} + '원'">28,980원</span>
+		</div>
+	</div>
+	<p class="settle-note">
+		매월 10일, 전월에 확정된 정산 예정액을 등록된 계좌로 입금해요. 환불된 결제엔 수수료를 매기지 않아요.
+		<br>(수수료율 10%는 팀 확정 전 임시값 · 결제 승인일 기준 집계)
+	</p>
+
+	<!-- 정산 대상 거래 — 통장 명세처럼 (리포트의 격자 표와 다르게) -->
+	<p class="settle-section-title">정산 대상 거래 <span th:text="'· ' + ${#lists.size(settlement.lines)} + '건'">· 5건</span></p>
+	<ul class="settle-txns">
+		<li class="settle-txn" th:each="l : ${settlement.lines}">
+			<div class="settle-txn__row">
+				<span class="settle-txn__date" th:text="${l.dateLabel}">08/24</span>
+				<span class="settle-txn__name" th:text="${l.name}">식빵 마감세트</span>
+				<span class="settle-txn__amt" th:text="${#numbers.formatInteger(l.amount, 0, 'COMMA')} + '원'">5,400원</span>
+			</div>
+			<div class="settle-txn__sub">
+				<span class="settle-txn__tag" th:text="${l.status}">픽업 완료</span>
+				<span th:text="'수수료 −' + ${#numbers.formatInteger(l.commission, 0, 'COMMA')} + ' · 정산 ' + ${#numbers.formatInteger(l.payout, 0, 'COMMA')} + '원'">수수료 −540 · 정산 4,860원</span>
+			</div>
+		</li>
+		<li class="settle-txn settle-txn--empty" th:if="${#lists.isEmpty(settlement.lines)}">
+			이 기간에 정산 대상 결제가 없어요.
+		</li>
+	</ul>
+	<div class="settle-txns__foot" th:if="${!#lists.isEmpty(settlement.lines)}">
+		<span>합계</span>
+		<span>
+			결제 <b th:text="${#numbers.formatInteger(settlement.net, 0, 'COMMA')}">32,200</b> ·
+			수수료 <b th:text="'−' + ${#numbers.formatInteger(settlement.commission, 0, 'COMMA')}">−3,220</b> ·
+			정산 <b class="u-primary" th:text="${#numbers.formatInteger(settlement.payout, 0, 'COMMA')} + '원'">28,980원</b>
+		</span>
+	</div>
+
+	<!-- 환불 내역 (있을 때만) — 빨강 틴트로 확실히 구분 -->
+	<div th:if="${!#lists.isEmpty(settlement.refunds)}">
+		<p class="settle-section-title">환불 내역 <span th:text="'· ' + ${#lists.size(settlement.refunds)} + '건'">· 1건</span></p>
+		<ul class="settle-txns settle-txns--refund">
+			<li class="settle-txn" th:each="r : ${settlement.refunds}">
+				<div class="settle-txn__row">
+					<span class="settle-txn__date" th:text="${r.dateLabel}">08/24</span>
+					<span class="settle-txn__name" th:text="${r.name}">식빵 마감세트</span>
+					<span class="settle-txn__amt settle-txn__amt--minus"
+					      th:text="'−' + ${#numbers.formatInteger(r.amount, 0, 'COMMA')} + '원'">−5,400원</span>
+				</div>
+				<div class="settle-txn__sub"><span class="settle-txn__tag settle-txn__tag--refund">환불 완료 · 수수료 없음</span></div>
+			</li>
+		</ul>
+	</div>
+
+	<!-- 정산서 내려받기 -->
+	<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-5)">
+		<a th:href="@{/store/settlement/excel(period=${period},from=${from},to=${to})}" class="btn btn--outline btn--block">정산서 Excel</a>
+		<a th:href="@{/store/settlement/pdf(period=${period},from=${from},to=${to})}" class="btn btn--outline btn--block">정산서 PDF</a>
+	</div>
+
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) { return; }
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
+</div>
+</body>
+</html>

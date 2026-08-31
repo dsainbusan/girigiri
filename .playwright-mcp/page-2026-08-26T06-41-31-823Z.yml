@@ -1,0 +1,31 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "상품 등록" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 점주 모드
+  - main [ref=f1e8]:
+    - generic [ref=f1e10]:
+      - generic [ref=f1e11]:
+        - generic [ref=f1e12]: 상품 사진
+        - generic [ref=f1e13] [cursor=pointer]: 📷사진 추가
+        - paragraph [ref=f1e15]: 10MB 이하 이미지 1장 (선택). 안 올리면 카테고리 기본 이미지가 표시돼요.
+      - generic [ref=f1e16]:
+        - generic [ref=f1e17]: 품목명 *
+        - textbox "품목명 *" [ref=f1e18]:
+          - /placeholder: "예: 오늘의 모둠빵 세트"
+      - generic [ref=f1e19]:
+        - generic [ref=f1e20]: 원가(정상가) *
+        - spinbutton "원가(정상가) *" [ref=f1e21]
+      - generic [ref=f1e22]:
+        - generic [ref=f1e23]: 수량 *
+        - spinbutton "수량 *" [ref=f1e24]
+      - generic [ref=f1e25]:
+        - generic [ref=f1e26]: 상품 설명
+        - textbox "상품 설명" [ref=f1e27]:
+          - /placeholder: 구성, 알레르기 정보 등 (선택)
+      - generic [ref=f1e28]:
+        - generic [ref=f1e29]: 🏷️
+        - generic [ref=f1e30]:
+          - generic [ref=f1e31]: 할인가는 자동으로 계산돼요
+          - generic [ref=f1e32]: 마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −10%. 마감이 가까울수록 더 할인됩니다.
+      - button "등록하기" [ref=f1e33] [cursor=pointer]

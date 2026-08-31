@@ -12,6 +12,7 @@ import net.dsa.girigiri.repository.ListingTemplateRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,6 +87,11 @@ public class StoreProductController {
 				store.getPosDraftPromptTime() == null ? null : store.getPosDraftPromptTime().format(TIME_FMT));
 		model.addAttribute("hasActiveTemplate",
 				listingTemplateRepository.findByStoreId(store.getId()).stream().anyMatch(ListingTemplateEntity::isActive));
+
+		// 마감 10분 전을 넘기면 초안 [바로 올리기]를 닫는다 (손님이 예약·픽업할 시간이 없어서).
+		model.addAttribute("canPublishDrafts", StoreHoursUtil.canPublishNow(
+				StoreHoursUtil.parse(store.getOperatingHours(), 60).closeAt()));
+		model.addAttribute("publishCutoffMinutes", StoreHoursUtil.PUBLISH_CUTOFF_MINUTES);
 		return "storeView/products";
 	}
 
@@ -122,7 +128,8 @@ public class StoreProductController {
 		try {
 			productService.create(ownerId, form, image);
 		} catch (ResponseStatusException e) {
-			return "redirect:/store/products/new?error";
+			boolean rateIssue = e.getReason() != null && e.getReason().contains("할인율");
+			return "redirect:/store/products/new?error" + (rateIssue ? "=rate" : "");
 		}
 		return "redirect:/store/products";
 	}
@@ -141,6 +148,19 @@ public class StoreProductController {
 		form.setQuantity(product.getQuantity());
 		form.setDescription(product.getDescription());
 		form.setCurrentImageUrl(product.getImageUrl());
+		// 할인율은 따로 저장 안 하므로 원가·할인가로 역산한다. 단 "지금 자동값보다 큰 값"(=점주가 일부러
+		// 더 깎은 값)일 때만 채워서 유지하고, 그 이하면 비워둔다 — 예전 자동값이 현재 자동값보다 낮아
+		// 저장이 거부되는 걸 막기 위해(비어 있으면 저장 시 현재 자동값으로 재계산).
+		StoreEntity ownStore = storeRepository.findByOwnerId(ownerId).orElse(null);
+		if (ownStore != null && product.getOriginalPrice() != null && product.getOriginalPrice() > 0
+				&& product.getDiscountedPrice() != null) {
+			int rate = (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
+			int autoRate = net.dsa.girigiri.util.DiscountRateCalculator.calculateRate(
+					StoreHoursUtil.parse(ownStore.getOperatingHours(), 60).closeAt());
+			if (rate > autoRate) {
+				form.setDiscountRate(String.valueOf(rate));
+			}
+		}
 
 		model.addAttribute("mode", "edit");
 		model.addAttribute("productId", id);
@@ -160,15 +180,17 @@ public class StoreProductController {
 		if (ownerId == null) {
 			return "redirect:/auth/loginForm";
 		}
+		boolean publishedOk = true;
 		try {
 			productService.update(ownerId, id, form, image, removeImage);
 			if (publishAfter) {
-				productService.publishDraft(ownerId, id);   // "수정 후 발행" (draft가 아니면 무시됨)
+				publishedOk = productService.publishDraft(ownerId, id);   // "수정 후 발행"
 			}
 		} catch (ResponseStatusException e) {
-			return "redirect:/store/products/" + id + "/edit?error";
+			boolean rateIssue = e.getReason() != null && e.getReason().contains("할인율");
+			return "redirect:/store/products/" + id + "/edit?error" + (rateIssue ? "=rate" : "");
 		}
-		return "redirect:/store/products";
+		return publishedOk ? "redirect:/store/products" : "redirect:/store/products?tooLate";
 	}
 
 	@PostMapping("/{id}/publish")
@@ -177,8 +199,8 @@ public class StoreProductController {
 		if (ownerId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		productService.publishDraft(ownerId, id);
-		return "redirect:/store/products";
+		boolean ok = productService.publishDraft(ownerId, id);
+		return ok ? "redirect:/store/products" : "redirect:/store/products?tooLate";
 	}
 
 	@PostMapping("/{id}/discard")

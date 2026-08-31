@@ -1,0 +1,36 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e4]:
+    - button "뒤로" [ref=f2e5] [cursor=pointer]: ‹
+    - heading "상품 수정" [level=1] [ref=f2e6]
+    - generic [ref=f2e7]: 점주 모드
+  - main [ref=f2e8]:
+    - generic [ref=f2e9]:
+      - generic [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - generic [ref=f2e12]: 상품 사진
+          - generic [ref=f2e13] [cursor=pointer]: 📷사진 추가
+          - paragraph [ref=f2e15]: 10MB 이하 이미지 1장 (선택). 안 올리면 카테고리 기본 이미지가 표시돼요.
+        - generic [ref=f2e16]:
+          - generic [ref=f2e17]: 품목명 *
+          - textbox "품목명 *" [ref=f2e18]:
+            - /placeholder: "예: 오늘의 모둠빵 세트"
+            - text: 오늘의 모둠빵 세트
+        - generic [ref=f2e19]:
+          - generic [ref=f2e20]: 원가(정상가) *
+          - spinbutton "원가(정상가) *" [ref=f2e21]: "12000"
+        - generic [ref=f2e22]:
+          - generic [ref=f2e23]: 수량 *
+          - spinbutton "수량 *" [ref=f2e24]: "10"
+          - paragraph [ref=f2e25]: 수량을 늘리면 남은 재고도 같이 늘어나요. 이미 예약된 수량보다 적게는 줄일 수 없어요.
+        - generic [ref=f2e26]:
+          - generic [ref=f2e27]: 상품 설명
+          - textbox "상품 설명" [ref=f2e28]:
+            - /placeholder: 구성, 알레르기 정보 등 (선택)
+            - text: 크루아상, 소금빵, 단팥빵 등 그날 구운 빵을 랜덤으로 담아드려요.
+        - generic [ref=f2e29]:
+          - generic [ref=f2e30]: 🏷️
+          - generic [ref=f2e31]:
+            - generic [ref=f2e32]: 할인가는 자동으로 계산돼요
+            - generic [ref=f2e33]: 마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −10%. 마감이 가까울수록 더 할인됩니다.
+        - button "저장하기" [ref=f2e34] [cursor=pointer]
+      - button "상품 삭제" [ref=f2e36] [cursor=pointer]

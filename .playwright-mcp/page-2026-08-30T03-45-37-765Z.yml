@@ -1,0 +1,75 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e4]:
+    - button "뒤로" [ref=f4e5] [cursor=pointer]: ‹
+    - heading "판매·폐기 리포트" [level=1] [ref=f4e6]
+    - generic [ref=f4e7]: 점주 모드
+    - button "유저 모드로" [ref=f4e9] [cursor=pointer]
+  - main [ref=f4e10]:
+    - generic [ref=f4e11]:
+      - generic [ref=f4e12]:
+        - link "일간" [ref=f4e13] [cursor=pointer]:
+          - /url: /store/report?period=daily
+        - link "최근 7일" [ref=f4e14] [cursor=pointer]:
+          - /url: /store/report?period=weekly
+      - paragraph [ref=f4e15]: 테스트 베이커리(dashfix)
+      - paragraph [ref=f4e16]: 2026-08-30 (오늘)
+      - generic [ref=f4e17]:
+        - generic [ref=f4e18]:
+          - generic [ref=f4e19]: 구제율
+          - generic [ref=f4e20]: 39%
+        - generic [ref=f4e21]:
+          - generic [ref=f4e22]:
+            - generic [ref=f4e23]: 등록
+            - generic [ref=f4e24]: 18개
+          - generic [ref=f4e25]:
+            - generic [ref=f4e26]: 판매
+            - generic [ref=f4e27]: 7개
+          - generic [ref=f4e28]:
+            - generic [ref=f4e29]: 폐기
+            - generic [ref=f4e30]: 0개
+          - generic [ref=f4e31]:
+            - generic [ref=f4e32]: 회수 매출
+            - generic [ref=f4e33]: 17,150원
+          - generic [ref=f4e34]:
+            - generic [ref=f4e35]: 할인 제공
+            - generic [ref=f4e36]: 7,350원
+          - generic [ref=f4e37]:
+            - generic [ref=f4e38]: CO₂ 절감
+            - generic [ref=f4e39]: 3.5kg
+      - table [ref=f4e41]:
+        - rowgroup [ref=f4e42]:
+          - row [ref=f4e43]:
+            - columnheader "상품명" [ref=f4e44]
+            - columnheader "할인" [ref=f4e45]
+            - columnheader "등록" [ref=f4e46]
+            - columnheader "판매" [ref=f4e47]
+            - columnheader "폐기" [ref=f4e48]
+            - columnheader "회수 매출" [ref=f4e49]
+        - rowgroup [ref=f4e50]:
+          - row [ref=f4e51]:
+            - cell "리포트테스트 크루아상" [ref=f4e52]
+            - cell "-30%" [ref=f4e53]
+            - cell "10" [ref=f4e54]
+            - cell "7" [ref=f4e55]
+            - cell "0" [ref=f4e56]
+            - cell "17,150" [ref=f4e57]
+          - row [ref=f4e58]:
+            - cell "리포트테스트 소금빵" [ref=f4e59]
+            - cell "-30%" [ref=f4e60]
+            - cell "8" [ref=f4e61]
+            - cell "0" [ref=f4e62]
+            - cell "0" [ref=f4e63]
+            - cell "0" [ref=f4e64]
+        - rowgroup [ref=f4e65]:
+          - row [ref=f4e66]:
+            - cell "합계" [ref=f4e67]
+            - cell "18" [ref=f4e68]
+            - cell "7" [ref=f4e69]
+            - cell "0" [ref=f4e70]
+            - cell "17,150" [ref=f4e71]
+      - paragraph [ref=f4e72]: 원가·할인가·할인액 상세는 Excel/PDF에 있어요.
+      - generic [ref=f4e73]:
+        - link "Excel 다운로드" [ref=f4e74] [cursor=pointer]:
+          - /url: /store/report/excel?period=daily
+        - link "PDF 다운로드" [ref=f4e75] [cursor=pointer]:
+          - /url: /store/report/pdf?period=daily

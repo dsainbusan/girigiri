@@ -21,10 +21,25 @@ public final class StoreHoursUtil {
 	// 채로 나왔다(직접 재현해서 확인함). "~" 뒤에서 첫 번째로 나오는 "H:mm" 패턴만 뽑아 쓰도록 고친다.
 	private static final Pattern TIME_TOKEN = Pattern.compile("(\\d{1,2}:\\d{2})");
 
+	/**
+	 * "오늘의 구제" 초안을 발행(등록)할 수 있는 마지막 여유(분).
+	 * 마감 직전에 올리면 손님이 예약·픽업하러 올 시간이 없어서 죽은 매물이 되므로, 마감 N분 전에 등록을 닫는다.
+	 */
+	public static final int PUBLISH_CUTOFF_MINUTES = 10;
+
 	private StoreHoursUtil() {
 	}
 
 	public record ClosingInfo(String label, boolean urgent, LocalDateTime closeAt) {
+	}
+
+	/**
+	 * 지금 초안을 발행할 수 있는지 — 마감 {@link #PUBLISH_CUTOFF_MINUTES}분 전을 넘겼으면 false.
+	 * closeAt이 null(영업시간 정보 없음)이면 막지 않는다(true).
+	 */
+	public static boolean canPublishNow(LocalDateTime closeAt) {
+		return closeAt == null
+				|| LocalDateTime.now().isBefore(closeAt.minusMinutes(PUBLISH_CUTOFF_MINUTES));
 	}
 
 	/**

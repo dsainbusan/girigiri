@@ -1,0 +1,6 @@
+[   61633ms] [ERROR] Access to CSS stylesheet at 'http://localhost:8080/css/tokens.css' from origin 'null' has been blocked by CORS policy: The request client is not a secure context and the resource is in more-private address space `loopback`. @ about:blank:0
+[   61633ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/css/tokens.css:0
+[   61633ms] [ERROR] Access to CSS stylesheet at 'http://localhost:8080/css/base.css' from origin 'null' has been blocked by CORS policy: The request client is not a secure context and the resource is in more-private address space `loopback`. @ about:blank:0
+[   61633ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/css/base.css:0
+[   61634ms] [ERROR] Access to CSS stylesheet at 'http://localhost:8080/css/store.css' from origin 'null' has been blocked by CORS policy: The request client is not a secure context and the resource is in more-private address space `loopback`. @ about:blank:0
+[   61634ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8080/css/store.css:0

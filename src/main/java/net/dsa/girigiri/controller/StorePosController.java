@@ -158,41 +158,10 @@ public class StorePosController {
 		return "storeView/posSimulator";
 	}
 
-	@PostMapping("/sim/restock")
-	public String simRestock(HttpSession session) {
-		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		posCatalogService.simRestock(ownerId);
-		return "redirect:/store/pos/sim";
-	}
+	// 아침 생산 / 빨리감기 / 재고 저장은 시뮬레이터 화면(posSimulator.html)이 직접
+	// POST /api/pos/stock 을 호출한다 — "매장 POS가 재고를 push한다"를 실제 규격 그대로 시연하기 위해.
 
-	@PostMapping("/sim/selldown")
-	public String simSellDown(HttpSession session) {
-		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		posCatalogService.simSellDown(ownerId);
-		return "redirect:/store/pos/sim";
-	}
-
-	@PostMapping("/sim/stock/{id}")
-	public String simSetStock(@PathVariable Long id, @RequestParam int remaining, HttpSession session) {
-		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		try {
-			posCatalogService.simSetStock(ownerId, id, remaining);
-		} catch (ResponseStatusException e) {
-			return "redirect:/store/pos/sim?error";
-		}
-		return "redirect:/store/pos/sim";
-	}
-
-	/** "마감 임박 → 앱에 물어보기" — 스케줄러를 기다리지 않고 지금 재고로 초안 생성. */
+	/** "마감 임박 → 앱에 물어보기" — 스케줄러를 기다리지 않고 지금 재고로 초안 생성. (앱 내부 동작, POS 전송 아님) */
 	@PostMapping("/sim/prompt")
 	public String simPrompt(HttpSession session) {
 		Long ownerId = ownerId(session);

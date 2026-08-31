@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('판매·폐기 리포트', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	판매·폐기 리포트 미리보기 — WBS 3.0 "일/주간 판매·폐기 리포트 (Excel + PDF)" 문창호, 2026-08-30.
+	대시보드 "현황" 카드의 [오늘]/[최근 7일] 탭에서 "리포트 보기"로 진입. 화면에서 표를 먼저 보고
+	[Excel 다운로드] / [PDF 다운로드]로 파일을 받는다. 화면·파일 숫자는 StoreReportService 하나에서 나온다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<!-- 기간 전환 (일간 ↔ 최근 7일) -->
+	<div class="stat-toggle-tabs">
+		<a th:href="@{/store/report(period='daily')}" class="stat-toggle-tab"
+		   th:classappend="${period == 'daily'} ? ' is-active'">일간</a>
+		<a th:href="@{/store/report(period='weekly')}" class="stat-toggle-tab"
+		   th:classappend="${period == 'weekly'} ? ' is-active'">최근 7일</a>
+	</div>
+
+	<p class="u-bold" style="font-size: var(--fs-md)" th:text="${report.storeName}">○○베이커리</p>
+	<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px" th:text="${report.periodLabel}">2026-08-30 (오늘)</p>
+
+	<!-- 요약 -->
+	<div class="card" style="margin-top: var(--s-3)">
+		<div class="u-row" style="justify-content: space-between; align-items: baseline">
+			<span class="u-bold" style="font-size: var(--fs-sm)">구제율</span>
+			<span class="u-bold u-primary" style="font-size: var(--fs-xl)" th:text="${report.totals.rescueRate} + '%'">75%</span>
+		</div>
+		<div class="report-summary">
+			<div><span>판매</span><b th:text="${report.totals.sold} + '개'">18개</b></div>
+			<div><span>폐기</span><b th:text="${report.totals.wasted} + '개'">6개</b></div>
+			<div><span>등록</span><b th:text="${report.totals.registered} + '개'">24개</b></div>
+			<div><span>회수 매출</span><b th:text="${#numbers.formatInteger(report.totals.sales, 0, 'COMMA')} + '원'">286,400원</b></div>
+			<div th:unless="${report.weekly}"><span>할인 제공</span><b th:text="${#numbers.formatInteger(report.totals.discountGiven, 0, 'COMMA')} + '원'">92,000원</b></div>
+			<div><span>CO₂ 절감</span><b th:text="${report.totals.co2Kg} + 'kg'">9.0kg</b></div>
+		</div>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-2)"
+		   th:text="${report.weekly}
+		            ? '구제율 = 판매 ÷ (판매 + 폐기). 판매·매출은 픽업 완료·노쇼 등 실제 거래 기준이에요.'
+		            : '구제율 = 판매 ÷ 등록. 마감 전이면 폐기는 아직 미정이에요.'">...</p>
+	</div>
+
+	<!-- 상세 표 — 주간은 판매 내역(예약), 일간은 상품별 -->
+	<div class="report-table-wrap" style="margin-top: var(--s-3)">
+		<!-- 주간: 판매 내역 -->
+		<table class="report-table" th:if="${report.weekly}">
+			<thead>
+			<tr><th>픽업일</th><th style="text-align:left">상품명</th><th>수량</th><th>결제 금액</th><th>상태</th></tr>
+			</thead>
+			<tbody>
+			<tr th:each="l : ${report.lines}">
+				<td th:text="${l.dateLabel}">08/26</td>
+				<td style="text-align:left" th:text="${l.name}">그래프 테스트 도시락</td>
+				<td th:text="${l.sold}">4</td>
+				<td th:text="${#numbers.formatInteger(l.sales, 0, 'COMMA')}">18,000</td>
+				<td th:text="${l.status}">픽업 완료</td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(report.lines)}">
+				<td colspan="5" class="u-sub" style="text-align:center; padding: var(--s-5) 0">최근 7일간 판매 내역이 없어요.</td>
+			</tr>
+			</tbody>
+			<tfoot th:if="${!#lists.isEmpty(report.lines)}">
+			<tr>
+				<td colspan="2" style="text-align:left">합계</td>
+				<td th:text="${report.totals.sold}">18</td>
+				<td th:text="${#numbers.formatInteger(report.totals.sales, 0, 'COMMA')}">286,400</td>
+				<td></td>
+			</tr>
+			</tfoot>
+		</table>
+
+		<!-- 일간: 상품별 -->
+		<table class="report-table" th:unless="${report.weekly}">
+			<thead>
+			<tr><th style="text-align:left">상품명</th><th>할인</th><th>등록</th><th>판매</th><th>폐기</th><th>회수 매출</th></tr>
+			</thead>
+			<tbody>
+			<tr th:each="l : ${report.lines}">
+				<td style="text-align:left" th:text="${l.name}">오늘의 모둠빵 세트</td>
+				<td th:text="'-' + ${l.discountRate} + '%'">-30%</td>
+				<td th:text="${l.registered}">10</td>
+				<td th:text="${l.sold}">7</td>
+				<td th:text="${l.wasted}">3</td>
+				<td th:text="${#numbers.formatInteger(l.sales, 0, 'COMMA')}">58,800</td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(report.lines)}">
+				<td colspan="6" class="u-sub" style="text-align:center; padding: var(--s-5) 0">오늘 등록된 상품이 없어요.</td>
+			</tr>
+			</tbody>
+			<tfoot th:if="${!#lists.isEmpty(report.lines)}">
+			<tr>
+				<td colspan="2" style="text-align:left">합계</td>
+				<td th:text="${report.totals.registered}">24</td>
+				<td th:text="${report.totals.sold}">18</td>
+				<td th:text="${report.totals.wasted}">6</td>
+				<td th:text="${#numbers.formatInteger(report.totals.sales, 0, 'COMMA')}">286,400</td>
+			</tr>
+			</tfoot>
+		</table>
+	</div>
+	<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px"
+	   th:text="${report.weekly}
+	            ? '상품별 등록·폐기 수치는 Excel/PDF에 있어요.'
+	            : '원가·할인가·할인액 상세는 Excel/PDF에 있어요.'">...</p>
+
+	<!-- 다운로드 -->
+	<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-4)">
+		<a th:href="@{/store/report/excel(period=${period})}" class="btn btn--outline btn--block">Excel 다운로드</a>
+		<a th:href="@{/store/report/pdf(period=${period})}" class="btn btn--outline btn--block">PDF 다운로드</a>
+	</div>
+
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) { return; }
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
+</div>
+</body>
+</html>

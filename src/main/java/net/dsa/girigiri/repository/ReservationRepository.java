@@ -56,4 +56,7 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 추가됨 (강노은) — 왜: 리뷰는 그 가게에서 실제로 예약·픽업까지 완료한 사용자만 쓸 수 있게 제한한다
 	// (ReviewService#canWriteReview). status="picked"로 호출.
 	boolean existsByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
+
+	// 매장 정산 집계용 (SettlementService, 문창호 2026-08-31) — 그 매장의 전체 예약 → 결제 조인
+	List<ReservationEntity> findByStoreId(Long storeId);
 }

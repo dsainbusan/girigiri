@@ -7,6 +7,7 @@ import net.dsa.girigiri.domain.dto.CancellableReservationDto;
 import net.dsa.girigiri.domain.dto.PaymentConfirmResponseDto;
 import net.dsa.girigiri.domain.dto.PickupBatchItemResultDto;
 import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
+import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
 import net.dsa.girigiri.domain.dto.ReservationPrepareResponseDto;
@@ -43,11 +44,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 예약 확인 -> 예약 생성 -> 완료 화면(QR/영수증)까지 담당하는 컨트롤러.
@@ -388,11 +392,51 @@ public class ReservationController {
 
 	/**
 	 * 추가됨 — 왜: 손님이 실제로 픽업해서 거래가 끝난 내역을 점주가 볼 화면이 없었다.
+	 * 변경됨 (2026-08-30, 문창호) — 왜: 내역이 쌓이면 찾기 힘들어서 날짜별 그룹 + 날짜/시간대 필터 추가.
+	 *   date=YYYY-MM-DD, from/to=HH:mm (그 날의 시간대). 값이 이상하면 무시하고 전체를 보여준다.
 	 */
 	@GetMapping("/completed")
-	public String completed(HttpSession session, Model model) {
-		model.addAttribute("completed", reservationService.getCompletedTransactions(resolveCurrentStoreId(session)));
+	public String completed(@RequestParam(required = false) String date,
+	                        @RequestParam(required = false) String from,
+	                        @RequestParam(required = false) String to,
+	                        HttpSession session, Model model) {
+		LocalDate d = parseLocalDate(date);
+		LocalTime f = parseLocalTime(from);
+		LocalTime t = parseLocalTime(to);
+
+		List<ReservationCompletedItemDto> items =
+				reservationService.getCompletedTransactions(resolveCurrentStoreId(session), d, f, t);
+
+		// 날짜별 그룹 (서비스가 pickedAt DESC로 넘겨줘서 최신 날짜가 먼저 들어온다)
+		Map<String, List<ReservationCompletedItemDto>> groups = new LinkedHashMap<>();
+		for (ReservationCompletedItemDto it : items) {
+			groups.computeIfAbsent(it.pickedDate(), k -> new ArrayList<>()).add(it);
+		}
+
+		model.addAttribute("groups", groups);
+		model.addAttribute("totalCount", items.size());
+		model.addAttribute("totalAmount", items.stream().mapToLong(ReservationCompletedItemDto::totalPrice).sum());
+		model.addAttribute("filterDate", date == null ? "" : date);
+		model.addAttribute("filterFrom", from == null ? "" : from);
+		model.addAttribute("filterTo", to == null ? "" : to);
+		model.addAttribute("filterActive", d != null || f != null || t != null);
 		return "reservationView/completed";
+	}
+
+	private LocalDate parseLocalDate(String s) {
+		try {
+			return (s == null || s.isBlank()) ? null : LocalDate.parse(s.trim());
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private LocalTime parseLocalTime(String s) {
+		try {
+			return (s == null || s.isBlank()) ? null : LocalTime.parse(s.trim());
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	/**

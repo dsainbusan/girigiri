@@ -1,0 +1,143 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "오늘의 구제" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 점주 모드
+    - button "유저 모드로" [ref=f1e9] [cursor=pointer]
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]:
+        - generic [ref=f1e13]: ✅ 오케이포스
+        - generic [ref=f1e14]: 매일 20:00 자동 준비
+        - link "POS 설정 ›" [ref=f1e15] [cursor=pointer]:
+          - /url: /store/pos
+      - generic [ref=f1e16]:
+        - paragraph [ref=f1e17]: 📦 오늘의 구제 — 발행 대기
+        - generic [ref=f1e18]:
+          - generic [ref=f1e19]:
+            - generic [ref=f1e20]: 🥐
+            - generic [ref=f1e22]:
+              - generic [ref=f1e23]:
+                - generic [ref=f1e24]: 크루아상
+                - generic [ref=f1e25]: POS 재고
+              - generic [ref=f1e26]:
+                - generic [ref=f1e27]: "-50%"
+                - generic [ref=f1e28]: 3,500원
+                - generic [ref=f1e29]: 1,750원
+              - generic [ref=f1e30]: 17개로 준비됐어요
+          - generic [ref=f1e31]:
+            - button "바로 올리기" [ref=f1e33] [cursor=pointer]
+            - link "수정" [ref=f1e34] [cursor=pointer]:
+              - /url: /store/products/70/edit
+            - button "오늘 안 함" [ref=f1e36] [cursor=pointer]
+        - generic [ref=f1e37]:
+          - generic [ref=f1e38]:
+            - generic [ref=f1e39]: 🥐
+            - generic [ref=f1e41]:
+              - generic [ref=f1e42]:
+                - generic [ref=f1e43]: 소금빵
+                - generic [ref=f1e44]: POS 재고
+              - generic [ref=f1e45]:
+                - generic [ref=f1e46]: "-50%"
+                - generic [ref=f1e47]: 3,000원
+                - generic [ref=f1e48]: 1,500원
+              - generic [ref=f1e49]: 20개로 준비됐어요
+          - generic [ref=f1e50]:
+            - button "바로 올리기" [ref=f1e52] [cursor=pointer]
+            - link "수정" [ref=f1e53] [cursor=pointer]:
+              - /url: /store/products/69/edit
+            - button "오늘 안 함" [ref=f1e55] [cursor=pointer]
+      - generic [ref=f1e56]:
+        - generic [ref=f1e57]: 판매 중
+        - generic [ref=f1e58]: 전체 5 · 판매중 3 · 품절 0
+      - list [ref=f1e59]:
+        - listitem [ref=f1e60]:
+          - generic [ref=f1e61]:
+            - img "�������� �׽�Ʈ" [ref=f1e63]
+            - generic [ref=f1e64]:
+              - generic [ref=f1e65]:
+                - generic [ref=f1e66]: �������� �׽�Ʈ
+                - generic [ref=f1e67]: 판매중
+              - generic [ref=f1e68]:
+                - generic [ref=f1e69]: "-10%"
+                - generic [ref=f1e70]: 5,000원
+                - generic [ref=f1e71]: 4,500원
+              - generic [ref=f1e72]: 재고 3 / 3개 · 8/27 등록
+          - generic [ref=f1e73]:
+            - button "품절" [ref=f1e75] [cursor=pointer]
+            - link "수정" [ref=f1e76] [cursor=pointer]:
+              - /url: /store/products/19/edit
+            - button "삭제" [ref=f1e78] [cursor=pointer]
+        - listitem [ref=f1e79]:
+          - generic [ref=f1e80]:
+            - generic [ref=f1e81]: 🥐
+            - generic [ref=f1e83]:
+              - generic [ref=f1e84]:
+                - generic [ref=f1e85]: 소금빵 묶음
+                - generic [ref=f1e86]: 판매중
+              - generic [ref=f1e87]:
+                - generic [ref=f1e88]: "-50%"
+                - generic [ref=f1e89]: 6,000원
+                - generic [ref=f1e90]: 3,000원
+              - generic [ref=f1e91]: 재고 5 / 5개 · 8/26 등록
+          - generic [ref=f1e92]:
+            - button "품절" [ref=f1e94] [cursor=pointer]
+            - link "수정" [ref=f1e95] [cursor=pointer]:
+              - /url: /store/products/10/edit
+            - button "삭제" [ref=f1e97] [cursor=pointer]
+        - listitem [ref=f1e98]:
+          - generic [ref=f1e99]:
+            - generic [ref=f1e100]: 🥐
+            - generic [ref=f1e102]:
+              - generic [ref=f1e103]:
+                - generic [ref=f1e104]: 오늘 케이크
+                - generic [ref=f1e105]: 마감
+              - generic [ref=f1e106]:
+                - generic [ref=f1e107]: "-50%"
+                - generic [ref=f1e108]: 15,000원
+                - generic [ref=f1e109]: 7,500원
+              - generic [ref=f1e110]: 재고 4 / 4개 · 8/26 등록
+          - generic [ref=f1e111]:
+            - link "수정" [ref=f1e112] [cursor=pointer]:
+              - /url: /store/products/17/edit
+            - button "삭제" [ref=f1e114] [cursor=pointer]
+        - listitem [ref=f1e115]:
+          - generic [ref=f1e116]:
+            - generic [ref=f1e117]: 🥐
+            - generic [ref=f1e119]:
+              - generic [ref=f1e120]:
+                - generic [ref=f1e121]: 크루아상 세트
+                - generic [ref=f1e122]: 마감
+              - generic [ref=f1e123]:
+                - generic [ref=f1e124]: "-50%"
+                - generic [ref=f1e125]: 9,000원
+                - generic [ref=f1e126]: 4,500원
+              - generic [ref=f1e127]: 재고 3 / 8개 · 8/24 등록
+          - generic [ref=f1e128]:
+            - link "수정" [ref=f1e129] [cursor=pointer]:
+              - /url: /store/products/16/edit
+            - button "삭제" [ref=f1e131] [cursor=pointer]
+        - listitem [ref=f1e132]:
+          - generic [ref=f1e133]:
+            - generic [ref=f1e134]: 🥐
+            - generic [ref=f1e136]:
+              - generic [ref=f1e137]:
+                - generic [ref=f1e138]: 식빵 마감세트
+                - generic [ref=f1e139]: 판매중
+              - generic [ref=f1e140]:
+                - generic [ref=f1e141]: "-50%"
+                - generic [ref=f1e142]: 6,000원
+                - generic [ref=f1e143]: 3,000원
+              - generic [ref=f1e144]: 재고 10 / 10개 · 8/22 등록
+          - generic [ref=f1e145]:
+            - button "품절" [ref=f1e147] [cursor=pointer]
+            - link "수정" [ref=f1e148] [cursor=pointer]:
+              - /url: /store/products/15/edit
+            - button "삭제" [ref=f1e150] [cursor=pointer]
+      - generic [ref=f1e151]:
+        - link "+ 직접 등록" [ref=f1e152] [cursor=pointer]:
+          - /url: /store/products/new
+        - link "자동 등록 템플릿" [ref=f1e153] [cursor=pointer]:
+          - /url: /store/templates
+        - link "대시보드" [ref=f1e154] [cursor=pointer]:
+          - /url: /store/dashboard

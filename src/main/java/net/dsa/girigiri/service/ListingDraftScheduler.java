@@ -16,8 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * "오늘의 구제 자동 등록" 스케줄러 — 2026-08-26 신규 (문창호).
@@ -32,6 +35,11 @@ import java.util.List;
  * 변경됨 (2026-08-27) — 왜: 예전엔 여기서 NotificationService로 점주에게 알림을 만들었는데,
  * 그 알림함(/user/alerts)은 손님용 화면이라 점주 진입점이 없어서 죽은 데이터였다. 점주는 대시보드
  * 최상단 "처리할 일" 배너 + /store/products "발행 대기" 카드로 확인한다(StoreController.dashboard 참고).
+ *
+ * 변경됨 (2026-08-29) — 상품 생애주기 정리도 여기서 같이 한다(매 스캔):
+ *   - expireStaleDrafts:        발행 안 된 초안 → skipped
+ *   - expireStaleActiveProducts: 마감 지난 판매중(active) → expired (손님 화면/카운트가 실제와 어긋나지 않게)
+ *   - purgeOldSkipped:          지난 날 skipped 행 삭제 (그날 dedup 끝나면 쓸모없음)
  */
 @Slf4j
 @Service
@@ -52,8 +60,94 @@ public class ListingDraftScheduler {
 	@Scheduled(fixedRate = SCAN_INTERVAL_MS)
 	@Transactional
 	public void scan() {
+		expireStaleDrafts();
+		expireStaleActiveProducts();
+		purgeOldSkipped();
 		scanTemplates();
 		scanPosStockSnapshots();
+	}
+
+	/** "이 상품/초안의 판매 기회가 이미 끝났나" — 등록일 마감이 지났으면 true. */
+	private boolean sellingWindowOver(ProductEntity p, LocalDate today, LocalDateTime now,
+	                                  Map<Long, LocalDateTime> closeAtCache) {
+		if (p.getRegisteredAt() == null || p.getRegisteredAt().toLocalDate().isBefore(today)) {
+			return true;   // 지난 날 등록분 — 이미 마감 지남
+		}
+		if (!p.getRegisteredAt().toLocalDate().equals(today)) {
+			return false;  // 미래 등록(있을 리 없음)
+		}
+		LocalDateTime closeAt = closeAtCache.computeIfAbsent(p.getStoreId(), sid ->
+				storeRepository.findById(sid)
+						.map(s -> StoreHoursUtil.parse(s.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt())
+						.orElse(null));
+		return closeAt != null && !closeAt.isAfter(now);
+	}
+
+	// --- 발행 안 된 초안 정리 -----------------------------------------
+	// 초안(status='draft')은 그날 마감 전에 [바로 올리기] 하라고 만든 것 — 마감이 지났거나 날짜가
+	// 바뀌었으면 "오늘 안 함"과 같은 처리(status='skipped')로 내려서 "발행 대기"에서 치운다.
+	// (지우지 않고 skipped로 두는 건, 같은 날 재생성 방지 dedup 때문. discardDraft와 동일 정책.)
+	private void expireStaleDrafts() {
+		List<ProductEntity> drafts = productRepository.findByStatus("draft");
+		if (drafts.isEmpty()) {
+			return;
+		}
+		LocalDate today = LocalDate.now();
+		LocalDateTime now = LocalDateTime.now();
+		Map<Long, LocalDateTime> closeAtByStore = new HashMap<>();
+
+		int cleared = 0;
+		for (ProductEntity d : drafts) {
+			if (sellingWindowOver(d, today, now, closeAtByStore)) {
+				d.setStatus("skipped");
+				productRepository.save(d);
+				cleared++;
+			}
+		}
+		if (cleared > 0) {
+			log.info("발행 안 된 초안 정리(마감/날짜 경과): {}건", cleared);
+		}
+	}
+
+	// --- 마감 지난 "판매중" 상품 만료 --------------------------------
+	// "오늘의 구제" 상품은 그날 장사용이다. 등록일 마감이 지났는데도 status='active'로 남아 있으면
+	// 손님 홈/검색에 계속 뜨고(예약까지 가능), 점주 목록엔 "판매중", 대시보드 "판매중" 카운트에도 잡힌다.
+	// 실제 상태(expired)로 맞춘다. remainingQuantity는 그대로 — 안 팔린 수량 = 폐기량이라 리포트/그래프가 쓴다.
+	private void expireStaleActiveProducts() {
+		List<ProductEntity> actives = productRepository.findByStatus("active");
+		if (actives.isEmpty()) {
+			return;
+		}
+		LocalDate today = LocalDate.now();
+		LocalDateTime now = LocalDateTime.now();
+		Map<Long, LocalDateTime> closeAtByStore = new HashMap<>();
+
+		int expired = 0;
+		for (ProductEntity p : actives) {
+			if (sellingWindowOver(p, today, now, closeAtByStore)) {
+				p.setStatus("expired");
+				productRepository.save(p);
+				expired++;
+			}
+		}
+		if (expired > 0) {
+			log.info("마감 지난 판매중 상품 만료: {}건", expired);
+		}
+	}
+
+	// --- 오래된 skipped 정리 ----------------------------------------
+	// skipped는 "그날 초안 재생성 방지"가 목적이라 자정을 넘기면 쓸모가 없다.
+	// active였던 적이 없어 예약이 붙을 수 없으므로 안전하게 삭제한다.
+	private void purgeOldSkipped() {
+		LocalDate today = LocalDate.now();
+		List<ProductEntity> old = productRepository.findByStatus("skipped").stream()
+				.filter(p -> p.getRegisteredAt() != null && p.getRegisteredAt().toLocalDate().isBefore(today))
+				.toList();
+		if (old.isEmpty()) {
+			return;
+		}
+		productRepository.deleteAll(old);
+		log.info("지난 날 skipped 초안 정리: {}건", old.size());
 	}
 
 	// --- 방식 1: 템플릿 (POS 없는 매장) --------------------------------
@@ -79,6 +173,11 @@ public class ListingDraftScheduler {
 
 			StoreEntity store = storeRepository.findById(template.getStoreId()).orElse(null);
 			if (store == null) {
+				continue;
+			}
+			// 마감 10분 전을 넘겼으면 올릴 수 없는 초안이라 만들지 않는다 (promptTime을 마감에 너무 붙인 경우).
+			if (!StoreHoursUtil.canPublishNow(
+					StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt())) {
 				continue;
 			}
 

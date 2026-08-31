@@ -49,7 +49,10 @@ public class ProductEntity {
 	@Column(name = "status", nullable = false, length = 20)
 	private String status;   // draft / active / sold / expired / skipped
 	                         // draft = "오늘의 구제" 자동 초안 (사장님이 [바로 올리기] 누르면 active).
-	                         // skipped = 초안을 "오늘 안 함" 처리 (지우면 스케줄러가 재생성하므로 행은 남긴다).
+	                         // skipped = 초안을 "오늘 안 함" 처리했거나, 마감/날짜가 지나 발행 못 한 초안
+	                         //           (ListingDraftScheduler.expireStaleDrafts). 지난 날 것은 purgeOldSkipped가 삭제.
+	                         // expired = 마감 지난 상품. 점주가 지정하거나, 등록일 마감이 지나면 스케줄러가
+	                         //           active→expired로 내린다 (ListingDraftScheduler.expireStaleActiveProducts).
 	                         // draft/skipped 는 홈/검색/대시보드 집계에서 제외된다.
 
 	// "오늘의 구제 자동 등록"이 만든 상품이면 그 출처 id. 수동 등록이면 둘 다 null.

@@ -1,0 +1,109 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "오늘의 구제" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 점주 모드
+    - button "유저 모드로" [ref=f1e9] [cursor=pointer]
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e13]:
+        - paragraph [ref=f1e14]: ✅ 오케이포스 연동됨
+        - paragraph [ref=f1e15]: 매일 20:00에 POS 재고로 오늘의 구제를 자동 준비해요
+        - link "POS 설정 ›" [ref=f1e16] [cursor=pointer]:
+          - /url: /store/pos
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: 전체 5 · 판매중 3 · 품절 0
+        - link "대시보드" [ref=f1e19] [cursor=pointer]:
+          - /url: /store/dashboard
+      - generic [ref=f1e20]:
+        - generic [ref=f1e21]: 🔎
+        - textbox "품목명으로 검색" [ref=f1e22]
+      - list [ref=f1e23]:
+        - listitem [ref=f1e24]:
+          - generic [ref=f1e25]:
+            - img "�������� �׽�Ʈ" [ref=f1e27]
+            - generic [ref=f1e28]:
+              - generic [ref=f1e29]:
+                - generic [ref=f1e30]: �������� �׽�Ʈ
+                - generic [ref=f1e31]: 판매중
+              - generic [ref=f1e32]:
+                - generic [ref=f1e33]: "-10%"
+                - generic [ref=f1e34]: 5,000원
+                - generic [ref=f1e35]: 4,500원
+              - generic [ref=f1e36]: 재고 3 / 3개 · 오늘 11:13 등록
+          - generic [ref=f1e37]:
+            - link "수정" [ref=f1e38] [cursor=pointer]:
+              - /url: /store/products/19/edit
+            - button "품절" [ref=f1e40] [cursor=pointer]
+            - button "삭제" [ref=f1e42] [cursor=pointer]
+        - listitem [ref=f1e43]:
+          - generic [ref=f1e44]:
+            - generic [ref=f1e45]: 🥐
+            - generic [ref=f1e47]:
+              - generic [ref=f1e48]:
+                - generic [ref=f1e49]: 소금빵 묶음
+                - generic [ref=f1e50]: 판매중
+              - generic [ref=f1e51]:
+                - generic [ref=f1e52]: "-50%"
+                - generic [ref=f1e53]: 6,000원
+                - generic [ref=f1e54]: 3,000원
+              - generic [ref=f1e55]: 재고 5 / 5개 · 8/26 등록
+          - generic [ref=f1e56]:
+            - link "수정" [ref=f1e57] [cursor=pointer]:
+              - /url: /store/products/10/edit
+            - button "품절" [ref=f1e59] [cursor=pointer]
+            - button "삭제" [ref=f1e61] [cursor=pointer]
+        - listitem [ref=f1e62]:
+          - generic [ref=f1e63]:
+            - generic [ref=f1e64]: 🥐
+            - generic [ref=f1e66]:
+              - generic [ref=f1e67]:
+                - generic [ref=f1e68]: 오늘 케이크
+                - generic [ref=f1e69]: 마감
+              - generic [ref=f1e70]:
+                - generic [ref=f1e71]: "-50%"
+                - generic [ref=f1e72]: 15,000원
+                - generic [ref=f1e73]: 7,500원
+              - generic [ref=f1e74]: 재고 4 / 4개 · 8/26 등록
+          - generic [ref=f1e75]:
+            - link "수정" [ref=f1e76] [cursor=pointer]:
+              - /url: /store/products/17/edit
+            - button "삭제" [ref=f1e78] [cursor=pointer]
+        - listitem [ref=f1e79]:
+          - generic [ref=f1e80]:
+            - generic [ref=f1e81]: 🥐
+            - generic [ref=f1e83]:
+              - generic [ref=f1e84]:
+                - generic [ref=f1e85]: 크루아상 세트
+                - generic [ref=f1e86]: 마감
+              - generic [ref=f1e87]:
+                - generic [ref=f1e88]: "-50%"
+                - generic [ref=f1e89]: 9,000원
+                - generic [ref=f1e90]: 4,500원
+              - generic [ref=f1e91]: 재고 3 / 8개 · 8/24 등록
+          - generic [ref=f1e92]:
+            - link "수정" [ref=f1e93] [cursor=pointer]:
+              - /url: /store/products/16/edit
+            - button "삭제" [ref=f1e95] [cursor=pointer]
+        - listitem [ref=f1e96]:
+          - generic [ref=f1e97]:
+            - generic [ref=f1e98]: 🥐
+            - generic [ref=f1e100]:
+              - generic [ref=f1e101]:
+                - generic [ref=f1e102]: 식빵 마감세트
+                - generic [ref=f1e103]: 판매중
+              - generic [ref=f1e104]:
+                - generic [ref=f1e105]: "-50%"
+                - generic [ref=f1e106]: 6,000원
+                - generic [ref=f1e107]: 3,000원
+              - generic [ref=f1e108]: 재고 10 / 10개 · 8/22 등록
+          - generic [ref=f1e109]:
+            - link "수정" [ref=f1e110] [cursor=pointer]:
+              - /url: /store/products/15/edit
+            - button "품절" [ref=f1e112] [cursor=pointer]
+            - button "삭제" [ref=f1e114] [cursor=pointer]
+      - generic [ref=f1e115]:
+        - link "+ 직접 등록" [ref=f1e116] [cursor=pointer]:
+          - /url: /store/products/new
+        - link "자동 등록 템플릿" [ref=f1e117] [cursor=pointer]:
+          - /url: /store/templates

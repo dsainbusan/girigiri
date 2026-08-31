@@ -8,7 +8,7 @@ import lombok.Setter;
  * POS가 매장 메뉴 카탈로그를 이런 배열로 보낸다고 가정한다:
  *   [ {"posSku":"BR001","name":"크루아상","originalPrice":3500,"imageUrl":null}, ... ]
  *
- * PosProductDto(단건 상품 수신, quantity 있음)와 달리 이건 "메뉴"라 수량이 없다.
+ * 재고는 여기 없다 — 재고는 별도로 PosStockDto(POST /api/pos/stock)로 받는다.
  */
 @Getter
 @Setter

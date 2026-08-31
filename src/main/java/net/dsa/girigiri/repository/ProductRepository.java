@@ -24,4 +24,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
 	// 점주 재고 관리 목록용 (StoreProductController) — 최근 등록순
 	List<ProductEntity> findByStoreIdOrderByRegisteredAtDesc(Long storeId);
+
+	// 발행 안 된 초안 정리용 (ListingDraftScheduler.expireStaleDrafts)
+	List<ProductEntity> findByStatus(String status);
 }

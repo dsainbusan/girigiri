@@ -1,0 +1,49 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "완료된 거래 내역" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 점주 모드
+    - button "유저 모드로" [ref=f1e9] [cursor=pointer]
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]:
+        - generic [ref=f1e13]:
+          - generic [ref=f1e14]: 날짜
+          - textbox "날짜" [ref=f1e15]: 2026-08-26
+        - generic [ref=f1e16]:
+          - generic [ref=f1e17]:
+            - generic [ref=f1e18]: 시작 시각
+            - textbox "시작 시각" [ref=f1e19]: 10:00
+          - generic [ref=f1e20]:
+            - generic [ref=f1e21]: 끝 시각
+            - textbox "끝 시각" [ref=f1e22]: 12:00
+        - paragraph [ref=f1e23]: 날짜만 골라도 되고, 시간대까지 좁혀도 돼요. (픽업 완료 시각 기준)
+        - generic [ref=f1e24]:
+          - button "조회" [ref=f1e25] [cursor=pointer]
+          - link "전체 보기" [ref=f1e26] [cursor=pointer]:
+            - /url: /reservation/completed
+      - generic [ref=f1e27]:
+        - generic [ref=f1e28]: 조회 결과
+        - generic [ref=f1e29]: 2건 · 30,000원
+      - generic [ref=f1e30]:
+        - paragraph [ref=f1e31]: 08월 26일 (수)
+        - generic [ref=f1e32]:
+          - generic [ref=f1e33]:
+            - generic [ref=f1e34]: 소금빵 묶음 × 2개
+            - generic [ref=f1e35]: 11:15
+          - paragraph [ref=f1e36]:
+            - text: 결제
+            - strong [ref=f1e37]: 12,000
+            - text: 원 · 코드
+            - strong [ref=f1e38]: PK-B
+          - paragraph [ref=f1e39]: 주문 08월 24일 04:35
+        - generic [ref=f1e40]:
+          - generic [ref=f1e41]:
+            - generic [ref=f1e42]: 소금빵 묶음 × 3개
+            - generic [ref=f1e43]: 10:30
+          - paragraph [ref=f1e44]:
+            - text: 결제
+            - strong [ref=f1e45]: 18,000
+            - text: 원 · 코드
+            - strong [ref=f1e46]: PK-A
+          - paragraph [ref=f1e47]: 주문 08월 22일 04:35

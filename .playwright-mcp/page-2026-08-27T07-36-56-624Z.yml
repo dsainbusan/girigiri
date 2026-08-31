@@ -1,0 +1,247 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e4]:
+    - button "뒤로" [ref=f2e5] [cursor=pointer]: ‹
+    - heading "오늘의 구제" [level=1] [ref=f2e6]
+    - generic [ref=f2e7]: 점주 모드
+    - button "유저 모드로" [ref=f2e9] [cursor=pointer]
+  - main [ref=f2e10]:
+    - generic [ref=f2e11]:
+      - generic [ref=f2e13]:
+        - paragraph [ref=f2e14]: ✅ 오케이포스 연동됨
+        - paragraph [ref=f2e15]: 매일 20:00에 POS 재고로 오늘의 구제를 자동 준비해요
+        - link "POS 설정 ›" [ref=f2e16] [cursor=pointer]:
+          - /url: /store/pos
+      - generic [ref=f2e17]:
+        - paragraph [ref=f2e18]: 📦 오늘의 구제 — 발행 대기
+        - generic [ref=f2e19]:
+          - generic [ref=f2e20]:
+            - generic [ref=f2e21]: 🥐
+            - generic [ref=f2e23]:
+              - generic [ref=f2e24]:
+                - generic [ref=f2e25]: 통밀 캄파뉴
+                - generic [ref=f2e26]: POS 재고
+              - generic [ref=f2e27]:
+                - generic [ref=f2e28]: "-20%"
+                - generic [ref=f2e29]: 7,000원
+                - generic [ref=f2e30]: 5,600원
+              - generic [ref=f2e31]: 8개로 준비됐어요
+          - generic [ref=f2e32]:
+            - button "바로 올리기" [ref=f2e34] [cursor=pointer]
+            - link "수정" [ref=f2e35] [cursor=pointer]:
+              - /url: /store/products/42/edit
+            - button "오늘 안 함" [ref=f2e37] [cursor=pointer]
+        - generic [ref=f2e38]:
+          - generic [ref=f2e39]:
+            - generic [ref=f2e40]: 🥐
+            - generic [ref=f2e42]:
+              - generic [ref=f2e43]:
+                - generic [ref=f2e44]: 크루아상
+                - generic [ref=f2e45]: POS 재고
+              - generic [ref=f2e46]:
+                - generic [ref=f2e47]: "-20%"
+                - generic [ref=f2e48]: 3,500원
+                - generic [ref=f2e49]: 2,800원
+              - generic [ref=f2e50]: 17개로 준비됐어요
+          - generic [ref=f2e51]:
+            - button "바로 올리기" [ref=f2e53] [cursor=pointer]
+            - link "수정" [ref=f2e54] [cursor=pointer]:
+              - /url: /store/products/41/edit
+            - button "오늘 안 함" [ref=f2e56] [cursor=pointer]
+        - generic [ref=f2e57]:
+          - generic [ref=f2e58]:
+            - generic [ref=f2e59]: 🥐
+            - generic [ref=f2e61]:
+              - generic [ref=f2e62]:
+                - generic [ref=f2e63]: 초코 스콘
+                - generic [ref=f2e64]: POS 재고
+              - generic [ref=f2e65]:
+                - generic [ref=f2e66]: "-20%"
+                - generic [ref=f2e67]: 4,200원
+                - generic [ref=f2e68]: 3,360원
+              - generic [ref=f2e69]: 14개로 준비됐어요
+          - generic [ref=f2e70]:
+            - button "바로 올리기" [ref=f2e72] [cursor=pointer]
+            - link "수정" [ref=f2e73] [cursor=pointer]:
+              - /url: /store/products/40/edit
+            - button "오늘 안 함" [ref=f2e75] [cursor=pointer]
+        - generic [ref=f2e76]:
+          - generic [ref=f2e77]:
+            - generic [ref=f2e78]: 🥐
+            - generic [ref=f2e80]:
+              - generic [ref=f2e81]:
+                - generic [ref=f2e82]: 에그타르트
+                - generic [ref=f2e83]: POS 재고
+              - generic [ref=f2e84]:
+                - generic [ref=f2e85]: "-20%"
+                - generic [ref=f2e86]: 3,200원
+                - generic [ref=f2e87]: 2,560원
+              - generic [ref=f2e88]: 18개로 준비됐어요
+          - generic [ref=f2e89]:
+            - button "바로 올리기" [ref=f2e91] [cursor=pointer]
+            - link "수정" [ref=f2e92] [cursor=pointer]:
+              - /url: /store/products/39/edit
+            - button "오늘 안 함" [ref=f2e94] [cursor=pointer]
+        - generic [ref=f2e95]:
+          - generic [ref=f2e96]:
+            - generic [ref=f2e97]: 🥐
+            - generic [ref=f2e99]:
+              - generic [ref=f2e100]:
+                - generic [ref=f2e101]: 소금빵
+                - generic [ref=f2e102]: POS 재고
+              - generic [ref=f2e103]:
+                - generic [ref=f2e104]: "-20%"
+                - generic [ref=f2e105]: 3,000원
+                - generic [ref=f2e106]: 2,400원
+              - generic [ref=f2e107]: 20개로 준비됐어요
+          - generic [ref=f2e108]:
+            - button "바로 올리기" [ref=f2e110] [cursor=pointer]
+            - link "수정" [ref=f2e111] [cursor=pointer]:
+              - /url: /store/products/38/edit
+            - button "오늘 안 함" [ref=f2e113] [cursor=pointer]
+        - generic [ref=f2e114]:
+          - generic [ref=f2e115]:
+            - generic [ref=f2e116]: 🥐
+            - generic [ref=f2e118]:
+              - generic [ref=f2e119]:
+                - generic [ref=f2e120]: 베이글
+                - generic [ref=f2e121]: POS 재고
+              - generic [ref=f2e122]:
+                - generic [ref=f2e123]: "-20%"
+                - generic [ref=f2e124]: 3,800원
+                - generic [ref=f2e125]: 3,040원
+              - generic [ref=f2e126]: 15개로 준비됐어요
+          - generic [ref=f2e127]:
+            - button "바로 올리기" [ref=f2e129] [cursor=pointer]
+            - link "수정" [ref=f2e130] [cursor=pointer]:
+              - /url: /store/products/37/edit
+            - button "오늘 안 함" [ref=f2e132] [cursor=pointer]
+        - generic [ref=f2e133]:
+          - generic [ref=f2e134]:
+            - generic [ref=f2e135]: 🥐
+            - generic [ref=f2e137]:
+              - generic [ref=f2e138]:
+                - generic [ref=f2e139]: 밀크 식빵
+                - generic [ref=f2e140]: POS 재고
+              - generic [ref=f2e141]:
+                - generic [ref=f2e142]: "-20%"
+                - generic [ref=f2e143]: 5,500원
+                - generic [ref=f2e144]: 4,400원
+              - generic [ref=f2e145]: 10개로 준비됐어요
+          - generic [ref=f2e146]:
+            - button "바로 올리기" [ref=f2e148] [cursor=pointer]
+            - link "수정" [ref=f2e149] [cursor=pointer]:
+              - /url: /store/products/36/edit
+            - button "오늘 안 함" [ref=f2e151] [cursor=pointer]
+        - generic [ref=f2e152]:
+          - generic [ref=f2e153]:
+            - generic [ref=f2e154]: 🥐
+            - generic [ref=f2e156]:
+              - generic [ref=f2e157]:
+                - generic [ref=f2e158]: 단팥빵
+                - generic [ref=f2e159]: POS 재고
+              - generic [ref=f2e160]:
+                - generic [ref=f2e161]: "-20%"
+                - generic [ref=f2e162]: 2,800원
+                - generic [ref=f2e163]: 2,240원
+              - generic [ref=f2e164]: 21개로 준비됐어요
+          - generic [ref=f2e165]:
+            - button "바로 올리기" [ref=f2e167] [cursor=pointer]
+            - link "수정" [ref=f2e168] [cursor=pointer]:
+              - /url: /store/products/35/edit
+            - button "오늘 안 함" [ref=f2e170] [cursor=pointer]
+      - generic [ref=f2e171]:
+        - generic [ref=f2e172]: 전체 5 · 판매중 3 · 품절 0
+        - link "대시보드" [ref=f2e173] [cursor=pointer]:
+          - /url: /store/dashboard
+      - generic [ref=f2e174]:
+        - generic [ref=f2e175]: 🔎
+        - textbox "품목명으로 검색" [ref=f2e176]
+      - list [ref=f2e177]:
+        - listitem [ref=f2e178]:
+          - generic [ref=f2e179]:
+            - img "�������� �׽�Ʈ" [ref=f2e181]
+            - generic [ref=f2e182]:
+              - generic [ref=f2e183]:
+                - generic [ref=f2e184]: �������� �׽�Ʈ
+                - generic [ref=f2e185]: 판매중
+              - generic [ref=f2e186]:
+                - generic [ref=f2e187]: "-10%"
+                - generic [ref=f2e188]: 5,000원
+                - generic [ref=f2e189]: 4,500원
+              - generic [ref=f2e190]: 재고 3 / 3개 · 오늘 11:13 등록
+          - generic [ref=f2e191]:
+            - link "수정" [ref=f2e192] [cursor=pointer]:
+              - /url: /store/products/19/edit
+            - button "품절" [ref=f2e194] [cursor=pointer]
+            - button "삭제" [ref=f2e196] [cursor=pointer]
+        - listitem [ref=f2e197]:
+          - generic [ref=f2e198]:
+            - generic [ref=f2e199]: 🥐
+            - generic [ref=f2e201]:
+              - generic [ref=f2e202]:
+                - generic [ref=f2e203]: 소금빵 묶음
+                - generic [ref=f2e204]: 판매중
+              - generic [ref=f2e205]:
+                - generic [ref=f2e206]: "-50%"
+                - generic [ref=f2e207]: 6,000원
+                - generic [ref=f2e208]: 3,000원
+              - generic [ref=f2e209]: 재고 5 / 5개 · 8/26 등록
+          - generic [ref=f2e210]:
+            - link "수정" [ref=f2e211] [cursor=pointer]:
+              - /url: /store/products/10/edit
+            - button "품절" [ref=f2e213] [cursor=pointer]
+            - button "삭제" [ref=f2e215] [cursor=pointer]
+        - listitem [ref=f2e216]:
+          - generic [ref=f2e217]:
+            - generic [ref=f2e218]: 🥐
+            - generic [ref=f2e220]:
+              - generic [ref=f2e221]:
+                - generic [ref=f2e222]: 오늘 케이크
+                - generic [ref=f2e223]: 마감
+              - generic [ref=f2e224]:
+                - generic [ref=f2e225]: "-50%"
+                - generic [ref=f2e226]: 15,000원
+                - generic [ref=f2e227]: 7,500원
+              - generic [ref=f2e228]: 재고 4 / 4개 · 8/26 등록
+          - generic [ref=f2e229]:
+            - link "수정" [ref=f2e230] [cursor=pointer]:
+              - /url: /store/products/17/edit
+            - button "삭제" [ref=f2e232] [cursor=pointer]
+        - listitem [ref=f2e233]:
+          - generic [ref=f2e234]:
+            - generic [ref=f2e235]: 🥐
+            - generic [ref=f2e237]:
+              - generic [ref=f2e238]:
+                - generic [ref=f2e239]: 크루아상 세트
+                - generic [ref=f2e240]: 마감
+              - generic [ref=f2e241]:
+                - generic [ref=f2e242]: "-50%"
+                - generic [ref=f2e243]: 9,000원
+                - generic [ref=f2e244]: 4,500원
+              - generic [ref=f2e245]: 재고 3 / 8개 · 8/24 등록
+          - generic [ref=f2e246]:
+            - link "수정" [ref=f2e247] [cursor=pointer]:
+              - /url: /store/products/16/edit
+            - button "삭제" [ref=f2e249] [cursor=pointer]
+        - listitem [ref=f2e250]:
+          - generic [ref=f2e251]:
+            - generic [ref=f2e252]: 🥐
+            - generic [ref=f2e254]:
+              - generic [ref=f2e255]:
+                - generic [ref=f2e256]: 식빵 마감세트
+                - generic [ref=f2e257]: 판매중
+              - generic [ref=f2e258]:
+                - generic [ref=f2e259]: "-50%"
+                - generic [ref=f2e260]: 6,000원
+                - generic [ref=f2e261]: 3,000원
+              - generic [ref=f2e262]: 재고 10 / 10개 · 8/22 등록
+          - generic [ref=f2e263]:
+            - link "수정" [ref=f2e264] [cursor=pointer]:
+              - /url: /store/products/15/edit
+            - button "품절" [ref=f2e266] [cursor=pointer]
+            - button "삭제" [ref=f2e268] [cursor=pointer]
+      - generic [ref=f2e269]:
+        - link "+ 직접 등록" [ref=f2e270] [cursor=pointer]:
+          - /url: /store/products/new
+        - link "자동 등록 템플릿" [ref=f2e271] [cursor=pointer]:
+          - /url: /store/templates
