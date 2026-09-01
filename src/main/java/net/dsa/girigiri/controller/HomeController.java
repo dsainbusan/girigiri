@@ -10,6 +10,7 @@ import net.dsa.girigiri.service.HomeService;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.NotificationService;
 import net.dsa.girigiri.service.RecommendationService;
+import net.dsa.girigiri.util.KakaoGeocodingClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,8 +22,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * TODO(강노은): 지금은 매장 전체를 좌표만 보고 뿌린다(지도).
- * 카드 리스트(storeCards)는 active 상품 있는 매장만 나온다 — 카테고리 필터는 다음 작업.
+ * 강노은: 지도(stores)는 좌표 있는 매장 전체를 그대로 뿌린다 — 카테고리 필터가 안 걸린다.
+ * 카드 리스트(storeCards)는 active 상품 있는 매장만 나오고, 카테고리 필터는 home.html의
+ * chip-row가 클라이언트 사이드로 처리한다(카드만 대상, 지도 마커는 그대로 유지).
  */
 @Controller
 @RequiredArgsConstructor
@@ -33,6 +35,7 @@ public class HomeController {
 	private final LikeService likeService;
 	private final NotificationService notificationService;
 	private final RecommendationService recommendationService;
+	private final KakaoGeocodingClient kakaoGeocodingClient;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -64,11 +67,19 @@ public class HomeController {
 		model.addAttribute("recommendation",
 				recommendationService.getRecommendations(userId, likedStoreIds, shownStoreIds, lat, lng));
 
-		// TODO(강노은): GPS/역지오코딩 연동 전까지 고정값.
-		model.addAttribute("location", "내 동네");
+		// 강노은: 좌표가 있으면 실제 동네 이름으로(KakaoGeocodingClient), 없거나 실패하면 "내 동네" 폴백.
+		model.addAttribute("location", resolveLocationLabel(lat, lng));
 		model.addAttribute("unreadCount", notificationService.getUnreadCount(userId));
 		model.addAttribute("loggedIn", userId != null); // SSE 알림 구독은 로그인했을 때만 열게(home.html)
 		return "home";
+	}
+
+	/** 좌표 없거나(Geolocation 미허용) 역지오코딩 실패 시 기존처럼 "내 동네" 고정 문구로 폴백한다. */
+	private String resolveLocationLabel(Double lat, Double lng) {
+		if (lat == null || lng == null) {
+			return "내 동네";
+		}
+		return kakaoGeocodingClient.reverseGeocode(lat, lng).orElse("내 동네");
 	}
 
 	private StoreMapDto toMapDto(StoreEntity store) {

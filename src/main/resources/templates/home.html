@@ -134,9 +134,14 @@
 				var marker = new kakao.maps.Marker({ position: position, map: map });
 
 				kakao.maps.event.addListener(marker, 'click', function () {
+					// 강노은: 마커 클릭 시 이름/카테고리만 보여주고 끝이라 가게 상세로 넘어갈 방법이
+					// 없었음 — 인포윈도우에 상세 페이지 링크를 추가한다.
 					infoWindow.setContent(
 						'<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">'
+						+ '<a href="/user/stores/' + store.id + '" style="color:inherit;text-decoration:none;">'
 						+ store.storeName + (store.category ? ' · ' + store.category : '')
+						+ ' <span style="color:var(--c-accent)">›</span>'
+						+ '</a>'
 						+ '</div>'
 					);
 					infoWindow.open(map, marker);

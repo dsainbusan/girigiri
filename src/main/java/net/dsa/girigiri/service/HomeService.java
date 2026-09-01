@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 
 /**
  * 홈 화면(메인) 조립용 서비스.
- * TODO(강노은): 지금은 매장당 할인율 1위 상품 하나만 대표로 보여준다.
- * 페이징/거리순 정렬은 사용자 위치 연동 이후에 추가할 것.
+ * 거리순 정렬은 좌표(userLat/userLng)가 있을 때만 적용되고, 없으면 마감임박순으로 폴백한다.
+ * TODO(강노은): 지금은 매장당 할인율 1위 상품 하나만 대표로 보여준다. 페이징은 아직 없음.
  */
 @Service
 @RequiredArgsConstructor

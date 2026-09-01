@@ -22,7 +22,7 @@ public class StoreCardDto {
 	private String thumbColor;
 	private String name;          // 매장명
 	private String category;
-	private String distance;      // TODO(강노은): 사용자 위치 연동되면 실제 거리로 교체. 지금은 빈 값.
+	private String distance;      // "1.2km" 형태 — 사용자 좌표 없으면 빈 값(DistanceUtil.label 참고).
 	private String origPrice;     // "12,000원" 형태로 포맷된 문자열
 	private String salePrice;
 	private String discountRate;  // "-51%" 형태
