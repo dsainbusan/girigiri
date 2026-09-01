@@ -75,6 +75,13 @@
 .badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent); }
 .badge--info     { background: var(--c-info-weak);    color: var(--c-info); }
 
+/* .field(flex-direction:column)의 직계 자식 배지(signup.html/mypageView edit.html의 GPS 상태 배지)만
+   align-self:flex-start를 준다 — 기본 align-items:stretch 때문에 부모 폭까지 늘어나던 문제. 처음엔
+   .badge 전체에 걸었더니 .u-row(flex-row, align-items:center) 안의 다른 배지(mypageView/edit.html의
+   "카카오" 연동 배지 등)가 세로 중앙정렬을 잃는 부작용이 있어 .field 안에서만 적용되게 좁혔다
+   (layout-admin.css의 .field-group > .badge와 같은 이유). */
+.field > .badge { align-self: flex-start; }
+
 /* ---------------- Price (원가 취소선 + 할인가) ---------------- */
 .price { display: inline-flex; align-items: center; gap: var(--s-2); }
 .price__orig { font-size: var(--fs-sm); color: var(--c-text-mut); text-decoration: line-through; }

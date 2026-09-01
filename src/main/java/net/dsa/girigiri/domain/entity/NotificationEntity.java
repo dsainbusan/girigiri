@@ -30,6 +30,12 @@ public class NotificationEntity {
 	public static final String TYPE_RESERVATION_NOSHOW = "RESERVATION_NOSHOW";     // 노쇼 처리
 	public static final String TYPE_INQUIRY_COMMENT = "INQUIRY_COMMENT";           // 문의에 새 댓글(강노은)
 
+	// 추가됨 — 왜: 슈퍼어드민 알림 패널(회원/게시판/예약 3개 탭)용. 수신자는 항상 대표 관리자 계정
+	// 1명(AdminNotificationTriggerScheduler 참고) — 스키마 변경 없이 타입 문자열만 추가.
+	public static final String TYPE_ADMIN_NEW_MEMBER = "ADMIN_NEW_MEMBER";         // 신규 회원가입
+	public static final String TYPE_ADMIN_NEW_INQUIRY = "ADMIN_NEW_INQUIRY";       // 새 문의 등록
+	public static final String TYPE_ADMIN_NEW_RESERVATION = "ADMIN_NEW_RESERVATION"; // 새 예약 등록
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

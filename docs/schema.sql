@@ -187,3 +187,35 @@ CREATE TABLE report (
     generated_at       DATETIME,
     FOREIGN KEY (store_id) REFERENCES store(id)
 );
+
+-- 추가됨 (2026-08-27, 송보미) — 슈퍼어드민 공지사항 관리 (WBS 7.0).
+-- 변경됨 (2026-09-01, 송보미) — "게시 기간을 정하고 싶다"는 요청으로 publish_start_at/publish_end_at
+-- (둘 다 nullable, null이면 즉시·무제한) 추가. published는 그대로 수동 on/off("게시글 내리기") 스위치.
+CREATE TABLE notice (
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title             VARCHAR(100) NOT NULL,
+    content           VARCHAR(2000) NOT NULL,
+    published         BOOLEAN NOT NULL,
+    publish_start_at  DATE,
+    publish_end_at    DATE,
+    created_at        DATETIME,
+    updated_at        DATETIME
+);
+
+-- 추가됨 (2026-09-01, 송보미) — 슈퍼어드민 "신고 · 문의" 화면의 신고 접수 탭(WBS 7.0). 원래 정적
+-- 데모였는데 매장 문의/유저 문의처럼 클릭 → 상세 → 답변이 되게 해달라는 요청으로 테이블을 만들었다.
+-- "report"는 이미 매장 판매/폐기 리포트가 쓰고 있어 이름을 complaint로 지었다. 신고 제출 화면(소비자용)이
+-- 아직 없어 신고자는 FK 대신 스냅샷 문자열로 저장.
+CREATE TABLE complaint (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    target_name      VARCHAR(100) NOT NULL,
+    target_store_id  BIGINT,
+    reason           VARCHAR(100) NOT NULL,
+    content          VARCHAR(1000) NOT NULL,
+    reporter_name    VARCHAR(50) NOT NULL,
+    reporter_id      BIGINT,
+    status           VARCHAR(20) NOT NULL,
+    admin_reply      VARCHAR(1000),
+    created_at       DATETIME,
+    resolved_at      DATETIME
+);

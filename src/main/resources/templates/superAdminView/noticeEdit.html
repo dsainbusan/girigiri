@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!--/*
+  공지사항 수정. /superadmin/notices/{id}/edit 로 접속 — 상세 화면의 "수정" 버튼에서 진입.
+  noticeNew.html과 거의 같은 폼이지만 기존 값이 채워져 있고 게시 여부 체크박스·게시 기간이 추가된다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('공지사항 수정', ~{:: #content}, 'notices', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/notices/{id}(id=${notice.id})}">&larr; 공지사항 상세로</a>
+
+  <p class="form-error" th:if="${param.error == 'period'}">종료일은 시작일보다 빠를 수 없어요.</p>
+  <p class="form-error" th:if="${param.error != null and param.error != 'period'}">제목과 내용을 모두 입력해 주세요.</p>
+
+  <form th:action="@{/superadmin/notices/{id}/edit(id=${notice.id})}" method="post" class="form-narrow">
+    <div class="field-group">
+      <label class="field-group__label" for="title">제목 <span class="req">*</span></label>
+      <input class="field" type="text" id="title" name="title" th:value="${notice.title}" required maxlength="100">
+    </div>
+
+    <div class="field-group">
+      <label class="field-group__label" for="content">내용 <span class="req">*</span></label>
+      <textarea class="field" id="content" name="content" required maxlength="2000"
+                th:text="${notice.content}"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label class="field-group__label">게시 기간 <span class="text-muted text-muted--sm">(선택, 비우면 즉시·무제한)</span></label>
+      <div class="flex-row">
+        <input class="field" type="date" name="publishStartAt" th:value="${notice.publishStartAt}" style="flex:1">
+        <span class="text-muted">~</span>
+        <input class="field" type="date" name="publishEndAt" th:value="${notice.publishEndAt}" style="flex:1">
+      </div>
+    </div>
+
+    <div class="field-group field--check">
+      <input type="checkbox" id="published" name="published" value="true" th:checked="${notice.published}">
+      <label for="published">게시중</label>
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block mt-24">저장</button>
+  </form>
+
+</div>
+</body>
+</html>

@@ -1,55 +1,80 @@
 <!DOCTYPE html>
 <!--/*
-  매장 관리 (입점 승인 / 매장 목록). /superadmin/stores 로 접속.
-  TODO(송보미): 데모 데이터 → StoreRepository 연동, 승인/반려 액션은 실제 처리 API 붙을 때 버튼 활성화.
+  매장 관리 — 표(테이블) 스타일. /superadmin/stores 로 접속.
+  StoreRepository.findAll()에서 반려(REJECTED)만 뺀 전체 매장을 표 하나로 보여준다 — 승인대기/매장목록을
+  따로 나누지 말고 전체로, 대기 매장은 필터로 보게 해달라는 요청으로 예전 2표 구조를 되돌렸다.
+  "대기" 필터(filter=PENDING)를 고르면 approvalStatus=PENDING인 매장만 좁혀서 보여준다.
+  매장명 칸을 클릭하면 /superadmin/stores/{id} 상세로 이동(표 행 자체는 <a>가 될 수 없어 매장명 셀만
+  링크) — 대기 중인 매장도 상세 페이지가 이미 "대기중" 배지를 지원해서 문제없이 들어간다.
+  대표 연락처(phone)는 상세 화면까지 안 들어가도 목록에서 바로 보이게 컬럼으로 뺐다(요청) — StoreEntity엔
+  email 필드가 없어서(전화번호·사업자번호만 있음) 매장 쪽엔 이메일 컬럼을 안 만든다, 이 연락처 컬럼이
+  그 역할을 대신한다.
+
+  "관리" 컬럼(예전엔 "액션"): 대기 행엔 승인(SuperAdminController#approveStore) + 수정 + 삭제, 나머지는
+  수정 + 삭제만. 수정은 기존 /superadmin/stores/{id}/edit 화면 재사용. 삭제(SuperAdminController#deleteStore,
+  신규)는 withdrawMember(회원 강제 탈퇴)와 동일한 가드 — 미완료 예약이 있으면 막고(?deleteError), 통과하면
+  그 매장의 상품도 같이 지운다(FK 연관관계 매핑이 없어 고아로 남는 걸 방지).
+  회원 관리(members.html)와 달리 체크박스/일괄 액션은 없음(요청 범위 밖).
+  TODO(송보미): 반려(REJECTED) 액션은 아직 없음 — 필요해지면 승인 버튼 옆에 추가할 것.
+
+  매장명 링크가 이제 filter를 같이 실어 보낸다 — "매장 상세의 '← 매장 목록'이 원래 보던 탭(대기 등)
+  으로 정확히 돌아가게 해달라"는 요청. SuperAdminController#storeDetail이 받아 모델에 얹고,
+  storeDetail.html이 그대로 다시 실어 "← 매장 목록" 링크를 만든다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('매장 관리', ~{:: #content}, 'stores', '슈퍼어드민')}">
 <body>
 <div id="content" th:fragment="content">
 
-  <h2 class="section-title">입점 승인 대기</h2>
-  <div class="card">
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">동네빵집 청파점</div>
-        <div class="u-sub">2026-08-20 신청 · 베이커리</div>
-      </div>
-      <span class="badge badge--accent">대기</span>
-      <button class="btn btn--sm btn--outline" type="button" disabled>승인</button>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">싱싱반찬가게</div>
-        <div class="u-sub">2026-08-19 신청 · 반찬</div>
-      </div>
-      <span class="badge badge--success">승인</span>
-    </div>
+  <div class="tabs">
+    <a class="tab" th:classappend="${filter == null} ? ' is-active'" th:href="@{/superadmin/stores}">전체</a>
+    <a class="tab" th:classappend="${filter == 'PENDING'} ? ' is-active'" th:href="@{/superadmin/stores(filter='PENDING')}">대기</a>
   </div>
 
-  <h2 class="section-title">매장 목록<span class="section-title__count">3곳</span></h2>
-  <div class="card">
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">보미네베이커리</div>
-        <div class="u-sub">베이커리 · 광안동</div>
-      </div>
-      <span class="badge badge--success">영업중</span>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">채현이네 도시락</div>
-        <div class="u-sub">도시락 · 남천동</div>
-      </div>
-      <span class="badge badge--success">영업중</span>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">노은카페</div>
-        <div class="u-sub">카페 · 대연동</div>
-      </div>
-      <span class="badge badge--discount">휴업</span>
-    </div>
+  <p class="form-error" th:if="${param.deleteError}">
+    미완료 예약이 있어 삭제할 수 없어요 — 픽업/취소/노쇼 처리가 끝난 뒤 다시 시도해 주세요.
+  </p>
+
+  <p class="result-count">매장 <b th:text="${stores.size()}">0</b>곳 조회되었습니다.</p>
+
+  <div class="table-wrap">
+    <table class="data-table store-table">
+      <thead>
+        <tr>
+          <th>매장명</th>
+          <th>카테고리</th>
+          <th>주소</th>
+          <th>대표 연락처</th>
+          <th>상태</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(stores)}">
+          <td colspan="6" class="table-empty">모든 매장이 입점 완료했습니다.</td>
+        </tr>
+        <tr th:each="store : ${stores}">
+          <td class="cell-name"><a th:href="@{/superadmin/stores/{id}(id=${store.id}, filter=${filter})}" th:text="${store.storeName}">매장명</a></td>
+          <td th:text="${store.category}">카테고리</td>
+          <td th:text="${store.address}">주소</td>
+          <td th:text="${store.phone} ?: '-'">010-0000-0000</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${store.approvalStatus == 'PENDING'}">대기</span>
+            <span class="badge badge--success" th:if="${store.approvalStatus != 'PENDING' and openStatusMap[store.id]}">영업중</span>
+            <span class="badge badge--danger" th:if="${store.approvalStatus != 'PENDING' and !openStatusMap[store.id]}">휴업</span>
+          </td>
+          <td class="action-row">
+            <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post">
+              <button class="chip-btn" type="submit">승인</button>
+            </form>
+            <a class="chip-btn chip-btn--neutral" th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}">수정</a>
+            <form th:action="@{/superadmin/stores/{id}/delete(id=${store.id})}" method="post">
+              <button class="chip-btn chip-btn--danger" type="submit">삭제</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
 </div>

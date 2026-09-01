@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <!--/*
-  슈퍼어드민(플랫폼 운영자) 전용 wide 레이아웃 — common/layout.html(모바일 420px 고정폭, 소비자·사장님용)과는
-  별도 트랙이다. 운영자는 PC로 통계/회원/매장/신고/공지를 관리한다고 가정하고 사이드바 + 넓은 콘텐츠 영역으로 짠다.
-  두 레이아웃을 섞어 쓰지 않는다 — 슈퍼어드민 화면은 이 프래그먼트만, 나머지 전부는 common/layout.html만 쓴다.
+  슈퍼어드민(플랫폼 운영자) 전용 레이아웃 — 사용자가 제공한 참고 디자인
+  (/Users/bomisong/Downloads/admin-console.html)의 topbar(통계+유틸)/gnb(가로 탭)/drawer(알림)를
+  그대로 이식했다. common/layout.html(모바일 420px, 소비자·사장님용)과는 완전히 별도 트랙이고,
+  static/css/layout-admin.css 하나만 링크한다(tokens.css/base.css/components.css는 그린 톤 BEM
+  시스템이라 여기서는 안 씀 — 같이 로드하면 .btn/.badge 같은 클래스명이 겹쳐서 캐스케이드가 꼬인다).
 
   사용법 (페이지 템플릿 예):
   <html th:replace="~{common/layout-admin :: layoutAdmin('회원 관리', ~{:: #content}, 'members', '')}">
     <body>
-      <div id="content" th:fragment="content"> ...페이지 본문... </div>
+      <div id="content" th:fragment="content"> ...페이지 본문(.tabs/.toolbar/.data-table 등)... </div>
     </body>
   </html>
 
-  파라미터 (4개 전부 명시할 것 — common/layout.html과 동일한 이유로 위치 인자 생략 금지 컨벤션 유지:
-  layout()에서 badge 하나 빠뜨려 500 에러 났던 전례가 있다)
-   - title   : 상단바 제목 & <title>
+  파라미터 (4개 전부 명시할 것 — 예전 layout()에서 badge 하나 빠뜨려 500 에러 났던 전례가 있어 계속 유지):
+   - title   : <h1 class="page-title">로 본문 위에 자동으로 뜸(각 페이지에서 따로 안 그려도 됨) & <title>
    - content : 본문 프래그먼트 (~{:: #content})
-   - active  : 좌측 사이드바 활성 메뉴값 ('dashboard' | 'members' | 'stores' | 'reports' | 'notices' | 'codes')
-   - badge   : 상단바 제목 옆 텍스트 뱃지 (예: '슈퍼어드민'), 안 쓰면 ''
+   - active  : gnb 활성 탭값 ('dashboard' | 'members' | 'stores' | 'reports' | 'notices' | 'codes')
+   - badge   : topbar 브랜드 옆 작은 라벨(예: '슈퍼어드민'), 안 쓰면 ''
+
+  통계 스트립(todayNewMemberCount/pendingStoreCount)과 알림 드로어(unreadNotificationCount/
+  groupedNotifications)는 SuperAdminNotificationAdvice(@ControllerAdvice)가 모든 SuperAdminController
+  응답에 자동으로 채워준다 — 여기서는 그 모델 속성을 그대로 바인딩만 한다. 알림이 실제로 "생기는" 트리거는
+  AdminNotificationTriggerScheduler(1분마다 스캔, 강노은의 NotificationTriggerScheduler와 동일 패턴).
 
   권한 체크는 여기서 하지 않는다 — role 기준 접근 제어는 서버(시큐리티/컨트롤러) 레이어 책임이고
   (CLAUDE.md "권한 체크는 항상 role 기준" 참고), 이 프래그먼트는 이미 통과한 요청의 화면만 그린다.
@@ -27,64 +33,157 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="${title} != null ? ${title} + ' · 운영자' : 'ギリギリ 운영자'">ギリギリ 운영자</title>
-  <link rel="stylesheet" th:href="@{/css/tokens.css}">
-  <link rel="stylesheet" th:href="@{/css/base.css}">
-  <link rel="stylesheet" th:href="@{/css/components.css}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
   <link rel="stylesheet" th:href="@{/css/layout-admin.css}">
 </head>
 <body class="admin">
-  <div class="admin-shell">
 
-    <aside class="admin-sidebar">
-      <div class="admin-sidebar__brand">
-        <span class="admin-sidebar__logo">ギリギリ</span>
-        <span class="badge badge--accent">운영자</span>
-      </div>
-      <nav class="admin-nav">
-        <a class="admin-nav__item" th:classappend="${active=='dashboard'} ? ' is-active'"
-           th:href="@{/superadmin/dashboard}">
-          <span class="admin-nav__ico">📊</span><span>통계 대시보드</span>
-        </a>
-        <a class="admin-nav__item" th:classappend="${active=='members'} ? ' is-active'"
-           th:href="@{/superadmin/members}">
-          <span class="admin-nav__ico">👤</span><span>회원 관리</span>
-        </a>
-        <a class="admin-nav__item" th:classappend="${active=='stores'} ? ' is-active'"
-           th:href="@{/superadmin/stores}">
-          <span class="admin-nav__ico">🏪</span><span>매장 관리</span>
-        </a>
-        <a class="admin-nav__item" th:classappend="${active=='reports'} ? ' is-active'"
-           th:href="@{/superadmin/reports}">
-          <span class="admin-nav__ico">🚨</span><span>신고 · 문의</span>
-        </a>
-        <a class="admin-nav__item" th:classappend="${active=='notices'} ? ' is-active'"
-           th:href="@{/superadmin/notices}">
-          <span class="admin-nav__ico">📢</span><span>공지사항</span>
-        </a>
-        <a class="admin-nav__item" th:classappend="${active=='codes'} ? ' is-active'"
-           th:href="@{/superadmin/codes}">
-          <span class="admin-nav__ico">🏷️</span><span>카테고리 · 코드</span>
-        </a>
-      </nav>
-    </aside>
+<!-- 아이콘 심볼 — 참고 디자인의 스프라이트 중 기리기리 실제 화면에서 쓰는 것만 남김 -->
+<svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4S18.3 16.4 19.5 20"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5Z"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.2"/><path d="m20 20-3.6-3.6"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10 12 14.5 16.5 10M4.5 19.5h15"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4.5 16z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 6.5h15M9.5 6.5V4.2h5v2.3M7 6.5l.9 13.3h8.2L17 6.5"/></symbol>
+</svg>
 
-    <div class="admin-main">
-      <header class="admin-topbar">
-        <h1 class="admin-topbar__title" th:text="${title}">제목</h1>
-        <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">뱃지</span>
-        <span class="u-grow"></span>
-        <!--/* 세션에 로그인 표기용 값이 아직 없어도 깨지지 않도록 방어 (문창호의 role/세션 작업 전) */-->
-        <span class="admin-topbar__user" th:text="${session.nickname} ?: '운영자'">운영자</span>
-        <form th:action="@{/auth/logout}" method="post">
-          <button type="submit" class="admin-topbar__action">로그아웃</button>
-        </form>
-      </header>
-
-      <main class="admin-content">
-        <div th:replace="${content}"></div>
-      </main>
+<!-- 상단 유틸 바 -->
+<div class="topbar">
+  <div class="container topbar__inner">
+    <div class="topbar__stats">
+      <span>신규회원 <b th:text="${todayNewMemberCount} + '명'">0명</b>
+      <span>/</span>
+      <span>승인대기 매장 <b th:text="${pendingStoreCount} + '건'">0건</b></span>
+      (<span th:text="${todayLabel}">2026-08-31</span> 기준)</span>
     </div>
-
+    <div class="topbar__util">
+      <span class="util-btn util-btn--user">
+        <span class="avatar"><svg class="icon"><use href="#i-user"/></svg></span>
+        <!--/* 한때 세션 닉네임을 붙여 보여줬는데(실제 닉네임이 그대로 노출),
+             "그냥 운영자로" 피드백으로 닉네임과 무관하게 항상 고정 문구만 보여준다 —
+             슈퍼어드민 패널은 개인이 아니라 역할(운영자)로 보여야 한다는 의도. */-->
+        <span>운영자님 반갑습니다</span>
+      </span>
+      <button type="button" class="util-btn" id="admin-notif-open" aria-label="알림 열기">
+        <svg class="icon"><use href="#i-bell"/></svg>
+        <span class="util-btn__badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">1</span>
+      </button>
+      <form th:action="@{/auth/logout}" method="post">
+        <button type="submit" class="util-btn">로그아웃</button>
+      </form>
+    </div>
   </div>
+</div>
+
+<!-- 글로벌 내비게이션 -->
+<nav class="gnb">
+  <div class="container gnb__bar">
+    <a class="gnb__brand" th:href="@{/superadmin/dashboard}">ギリギリ</a>
+    <span th:if="${badge}" class="gnb__badge-label" th:text="${badge}">뱃지</span>
+    <ul class="gnb__list">
+      <li><a class="gnb__link" th:classappend="${active=='dashboard'} ? ' is-active'"
+             th:href="@{/superadmin/dashboard}">홈</a></li>
+      <li><a class="gnb__link" th:classappend="${active=='members'} ? ' is-active'"
+             th:href="@{/superadmin/members}">회원 관리</a></li>
+      <li><a class="gnb__link" th:classappend="${active=='stores'} ? ' is-active'"
+             th:href="@{/superadmin/stores}">매장 관리</a></li>
+      <li><a class="gnb__link" th:classappend="${active=='reports'} ? ' is-active'"
+             th:href="@{/superadmin/reports}">신고 · 문의</a></li>
+      <li><a class="gnb__link" th:classappend="${active=='notices'} ? ' is-active'"
+             th:href="@{/superadmin/notices}">공지사항</a></li>
+      <li><a class="gnb__link" th:classappend="${active=='codes'} ? ' is-active'"
+             th:href="@{/superadmin/codes}">카테고리 · 코드</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main class="container page">
+  <h1 class="page-title" th:text="${title}">제목</h1>
+  <div th:replace="${content}"></div>
+</main>
+
+<!-- 알림 드로어 -->
+<div class="drawer-backdrop" id="admin-drawer-backdrop"></div>
+<aside class="drawer" id="admin-drawer" aria-label="최신 알림">
+  <div class="drawer__head">
+    <h2 class="drawer__title">최신 알림</h2>
+    <span class="count-badge" th:if="${unreadNotificationCount > 0}" th:text="${unreadNotificationCount}">1</span>
+    <button type="button" class="drawer__close" id="admin-drawer-close" aria-label="닫기"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+
+  <div class="drawer__tabs">
+    <button type="button" class="drawer__tab is-active" data-notif-tab="ALL">전체</button>
+    <button type="button" class="drawer__tab" data-notif-tab="MEMBER">회원</button>
+    <button type="button" class="drawer__tab" data-notif-tab="BOARD">게시판</button>
+    <button type="button" class="drawer__tab" data-notif-tab="RESERVATION">예약</button>
+  </div>
+
+  <div class="noti-list">
+    <p class="noti-empty" th:if="${#maps.isEmpty(groupedNotifications)}">알림이 없습니다.</p>
+    <th:block th:each="entry : ${groupedNotifications}">
+      <h3 class="noti-date" th:text="${entry.key}">09월 17일 (토)</h3>
+      <a class="noti" th:each="n : ${entry.value}"
+         th:classappend="${n.read} ? ' noti--read' : ''"
+         th:attr="data-category=${n.category}"
+         th:href="@{/superadmin/notifications/{id}(id=${n.id})}">
+        <span class="noti__kind"
+              th:text="${n.category == 'MEMBER'} ? '신규회원' : (${n.category == 'BOARD'} ? '게시판 문의' : '예약')">신규회원</span>
+        <p class="noti__text" th:text="${n.message}">메시지</p>
+        <span class="noti__time" th:text="${n.dateLabel} + ' ' + ${n.timeLabel}">09월 17일 (토) 11:59</span>
+      </a>
+    </th:block>
+  </div>
+
+  <div class="drawer__foot">
+    <form th:action="@{/superadmin/notifications/read-all}" method="post">
+      <button type="submit" class="btn btn--ghost btn--sm">모두 읽음</button>
+    </form>
+  </div>
+</aside>
+
+<!--/* 드로어 열고닫기 + 탭 필터 — 참고 디자인의 스크립트를 서버 렌더 데이터에 맞게 최소 수정해서 이식.
+     서버 왕복 없이 이미 렌더된 목록을 data-category로 보이기/숨기기만 한다. */-->
+<script>
+  (function () {
+    var openBtn = document.getElementById('admin-notif-open');
+    var closeBtn = document.getElementById('admin-drawer-close');
+    var drawer = document.getElementById('admin-drawer');
+    var backdrop = document.getElementById('admin-drawer-backdrop');
+
+    var toggleDrawer = function (open) {
+      drawer.classList.toggle('is-open', open);
+      backdrop.classList.toggle('is-open', open);
+    };
+    if (openBtn) openBtn.addEventListener('click', function () { toggleDrawer(true); });
+    if (closeBtn) closeBtn.addEventListener('click', function () { toggleDrawer(false); });
+    if (backdrop) backdrop.addEventListener('click', function () { toggleDrawer(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleDrawer(false); });
+
+    var tabButtons = document.querySelectorAll('[data-notif-tab]');
+    tabButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        tabButtons.forEach(function (b) { b.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+        var category = btn.getAttribute('data-notif-tab');
+
+        document.querySelectorAll('.noti').forEach(function (row) {
+          var show = category === 'ALL' || row.getAttribute('data-category') === category;
+          row.style.display = show ? '' : 'none';
+        });
+        document.querySelectorAll('.noti-date').forEach(function (heading) {
+          var group = heading.nextElementSibling;
+          var visible = false;
+          while (group && group.classList && group.classList.contains('noti')) {
+            if (group.style.display !== 'none') { visible = true; }
+            group = group.nextElementSibling;
+          }
+          heading.style.display = visible ? '' : 'none';
+        });
+      });
+    });
+  })();
+</script>
 </body>
 </html>

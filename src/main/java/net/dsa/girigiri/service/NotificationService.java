@@ -1,6 +1,7 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.AdminNotificationRowDto;
 import net.dsa.girigiri.domain.dto.NotificationRowDto;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.NotificationSettingEntity;
@@ -13,9 +14,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 강노은: 인앱 알림함 + 알림 설정 + 실시간 전송(SSE). 알림이 실제로 "생기는" 트리거는
@@ -44,6 +47,29 @@ public class NotificationService {
 						n.getLinkUrl(),
 						n.isRead(),
 						relativeLabel(n.getCreatedAt())
+				))
+				.toList();
+	}
+
+	/**
+	 * 추가됨 — 왜: 슈퍼어드민 알림 패널용. getNotifications()와 모양은 같지만, 유저용 상대시간 라벨
+	 * ("오늘"/"어제") 대신 패널의 날짜별 그룹 헤더에 쓸 절대 날짜 라벨과, 탭 필터(회원/게시판/예약)에
+	 * 쓸 카테고리를 함께 내려준다.
+	 */
+	public List<AdminNotificationRowDto> getAdminNotifications(Long adminId) {
+		return notificationRepository.findAll().stream()
+				.filter(n -> adminId.equals(n.getUserId()))
+				.sorted(Comparator.comparing(NotificationEntity::getCreatedAt,
+						Comparator.nullsLast(Comparator.reverseOrder())))
+				.map(n -> new AdminNotificationRowDto(
+						n.getId(),
+						icon(n.getType()),
+						n.getMessage(),
+						n.getLinkUrl(),
+						n.isRead(),
+						adminCategory(n.getType()),
+						dateLabel(n.getCreatedAt()),
+						timeLabel(n.getCreatedAt())
 				))
 				.toList();
 	}
@@ -134,6 +160,9 @@ public class NotificationService {
 			case NotificationEntity.TYPE_RESERVATION_PICKUP_SOON -> "⏰";
 			case NotificationEntity.TYPE_RESERVATION_NOSHOW -> "⚠️";
 			case NotificationEntity.TYPE_INQUIRY_COMMENT -> "💬";
+			case NotificationEntity.TYPE_ADMIN_NEW_MEMBER -> "👤";
+			case NotificationEntity.TYPE_ADMIN_NEW_INQUIRY -> "💬";
+			case NotificationEntity.TYPE_ADMIN_NEW_RESERVATION -> "📅";
 			default -> "🔔";
 		};
 	}
@@ -150,5 +179,31 @@ public class NotificationService {
 			return "어제";
 		}
 		return days + "일 전";
+	}
+
+	/** 슈퍼어드민 알림 패널의 탭(전체/회원/게시판/예약) 필터용 — 3개 관리자 타입만 분류, 그 외는 필터 대상 밖. */
+	private String adminCategory(String type) {
+		if (NotificationEntity.TYPE_ADMIN_NEW_MEMBER.equals(type)) {
+			return "MEMBER";
+		}
+		if (NotificationEntity.TYPE_ADMIN_NEW_INQUIRY.equals(type)) {
+			return "BOARD";
+		}
+		if (NotificationEntity.TYPE_ADMIN_NEW_RESERVATION.equals(type)) {
+			return "RESERVATION";
+		}
+		return "";
+	}
+
+	private static final DateTimeFormatter ADMIN_DATE_LABEL =
+			DateTimeFormatter.ofPattern("MM월 dd일 (E)", Locale.KOREAN);
+	private static final DateTimeFormatter ADMIN_TIME_LABEL = DateTimeFormatter.ofPattern("HH:mm");
+
+	private String dateLabel(LocalDateTime createdAt) {
+		return createdAt == null ? "" : createdAt.format(ADMIN_DATE_LABEL);
+	}
+
+	private String timeLabel(LocalDateTime createdAt) {
+		return createdAt == null ? "" : createdAt.format(ADMIN_TIME_LABEL);
 	}
 }

@@ -1,85 +1,763 @@
 /* =====================================================================
-   layout-admin.css  —  슈퍼어드민(플랫폼 운영자) 전용 wide 셸
-   (사이드바 + 넓은 콘텐츠). layout.css의 420px 고정폭 .app 셸과는 별개다 —
-   consumer/사장님 화면에서 이 파일을 링크하지 말 것.
+   layout-admin.css — 슈퍼어드민(플랫폼 운영자) 전용 디자인 시스템.
+   /Users/bomisong/Downloads/admin-console.html(사용자 제공 참고 디자인)의 CSS를 그대로 이식했다 —
+   블루/그레이/레드 토큰, Pretendard 폰트, topbar(통계+유틸)/gnb(가로 탭)/data-table/알림 drawer.
+   컨슈머 앱(tokens.css/base.css/components.css, 그린 톤 BEM 시스템)과는 완전히 독립적이다 —
+   layout-admin.html은 이제 저 3개 파일을 링크하지 않는다(클래스명 충돌 방지: 두 시스템 다 .btn/.badge/
+   .card 같은 이름을 쓰면 캐스케이드가 꼬인다). 이 파일을 다른 화면에서 링크하지 말 것.
+
+   원본에서 뺀 것: §8 캘린더/일정표(기리기리에 없는 기능). 원본에 없어서 새로 만든 것: .info-list/
+   .info-row(카드형 정보 목록), .badge*(상태 배지), .stat-grid/.stat-card(대시보드 지표), .filter-tabs
+   (회원 관리의 역할 필터 토글) — 전부 이 파일의 blue/gray/red 토큰만 사용해서 톤을 맞췄다.
    ===================================================================== */
 
-body.admin { background: var(--c-bg); }
+/* ---------- 1. 토큰 ---------- */
+:root {
+  --blue-600: #2f6fe0;
+  --blue-500: #3e7bf3;
+  --blue-100: #e3edfd;
+  --blue-50:  #eff5ff;
 
-.admin-shell {
-  display: flex;
-  min-height: 100vh;
+  --red-500:  #f5424e;
+  --red-400:  #f56674;
+  --red-100:  #fde8ea;
+
+  --gray-900: #1a1c1f;
+  --gray-800: #33363b;
+  --gray-700: #55585e;
+  --gray-600: #777b83;
+  --gray-500: #9a9ea6;
+  --gray-400: #b9bdc4;
+  --gray-300: #dfe2e7;
+  --gray-200: #eaecf0;
+  --gray-100: #f2f4f7;
+  --gray-50:  #f8f9fb;
+  --white:    #fff;
+
+  --page-max: 1360px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+
+  --shadow-pop: 0 4px 16px rgba(20, 24, 35, .14);
+  --shadow-drawer: -4px 0 24px rgba(20, 24, 35, .12);
+
+  --font-sans: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+               "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
 }
 
-/* ---------- 사이드바 ---------- */
-.admin-sidebar {
-  flex: 0 0 240px;
-  width: 240px;
-  background: var(--c-dark);
-  color: #fff;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  padding: var(--s-5) 0;
+/* ---------- 2. 리셋 / 베이스 ----------
+   이 파일은 layout-admin.html에서만 로드되므로(다른 화면은 절대 안 씀) body.admin으로 다시 스코프할
+   필요가 없다 — 오히려 body.admin button처럼 스코프를 걸면 명시도가 .btn/.chip-btn/.field 같은
+   컴포넌트 클래스보다 높아져서(요소+클래스 2개 vs 클래스 1개) 리셋이 컴포넌트를 덮어써 버튼/인풋이
+   테두리·배경·패딩 없이 밋밋한 텍스트로 보이는 버그가 났다 — 참고 디자인 원본처럼 그냥 전역 셀렉터로 둔다. */
+*, *::before, *::after { box-sizing: border-box; }
+
+body.admin {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gray-800);
+  background: var(--white);
+  -webkit-font-smoothing: antialiased;
+  word-break: keep-all;
 }
 
-.admin-sidebar__brand {
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+table { border-collapse: collapse; width: 100%; }
+h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+
+:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.icon { width: 18px; height: 18px; flex: none; stroke-width: 1.6; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+/* ---------- 3. 레이아웃 ---------- */
+.container {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* 3-1. 상단 유틸 바 */
+.topbar {
+  border-bottom: 1px solid var(--gray-200);
+  background: var(--white);
+}
+.topbar__inner {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: 0 var(--s-5) var(--s-6);
+  justify-content: space-between;
+  gap: 24px;
+  height: 46px;
 }
-.admin-sidebar__logo { font-size: var(--fs-lg); font-weight: var(--fw-black); color: #fff; }
-
-.admin-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--s-3); }
-.admin-nav__item {
+.topbar__stats {
   display: flex;
   align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-radius: var(--r-md);
-  color: rgba(255, 255, 255, .7);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+  gap: 18px;
+  font-size: 13px;
+  color: var(--gray-600);
 }
-.admin-nav__item.is-active { background: rgba(255, 255, 255, .12); color: #fff; font-weight: var(--fw-bold); }
-.admin-nav__ico { font-size: 16px; width: 20px; text-align: center; }
-
-/* ---------- 메인 영역 ---------- */
-.admin-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-
-.admin-topbar {
-  height: var(--topbar-h);
+.topbar__stats b {
+  margin-left: 4px;
+  color: var(--red-500);
+  font-weight: 700;
+}
+.topbar__util {
   display: flex;
   align-items: center;
-  gap: var(--s-3);
-  padding: 0 var(--s-6);
-  background: var(--c-surface);
-  border-bottom: 1px solid var(--c-line);
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  gap: 4px;
 }
-.admin-topbar__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
-.admin-topbar__user  { font-size: var(--fs-sm); color: var(--c-text-sub); }
-.admin-topbar__action{ font-size: var(--fs-sm); color: var(--c-text-sub); font-weight: var(--fw-medium); }
+.util-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--gray-700);
+  position: relative;
+}
+.util-btn:hover { background: var(--gray-100); }
+.util-btn--user { font-weight: 700; color: var(--gray-900); }
+.util-btn .caret { width: 12px; height: 12px; color: var(--gray-500); }
+.avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  display: grid; place-items: center;
+  color: var(--gray-500);
+}
+.avatar .icon { width: 15px; height: 15px; }
 
-.admin-content {
-  flex: 1 1 auto;
+.util-btn__badge {
+  position: absolute;
+  top: 2px; right: 2px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: var(--red-500);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* 3-2. 글로벌 내비게이션 */
+.gnb { border-bottom: 1px solid var(--gray-200); }
+.gnb__list {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.05vw, 18px);
+  height: 56px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gnb__list::-webkit-scrollbar { display: none; }
+.gnb__link {
+  position: relative;
+  flex: none;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -.015em;
+  color: var(--gray-800);
+  white-space: nowrap;
+  transition: color .12s;
+}
+.gnb__link:hover { color: var(--blue-500); }
+.gnb__link.is-active { color: var(--blue-500); font-weight: 700; }
+
+/* 3-3. 본문 */
+.page { padding: 28px 0 60px; }
+
+/* ---------- 4. 페이지 헤더 ---------- */
+.page-title {
+  font-size: 28px;
+  letter-spacing: -.02em;
+  color: var(--gray-900);
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--gray-900);
+  margin-bottom: 24px;
+}
+
+.tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 28px;
+}
+.tab {
+  position: relative;
+  padding: 14px 2px;
+  font-size: 15px;
+  color: var(--gray-500);
+}
+.tab:hover { color: var(--gray-700); }
+.tab.is-active {
+  color: var(--gray-900);
+  font-weight: 700;
+}
+.tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--blue-500);
+}
+
+/* ---------- 5. 버튼 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background-color .12s, border-color .12s, color .12s;
+}
+.btn .icon { width: 17px; height: 17px; }
+
+.btn--primary { background: var(--blue-500); color: var(--white); }
+.btn--primary:hover { background: var(--blue-600); }
+
+.btn--outline {
+  border: 1px solid var(--blue-500);
+  color: var(--blue-500);
+  background: var(--white);
+}
+.btn--outline:hover { background: var(--blue-50); }
+
+/* 위험한 일괄 액션(예: 선택 회원 정지)용 — .btn--outline과 같은 모양, 색만 빨강 */
+.btn--outline-danger {
+  border: 1px solid var(--red-500);
+  color: var(--red-500);
+  background: var(--white);
+}
+.btn--outline-danger:hover { background: var(--red-100); }
+
+/* "수정" 버튼용 — 승인/이용재개 등 다른 .btn--outline(파랑)과 나란히 있으면 구분이 안 된다는 피드백으로
+   회색 톤으로 뺐다(위험하지도 긍정적이지도 않은, 그냥 "정보 편집" 액션이라는 뜻). */
+.btn--outline-neutral {
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  background: var(--white);
+}
+.btn--outline-neutral:hover { background: var(--gray-50); }
+
+.btn--ghost {
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  background: var(--white);
+}
+.btn--ghost:hover { border-color: var(--gray-400); }
+
+.btn--sm { height: 34px; padding: 0 14px; font-size: 13px; }
+
+.link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue-500);
+}
+.link-action:hover { text-decoration: underline; }
+.link-action .icon { width: 16px; height: 16px; }
+.link-action--danger { color: var(--red-500); }
+
+/* 표/목록 안의 작은 액션 버튼(정지·정지해제·탈퇴·승인 등) — .badge(상태 배지)와 정확히 같은 치수
+   (56x24, radius 6px — 완전 알약이 아니라 둥근 네모)로 맞춰서 같은 셀 안에서 배지와 나란히 있어도
+   한 몸처럼 보이게 한다. min-width+justify-content:center를 .badge에도 똑같이 넣어야
+   "대기"/"승인"처럼 글자 수가 같은데 여백이 달라 보이는 문제가 안 생긴다(badge엔 원래 빠져 있던 부분).
+   원래 members.html/stores.html마다 따로 스타일이 갈려 있던 걸 여기 한 곳으로 통일했다(2026-08-31). */
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 56px;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
+  background: var(--blue-100);
+  color: var(--blue-600);
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip-btn:hover { filter: brightness(.96); }
+.chip-btn--danger { background: var(--red-100); color: var(--red-400); }
+/* "수정" 칩 전용 — 기본 .chip-btn(파랑)이 승인/이용재개 같은 다른 파란 칩과 헷갈린다는 피드백으로
+   회색 톤으로 뺐다. */
+.chip-btn--neutral { background: var(--gray-100); color: var(--gray-700); }
+
+/* ---------- 6. 폼 ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.toolbar__spacer { margin-left: auto; }
+.toolbar__actions { display: flex; align-items: center; gap: 22px; padding-left: 10px; }
+
+.field {
+  height: 44px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--gray-800);
+  font-size: 14px;
+  padding: 0 14px;
+}
+.field:focus { border-color: var(--blue-500); outline: none; }
+textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: vertical; }
+
+.field-group { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.field-group:first-child { margin-top: 0; }
+.field-group__label { font-size: 13px; font-weight: 700; color: var(--gray-800); }
+.field-group__label .req { color: var(--red-500); }
+
+.field--check { display: flex; align-items: center; gap: 8px; height: auto; border: none; padding: 0; }
+
+.select {
+  min-width: 130px;
+  padding: 0 34px 0 14px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9ea6' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.search { position: relative; width: 260px; }
+.search input { width: 100%; padding: 0 42px 0 14px; }
+.search input::placeholder { color: var(--gray-400); }
+.search__submit {
+  position: absolute;
+  right: 4px; top: 50%;
+  transform: translateY(-50%);
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  color: var(--gray-500);
+  border-radius: var(--radius-sm);
+}
+.search__submit:hover { color: var(--gray-800); }
+
+.result-count {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--gray-700);
+}
+.result-count b { color: var(--blue-500); font-weight: 700; }
+
+/* ---------- 7. 테이블 ---------- */
+.table-wrap { overflow-x: auto; }
+
+.data-table { min-width: 600px; font-size: 14px; }
+.data-table thead th {
+  height: 50px;
+  padding: 0 12px;
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-300);
+  border-bottom: 1px solid var(--gray-300);
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+  text-align: center;
+}
+.data-table tbody td {
+  height: 52px;
+  padding: 0 12px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--gray-200);
+  color: var(--gray-700);
+}
+.data-table tbody tr:hover td { background: var(--gray-50); }
+.data-table .is-off { color: var(--red-400); }
+.data-table .cell-name { color: var(--gray-900); font-weight: 500; }
+.data-table td:has(.chip-btn), .data-table td:has(.checkbox) { padding: 0 12px; }
+/* <form>은 기본이 block이라 셀 안에 그대로 두면 줄바꿈/여백이 생긴다 — chip-btn을 폼으로 감싼
+   행 액션(정지/정지해제/탈퇴/승인 등)이 배지처럼 한 줄에 나란히 눕도록 인라인으로 강제한다. */
+.data-table form { display: inline; margin: 0; }
+.data-table td:has(form) { white-space: nowrap; }
+/* 행 전체를 눌러 상세로 이동하는 표(members.html) — 체크박스/버튼/폼 칸까지 손모양이 뜨면 오해를 사서
+   그 칸들만 기본 커서로 되돌린다. */
+.data-table tr.row-clickable { cursor: pointer; }
+.data-table tr.row-clickable td:has(.checkbox),
+.data-table tr.row-clickable td:has(form) { cursor: default; }
+
+.checkbox {
+  width: 18px; height: 18px;
+  border: 1px solid var(--gray-300);
+  border-radius: 3px;
+  accent-color: var(--blue-500);
+}
+
+/* 원본엔 없던, 카드형 정보 목록(회원/매장 상세, 문의, 공지 목록 등) — data-table과 톤만 맞춤 */
+.info-list {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.info-list + .info-list,
+.info-list + h2, h2 + .info-list { margin-top: 24px; }
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--gray-200);
+}
+.info-row:first-child { border-top: none; }
+.info-row:hover { background: var(--gray-50); }
+.info-row--link { display: flex; }
+.info-row__body { flex: 1 1 auto; min-width: 0; }
+.info-row__label { font-size: 12px; color: var(--gray-500); margin-bottom: 2px; }
+.info-row__title { font-size: 15px; font-weight: 600; color: var(--gray-900); }
+.info-row__sub { font-size: 13px; color: var(--gray-600); margin-top: 2px; }
+.info-row__value { font-size: 14px; color: var(--gray-900); }
+.info-row__arrow { color: var(--gray-400); font-size: 18px; flex: none; }
+.info-row__actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.info-empty { padding: 24px 18px; color: var(--gray-500); font-size: 14px; text-align: center; }
+
+/* 상태 배지 — 원본엔 없어서 blue/red/gray 토큰으로 새로 정의 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 56px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge--success { background: var(--blue-100); color: var(--blue-600); }
+.badge--danger  { background: var(--red-100);  color: var(--red-500); }
+.badge--neutral { background: var(--gray-100); color: var(--gray-700); }
+
+/* .field-group(flex-direction:column)의 직계 자식 배지(memberEdit/storeEdit의 GPS·주소 상태 배지)만
+   align-self:flex-start를 준다 — 기본 align-items:stretch 때문에 부모 폭(예: .form-narrow 520px)까지
+   늘어나던 문제(memberEdit.html에서 발견). .badge 전체에 걸었더니 이번엔 .detail-header(flex-row,
+   align-items:center) 안의 "승인됨/영업중" 같은 배지가 세로 중앙정렬을 잃고 위로 붙어 보이는 부작용이
+   생겨서("매장명/유저 이름 옆 배지 얼라인 깨짐" 피드백) — .field-group 안에서만 적용되게 좁혔다. */
+.field-group > .badge { align-self: flex-start; }
+
+/* 대시보드 지표 카드 — 원본엔 없어서 새로 정의, 톤은 data-table 헤더(gray-50)와 통일 */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+.stat-card {
+  padding: 20px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+}
+.stat-card__label { display: block; font-size: 13px; color: var(--gray-600); }
+.stat-card__value { display: block; margin-top: 8px; font-size: 24px; font-weight: 700; color: var(--gray-900); }
+.stat-card__delta { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--gray-500); }
+.stat-card__delta--up   { color: var(--blue-600); }
+.stat-card__delta--down { color: var(--red-500); }
+
+/* 대시보드 "최근 7일 신규 가입" 막대그래프 — storeView/dashboard.html의 판매/폐기 막대그래프와 같은
+   순수 CSS 방식(막대 높이는 컨트롤러가 미리 %로 계산해서 th:style로 꽂아줌, JS/차트 라이브러리 없음). */
+.admin-bar-chart {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 6px; height: 140px; margin-top: 12px; padding: 12px 8px 0;
+  border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--gray-50);
+}
+.admin-bar-chart__col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.admin-bar-chart__value { font-size: 11px; color: var(--gray-600); font-variant-numeric: tabular-nums; min-height: 14px; }
+.admin-bar-chart__track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+.admin-bar-chart__bar { width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--blue-500); transition: height .2s ease; }
+.admin-bar-chart__label { font-size: 11px; color: var(--gray-500); margin-top: 6px; }
+.admin-bar-chart__label.is-today { color: var(--gray-900); font-weight: 700; }
+
+/* 대시보드 미니 캘린더 — 이번 달 고정 42칸(6주) 격자, 가입자가 있는 날에만 점 표시. 날짜 클릭 등
+   상호작용은 없음(순수 조회용 위젯). */
+.admin-calendar { max-width: 380px; margin-top: 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--white); padding: 14px; }
+.admin-calendar__head { display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 10px; }
+.admin-calendar__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.admin-calendar__dow { font-size: 11px; color: var(--gray-500); padding: 4px 0 8px; }
+.admin-calendar__day {
+  position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--gray-800); border-radius: var(--radius-sm);
+}
+.admin-calendar__day.is-outside { color: var(--gray-300); }
+.admin-calendar__day.is-today { background: var(--blue-500); color: var(--white); font-weight: 700; }
+.admin-calendar__day .dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--blue-500); }
+.admin-calendar__day.is-today .dot { background: var(--white); }
+
+/* ---------- 9. 알림 드로어 ---------- */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .18s ease;
+  z-index: 90;
+}
+.drawer-backdrop.is-open { opacity: 1; visibility: visible; }
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  max-width: 100%;
+  height: 100dvh;
+  background: var(--white);
+  box-shadow: var(--shadow-drawer);
+  transform: translateX(100%);
+  transition: transform .22s ease;
+}
+.drawer.is-open { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .drawer, .drawer-backdrop { transition: none; }
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 24px 16px;
+}
+.drawer__title { font-size: 19px; color: var(--gray-900); }
+.count-badge {
+  min-width: 34px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--red-500);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.drawer__close { margin-left: auto; color: var(--gray-700); display: grid; place-items: center; }
+
+.drawer__tabs {
+  display: flex;
+  gap: 22px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.drawer__tab {
+  position: relative;
+  padding: 8px 2px 12px;
+  font-size: 15px;
+  color: var(--gray-500);
+}
+.drawer__tab.is-active { color: var(--gray-900); font-weight: 700; }
+.drawer__tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--gray-900);
+}
+
+.noti-list { flex: 1; overflow-y: auto; }
+.noti-date {
+  padding: 20px 24px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.noti {
+  display: block;
   width: 100%;
-  max-width: 1280px;
-  padding: var(--s-6);
+  padding: 14px 24px;
+  border-top: 1px solid var(--gray-100);
+  text-align: left;
+}
+.noti:hover { background: var(--gray-50); }
+.noti__kind { font-size: 12px; color: var(--gray-500); }
+.noti__text {
+  margin: 5px 0 6px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--gray-800);
+}
+.noti__time { font-size: 12px; color: var(--gray-400); }
+.noti--read { opacity: .45; }
+.noti-empty { padding: 40px 24px; text-align: center; color: var(--gray-500); font-size: 14px; }
+
+.drawer__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 24px 18px;
+  border-top: 1px solid var(--gray-200);
 }
 
-/* 대시보드 stat-grid는 데스크탑 폭에서 2열보다 넓게 쓴다 (components.css의 기본 2열은 420px 기준) */
-.admin-content .stat-grid { grid-template-columns: repeat(4, 1fr); }
+/* ---------- 10. 반응형 ---------- */
+@media (max-width: 760px) {
+  .container { padding: 0 16px; }
+  .topbar__stats { display: none; }
+  .page-title { font-size: 23px; }
+  .toolbar { gap: 8px; }
+  .search { width: 100%; }
+  .toolbar__spacer { margin-left: 0; width: 100%; }
+  .toolbar__actions { padding-left: 0; gap: 16px; flex-wrap: wrap; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+}
 
-/* 좁은 화면(태블릿 이하)에서는 사이드바를 상단 바로 접어 최소한의 사용성만 보장한다 */
-@media (max-width: 860px) {
-  .admin-shell { flex-direction: column; }
-  .admin-sidebar { width: 100%; height: auto; position: static; padding: var(--s-3); }
-  .admin-sidebar__brand { padding: 0 var(--s-3) var(--s-3); }
-  .admin-nav { flex-direction: row; overflow-x: auto; }
-  .admin-content .stat-grid { grid-template-columns: 1fr 1fr; }
+/* ---------- 11. 페이지 전용 유틸리티 / 컴포넌트 ----------
+   superAdminView/*.html에 style="..."로 흩어져 있던 반복 패턴을 여기로 옮겼다(2026-08-31) — HTML
+   파일이 너무 길어진다는 지적을 받아서, 개별 페이지가 아니라 여기 한 곳에서 관리한다. 딱 한 군데서만
+   쓰는 진짜 1회성 값(예: storeDetail의 2열 지표 그리드)만 유틸리티로 안 빼고 페이지에 남겨둔다. */
+
+/* 간격 유틸리티 — 여러 페이지에서 반복되는 값만 뽑음(전체 스케일이 아니라 실제 쓰인 값 기준) */
+.mb-8  { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.mb-32 { margin-bottom: 32px; }
+.mt-6  { margin-top: 6px; }
+.mt-8  { margin-top: 8px; }
+.mt-24 { margin-top: 24px; }
+.ml-auto { margin-left: auto; }
+.w-full { width: 100%; }
+.flex-grow { flex: 1 1 auto; }
+.text-muted { color: var(--gray-500); font-weight: 400; }
+.text-muted--sm { font-size: 13px; }
+.form-hint { font-size: 12px; color: var(--gray-600); }
+.meta-text { font-size: 13px; color: var(--gray-600); }
+
+/* 작은 flex 행(아이콘+텍스트, 배지+제목 나열 등) — 대부분의 "한 줄에 나열" 패턴이 이 모양이다 */
+.flex-row { display: flex; align-items: center; gap: 8px; }
+
+/* 섹션 소제목(정보/1:1 문의/입점 신청 등) — 상단 여백은 안 고정하고 필요한 곳에 .mt-24를 같이 붙인다
+   (페이지 맨 위 첫 소제목엔 여백이 필요 없어서, 하나로 고정하면 오히려 여백이 어긋난다). */
+.subhead { font-size: 15px; color: var(--gray-900); margin-bottom: 12px; }
+
+/* 상세 화면(회원 상세/매장 상세/공지 상세) 상단 "이름 + 배지 + 우측 액션 버튼" 한 줄 */
+.detail-header { display: flex; align-items: center; gap: 10px; margin: 16px 0 20px; }
+.detail-header--tight { margin-bottom: 8px; }
+.detail-header__title { font-size: 19px; color: var(--gray-900); }
+
+/* 회원 관리 표 위 "정상/정지됨 소제목 + 일괄 액션 버튼" 한 줄 */
+.section-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.section-row--spaced { margin-top: 28px; }
+.section-row__title { font-size: 15px; color: var(--gray-900); }
+
+/* 표 빈 상태 문구("~가 없습니다") */
+.table-empty { text-align: center; color: var(--gray-500); }
+
+/* 표 헤더의 체크박스 칸 너비 고정 */
+.th-check { width: 44px; }
+
+/* 행 안에 버튼 여러 개(정지 해제 + 탈퇴 등) 나열 — td에 display:flex를 주면 그 순간부터 table-cell이
+   아니라 flex 컨테이너가 되어 버튼들이 자기 높이(24px)만큼만 차지하고 셀 위쪽에 붙어버린다
+   (align-items 기본값 stretch는 크기가 고정된 자식껜 flex-start처럼 동작함) — 그래서 위로 쏠려
+   보이던 것. align-items/justify-content로 셀 중앙에 오도록 명시했다. */
+.action-row { display: flex; align-items: center; justify-content: center; gap: 6px; height: 100%; }
+
+/* 좁은 폭 단일 컬럼 폼(매장 수정/회원 수정/공지 작성·수정) + 폼 상단 에러 문구 — "매장 정보 수정 페이지
+   레이아웃 센터로" 요청으로 margin:auto 추가(넓은 어드민 콘텐츠 영역 왼쪽에 붙어 있던 걸 가운데로). */
+.form-narrow { max-width: 520px; margin: 0 auto; }
+.form-error { color: var(--red-500); margin: 16px 0; }
+
+/* 폼 하단 전체 폭 제출 버튼 — .btn과 조합해서 쓴다(예: class="btn btn--primary btn--block mt-24") */
+.btn--block { width: 100%; }
+
+/* .info-row를 세로 스택으로(문의 카드처럼 제목/본문/답변폼이 위아래로 쌓이는 경우) */
+.info-row--stack { flex-direction: column; align-items: stretch; gap: 8px; }
+.info-row--pre { white-space: pre-wrap; }
+
+/* 답변 작성 카드(문의/신고 상세 하단) — 예전엔 textarea+버튼만 페이지에 맨몸으로 놓여있어서 "작아
+   보이고 layout이 구리다"는 피드백을 받았다. 카드로 감싸고 라벨을 붙이고, 버튼은 전체폭 대신
+   오른쪽 정렬(반드시 다 채울 필요 없는 짧은 액션이라)로 바꿨다. */
+.reply-box { margin-top: 24px; padding: 18px; border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--gray-50); }
+.reply-box__label { font-size: 14px; font-weight: 700; color: var(--gray-800); margin-bottom: 10px; }
+.reply-box__textarea { width: 100%; min-height: 140px; background: var(--white); box-sizing: border-box; }
+.reply-box__footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+
+/* 이미 답변한 신고의 답변 내용 표시(신고 상세) — 문의의 댓글 카드와 톤을 맞춤 */
+.reply-view { margin-top: 24px; padding: 16px; border: 1px solid var(--blue-100); border-radius: var(--radius-md); background: var(--blue-50); }
+.reply-view__label { font-size: 13px; font-weight: 700; color: var(--blue-600); margin-bottom: 6px; }
+
+/* 페이지네이션(공지사항/신고·문의) — 숫자 링크 + 이전/다음 */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 20px; }
+.pagination a {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); font-size: 13px; color: var(--gray-700);
+}
+.pagination a:hover { background: var(--gray-100); }
+.pagination a.is-active { background: var(--blue-500); color: var(--white); font-weight: 700; }
+.pagination a.is-disabled { color: var(--gray-300); pointer-events: none; }
+
+/* .stat-grid를 2열로(매장 상세의 구제율 카드 쌍) */
+.stat-grid--2 { grid-template-columns: repeat(2, 1fr); }
+
+/* .search를 고정 260px가 아니라 꽉 채워 쓸 때 */
+.search--block { width: 100%; }
+
+/* .result-count에 이미 있는 기본 여백(0 0 12px)을 toolbar 같은 flex 행 안에서 쓸 때 0으로 */
+.result-count--inline { margin: 0; }
+
+/* 상단 아이콘 심볼 스프라이트(<svg>) — 화면엔 안 보이고 <use>로만 참조됨 */
+.icon-sprite { display: none; }
+
+/* 상단 gnb 바 안의 "브랜드명 + 뱃지 + 탭 목록" 한 줄 */
+.gnb__bar { display: flex; align-items: center; gap: 20px; }
+.gnb__brand { flex: none; font-weight: 800; font-size: 15px; color: var(--gray-900); }
+.gnb__badge-label { flex: none; font-size: 12px; color: var(--gray-500); }
+
+/* 매장 수정 폼의 지도 미리보기 박스 — id로만 JS가 찾으므로(카카오 지오코더) 기본 박스 모양은 여기서
+   고정하고, 보이기/숨기기(display)만 템플릿에서 th:styleappend로 덧붙인다. */
+#locationPreviewMap {
+  width: 100%;
+  height: 160px;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-300);
+}
+
+/* 매장 관리 표 — 텍스트가 길어도 안 밀리게(고정 레이아웃 + 말줄임) */
+.store-table { table-layout: fixed; width: 100%; }
+.store-table td, .store-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 신고·문의(reports.html) 표 3개 전용 — "탭 옮길 때마다 표가 왔다갔다해서 통일성이 없다"는 피드백으로
+   세 탭의 표를 컬럼 개수·순서·폭·헤더까지 완전히 동일하게(제목/매장명/작성자/접수일/답변일/상태) 맞췄다
+   — reports.html의 colgroup 세 개가 지금 전부 똑같은 값이다(px 고정, %면 폭이 안 맞는 문제가 있어
+   members.html 경험상 px로 감). table-layout:fixed가 없으면 colgroup 폭이 내용에 따라 밀릴 수 있어
+   (회원 관리에서 겪은 것과 같은 문제) 여기도 고정한다. */
+.report-table { table-layout: fixed; width: 100%; }
+.report-table td, .report-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 회원 관리 표 — 필터 탭(전체/일반 회원/점주 회원/정지 회원)마다 행 내용이 달라져도(관리 칸 버튼
+   개수 차이 등) 컬럼 폭이 항상 같게(colgroup의 %폭을 그대로 지킴). 체크박스(1번째)·관리(8번째) 칸은
+   버튼이 잘리면 안 되니 말줄임 대상에서 뺀다. */
+.member-table { table-layout: fixed; width: 100%; }
+.member-table td:nth-child(n+2):nth-child(-n+7),
+.member-table th:nth-child(n+2):nth-child(-n+7) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

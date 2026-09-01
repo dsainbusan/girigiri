@@ -45,3 +45,5 @@ receipts/
 
 *.class
 chatbot-test/
+receipts/test-output-*
+.gitignore

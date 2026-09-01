@@ -42,10 +42,21 @@
 		</div>
 
 		<!-- 활동 지역 입력 -->
+		<!--/* 추가됨 — 왜: 직접 타이핑하지 않아도 GPS로 현재 위치 기준 "시 동" 문자열을 자동으로 채워달라는
+		     요청. storeView/edit.html의 카카오 지오코더(주소→좌표) 패턴을 반대 방향(좌표→주소)으로
+		     재사용 — geocoder.coord2Address(). 채워진 뒤에도 인풋은 그대로 편집 가능(GPS가 부정확하면
+		     직접 고칠 수 있게).
+		     "상태 배지들 색깔만 다르고 통일해, 이모지 넣지 마" 피드백 — 버튼의 📍 이모지를 빼고,
+		     결과 안내(#gpsRegionStatus)도 ✅/⚠️ 붙은 문장 대신 다른 화면의 상태 배지(.badge/.badge--success/
+		     .badge--discount)와 같은 짧은 라벨 + 색으로 통일했다. */-->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="region">활동 지역</label>
-			<input class="input" type="text" id="region" name="region"
-			       th:value="${region}" placeholder="예: 부산 광안동">
+			<div class="u-row" style="gap: var(--s-2); align-items: stretch">
+				<input class="input" type="text" id="region" name="region" style="flex: 1"
+				       th:value="${region}" placeholder="예: 부산 광안동">
+				<button type="button" id="gpsRegionBtn" class="btn btn--outline btn--sm" style="flex: none">GPS</button>
+			</div>
+			<span id="gpsRegionStatus" class="badge" style="display:none;margin-top:6px"></span>
 		</div>
 
 		<!-- 이용 역할 선택 (소비자 / 사장님) -->
@@ -163,6 +174,49 @@
 				cardOwner.classList.remove('is-selected');
 			}
 		}
+	</script>
+
+	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
+	<script th:inline="javascript">
+		kakao.maps.load(function () {
+			var geocoder = new kakao.maps.services.Geocoder();
+			var regionInput = document.getElementById('region');
+			var statusEl = document.getElementById('gpsRegionStatus');
+
+			// "서울특별시"/"부산광역시"/"경기도"/"제주특별자치도" → "서울"/"부산"/"경기"/"제주"
+			function shortenSido(name) {
+				return name.replace('특별자치시', '').replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace(/도$/, '');
+			}
+
+			// 다른 화면의 상태 배지(.badge)와 같은 방식 — 색만 다르고 모양은 통일, 이모지 없음.
+			function setGpsStatus(text, variant) {
+				statusEl.textContent = text;
+				statusEl.className = 'badge badge--' + variant;
+				statusEl.style.display = 'inline-flex';
+			}
+
+			document.getElementById('gpsRegionBtn').addEventListener('click', function () {
+				if (!navigator.geolocation) {
+					setGpsStatus('위치 확인 불가', 'discount');
+					return;
+				}
+				setGpsStatus('확인 중', 'info');
+				navigator.geolocation.getCurrentPosition(function (pos) {
+					geocoder.coord2Address(pos.coords.longitude, pos.coords.latitude, function (result, status) {
+						if (status === kakao.maps.services.Status.OK) {
+							var addr = result[0].address;
+							var dong = addr.region_3depth_name || addr.region_2depth_name;
+							regionInput.value = (shortenSido(addr.region_1depth_name) + ' ' + dong).trim();
+							setGpsStatus('위치 확인됨', 'success');
+						} else {
+							setGpsStatus('주소를 찾지 못함', 'discount');
+						}
+					});
+				}, function () {
+					setGpsStatus('위치 확인 불가', 'discount');
+				});
+			});
+		});
 	</script>
 
 </div>

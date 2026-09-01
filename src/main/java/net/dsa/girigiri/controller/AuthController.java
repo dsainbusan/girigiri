@@ -7,6 +7,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,6 +35,11 @@ public class AuthController {
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
 	private final PasswordEncoder passwordEncoder;
+
+	// 추가됨 — 왜: 회원가입 완료 화면의 "GPS로 활동 지역 채우기" 버튼이 카카오 지오코더(좌표→주소)를
+	// 쓴다 — storeView/edit.html·SuperAdminController와 같은 설정 키 재사용.
+	@Value("${kakao.map.js-key}")
+	private String kakaoMapJsKey;
 
 	@GetMapping("/loginForm")
 	public String loginForm() {
@@ -127,6 +133,7 @@ public class AuthController {
 		model.addAttribute("maskedEmail", maskEmail(user.getEmail()));
 		model.addAttribute("nickname", user.getNickname());
 		model.addAttribute("region", user.getRegion());
+		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
 		return "authView/signup";
 	}
 

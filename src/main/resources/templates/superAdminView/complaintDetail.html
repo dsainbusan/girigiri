@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!--/*
+  신고 상세. /superadmin/complaints/{id} 로 접속(SuperAdminController#complaintDetail).
+  reports.html의 신고 접수 탭에서 행을 클릭하면 여기로 온다 — inquiryDetail.html과 같은 구조(제목/
+  메타정보/본문 + 답변)를 쓰되, 신고는 댓글 스레드가 아니라 ComplaintEntity.adminReply 하나뿐이라 목록
+  대신 "이미 답변했으면 .reply-view로 보여주고, 아직이면 .reply-box 폼만 보여준다"로 더 단순하다.
+  답변 등록(POST /superadmin/complaints/{id}/reply)은 저장과 동시에 상태를 처리완료(RESOLVED)로
+  바꾸고 이 페이지로 되돌아온다 — 답변을 다시 제출하면 내용을 덮어쓸 수 있다(수정 개념).
+
+  신고자/대상 클릭 → 상세 이동: reporterId/targetStoreId가 있을 때만 각각 회원 상세/매장 상세로 링크한다
+  (둘 다 nullable — 비회원 신고·매장 무관 신고는 텍스트만 보여줌). "신고자/매장 클릭하면 디테일 보이게
+  해달라"는 요청.
+
+  "사이즈 줄여서 센터로" 요청 — inquiryDetail.html과 동일하게 .form-narrow(520px, margin auto)로
+  본문을 감쌌다.
+
+  "'목록으로' css를 매장 목록/회원 목록/회원 상세로랑 똑같이" 피드백 — 여기만 .text-muted(회색, 작은
+  글씨)를 쓰고 있어서 storeDetail.html/memberDetail.html의 .link-action(파란색, 좀 더 굵음)과 톤이
+  달랐다 — 클래스만 .link-action mb-16으로 맞췄다(라벨 텍스트는 탭에 따라 돌아가는 곳이 달라
+  "목록으로"를 그대로 둠).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('신고 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/reports(tab='report')}">&larr; 목록으로</a>
+
+  <div class="form-narrow">
+  <div class="info-list" style="margin-top:12px">
+    <div class="info-row info-row--stack">
+      <div class="flex-row" style="justify-content:space-between">
+        <div class="info-row__title" th:text="${complaint.targetName} + ' 신고 — \'' + ${complaint.reason} + '\''">매장명 신고 — '사유'</div>
+        <span class="badge" th:classappend="${complaint.status == 'RESOLVED'} ? 'badge--success' : 'badge--neutral'"
+              th:text="${complaint.status == 'RESOLVED'} ? '처리완료' : '대기'">대기</span>
+      </div>
+      <div class="info-row__sub">
+        <span>신고자 </span>
+        <a class="link-action" th:if="${complaint.reporterId != null}" th:href="@{/superadmin/members/{id}(id=${complaint.reporterId})}" th:text="${complaint.reporterName}">신고자</a>
+        <span th:unless="${complaint.reporterId != null}" th:text="${complaint.reporterName}">신고자</span>
+        <span> · 대상 </span>
+        <a class="link-action" th:if="${complaint.targetStoreId != null}" th:href="@{/superadmin/stores/{id}(id=${complaint.targetStoreId})}" th:text="${complaint.targetName}">대상</a>
+        <span th:unless="${complaint.targetStoreId != null}" th:text="${complaint.targetName}">대상</span>
+        <span th:text="' · ' + ${#temporals.format(complaint.createdAt, 'yyyy-MM-dd HH:mm')} + ' 접수'"></span>
+      </div>
+      <div class="info-row__value info-row--pre" th:text="${complaint.content}">신고 내용</div>
+    </div>
+  </div>
+
+  <div class="reply-view" th:if="${complaint.adminReply != null}">
+    <div class="reply-view__label">운영자 답변 · <span th:text="${#temporals.format(complaint.resolvedAt, 'yyyy-MM-dd HH:mm')}">2026-08-01</span></div>
+    <div class="info-row--pre" th:text="${complaint.adminReply}">답변 내용</div>
+  </div>
+
+  <form class="reply-box" th:action="@{/superadmin/complaints/{id}/reply(id=${complaint.id})}" method="post">
+    <div class="reply-box__label" th:text="${complaint.adminReply != null} ? '답변 수정' : '답변 작성'">답변 작성</div>
+    <textarea class="field reply-box__textarea" name="content" required maxlength="1000"
+              placeholder="처리 결과를 입력하세요" th:text="${complaint.adminReply}"></textarea>
+    <div class="reply-box__footer">
+      <span class="text-muted text-muted--sm">최대 1000자 · 등록하면 처리완료로 바뀝니다</span>
+      <button class="btn btn--primary btn--sm" type="submit">답변 등록</button>
+    </div>
+  </form>
+  </div>
+
+</div>
+</body>
+</html>

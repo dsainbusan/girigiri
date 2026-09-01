@@ -1,38 +1,172 @@
 <!DOCTYPE html>
 <!--/*
-  회원 관리 (조회 / 정지 / 탈퇴). /superadmin/members 로 접속.
-  SuperAdminController#members 가 UserRepository.findAll()로 조회한 ${users}를 그린다 (실 데이터).
-  TODO(송보미): 상단 검색/필터 칩(전체·USER·ADMIN·정지)은 아직 클릭해도 동작하지 않는 정적 데모다.
-    정지/탈퇴 버튼도 실제 처리 API가 없어 disabled — 두 기능 다 붙을 때 함께 활성화할 것.
+  회원 관리 (조회 / 정지 / 정지 해제 / 탈퇴 / 일괄 정지·해제). /superadmin/members 로 접속.
+  SuperAdminController#members 가 검색(q)·필터(filter=USER|OWNER|SUSPENDED)로 걸러낸 회원을 표
+  하나에 전부 보여준다 — 정상/정지를 별도 표로 나누지 않고, 정지 회원은 "정지 회원" 필터 탭으로 거른다
+  (예전엔 항상 두 표로 나눴었는데, "따로 나누지 말고 전체로 하고 정지회원은 필터로 보게 해달라"는
+  요청으로 되돌렸다). 탭은 전체/일반 회원(USER)/점주 회원(OWNER)/정지 회원 — 운영자(ADMIN) 계정은
+  수가 적고 이 화면의 주 관리 대상이 아니라서 전용 탭 없이 "전체"에서만 보인다.
+
+  화면 표시 컬럼: 회원 ID(u.id)/닉네임/이메일/권한/상태/가입일/관리 — 최근수정일은 화면에서 뺐다(이메일은
+  이후 요청으로 다시 넣음). CSV 다운로드(exportMembers)는 이 화면과 별개라 최근수정일까지 그대로 포함.
+
+  상태 배지·버튼 문구도 "이용중/이용정지" 어휘로 통일했다: 정상→이용중, 정지됨→이용정지, 개별 행
+  액션은 정지→이용 정지, 정지 해제→이용 재개, 탈퇴→강제 탈퇴. 일괄 액션 버튼은 "선택 회원 정지"/
+  "선택 회원 정지 해제"로 문구만 다듬음(동작은 그대로).
+
+  체크박스는 장식이 아니라 실제로 동작한다 — 표가 하나라 정지 대상/정지 해제 대상이 섞여 있을 수
+  있으므로, 체크박스는 <table> 밖의 공용 <form id="bulk-form">에 연결하고 두 버튼은 각자 formaction으로
+  /bulk-suspend·/bulk-unsuspend를 가리킨다(HTML5 표준, JS 불필요) — 이미 정지된 회원한테 "선택 회원
+  정지"를 눌러도 컨트롤러가 그냥 상태만 다시 세팅해서 무해하다.
+  개별 행의 이용정지/이용재개/강제탈퇴는 각자 자기 <form>으로 남긴다 — <form> 안에 <form> 중첩은 안
+  되니까 체크박스처럼 밖에 있는 폼에 form="..."으로 연결하는 방식을 그대로 씀.
+
+  "회원 목록 다운로드"는 현재 검색/필터 조건 그대로 CSV로 내려받는다(SuperAdminController#exportMembers).
+  필터(전체/일반 회원/점주 회원/정지 회원)는 참고 디자인의 .tabs/.tab(밑줄 강조)을 재사용.
+
+  행 전체 클릭 → 상세 이동: 닉네임 셀만 링크였는데(<tr>은 <a>가 될 수 없어서), "닉네임만 눌러야 되는 게
+  아니라 행 아무데나 눌러도 디테일로 가게 해달라"는 요청으로 .row-clickable + data-href를 얹고 맨 아래
+  <script>에서 클릭 위임을 건다 — 체크박스/버튼/폼(정지·정지해제·탈퇴)을 누른 경우는
+  closest('a,button,input,form')로 걸러서 무시하고, 그 외 빈 셀 클릭만 상세로 이동시킨다(닉네임의 <a>는
+  접근성/키보드 포커스용으로 그대로 남겨둠).
+
+  컬럼 폭 고정(colgroup, .member-table): 원래 폭 지정이 없어서(table-layout:auto) 필터 탭마다 그 페이지에
+  실제로 그려진 행의 내용(예: "정지 회원" 탭은 모든 행이 이용재개+강제탈퇴 2버튼이라 관리 칸이 넓어지고,
+  "일반 회원"/"점주 회원" 탭은 이용정지 1버튼이라 좁아짐)에 따라 컬럼 폭이 브라우저 자동 계산으로 달라져
+  탭을 옮길 때마다 표가 들쭉날쭉해 보였다("필드 간격 통일해달라"는 요청) — colgroup으로 8개 컬럼 폭을
+  퍼센트로 고정하고 .member-table{table-layout:fixed}를 걸어서, 어떤 필터를 골라도 각 컬럼이 항상 같은
+  폭으로 렌더링되게 했다. 관리 칸(30%)만 넉넉히 잡아 2버튼(이용재개+강제탈퇴)도 안 잘리게 함.
+  권한 칸은 원래 6%로 "USER"/"OWNER" 같은 짧은 영문 코드 기준이었는데, "권한도 한국어로(유저/매장
+  점주/어드민)" 피드백으로 "매장 점주"가 더 길어져 잘려 보였다 — 권한을 10%로 늘리고 그만큼 이메일
+  칸(21%→17%)에서 떼어왔다.
+
+  페이지네이션: 회원도 많아지면 목록이 무한정 길어지니 10명씩 잘라서 보여준다(SuperAdminController#members
+  가 page 쿼리파라미터로 자름, reports/notices와 동일한 paginate 헬퍼 재사용). "전체 회원 N명"의 N은
+  페이지로 자르기 전 전체 개수(${users}, 검색/필터만 반영)를 그대로 쓰고, 실제 표는 그 페이지 몫만 담은
+  ${pagedUsers}를 그린다 — 페이지 링크는 q·filter를 그대로 들고 다녀서 검색/필터 상태가 페이지를 넘어도
+  안 풀린다.
+
+  관리 칸에 "수정"(→ /superadmin/members/{id}/edit, memberEdit.html) 추가. 그리고 개별 행의 이용정지/
+  이용재개/강제탈퇴 폼도 이제 q·filter·page를 함께 실어 보낸다 — "일반 회원 탭에서 정지시켰더니 전체
+  탭으로 튕긴다"는 피드백으로, 그 액션을 누른 화면(검색/필터/페이지)으로 다시 돌아가게 고쳤다
+  (SuperAdminController#buildMembersRedirectUri가 셋 다 반영해서 리다이렉트를 만듦).
+
+  행 클릭/닉네임 링크(→ 회원 상세)도 이제 q·filter·page를 같이 실어 보낸다 — "회원 상세의 '← 회원
+  목록'이 원래 보던 필터 탭(정지 회원 등)으로 정확히 돌아가게 해달라"는 요청. memberDetail.html이 이
+  값을 그대로 받아서 "← 회원 목록" 링크에 다시 실어 돌려준다(history.back() 없이, q/filter/page를
+  URL로 왕복시키는 방식 — 정지/정지해제/탈퇴 리다이렉트와 같은 패턴을 최초 진입 링크에도 적용).
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('회원 관리', ~{:: #content}, 'members', '슈퍼어드민')}">
 <body>
 <div id="content" th:fragment="content">
 
-  <h2 class="section-title">회원 목록<span class="section-title__count" th:text="${users.size()} + '명'">0명</span></h2>
-
-  <div class="card" style="display:flex;gap:var(--s-2);margin-bottom:var(--s-3)">
-    <div class="search u-grow">&#128269; <span>닉네임 · 이메일 검색</span></div>
-    <span class="chip is-active">전체</span>
-    <span class="chip">USER</span>
-    <span class="chip">ADMIN</span>
-    <span class="chip">정지</span>
+  <div class="tabs">
+    <a class="tab" th:classappend="${filter == null} ? ' is-active'" th:href="@{/superadmin/members(q=${q})}">전체</a>
+    <a class="tab" th:classappend="${filter == 'USER'} ? ' is-active'" th:href="@{/superadmin/members(q=${q}, filter='USER')}">일반 회원</a>
+    <a class="tab" th:classappend="${filter == 'OWNER'} ? ' is-active'" th:href="@{/superadmin/members(q=${q}, filter='OWNER')}">점주 회원</a>
+    <a class="tab" th:classappend="${filter == 'SUSPENDED'} ? ' is-active'" th:href="@{/superadmin/members(q=${q}, filter='SUSPENDED')}">정지 회원</a>
   </div>
 
-  <div class="card">
-    <div class="list-row" th:each="u : ${users}">
-      <div class="list-row__body">
-        <div class="u-bold" th:text="${u.nickname}">닉네임</div>
-        <div class="u-sub"
-             th:text="${u.role} + ' · 가입 ' + ${#temporals.format(u.createdAt, 'yyyy-MM-dd')}">USER · 가입 2026-08-01</div>
-      </div>
-      <span class="badge" th:classappend="${u.status == 'SUSPENDED'} ? 'badge--discount' : 'badge--success'"
-            th:text="${u.status == 'SUSPENDED'} ? '정지됨' : '정상'">정상</span>
-      <button class="btn btn--sm btn--outline" type="button" disabled
-              th:text="${u.status == 'SUSPENDED'} ? '탈퇴' : '정지'">정지</button>
+  <p class="form-error" th:if="${param.withdrawError}">
+    미완료 예약이 있어 탈퇴시킬 수 없어요 — 픽업/취소/노쇼 처리가 끝난 뒤 다시 시도해 주세요.
+  </p>
+
+  <form class="toolbar" method="get" th:action="@{/superadmin/members}">
+    <div class="search">
+      <input class="field" type="search" name="q" placeholder="닉네임 · 이메일 검색" th:value="${q}">
+      <button class="search__submit" type="submit" aria-label="검색"><svg class="icon"><use href="#i-search"/></svg></button>
     </div>
+    <input type="hidden" name="filter" th:value="${filter}">
+    <a class="link-action" th:if="${not #strings.isEmpty(q)}" th:href="@{/superadmin/members(filter=${filter})}">초기화</a>
+    <div class="toolbar__actions">
+      <a class="link-action" th:href="@{/superadmin/members/export(q=${q}, filter=${filter})}"><svg class="icon"><use href="#i-download"/></svg>회원 목록 다운로드</a>
+    </div>
+  </form>
+
+  <p class="result-count">전체 회원 <b th:text="${users.size()}">0</b>명 조회되었습니다.</p>
+
+  <form id="bulk-form" method="post" th:action="@{/superadmin/members/bulk-suspend(q=${q}, filter=${filter})}"></form>
+  <div class="section-row">
+    <button class="btn btn--outline-danger btn--sm" type="submit" form="bulk-form"
+            th:formaction="@{/superadmin/members/bulk-suspend(q=${q}, filter=${filter})}">선택 회원 정지</button>
+    <button class="btn btn--outline btn--sm" type="submit" form="bulk-form"
+            th:formaction="@{/superadmin/members/bulk-unsuspend(q=${q}, filter=${filter})}">선택 회원 정지 해제</button>
   </div>
+
+  <div class="table-wrap">
+    <table class="data-table member-table">
+      <colgroup>
+        <col style="width:5%">
+        <col style="width:6%">
+        <col style="width:14%">
+        <col style="width:17%">
+        <col style="width:10%">
+        <col style="width:8%">
+        <col style="width:10%">
+        <col style="width:30%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
+          <th>회원 ID</th>
+          <th>닉네임</th>
+          <th>이메일</th>
+          <th>권한</th>
+          <th>상태</th>
+          <th>가입일</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(pagedUsers)}">
+          <td colspan="8" class="table-empty">정지된 회원이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="u : ${pagedUsers}" th:attr="data-href=@{/superadmin/members/{id}(id=${u.id}, q=${q}, filter=${filter}, page=${page})}">
+          <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${u.id}" form="bulk-form"></td>
+          <td th:text="${u.id}">1042</td>
+          <td class="cell-name"><a th:href="@{/superadmin/members/{id}(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" th:text="${u.nickname}">닉네임</a></td>
+          <td th:text="${u.email} ?: '-'">example@example.com</td>
+          <td th:text="${u.role == 'USER'} ? '유저' : (${u.role == 'OWNER'} ? '매장 점주' : '어드민')">유저</td>
+          <td>
+            <span class="badge" th:classappend="${u.status == 'SUSPENDED'} ? 'badge--danger' : 'badge--success'"
+                  th:text="${u.status == 'SUSPENDED'} ? '이용정지' : '이용중'">이용중</span>
+          </td>
+          <td th:text="${#temporals.format(u.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
+          <td class="action-row">
+            <a class="chip-btn chip-btn--neutral" th:href="@{/superadmin/members/{id}/edit(id=${u.id})}">수정</a>
+            <th:block th:if="${u.status == 'SUSPENDED'}">
+              <form th:action="@{/superadmin/members/{id}/unsuspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
+                <button class="chip-btn" type="submit">이용 재개</button>
+              </form>
+              <form th:action="@{/superadmin/members/{id}/withdraw(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
+                <button class="chip-btn chip-btn--danger" type="submit">강제 탈퇴</button>
+              </form>
+            </th:block>
+            <form th:unless="${u.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
+              <button class="chip-btn chip-btn--danger" type="submit">이용 정지</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination" th:if="${totalPages > 1}">
+    <a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/superadmin/members(q=${q}, filter=${filter}, page=${page - 1})}">&lsaquo;</a>
+    <a th:each="p : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+       th:text="${p + 1}" th:href="@{/superadmin/members(q=${q}, filter=${filter}, page=${p})}"></a>
+    <a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/members(q=${q}, filter=${filter}, page=${page + 1})}">&rsaquo;</a>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
 
 </div>
 </body>

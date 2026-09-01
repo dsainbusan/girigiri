@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--/*
+  매장 상세 (조회 전용). /superadmin/stores/{id} 로 접속 — /superadmin/stores 목록에서 매장 클릭 시 진입.
+  SuperAdminController#storeDetail 가 담아주는 ${store}(StoreEntity 전체), ${isOpen}, 최근 7일 구제율
+  (${rescueRate7d}/${registeredCount7d}/${soldCount7d})을 그린다.
+  "정보 수정" 버튼(→ /superadmin/stores/{id}/edit)은 운영자 전용 전체 필드 수정 화면(storeEdit.html)으로
+  간다 — 점주 본인용 /store/edit과는 별개. 버튼 색은 다른 파란 .btn--outline과 안 헷갈리게
+  .btn--outline-neutral(회색)로 뺐다.
+  "← 매장 목록"은 한때 history.back()이었는데 — "'이전'이 아니라 라벨 그대로 목록으로 가야 한다"는
+  피드백(memberDetail.html과 동일)으로 /superadmin/stores로 가는 일반 링크로 되돌렸다. 그런데 필터
+  (대기 탭)를 잊어버리는 문제가 있어서, "탭으로도 정확히 돌아가게 해달라"는 요청으로 stores.html에서
+  넘어올 때 실려온 filter를 SuperAdminController#storeDetail이 모델에 얹고 여기서 다시 실어 보낸다
+  (history.back() 없이 URL로 왕복 — memberDetail.html의 q/filter/page 패턴과 동일).
+
+  "연결된 계정"(${owner}, 있을 때만) 추가 — memberDetail.html의 "연결된 매장"과 대칭. 이 매장을 소유한
+  회원(store.ownerId) 계정으로, 클릭하면 회원 상세로 이동한다.
+
+  layoutAdmin의 title도 ${store.storeName} 대신 고정 문자열 '매장 관리'로 — memberDetail.html과 같은
+  이유("상단 큰 제목이 레코드 이름으로 바뀌는 게 아니라 회원 관리처럼 섹션명으로 유지돼야 한다"는
+  피드백을 매장 상세에도 동일하게 적용).
+
+  TODO(송보미): "정산 내역" 섹션은 정산 도메인(엔티티/서비스)이 아직 없어 자리만 잡아둔 자리표시자다.
+    정산 페이지를 실제로 만들 때, 이 매장의 정산 기록을 검색해서 여기 목록에 채워 넣을 것 — 슈퍼어드민이
+    "점주가 정산한 자료를 매장별로 확인"하는 용도로 요청받음(전체 정산 통합 관리 화면과는 별개).
+
+  "사이즈 줄여서 센터로" 요청 — memberDetail.html/inquiryDetail.html 등과 동일하게 .form-narrow
+  (520px, margin auto)로 본문을 감쌌다. "← 매장 목록" 링크만 밖에 남겨 왼쪽 정렬 유지.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('매장 관리', ~{:: #content}, 'stores', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/stores(filter=${filter})}">&larr; 매장 목록</a>
+
+  <div class="form-narrow">
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${store.storeName}">매장명</h2>
+    <span class="badge" th:classappend="${store.approvalStatus == 'APPROVED'} ? 'badge--success' : (${store.approvalStatus == 'REJECTED'} ? 'badge--danger' : 'badge--neutral')"
+          th:text="${store.approvalStatus == 'APPROVED'} ? '승인됨' : (${store.approvalStatus == 'REJECTED'} ? '반려됨' : (${store.approvalStatus == 'PENDING'} ? '대기중' : '상태 미확인'))">승인됨</span>
+    <span class="badge badge--success" th:if="${isOpen}">영업중</span>
+    <span class="badge badge--danger" th:unless="${isOpen}">휴업</span>
+    <a class="btn btn--outline-neutral btn--sm ml-auto"
+       th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}"><svg class="icon"><use href="#i-pencil"/></svg>정보 수정</a>
+  </div>
+
+  <h3 class="subhead">기본 정보</h3>
+  <div class="info-list">
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">카테고리</div>
+        <div class="info-row__value" th:text="${store.category} ?: '-'">베이커리</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">주소</div>
+        <div class="info-row__value" th:text="${store.address} ?: '-'">서울시 중구</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">영업시간</div>
+        <div class="info-row__value" th:text="${store.operatingHours} ?: '-'">09:00 ~ 22:00</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subhead mt-24">긴급 연락처</h3>
+  <div class="info-list">
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">대표 연락처</div>
+        <div class="info-row__value" th:text="${store.phone} ?: '등록된 연락처 없음'">010-0000-0000</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">사업자등록번호</div>
+        <div class="info-row__value" th:text="${store.businessNumber} ?: '미등록'">000-00-00000</div>
+      </div>
+    </div>
+  </div>
+
+  <th:block th:if="${owner != null}">
+    <h3 class="subhead mt-24">연결된 계정</h3>
+    <div class="info-list">
+      <a class="info-row" th:href="@{/superadmin/members/{id}(id=${owner.id})}">
+        <div class="info-row__body">
+          <div class="info-row__title" th:text="${owner.nickname}">닉네임</div>
+          <div class="info-row__sub" th:text="(${owner.role == 'USER'} ? '유저' : (${owner.role == 'OWNER'} ? '매장 점주' : '어드민')) + (${owner.email != null} ? ' · ' + ${owner.email} : '')">매장 점주</div>
+        </div>
+        <span class="info-row__arrow">&rsaquo;</span>
+      </a>
+    </div>
+  </th:block>
+
+  <h3 class="subhead mt-24">최근 7일 판매율(구제율)</h3>
+  <div class="stat-grid stat-grid--2">
+    <div class="stat-card">
+      <span class="stat-card__label">구제율</span>
+      <span class="stat-card__value" th:text="${rescueRate7d} + '%'">0%</span>
+      <span class="stat-card__delta" th:classappend="${rescueRate7d >= rescueGoalPercent} ? 'stat-card__delta--up' : ''"
+            th:text="'목표 ' + ${rescueGoalPercent} + '%' + (${rescueRate7d >= rescueGoalPercent} ? ' 달성' : '')">목표 70%</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">판매 수량 / 등록 수량 (최근 7일)</span>
+      <span class="stat-card__value" th:text="${soldCount7d} + ' / ' + ${totalQuantity7d}">0 / 0</span>
+      <span class="stat-card__delta" th:text="'상품 ' + ${registeredCount7d} + '종 등록'">상품 0종 등록</span>
+    </div>
+  </div>
+
+  <!--/* 정산 페이지가 아직 없어 자리만 — TODO(송보미) 위 주석 참고. 검색창은 아직 비기능(정적) UI다. */-->
+  <h3 class="subhead mt-24">정산 내역</h3>
+  <div class="search search--block mb-12">
+    <input class="field w-full" type="search" placeholder="정산일 · 항목 검색">
+    <span class="search__submit"><svg class="icon"><use href="#i-search"/></svg></span>
+  </div>
+  <div class="info-list">
+    <div class="info-empty">아직 정산 내역이 없습니다. (정산 페이지 준비 중)</div>
+  </div>
+  </div>
+
+</div>
+</body>
+</html>

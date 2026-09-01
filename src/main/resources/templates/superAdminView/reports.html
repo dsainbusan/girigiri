@@ -1,68 +1,155 @@
 <!DOCTYPE html>
 <!--/*
-  신고 처리 / 1:1 문의 관리. /superadmin/reports 로 접속.
-  TODO(송보미): 데모 데이터 → Report/Inquiry Repository 연동, 답변/처리 액션은 실제 처리 API 붙을 때 버튼 활성화.
+  신고 처리 / 1:1 문의 관리. /superadmin/reports 로 접속. 신고 접수/매장 문의/유저 문의를 한 화면에
+  쭉 늘어놓지 않고 탭(?tab=report|store|user, 기본 report)으로 나눴다 — 다른 필터 탭들과 동일하게
+  서버가 골라 그리는 방식(JS 없음). 세 섹션 데이터는 항상 같이 계산해서 모델에 담아두고 템플릿에서
+  th:if로 하나만 보여준다(SuperAdminController#reports).
+
+  "신고 접수"도 처음엔 정적 데모였는데, 매장 문의/유저 문의처럼 클릭 → 상세 → 답변이 되게 해달라는
+  요청으로 ComplaintEntity(신규, "report"는 이미 매장 판매 리포트가 선점해 Complaint로 이름 지음)로
+  실데이터 연동했다.
+
+  변경됨 — 왜: "회원 관리/매장 관리처럼 표로 만들면 좋겠다"는 요청 — 카드형 .info-row 목록을
+  members.html/stores.html과 같은 .data-table(+colgroup 고정 폭 + row-clickable 행 전체 클릭)로
+  바꿨다. 표 하나가 필요로 하는 폭이 카드보다 넓어서, 지난번에 넣었던 .form-narrow(520px 센터 정렬)는
+  뺐다 — members.html/stores.html도 표 화면은 전체 폭을 쓰지 폭을 좁혀 가운데 정렬하지 않는다(상세
+  페이지들만 계속 센터 정렬 유지, 거긴 표가 아니라 읽는 화면이라 폭을 좁히는 게 여전히 맞음).
+
+  변경됨 — 왜: "탭 옮길 때마다 표가 왔다갔다해서 통일성이 없다"는 피드백 — 처음엔 탭마다 컬럼 구성이
+  달라(6/5/5개, 순서도 제각각) 매 탭 전환마다 표 모양 자체가 바뀌었다. 세 탭을 완전히 똑같은 6컬럼
+  순서·폭·헤더(제목/매장명/작성자/접수일/답변일/상태)로 통일해서, 탭을 옮겨도 "같은 표에 다른 데이터가
+  들어간" 것처럼 보이게 했다:
+    - 신고 접수: 제목=신고 사유, 매장명=신고 대상, 작성자=신고자
+    - 매장 문의: 제목=문의 제목, 매장명=문의 대상 매장, 작성자=문의자
+    - 유저 문의: 제목=문의 제목, 매장명 없음("-"), 작성자=문의자
+  매장 문의 탭엔 원래 작성자를 안 보여줬는데, 통일하려면 필요해져서 작성자 이름 계산(inquiryAuthorNames)
+  범위를 유저 문의만이 아니라 문의 전체(매장+유저)로 넓혔다(SuperAdminController#reports).
+  colgroup도 세 표가 완전히 동일한 값 — 폭이 안 흔들리는 게 핵심이라 표마다 다르게 잴 이유가 없다.
+  답변일은 신고는 ComplaintEntity.resolvedAt, 문의 둘 다 answeredAtByInquiryId(그 문의의 첫 댓글
+  createdAt, SuperAdminController#reports가 계산) — 아직 답변 전이면 "-".
+
+  각 탭 목록 아래 페이지네이션(.pagination)을 붙였다(SuperAdminController#reports가 page 쿼리파라미터로
+  10건씩 잘라서 내려줌) — 글이 쌓일수록 목록이 무한정 길어지는 걸 방지. 세 탭이 page 파라미터를
+  공유하지만 각 탭의 링크가 자기 totalPages 안에서만 생성되므로 탭을 넘나들며 섞이지 않는다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('신고 · 문의', ~{:: #content}, 'reports', '슈퍼어드민')}">
 <body>
 <div id="content" th:fragment="content">
 
-  <h2 class="section-title">신고 접수</h2>
-  <div class="card">
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">싱싱반찬가게 신고 — "상품 상태 불량"</div>
-        <div class="u-sub">2026-08-19 접수 · 신고자 song_bm</div>
-      </div>
-      <span class="badge badge--accent">대기</span>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">노은카페 신고 — "노쇼 과다 청구"</div>
-        <div class="u-sub">2026-08-17 접수 · 신고자 noeun_k</div>
-      </div>
-      <span class="badge badge--success">처리완료</span>
-    </div>
+  <div class="tabs">
+    <a class="tab" th:classappend="${tab == 'report'} ? ' is-active'" th:href="@{/superadmin/reports(tab='report')}">신고 접수</a>
+    <a class="tab" th:classappend="${tab == 'store'} ? ' is-active'" th:href="@{/superadmin/reports(tab='store')}">매장 문의</a>
+    <a class="tab" th:classappend="${tab == 'user'} ? ' is-active'" th:href="@{/superadmin/reports(tab='user')}">유저 문의</a>
   </div>
 
-  <h2 class="section-title">매장 문의<span class="section-title__count">사장님</span></h2>
-  <div class="card">
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">"이번 달 정산 내역이 안 맞아요"</div>
-        <div class="u-sub">2026-08-21 접수 · 보미네베이커리</div>
-      </div>
-      <span class="badge badge--accent">대기</span>
-      <button class="btn btn--sm btn--outline" type="button" disabled>답변</button>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">"상품 등록이 자꾸 실패해요"</div>
-        <div class="u-sub">2026-08-18 접수 · 채현이네 도시락</div>
-      </div>
-      <span class="badge badge--success">답변완료</span>
-    </div>
+  <div class="table-wrap" th:if="${tab == 'report'}">
+    <table class="data-table report-table">
+      <colgroup>
+        <col><col style="width:200px"><col style="width:140px"><col style="width:110px"><col style="width:110px"><col style="width:100px">
+      </colgroup>
+      <thead>
+        <tr><th>제목</th><th>매장명</th><th>작성자</th><th>접수일</th><th>답변일</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(complaints)}">
+          <td colspan="6" class="table-empty">접수된 신고가 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="c : ${complaints}" th:attr="data-href=@{/superadmin/complaints/{id}(id=${c.id})}">
+          <td class="cell-name"><a th:href="@{/superadmin/complaints/{id}(id=${c.id})}" th:text="${c.reason}">사유</a></td>
+          <td th:text="${c.targetName}">매장명</td>
+          <td th:text="${c.reporterName}">신고자</td>
+          <td th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
+          <td th:text="${c.resolvedAt != null} ? ${#temporals.format(c.resolvedAt, 'yyyy-MM-dd')} : '-'">-</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${c.status == 'PENDING'}">대기</span>
+            <span class="badge badge--success" th:unless="${c.status == 'PENDING'}">처리완료</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" th:if="${tab == 'report' and complaintsTotalPages > 1}">
+    <a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='report', page=${page - 1})}">&lsaquo;</a>
+    <a th:each="p : ${#numbers.sequence(0, complaintsTotalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+       th:text="${p + 1}" th:href="@{/superadmin/reports(tab='report', page=${p})}"></a>
+    <a th:classappend="${page >= complaintsTotalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='report', page=${page + 1})}">&rsaquo;</a>
   </div>
 
-  <h2 class="section-title">유저 문의<span class="section-title__count">소비자</span></h2>
-  <div class="card">
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">"환불이 안돼요"</div>
-        <div class="u-sub">2026-08-21 접수 · 작성자 taehoon_k</div>
-      </div>
-      <span class="badge badge--accent">대기</span>
-      <button class="btn btn--sm btn--outline" type="button" disabled>답변</button>
-    </div>
-    <div class="list-row">
-      <div class="list-row__body">
-        <div class="u-bold">"픽업 QR이 인식이 안돼요"</div>
-        <div class="u-sub">2026-08-18 접수 · 작성자 changho_m</div>
-      </div>
-      <span class="badge badge--success">답변완료</span>
-    </div>
+  <div class="table-wrap" th:if="${tab == 'store'}">
+    <table class="data-table report-table">
+      <colgroup>
+        <col><col style="width:200px"><col style="width:140px"><col style="width:110px"><col style="width:110px"><col style="width:100px">
+      </colgroup>
+      <thead>
+        <tr><th>제목</th><th>매장명</th><th>작성자</th><th>접수일</th><th>답변일</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(storeInquiries)}">
+          <td colspan="6" class="table-empty">매장 문의가 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="inquiry : ${storeInquiries}" th:attr="data-href=@{/superadmin/inquiries/{id}(id=${inquiry.id})}">
+          <td class="cell-name"><a th:href="@{/superadmin/inquiries/{id}(id=${inquiry.id})}" th:text="${inquiry.title}">문의 제목</a></td>
+          <td th:text="${storeNames[inquiry.storeId]}">매장명</td>
+          <td th:text="${inquiryAuthorNames[inquiry.userId]} ?: '(탈퇴한 회원)'">작성자</td>
+          <td th:text="${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
+          <td th:text="${answeredAtByInquiryId[inquiry.id] != null} ? ${#temporals.format(answeredAtByInquiryId[inquiry.id], 'yyyy-MM-dd')} : '-'">-</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${commentCounts[inquiry.id]} == null">대기</span>
+            <span class="badge badge--success" th:unless="${commentCounts[inquiry.id]} == null">답변완료</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
+  <div class="pagination" th:if="${tab == 'store' and storeInquiriesTotalPages > 1}">
+    <a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='store', page=${page - 1})}">&lsaquo;</a>
+    <a th:each="p : ${#numbers.sequence(0, storeInquiriesTotalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+       th:text="${p + 1}" th:href="@{/superadmin/reports(tab='store', page=${p})}"></a>
+    <a th:classappend="${page >= storeInquiriesTotalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='store', page=${page + 1})}">&rsaquo;</a>
+  </div>
+
+  <div class="table-wrap" th:if="${tab == 'user'}">
+    <table class="data-table report-table">
+      <colgroup>
+        <col><col style="width:200px"><col style="width:140px"><col style="width:110px"><col style="width:110px"><col style="width:100px">
+      </colgroup>
+      <thead>
+        <tr><th>제목</th><th>매장명</th><th>작성자</th><th>접수일</th><th>답변일</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(userInquiries)}">
+          <td colspan="6" class="table-empty">유저 문의가 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="inquiry : ${userInquiries}" th:attr="data-href=@{/superadmin/inquiries/{id}(id=${inquiry.id})}">
+          <td class="cell-name"><a th:href="@{/superadmin/inquiries/{id}(id=${inquiry.id})}" th:text="${inquiry.title}">문의 제목</a></td>
+          <td>-</td>
+          <td th:text="${inquiryAuthorNames[inquiry.userId]} ?: '(탈퇴한 회원)'">작성자</td>
+          <td th:text="${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
+          <td th:text="${answeredAtByInquiryId[inquiry.id] != null} ? ${#temporals.format(answeredAtByInquiryId[inquiry.id], 'yyyy-MM-dd')} : '-'">-</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${commentCounts[inquiry.id]} == null">대기</span>
+            <span class="badge badge--success" th:unless="${commentCounts[inquiry.id]} == null">답변완료</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" th:if="${tab == 'user' and userInquiriesTotalPages > 1}">
+    <a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='user', page=${page - 1})}">&lsaquo;</a>
+    <a th:each="p : ${#numbers.sequence(0, userInquiriesTotalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+       th:text="${p + 1}" th:href="@{/superadmin/reports(tab='user', page=${p})}"></a>
+    <a th:classappend="${page >= userInquiriesTotalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='user', page=${page + 1})}">&rsaquo;</a>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
 
 </div>
 </body>

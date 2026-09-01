@@ -8,6 +8,7 @@ import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,10 @@ public class MypageController {
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
 	private final ReservationRepository reservationRepository;
+
+	// 추가됨 — 왜: 회원정보 수정 화면의 "GPS로 활동 지역 채우기" 버튼용(카카오 지오코더 좌표→주소).
+	@Value("${kakao.map.js-key}")
+	private String kakaoMapJsKey;
 
 	/**
 	 * 마이페이지 메인 화면
@@ -76,6 +81,7 @@ public class MypageController {
 
 		userRepository.findById(userId).ifPresent(user -> model.addAttribute("user", user));
 		storeRepository.findByOwnerId(userId).ifPresent(store -> model.addAttribute("store", store));
+		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
 
 		return "mypageView/edit";
 	}

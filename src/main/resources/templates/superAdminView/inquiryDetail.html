@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--/*
+  문의 상세. /superadmin/inquiries/{id} 로 접속(SuperAdminController#inquiryDetail).
+  reports.html의 매장 문의/유저 문의 탭에서 제목 행을 클릭하면 여기로 온다 — 컨슈머용
+  inquiryView/detail.html과 같은 정보(제목/작성자/매장명/작성일/본문/사진/댓글)를 보여주되, 어드민
+  디자인 시스템(.info-list/.info-row, .field, .btn) 톤으로 맞췄다. 사진은 InquiryEntity.imageUrl이
+  있을 때만(/upload/... 정적 경로라 th:src에 바로 씀, @{...} 불필요) 보여주는 기존 확립된 패턴 재사용.
+  답변 등록은 기존 POST /superadmin/inquiries/{id}/reply를 그대로 쓴다(이 상세 페이지로 리다이렉트).
+  댓글 삭제는 어드민 스코프 밖(컨슈머 쪽만 지원) — 여기선 조회+답변만.
+
+  답변 입력 영역(.reply-box)은 "너무 작고 layout이 구리다"는 피드백으로 카드형(테두리+연한 배경+라벨)
+  으로 다시 짰다 — textarea만 맨몸으로 있던 걸 감싸고, 버튼은 전체폭 대신 오른쪽 정렬로(신고 상세
+  complaintDetail.html과 동일한 컴포넌트 공유, layout-admin.css 참고).
+
+  작성자/매장 클릭 → 상세 이동: 작성자(authorName)는 회원 상세(/superadmin/members/{inquiry.userId})
+  로, 매장명(storeName, 있을 때만)은 매장 상세(/superadmin/stores/{inquiry.storeId})로 링크한다 —
+  "신고자/문의자·매장 클릭하면 디테일 보이게 해달라"는 요청.
+  변경됨 — 왜: 탈퇴 등으로 작성자 회원이 실제로 없는 경우(InquiryService#getAuthorName이 "익명"으로
+  표시하는 그 경우) 링크를 그대로 두면 클릭 시 회원 상세가 404("회원을 찾을 수 없습니다: N")로 떨어져서
+  보기 안 좋다는 피드백 — authorExists(컨트롤러가 userRepository.existsById로 미리 확인)가 false일 때는
+  링크 대신 alert("탈퇴한 회원입니다.")만 띄우고 페이지 이동은 막는다(존재하는 회원일 때만 진짜 링크).
+
+  "사이즈 줄여서 센터로" 요청 — memberDetail.html과 동일하게 .form-narrow(520px, margin auto)로 본문을
+  감쌌다. "목록으로" 링크만 밖에 남겨 왼쪽 정렬 유지.
+
+  "'목록으로' css를 매장 목록/회원 목록/회원 상세로랑 똑같이" 피드백 — .text-muted(회색) 대신
+  storeDetail.html/memberDetail.html과 같은 .link-action(파란색) 클래스로 맞췄다(complaintDetail.html
+  도 동일하게 변경).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('문의 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/reports(tab=${inquiry.storeId != null ? 'store' : 'user'})}">&larr; 목록으로</a>
+
+  <div class="form-narrow">
+  <div class="info-list" style="margin-top:12px">
+    <div class="info-row info-row--stack">
+      <div class="info-row__title" th:text="${inquiry.title}">문의 제목</div>
+      <div class="info-row__sub">
+        <a class="link-action" th:if="${authorExists}" th:href="@{/superadmin/members/{id}(id=${inquiry.userId})}" th:text="${authorName}">작성자</a>
+        <a class="link-action" th:unless="${authorExists}" href="javascript:void(0)" onclick="alert('탈퇴한 회원입니다.'); return false;" th:text="${authorName}">작성자</a>
+        <th:block th:if="${storeName != null}">
+          <span> · </span>
+          <a class="link-action" th:href="@{/superadmin/stores/{id}(id=${inquiry.storeId})}" th:text="${storeName}">매장명</a>
+        </th:block>
+        <span th:text="' · ' + ${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+      </div>
+      <div class="info-row__value info-row--pre" th:text="${inquiry.content}">문의 내용</div>
+      <img th:if="${inquiry.imageUrl != null and !#strings.isEmpty(inquiry.imageUrl)}" th:src="${inquiry.imageUrl}"
+           alt="문의 사진" loading="lazy" onerror="this.style.display='none'"
+           style="margin-top:4px;width:100%;max-width:320px;aspect-ratio:4/3;object-fit:cover;border-radius:8px">
+    </div>
+  </div>
+
+  <div class="subhead" style="margin-top:24px">답변</div>
+  <div class="info-list">
+    <div class="info-row info-row--stack" th:each="c : ${comments}">
+      <div class="flex-row" style="justify-content:space-between">
+        <span class="info-row__title" style="font-size:13px" th:text="${c.authorName}">닉네임</span>
+        <span class="text-muted text-muted--sm" th:text="${c.createdAtLabel}">오늘</span>
+      </div>
+      <div class="info-row__value info-row--pre" th:text="${c.content}">답변 내용</div>
+    </div>
+    <p class="text-muted" th:if="${#lists.isEmpty(comments)}" style="padding:16px">아직 답변이 없습니다.</p>
+  </div>
+
+  <form class="reply-box" th:action="@{/superadmin/inquiries/{id}/reply(id=${inquiry.id})}" method="post">
+    <div class="reply-box__label">답변 작성</div>
+    <textarea class="field reply-box__textarea" name="content" required maxlength="500" placeholder="답변을 입력하세요"></textarea>
+    <div class="reply-box__footer">
+      <span class="text-muted text-muted--sm">최대 500자</span>
+      <button class="btn btn--primary btn--sm" type="submit">답변 등록</button>
+    </div>
+  </form>
+  </div>
+
+</div>
+</body>
+</html>
