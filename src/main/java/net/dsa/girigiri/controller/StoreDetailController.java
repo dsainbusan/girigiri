@@ -55,6 +55,8 @@ public class StoreDetailController {
 		model.addAttribute("avgRating", String.format("%.1f", reviewService.getAverageRating(id)));
 		model.addAttribute("reviewCount", reviewService.getReviewCount(id));
 		model.addAttribute("reviews", reviewService.getReviews(id, userId, role));
+		// 강노은: AI 리뷰 요약 (리뷰 10건 이상일 때만 값이 채워짐 — ReviewService.getReviewSummary 참고).
+		model.addAttribute("reviewSummary", reviewService.getReviewSummary(id).orElse(null));
 		model.addAttribute("loggedIn", userId != null);
 		model.addAttribute("myRating", myReview.map(r -> r.getRating()).orElse(0));
 		model.addAttribute("myContent", myReview.map(r -> r.getContent()).orElse(""));

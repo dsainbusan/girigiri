@@ -12,6 +12,8 @@ public record ReservationCompletedItemDto(
 		int totalPrice,
 		String pickupCode,
 		String reservedAtDisplay,
-		String pickedAtDisplay
+		String pickedAtDisplay,
+		String pickedDate,   // 날짜별 그룹 헤더용 ("08월 26일 (화)")
+		String pickedTime    // 그룹 안에서 시각만 ("10:35")
 ) {
 }

@@ -2,6 +2,49 @@
 (function () {
   "use strict";
 
+  // 강노은: 위치 권한 상태를 미리 확인해서 쓰는 공용 헬퍼. home.html(진입 시 자동 시도)과
+  // searchView/results.html("거리순" 버튼) 둘 다 이걸 쓴다 — 예전엔 각자 getCurrentPosition을
+  // 직접 불렀는데, 거부(denied) 상태에서 다시 호출하면 브라우저가 네이티브 프롬프트 없이 그냥
+  // 실패 콜백만 주니까 "왜 안 되는지/어디서 풀어야 하는지"를 사용자가 알 방법이 없었다.
+  // Permissions API로 먼저 상태를 물어보고, denied면 onFail('denied')을 바로 불러 안내 배너를 띄운다.
+  // (Permissions API 미지원 브라우저는 그냥 getCurrentPosition을 바로 시도 — 최소한 이전 동작은 유지.)
+  //
+  // onFail(reason)의 reason: 'denied'(권한 차단 — 안내 배너 필요) | 'unsupported'(브라우저 미지원 —
+  // 안내 배너 필요) | 'unavailable'(TIMEOUT/POSITION_UNAVAILABLE — 권한과 무관한 일시적 실패라
+  // 안내 배너 없이 조용히 버튼/상태만 원복하면 됨). 처음엔 reason 구분 없이 onBlocked()만 있었는데,
+  // PERMISSION_DENIED만 걸러내다 보니 TIMEOUT/POSITION_UNAVAILABLE일 땐 onBlocked도 안 불려서
+  // "위치 확인 중…" 버튼이 영영 안 돌아오는 회귀가 있었다(리뷰로 발견, 재현 확인 후 수정).
+  window.girigiriRequestLocation = function (onGranted, onFail) {
+    function askBrowser() {
+      navigator.geolocation.getCurrentPosition(onGranted, function (err) {
+        onFail(err.code === err.PERMISSION_DENIED ? "denied" : "unavailable");
+      });
+    }
+    if (!navigator.geolocation) { onFail("unsupported"); return; }
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then(function (status) {
+        if (status.state === "denied") { onFail("denied"); return; }
+        askBrowser();
+      }).catch(askBrowser);
+    } else {
+      askBrowser();
+    }
+  };
+
+  // 강노은: 브라우저마다 위치 권한을 푸는 위치(메뉴/아이콘)가 달라서 User-Agent로 대략 나눠 안내한다.
+  // 완벽한 판별은 아니다(삼성인터넷 등 소수 브라우저는 else로 빠짐) — "아예 안 알려주는 것"보다
+  // "대부분의 경우엔 맞는 안내"가 사용자 입장에서 훨씬 나아서 실용적으로 타협했다.
+  window.girigiriGeoHint = function () {
+    var ua = navigator.userAgent;
+    if (/Firefox/.test(ua)) {
+      return "주소창 왼쪽의 방패 아이콘을 눌러 위치 차단을 해제한 뒤 새로고침 해주세요.";
+    }
+    if (/Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua)) {
+      return "Safari 메뉴 → 이 웹사이트 설정 → 위치를 '허용'으로 바꾼 뒤 새로고침 해주세요. (아이폰은 설정 앱 → Safari → 위치에서도 확인할 수 있어요)";
+    }
+    return "주소창 왼쪽의 자물쇠 또는 정보(ⓘ) 아이콘을 눌러 '위치' 권한을 '허용'으로 바꾼 뒤 새로고침 해주세요.";
+  };
+
   // 뒤로가기 버튼
   document.querySelectorAll("[data-back]").forEach(function (el) {
     el.addEventListener("click", function () { history.back(); });

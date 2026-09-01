@@ -1,0 +1,88 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - heading "테스트 베이커리(dashfix)" [level=1] [ref=f1e5]
+    - generic [ref=f1e6]: 점주 모드
+    - button "유저 모드로" [ref=f1e8] [cursor=pointer]
+  - main [ref=f1e9]:
+    - generic [ref=f1e10]:
+      - generic [ref=f1e11]:
+        - link "오늘의 구제" [ref=f1e12] [cursor=pointer]:
+          - /url: /store/products
+        - link "매장 정보 수정" [ref=f1e13] [cursor=pointer]:
+          - /url: /store/edit
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]:
+          - generic [ref=f1e16]: 오늘 매출
+          - generic [ref=f1e17]: 0원
+        - generic [ref=f1e18]:
+          - generic [ref=f1e19]: 판매 / 등록
+          - generic [ref=f1e20]: 0 / 0개
+          - generic [ref=f1e21]: 0개 판매중 (0종)
+        - generic [ref=f1e22]:
+          - generic [ref=f1e23]: 픽업 예약
+          - generic [ref=f1e24]: 0건
+          - generic [ref=f1e25]: 대기 0 · 완료 0 · 취소 0
+        - generic [ref=f1e26]:
+          - generic [ref=f1e27]: 폐기 절감(구제율)
+          - generic [ref=f1e28]: 0%
+          - generic [ref=f1e29]:
+            - generic [ref=f1e30]: 목표 70%
+            - button "✏️" [ref=f1e31] [cursor=pointer]
+      - generic [ref=f1e32]:
+        - generic [ref=f1e33]:
+          - button "주문" [ref=f1e34] [cursor=pointer]
+          - button "픽업" [ref=f1e35] [cursor=pointer]
+        - generic [ref=f1e36]:
+          - generic [ref=f1e37]:
+            - link "들어온 예약 확인" [ref=f1e38] [cursor=pointer]:
+              - /url: /reservation/incoming
+            - link "주문 마감 설정" [ref=f1e39] [cursor=pointer]:
+              - /url: /reservation/settings
+          - link "완료된 거래 내역" [ref=f1e40] [cursor=pointer]:
+            - /url: /reservation/completed
+      - generic [ref=f1e41]:
+        - generic [ref=f1e42]:
+          - button "오늘" [ref=f1e43] [cursor=pointer]
+          - button "최근 7일" [ref=f1e44] [cursor=pointer]
+        - generic [ref=f1e45]:
+          - generic [ref=f1e46]:
+            - generic [ref=f1e47]:
+              - generic [ref=f1e48]:
+                - paragraph [ref=f1e49]: 오늘 판매 현황
+                - paragraph [ref=f1e50]: 등록 0개
+              - generic [ref=f1e51]: 마감까지 4시간 49분
+            - generic [ref=f1e52]:
+              - generic [ref=f1e53]:
+                - generic [ref=f1e55]:
+                  - generic [ref=f1e56]: 남음
+                  - generic [ref=f1e57]: 0개
+                  - generic [ref=f1e58]: 0개 중
+                - generic [ref=f1e59]:
+                  - generic [ref=f1e60]:
+                    - generic [ref=f1e61]: 판매
+                    - generic [ref=f1e64]: 0개
+                  - generic [ref=f1e65]:
+                    - generic [ref=f1e66]: 예약됨
+                    - generic [ref=f1e69]: 0개
+                  - generic [ref=f1e70]:
+                    - generic [ref=f1e71]: 남음
+                    - generic [ref=f1e74]: 0개
+              - generic [ref=f1e75]:
+                - generic [ref=f1e76]: 마감 후 남은 수량은 폐기로 집계돼요
+                - generic [ref=f1e77]:
+                  - text: 남은
+                  - strong [ref=f1e78]: 0개
+          - paragraph [ref=f1e80]: 오늘 절감 효과
+          - generic [ref=f1e81]:
+            - generic [ref=f1e82]:
+              - generic [ref=f1e83]: 0개
+              - generic [ref=f1e84]: 구한 음식
+            - generic [ref=f1e85]:
+              - generic [ref=f1e86]: 0원
+              - generic [ref=f1e87]: 회수 매출
+            - generic [ref=f1e88]:
+              - generic [ref=f1e89]: 0.0kg
+              - generic [ref=f1e90]: CO₂ 절감
+          - link "📄 오늘 리포트 보기 (Excel · PDF)" [ref=f1e91] [cursor=pointer]:
+            - /url: /store/report?period=daily
+      - button "유저 모드로 전환" [ref=f1e93] [cursor=pointer]

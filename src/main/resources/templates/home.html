@@ -11,6 +11,18 @@
 
 	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)">🔍 <span>베이커리, 반찬, 도시락 검색</span></a>
 
+	<!--/* 강노은: 위치 권한이 차단돼 있으면 조용히 넘어가지 않고 어디서 풀 수 있는지 안내한다
+	     (아래 script 참고). 한 번 닫으면 localStorage에 남겨서 방문할 때마다 다시 뜨지 않게 한다. */-->
+	<div id="geo-blocked-banner" class="banner banner--info" style="margin-top:var(--s-3);display:none;align-items:flex-start">
+		<span style="font-size:16px">📍</span>
+		<div class="u-grow">
+			<div class="banner__title">위치 권한이 꺼져 있어요</div>
+			<div class="banner__desc" id="geo-blocked-desc"></div>
+		</div>
+		<button type="button" id="geo-blocked-dismiss" aria-label="닫기"
+		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);font-size:14px;line-height:1;padding:2px">✕</button>
+	</div>
+
 	<div class="chip-row" id="category-filter" style="margin-top:var(--s-3)">
 		<button type="button" class="chip is-active" data-filter="all">전체</button>
 		<button type="button" class="chip" data-filter="베이커리">베이커리</button>
@@ -53,23 +65,48 @@
 	</div>
 
 	<!--/* 강노은: "현재 위치 기준 거리순 카드 목록" — URL에 좌표가 아직 없으면 Geolocation으로
-	     한 번 조용히 물어보고, 받으면 그 좌표를 붙여 페이지를 자동으로 다시 불러온다(검색 페이지의
+	     한 번 물어보고, 받으면 그 좌표를 붙여 페이지를 자동으로 다시 불러온다(검색 페이지의
 	     "거리순" 버튼과 같은 방식이지만 여기는 메인 화면이라 버튼 없이 최초 진입 시 자동으로 시도).
-	     거부/미지원이면 그냥 조용히 넘어간다 — HomeService가 좌표 없을 때 기존 마감임박순으로
-	     폴백해주므로 화면이 깨지지 않는다. */-->
+	     차단돼 있으면 위 배너로 어디서 풀 수 있는지 안내한다(한 번 닫으면 다시 안 뜸) — 예전엔
+	     그냥 조용히 무시했는데, "왜 거리순이 안 되는지도 모르겠고 어디서 풀어야 할지도 모르겠다"는
+	     피드백을 받고 바꿨다. 안내를 봐도 여전히 HomeService가 좌표 없을 때 기존 마감임박순으로
+	     폴백해주므로 화면 자체는 깨지지 않는다. */-->
 	<script>
-		(function () {
-			if (!navigator.geolocation) return;
+		// 강노은: /js/app.js(girigiriRequestLocation 정의)가 이 content보다 뒤(</body> 직전)에서
+		// 로드되기 때문에, 여기서 바로 호출하면 아직 정의 전이라 에러난다 — DOMContentLoaded까지
+		// 기다려서 app.js가 먼저 실행되게 한다.
+		document.addEventListener('DOMContentLoaded', function () {
 			var params = new URLSearchParams(window.location.search);
 			if (params.has('lat') && params.has('lng')) return; // 이미 좌표로 들어온 상태 — 재요청 안 함
-			navigator.geolocation.getCurrentPosition(function (pos) {
+
+			var STORAGE_KEY = 'giriGeoHintDismissed';
+			var banner = document.getElementById('geo-blocked-banner');
+			var descEl = document.getElementById('geo-blocked-desc');
+			var dismissBtn = document.getElementById('geo-blocked-dismiss');
+
+			if (dismissBtn) {
+				dismissBtn.addEventListener('click', function () {
+					banner.style.display = 'none';
+					try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) { /* 프라이빗 모드 등 — 무시 */ }
+				});
+			}
+
+			window.girigiriRequestLocation(function (pos) {
 				params.set('lat', pos.coords.latitude);
 				params.set('lng', pos.coords.longitude);
 				window.location.search = params.toString();
-			}, function () {
-				// 위치 권한 거부/실패 — 조용히 무시(기존 마감임박순 그대로 유지)
+			}, function (reason) {
+				// 'unavailable'(GPS 응답 지연/실패)은 권한 문제가 아니니 조용히 넘어간다(기존 마감임박순 유지).
+				if (reason !== 'denied' && reason !== 'unsupported') return;
+				if (!banner) return;
+				try {
+					if (localStorage.getItem(STORAGE_KEY) === '1') return; // 이미 한 번 닫았으면 다시 안 보여줌
+				} catch (e) { /* localStorage 접근 불가 환경 — 매번 보여주는 쪽이 안전하니 그냥 진행 */ }
+				var hint = reason === 'unsupported' ? '이 브라우저에서는 위치 정보를 사용할 수 없어요.' : window.girigiriGeoHint();
+				if (descEl) descEl.textContent = '거리순 정렬을 쓰려면 위치 권한이 필요해요. ' + hint;
+				banner.style.display = 'flex';
 			});
-		})();
+		});
 	</script>
 
 	<!--/* th:replace="~{:: #content}"는 이 div 안쪽만 가져간다 — 스크립트도 반드시 여기 안에 있어야 렌더링된다. */-->
@@ -97,9 +134,14 @@
 				var marker = new kakao.maps.Marker({ position: position, map: map });
 
 				kakao.maps.event.addListener(marker, 'click', function () {
+					// 강노은: 마커 클릭 시 이름/카테고리만 보여주고 끝이라 가게 상세로 넘어갈 방법이
+					// 없었음 — 인포윈도우에 상세 페이지 링크를 추가한다.
 					infoWindow.setContent(
 						'<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">'
+						+ '<a href="/user/stores/' + store.id + '" style="color:inherit;text-decoration:none;">'
 						+ store.storeName + (store.category ? ' · ' + store.category : '')
+						+ ' <span style="color:var(--c-accent)">›</span>'
+						+ '</a>'
 						+ '</div>'
 					);
 					infoWindow.open(map, marker);

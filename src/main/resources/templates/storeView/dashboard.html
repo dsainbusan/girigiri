@@ -6,18 +6,21 @@
 	점주 대시보드
 	담당: 문창호 (WBS 3.0 매장 운영)
 
-	변경됨 (2026-08-21) — 왜: 사용자가 만든 목업(오늘 매출·판매/등록·픽업예약·구제율 2x2 통계 +
-	판매 vs 폐기 진행률 바) 참고해서 화면 구성을 다시 잡았다. 새 CSS 클래스는 하나도 추가하지 않고
-	기존 stat-grid/stat-card, card, progress, btn--outline만 재사용 — 컬러 점(dot) 정도만 인라인
-	스타일로 처리했다. 배지는 "관리자 모드"가 아니라 "점주 모드"로 명명 — 이 서비스엔 플랫폼 운영자용
-	진짜 "관리자(어드민)" 화면이 별도로 있어서 명칭이 겹치면 안 된다(CLAUDE.md 참고).
+	변경됨 (2026-08-30) — 왜: 한 화면에 정보가 너무 많다는 피드백.
+	- 항상 보이는 것: 처리할 일 배너 · 2x2 핵심지표 · 유저모드 전환
+	- "현황"(보기): 하나의 카드 안에서 [오늘]↔[최근 7일] 토글. 최근 7일 탭에 리포트 다운로드도 함께.
+	- "주문·픽업"(하기): 성격이 달라서 토글에 안 섞고 그 아래 별도 카드 하나로 버튼을 모음.
+	  (예전엔 픽업 처리 / 주문·설정 / 리포트 3개 카드로 흩어져 있었다.)
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<!-- 처리할 일 배너 — 마감 상품 자동 등록 알림/수락 대기 예약을 여기서 확인 (손님용 알림함 대신).
-	     각 줄은 0건이면 숨김. 문창호, 2026-08-27 -->
-	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0}" class="todo-banner">
+	<!-- 처리할 일 배너 — 항상 최상단. 각 줄 0건이면 숨김. -->
+	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+		<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
+			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span class="todo-banner__go">›</span>
+		</a>
 		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
 			<span>📦 오늘의 구제 <b th:text="${draftPendingCount}">3</b>건이 발행을 기다려요</span>
 			<span class="todo-banner__go">›</span>
@@ -26,13 +29,21 @@
 			<span>🔔 새 예약 <b th:text="${incomingReservationCount}">2</b>건 확인이 필요해요</span>
 			<span class="todo-banner__go">›</span>
 		</a>
+		<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
+			<span>⚙️ 자동 등록을 설정하면 매일 손 안 대도 돼요 — POS 연동하기</span>
+			<span class="todo-banner__go">›</span>
+		</a>
 	</div>
 
-	<div class="u-row" style="justify-content: flex-end; gap: var(--s-3); margin-bottom: var(--s-4)">
-		<a th:href="@{/store/products}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">오늘의 구제</a>
-		<a th:href="@{/store/edit}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">매장 정보 수정</a>
+	<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-4)">
+		<span class="u-sub" style="font-size: var(--fs-sm)" th:text="${todayLabel}">8월 30일 토요일</span>
+		<span class="u-row" style="gap: var(--s-3)">
+			<a th:href="@{/store/products}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">오늘의 구제</a>
+			<a th:href="@{/store/edit}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">매장 정보 수정</a>
+		</span>
 	</div>
 
+	<!-- 핵심 지표 2x2 — 항상 보임. "지금 장사 어때?"의 한눈 요약. -->
 	<div class="stat-grid">
 		<div class="stat-card">
 			<span class="stat-card__label">오늘 매출</span>
@@ -61,21 +72,48 @@
 		</div>
 	</div>
 
-	<!-- 변경됨 — 왜: 기존 진행률 바 하나였던 "오늘 판매 vs 폐기" 카드를, 마감 전/후 상태에 따라
-		의미가 달라지는 도넛 카드로 교체했다(사용자 목업 기반). "마감 전"엔 아직 결과가 안 나서
-		남은 수량을 회색(미정)으로 비워두고, "마감 후"엔 그 회색이 빨강(폐기 확정)으로 바뀐다 —
-		화면을 숨기거나 시간대별로 안 보여주는 게 아니라, 항상 같은 자리에서 "지금 상태"를 정직하게
-		보여주는 방식이라 사장님이 언제 들어오든 볼 수 있다. 실제 conic-gradient % 값은
-		StoreController에서 미리 계산해서 넘긴다(Thymeleaf에서 정수 나눗셈 직접 하면 실수하기 쉬움). -->
-	<!-- 판매 · 폐기 통계 카드 (오늘 현황 vs 최근 7일 통계 탭 전환) — 문창호 -->
+	<!-- 정산 예정액 — "돈 받는 것"이 제일 중요해서 토글 뒤에 숨기지 않고 지표 그리드 바로 밑에 노출.
+	     숫자를 바로 보여주니 요약이자 진입 버튼 역할을 겸한다. -->
+	<a th:href="@{/store/settlement(period='month')}" class="card settlement-cta">
+		<span>
+			<span class="settlement-cta__label">이번 달 정산 예정액</span>
+			<span class="settlement-cta__value" th:text="${settlementPayout}">286,400원</span>
+		</span>
+		<span class="settlement-cta__go">정산 내역 보기 ›</span>
+	</a>
+
+	<!-- ============ 주문 · 픽업 (하기) — [주문] ↔ [픽업] 토글 ============ -->
+	<!-- 현황(보기)보다 위 — 들어온 예약 수락·QR 픽업은 손님이 기다리는 시간 민감 작업이라 먼저 처리해야 한다. -->
 	<div class="card" style="margin-top: var(--s-4)">
-		<!-- 탭 헤더 -->
 		<div class="stat-toggle-tabs">
-			<button type="button" class="stat-toggle-tab is-active" id="tab-btn-today" data-target="panel-today">오늘 현황</button>
-			<button type="button" class="stat-toggle-tab" id="tab-btn-weekly" data-target="panel-weekly">최근 7일 통계</button>
+			<button type="button" class="stat-toggle-tab is-active" data-target="panel-order">주문</button>
+			<button type="button" class="stat-toggle-tab" data-target="panel-pickup">픽업</button>
 		</div>
 
-		<!-- 패널 1: 오늘 판매 현황 (도넛) -->
+		<div id="panel-order" class="stat-panel">
+			<div class="u-row" style="gap: var(--s-2)">
+				<a th:href="@{/reservation/incoming}" class="btn btn--outline btn--block">들어온 예약 확인</a>
+				<a th:href="@{/reservation/settings}" class="btn btn--outline btn--block">주문 마감 설정</a>
+			</div>
+			<a th:href="@{/reservation/completed}" class="btn btn--outline btn--block" style="margin-top: var(--s-2)">완료된 거래 내역</a>
+		</div>
+
+		<div id="panel-pickup" class="stat-panel is-hidden">
+			<div class="u-row" style="gap: var(--s-2)">
+				<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block">QR 픽업 확인</a>
+				<a th:href="@{/reservation/store-cancel}" class="btn btn--outline btn--block">매장 취소</a>
+			</div>
+		</div>
+	</div>
+
+	<!-- ============ 현황 (오늘 ↔ 최근 7일 토글) ============ -->
+	<div class="card" style="margin-top: var(--s-3)">
+		<div class="stat-toggle-tabs">
+			<button type="button" class="stat-toggle-tab is-active" data-target="panel-today">오늘</button>
+			<button type="button" class="stat-toggle-tab" data-target="panel-weekly">최근 7일</button>
+		</div>
+
+		<!-- 패널: 오늘 -->
 		<div id="panel-today" class="stat-panel">
 			<!-- 마감 전 -->
 			<div th:if="${!isClosed}">
@@ -173,9 +211,13 @@
 					<span class="saving-week__label">CO₂ 절감</span>
 				</div>
 			</div>
+
+			<a th:href="@{/store/report(period='daily')}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
+				📄 오늘 리포트 보기 (Excel · PDF)
+			</a>
 		</div>
 
-		<!-- 패널 2: 최근 7일 통계 (막대 + 절감 요약) -->
+		<!-- 패널: 최근 7일 (막대 + 절감 요약 + 리포트 보기) -->
 		<div id="panel-weekly" class="stat-panel is-hidden">
 			<div class="u-row" style="justify-content: space-between; align-items: baseline">
 				<p class="u-bold" style="font-size: var(--fs-sm)">최근 7일 판매 · 폐기</p>
@@ -216,40 +258,10 @@
 					<span class="saving-week__label">CO₂ 절감</span>
 				</div>
 			</div>
-		</div>
-	</div>
 
-	<!-- 추가됨 — 왜: 픽업 확인(/reservation/pickup)·매장 취소(/reservation/store-cancel) 화면은
-	     이미 만들어져 있는데(송채현 담당), 대시보드 어디에도 이 화면으로 가는 링크가 없어서 위
-	     "픽업 예약" 통계 카드에 숫자만 보이고 정작 처리하러 갈 방법이 없었다. -->
-	<div class="card" style="margin-top: var(--s-3)">
-		<p class="u-bold">픽업 처리</p>
-		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
-			<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block">QR 픽업 확인</a>
-			<a th:href="@{/reservation/store-cancel}" class="btn btn--outline btn--block">매장 취소</a>
-		</div>
-	</div>
-
-	<!-- 추가됨 — 왜: pull로 새로 들어온 예약 확인/수락(/reservation/incoming)·주문 마감 설정
-	     (/reservation/settings) 화면(송채현 담당)도 위와 같은 이유로 대시보드에 진입점이 없었다.
-	     이름은 원래 "픽업 설정"이었는데, 픽업 확인/처리/대기중 화면들이랑 이름이 겹쳐서 헷갈린다는
-	     피드백으로 "주문 마감 설정"으로 바꿨다 — 실제로 이 화면이 정하는 건 "몇 시까지 주문을
-	     받을지"(준비시간/마지막 픽업시간)라 이 이름이 더 정확하다. -->
-	<div class="card" style="margin-top: var(--s-3)">
-		<p class="u-bold">주문 · 설정</p>
-		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
-			<a th:href="@{/reservation/incoming}" class="btn btn--outline btn--block">들어온 예약 확인</a>
-			<a th:href="@{/reservation/settings}" class="btn btn--outline btn--block">주문 마감 설정</a>
-		</div>
-		<a th:href="@{/reservation/completed}" class="btn btn--outline btn--block" style="margin-top: var(--s-2)">완료된 거래 내역</a>
-	</div>
-
-	<div class="card" style="margin-top: var(--s-3)">
-		<p class="u-bold">리포트</p>
-		<p class="u-sub" style="font-size: var(--fs-sm); margin-top: 2px">오늘 판매·폐기 현황을 문서로 내려받을 수 있습니다.</p>
-		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
-			<a th:href="@{/store/report/excel}" class="btn btn--outline btn--block">Excel</a>
-			<a th:href="@{/store/report/pdf}" class="btn btn--outline btn--block">PDF</a>
+			<a th:href="@{/store/report(period='weekly')}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
+				📄 주간 리포트 보기 (Excel · PDF)
+			</a>
 		</div>
 	</div>
 
@@ -261,21 +273,32 @@
 		<button type="submit" class="btn btn--outline btn--block">유저 모드로 전환</button>
 	</form>
 
-	<!-- 통계 탭 전환 (오늘 현황 ↔ 최근 7일) & 구제율 목표 수정 -->
+	<!-- 탭 토글(현황: 오늘/최근7일, 주문·픽업: 주문/픽업) · 상단바 뒤로 버튼 숨김 · 구제율 목표 수정 -->
 	<script th:inline="none">
 	(function () {
-		// 1. 통계 탭 전환
-		var tabs = document.querySelectorAll('.stat-toggle-tab');
-		tabs.forEach(function (tab) {
-			tab.addEventListener('click', function () {
-				var targetId = tab.getAttribute('data-target');
-				tabs.forEach(function (t) { t.classList.remove('is-active'); });
-				document.querySelectorAll('.stat-panel').forEach(function (p) { p.classList.add('is-hidden'); });
-				tab.classList.add('is-active');
-				var targetPanel = document.getElementById(targetId);
-				if (targetPanel) {
-					targetPanel.classList.remove('is-hidden');
-				}
+		// 0. 대시보드는 점주 모드의 홈이라 "뒤로가기"가 갈 곳이 없다 — 상단바 뒤로 버튼을 숨긴다.
+		//    (common/topbar 프래그먼트엔 버튼 표시 옵션이 없어서 여기서 처리. app.js보다 먼저 실행돼
+		//     data-back을 떼두면 history.back() 핸들러도 안 붙는다.)
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (back) {
+			back.removeAttribute('data-back');
+			back.style.display = 'none';
+		}
+
+		// 1. 탭 토글 — 페이지에 여러 개(.stat-toggle-tabs) 있을 수 있어서 그룹별로 독립 처리한다.
+		//    각 그룹이 제어하는 패널은 그 그룹 버튼의 data-target으로만 한정 → 그룹끼리 안 섞인다.
+		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+			var panels = tabs
+				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
+				.filter(Boolean);
+			tabs.forEach(function (tab, i) {
+				tab.addEventListener('click', function () {
+					tabs.forEach(function (t) { t.classList.remove('is-active'); });
+					panels.forEach(function (p) { p.classList.add('is-hidden'); });
+					tab.classList.add('is-active');
+					if (panels[i]) { panels[i].classList.remove('is-hidden'); }
+				});
 			});
 		});
 

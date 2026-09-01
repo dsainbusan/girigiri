@@ -4,8 +4,10 @@
 <body>
 <!--/*
 	POS 시뮬레이터 — 2026-08-27 신규 (문창호). 시연/개발용.
-	진짜 매장 POS 단말이 없어서, 이 화면이 "매장 POS"인 척한다. 버튼들은 전부 진짜 엔드포인트
-	(/api/pos/stock 등)를 호출한다 — 실제 POS사가 이 규격으로 붙이면 그대로 동작한다.
+	진짜 매장 POS 단말이 없어서 이 화면이 "매장 POS"인 척한다.
+	2026-08-30 — 아침생산/빨리감기/재고저장 버튼이 실제로 POST /api/pos/stock 을 호출한다.
+	(재고 숫자는 이 화면=POS가 직접 계산해서 그 규격의 JSON으로 기리기리에 보낸다. 아래 "전송 로그"에 실제 요청/응답이 찍힌다.)
+	실제 POS사가 이 규격으로 붙이면 코드 수정 없이 그대로 동작한다. 명세: docs/pos-json-spec.md
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
@@ -20,49 +22,107 @@
 		<div class="pos-sim__screen">
 			<div class="pos-sim__brand">🖥️ <span th:text="${storeName} + ' POS'">○○상회 POS</span></div>
 			<p class="pos-sim__note">
-				이건 <b>매장 POS 시뮬레이터</b>입니다. 실제로는 매장 POS가 이 재고 데이터를
-				<code>POST /api/pos/stock</code> 로 기리기리에 보냅니다.
+				이건 <b>매장 POS 시뮬레이터</b>입니다. 아래 버튼은 이 POS가 계산한 재고를
+				<code>POST /api/pos/stock</code> 규격으로 기리기리에 실제로 전송합니다.
 			</p>
 		</div>
 
 		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3); flex-wrap: wrap">
-			<form th:action="@{/store/pos/sim/restock}" method="post" style="flex:1 1 45%">
-				<button type="submit" class="btn btn--outline btn--block btn--sm">🌅 아침 생산 (재고 채우기)</button>
-			</form>
-			<form th:action="@{/store/pos/sim/selldown}" method="post" style="flex:1 1 45%">
-				<button type="submit" class="btn btn--outline btn--block btn--sm">⏩ 하루 장사 빨리감기</button>
-			</form>
+			<button type="button" id="sim-restock" class="btn btn--outline btn--block btn--sm" style="flex:1 1 45%">🌅 아침 생산 (재고 채우기)</button>
+			<button type="button" id="sim-selldown" class="btn btn--outline btn--block btn--sm" style="flex:1 1 45%">⏩ 하루 장사 빨리감기</button>
 		</div>
 
 		<form th:action="@{/store/pos/sim/prompt}" method="post" style="margin-top: var(--s-2)">
 			<button type="submit" class="btn btn--block">📤 마감 임박 → 앱에 물어보기</button>
 		</form>
 		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; text-align: center">
-			지금 재고로 "오늘의 구제" 초안을 만들어서 발행 대기에 올립니다.
+			지금 재고로 "오늘의 구제" 초안을 만들어서 발행 대기에 올립니다. (이건 앱 내부 동작 — POS 전송 아님)
 		</p>
 
 		<p class="section-title" style="padding-bottom: var(--s-2)">현재 재고</p>
-		<ul>
-			<li th:each="m : ${menuItems}" class="stock-item">
+		<ul id="sim-menu">
+			<li th:each="m : ${menuItems}" class="stock-item"
+			    th:attr="data-sku=${m.posSku},data-price=${m.originalPrice}">
 				<div class="u-row" style="justify-content: space-between; gap: var(--s-3)">
 					<div class="stock-item__body">
 						<span class="stock-item__name" th:text="${m.name}">크루아상</span>
-						<span class="stock-item__meta">
-							<span th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">3,500원</span>
-							<span th:if="${m.appSaleEnabled}" class="badge badge--success" style="margin-left: 4px">앱 판매</span>
-						</span>
+						<span class="stock-item__meta" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">3,500원</span>
 					</div>
-					<form th:action="@{/store/pos/sim/stock/{id}(id=${m.id})}" method="post" class="u-row" style="gap: 4px">
-						<input class="input" type="number" name="remaining" th:value="${m.stockQuantity}"
+					<div class="u-row" style="gap: 4px">
+						<input class="input sim-stock" type="number" th:value="${m.stockQuantity}"
 						       min="0" style="width: 68px; padding: 6px 8px; text-align: right">
-						<button type="submit" class="btn btn--sm btn--outline">저장</button>
-					</form>
+						<button type="button" class="btn btn--sm btn--outline sim-save">저장</button>
+					</div>
 				</div>
 			</li>
 		</ul>
 
+		<p class="section-title" style="padding-bottom: var(--s-2)">전송 로그</p>
+		<pre id="sim-log" class="pos-sim__log">아직 전송 없음</pre>
+
 		<a th:href="@{/store/pos}" class="btn btn--ghost btn--block btn--sm" style="margin-top: var(--s-3)">← POS 연동 관리로</a>
 	</div>
+
+	<script th:inline="none">
+	(function () {
+		var list = document.getElementById('sim-menu');
+		if (!list) { return; }
+		var logEl = document.getElementById('sim-log');
+		var rows = Array.prototype.slice.call(list.querySelectorAll('.stock-item'));
+
+		function seedStock(price) {
+			return Math.max(5, Math.min(40, Math.floor(60000 / Math.max(1, price))));
+		}
+
+		// POS가 계산한 재고 배열을 실제 엔드포인트로 전송
+		function pushStock(items) {
+			var body = JSON.stringify(items);
+			logEl.textContent = 'POST /api/pos/stock\n' + JSON.stringify(items, null, 2) + '\n\n전송 중...';
+			fetch('/api/pos/stock', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: body
+			}).then(function (res) {
+				return res.json().then(function (json) {
+					logEl.textContent = 'POST /api/pos/stock\n' + JSON.stringify(items, null, 2)
+						+ '\n\n← ' + res.status + ' ' + JSON.stringify(json);
+					// 화면 재고칸을 전송값으로 갱신
+					items.forEach(function (it) {
+						var row = rows.find(function (r) { return r.getAttribute('data-sku') === it.posSku; });
+						if (row) { row.querySelector('.sim-stock').value = it.remaining; }
+					});
+				});
+			}).catch(function (e) {
+				logEl.textContent = '전송 실패: ' + e;
+			});
+		}
+
+		function rowItem(row, remaining) {
+			return { posSku: row.getAttribute('data-sku'), remaining: remaining };
+		}
+
+		document.getElementById('sim-restock').addEventListener('click', function () {
+			pushStock(rows.map(function (r) {
+				return rowItem(r, seedStock(parseInt(r.getAttribute('data-price'), 10) || 1));
+			}));
+		});
+
+		document.getElementById('sim-selldown').addEventListener('click', function () {
+			pushStock(rows.map(function (r) {
+				var cur = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
+				var sold = 0.40 + Math.random() * 0.45;   // 40~85% 팔림
+				return rowItem(r, Math.max(0, Math.round(cur * (1 - sold))));
+			}));
+		});
+
+		rows.forEach(function (r) {
+			r.querySelector('.sim-save').addEventListener('click', function () {
+				var v = parseInt(r.querySelector('.sim-stock').value, 10);
+				pushStock([rowItem(r, isNaN(v) || v < 0 ? 0 : v)]);
+			});
+		});
+	})();
+	</script>
 </div>
 </body>
 </html>

@@ -4,8 +4,8 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
-import net.dsa.girigiri.repository.ReviewRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -24,7 +24,7 @@ public class ProductController {
 
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
-	private final ReviewRepository reviewRepository;
+	private final ReviewService reviewService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, Model model) {
@@ -36,13 +36,10 @@ public class ProductController {
 		int savedAmount = nullToZero(product.getOriginalPrice()) - nullToZero(product.getDiscountedPrice());
 
 		double avgRating = 0;
-		long reviewCount = 0;
+		int reviewCount = 0;
 		if (store != null) {
-			var reviews = reviewRepository.findAll().stream()
-					.filter(r -> store.getId().equals(r.getStoreId()))
-					.toList();
-			reviewCount = reviews.size();
-			avgRating = reviews.stream().mapToInt(r -> r.getRating() == null ? 0 : r.getRating()).average().orElse(0);
+			avgRating = reviewService.getAverageRating(store.getId());
+			reviewCount = reviewService.getReviewCount(store.getId());
 		}
 
 		StoreHoursUtil.ClosingInfo closingInfo = store == null

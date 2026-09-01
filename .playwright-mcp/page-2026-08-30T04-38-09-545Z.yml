@@ -1,0 +1,23 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e4]:
+    - button "뒤로" [ref=f4e5] [cursor=pointer]: ‹
+    - heading "로그인" [level=1] [ref=f4e6]
+  - main [ref=f4e8]:
+    - generic [ref=f4e9]:
+      - generic [ref=f4e10]:
+        - generic [ref=f4e11]: ギリ
+        - heading "기리기리" [level=1] [ref=f4e12]
+        - paragraph [ref=f4e13]: 마감 특가로 아끼는 동네 장보기
+        - paragraph [ref=f4e14]: 오늘도 기리기리 세이브
+      - link "카카오로 시작하기" [ref=f4e15] [cursor=pointer]:
+        - /url: /oauth2/authorization/kakao
+      - link "구글로 시작하기" [ref=f4e16] [cursor=pointer]:
+        - /url: /oauth2/authorization/google
+      - link "라인으로 시작하기" [ref=f4e17] [cursor=pointer]:
+        - /url: /oauth2/authorization/line
+      - link "이메일로 시작하기" [ref=f4e18] [cursor=pointer]:
+        - /url: /auth/emailLogin
+      - paragraph [ref=f4e19]: 가입 시 이용약관 및 개인정보처리방침에 동의하게 됩니다
+      - generic [ref=f4e20]:
+        - paragraph [ref=f4e21]: 사장님이신가요?
+        - paragraph [ref=f4e22]: 로그인 후 마이페이지에서 점주 신청을 하시면, 운영자 승인 후 점주 모드를 이용하실 수 있어요.

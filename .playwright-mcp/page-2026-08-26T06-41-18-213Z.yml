@@ -1,0 +1,67 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - button "뒤로" [ref=e5] [cursor=pointer]: ‹
+    - heading "재고 관리" [level=1] [ref=e6]
+    - generic [ref=e7]: 점주 모드
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]: 전체 3 · 판매중 2 · 품절 1
+        - link "대시보드" [ref=e12] [cursor=pointer]:
+          - /url: /store/dashboard
+      - generic [ref=e13]:
+        - generic [ref=e14]: 🔎
+        - textbox "품목명으로 검색" [ref=e15]
+      - link "+ 상품 등록" [ref=e16] [cursor=pointer]:
+        - /url: /store/products/new
+      - list [ref=e17]:
+        - listitem [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: 🥐
+            - generic [ref=e22]:
+              - generic [ref=e23]:
+                - generic [ref=e24]: 오늘의 모둠빵 세트
+                - generic [ref=e25]: 판매중
+              - generic [ref=e26]:
+                - generic [ref=e27]: "-30%"
+                - generic [ref=e28]: 12,000원
+                - generic [ref=e29]: 8,400원
+              - generic [ref=e30]: 재고 3 / 10개 · 오늘 14:20 등록
+          - generic [ref=e31]:
+            - link "수정" [ref=e32] [cursor=pointer]:
+              - /url: /store/products/1/edit
+            - button "품절" [ref=e34] [cursor=pointer]
+            - button "삭제" [ref=e36] [cursor=pointer]
+        - listitem [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: 🥪
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - generic [ref=e43]: 샌드위치 2종 세트
+                - generic [ref=e44]: 판매중
+              - generic [ref=e45]:
+                - generic [ref=e46]: "-10%"
+                - generic [ref=e47]: 7,000원
+                - generic [ref=e48]: 6,300원
+              - generic [ref=e49]: 재고 6 / 8개 · 오늘 11:05 등록
+          - generic [ref=e50]:
+            - link "수정" [ref=e51] [cursor=pointer]:
+              - /url: /store/products/2/edit
+            - button "품절" [ref=e53] [cursor=pointer]
+            - button "삭제" [ref=e55] [cursor=pointer]
+        - listitem [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 🍪
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e62]: 수제 쿠키 박스
+                - generic [ref=e63]: 품절
+              - generic [ref=e64]:
+                - generic [ref=e65]: "-50%"
+                - generic [ref=e66]: 9,000원
+                - generic [ref=e67]: 4,500원
+              - generic [ref=e68]: 재고 0 / 5개 · 오늘 09:30 등록
+          - generic [ref=e69]:
+            - link "수정" [ref=e70] [cursor=pointer]:
+              - /url: /store/products/3/edit
+            - button "삭제" [ref=e72] [cursor=pointer]

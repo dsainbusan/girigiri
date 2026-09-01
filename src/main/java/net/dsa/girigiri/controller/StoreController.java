@@ -58,6 +58,10 @@ public class StoreController {
 	private final ProductRepository productRepository;
 	private final ReservationRepository reservationRepository;
 	private final net.dsa.girigiri.repository.MenuItemRepository menuItemRepository;
+	private final net.dsa.girigiri.repository.ListingTemplateRepository listingTemplateRepository;
+	private final net.dsa.girigiri.service.StoreReportService storeReportService;
+	private final net.dsa.girigiri.service.SettlementService settlementService;
+	private final net.dsa.girigiri.repository.SettlementRepository settlementRepository;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -71,6 +75,8 @@ public class StoreController {
 
 		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "매장 정보 없음");
+		model.addAttribute("todayLabel", LocalDate.now().format(
+				DateTimeFormatter.ofPattern("M월 d일 EEEE", java.util.Locale.KOREAN)));
 
 		if (store == null) {
 			addEmptyStats(model);
@@ -214,6 +220,19 @@ public class StoreController {
 		model.addAttribute("draftPendingCount", draftPendingCount);
 		model.addAttribute("incomingReservationCount", incomingReservationCount);
 
+		// 자동 등록(POS 연동 또는 템플릿)을 하나도 안 해둔 매장엔 "처리할 일" 배너로 넛지한다.
+		boolean noAutomation = store.getPosProvider() == null
+				&& listingTemplateRepository.findByStoreId(store.getId()).stream().noneMatch(t -> t.isActive());
+		model.addAttribute("needsAutomationSetup", noAutomation);
+
+		// 정산 계좌 미등록 넛지 — 계좌가 없으면 주간 정산이 확정돼도 지급이 보류된다 (WBS 2.0).
+		model.addAttribute("needsBankAccount",
+				store.getBankName() == null || store.getBankName().isBlank());
+
+		// 추가됨 (2026-08-31) — 왜: "돈 받는 것"이 제일 중요한데 정산 페이지 진입점이 토글 뒤에 묻혀
+		// 있었다. 지표 그리드 밑에 "이번 달 정산 예정액" 한 줄 카드로 숫자+버튼을 같이 노출한다.
+		model.addAttribute("settlementPayout", formatWon(settlementService.build(store, "month").payout()));
+
 		return "storeView/dashboard";
 	}
 
@@ -240,66 +259,168 @@ public class StoreController {
 	}
 
 	/**
-	 * 추가됨 (2026-08-21) — 왜: 일간 판매·폐기 리포트 Excel 다운로드 (WBS 3.0). PDF는 이번 단계에서 제외.
-	 * dashboard()와 똑같이 "오늘 등록된 상품" 기준으로 만들어서 화면 숫자랑 리포트 숫자가 항상 일치하게 한다.
+	 * 판매·폐기 리포트 — 미리보기 화면 (WBS 3.0, 문창호). 대시보드 "오늘"/"최근 7일" 탭에서 진입.
+	 * period: daily(오늘, 기본) / weekly(최근 7일). 이 화면에서 Excel/PDF 다운로드로 이어진다.
 	 */
-	@GetMapping("/report/excel")
-	public ResponseEntity<byte[]> reportExcel(HttpSession session) throws IOException {
+	@GetMapping("/report")
+	public String reportPage(@RequestParam(defaultValue = "daily") String period, HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+			return "redirect:/auth/loginForm";
 		}
-
 		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
 		if (store == null) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return "redirect:/auth/owner-apply";
 		}
+		boolean weekly = "weekly".equals(period);
+		model.addAttribute("report", storeReportService.build(store, weekly));
+		model.addAttribute("period", weekly ? "weekly" : "daily");
+		return "reportView/report";
+	}
 
-		LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-		LocalDateTime todayEnd = todayStart.plusDays(1);
-		List<ProductEntity> todayProducts = fetchTodayProducts(store.getId(), todayStart, todayEnd);
+	/**
+	 * 리포트 Excel 다운로드. dashboard()와 같은 집계(StoreReportService)를 써서 화면·파일 숫자가 항상 일치한다.
+	 */
+	@GetMapping("/report/excel")
+	public ResponseEntity<byte[]> reportExcel(@RequestParam(defaultValue = "daily") String period, HttpSession session) throws IOException {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		boolean weekly = "weekly".equals(period);
+		byte[] excel = StoreReportExcelGenerator.generate(storeReportService.build(store, weekly));
 
-		byte[] excel = StoreReportExcelGenerator.generate(store.getStoreName(), todayProducts);
-
-		// 파일명에 한글(매장명)을 그대로 넣으면 일부 브라우저에서 Content-Disposition 인코딩이 깨질 수
-		// 있어서, 파일명은 날짜만 넣은 안전한 ASCII로 고정한다.
-		String filename = "store-report-" + LocalDate.now() + ".xlsx";
-
+		// 파일명에 한글(매장명)을 넣으면 일부 브라우저에서 Content-Disposition 인코딩이 깨질 수 있어 ASCII로 고정.
+		String filename = "store-report-" + (weekly ? "weekly-" : "") + LocalDate.now() + ".xlsx";
 		return ResponseEntity.ok()
 				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
 				.body(excel);
 	}
 
-	/**
-	 * 추가됨 — 왜: dashboard.html에 "PDF는 이번 단계에서 제외"로 막아뒀던 버튼을 채운다 (WBS 3.0).
-	 * reportExcel()과 데이터 소스(오늘 등록된 상품)는 동일 — 포맷만 PDF.
-	 */
+	/** 리포트 PDF 다운로드. reportExcel()과 데이터 소스 동일, 포맷만 PDF. */
 	@GetMapping("/report/pdf")
-	public ResponseEntity<byte[]> reportPdf(HttpSession session) throws IOException {
-		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
+	public ResponseEntity<byte[]> reportPdf(@RequestParam(defaultValue = "daily") String period, HttpSession session) throws IOException {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
+		boolean weekly = "weekly".equals(period);
+		byte[] pdf = StoreReportPdfGenerator.generate(storeReportService.build(store, weekly));
 
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
-		if (store == null) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-		}
-
-		LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-		LocalDateTime todayEnd = todayStart.plusDays(1);
-		List<ProductEntity> todayProducts = fetchTodayProducts(store.getId(), todayStart, todayEnd);
-
-		byte[] pdf = StoreReportPdfGenerator.generate(store.getStoreName(), todayProducts);
-
-		// reportExcel()과 동일한 이유로 파일명은 날짜만 넣은 안전한 ASCII로 고정한다.
-		String filename = "store-report-" + LocalDate.now() + ".pdf";
-
+		String filename = "store-report-" + (weekly ? "weekly-" : "") + LocalDate.now() + ".pdf";
 		return ResponseEntity.ok()
 				.contentType(MediaType.APPLICATION_PDF)
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
 				.body(pdf);
+	}
+
+	private StoreEntity reportStore(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		return userId == null ? null : storeRepository.findByOwnerId(userId).orElse(null);
+	}
+
+	/**
+	 * 매장 정산 페이지 — 미리보기 화면 (WBS 2.0, 문창호). 기간별 결제 집계 / 수수료·정산 예정액 / 정산 내역.
+	 * period: today / week / month(기본). from·to(yyyy-MM-dd)를 둘 다 주면 그 날짜 구간으로 집계(preset 무시).
+	 * 판매·폐기 리포트와 다른 문서 — 이건 회계(정산)용.
+	 */
+	@GetMapping("/settlement")
+	public String settlementPage(@RequestParam(defaultValue = "month") String period,
+	                             @RequestParam(required = false) String from,
+	                             @RequestParam(required = false) String to,
+	                             HttpSession session, Model model) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
+			return "redirect:/auth/loginForm";
+		}
+		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		if (store == null) {
+			return "redirect:/auth/owner-apply";
+		}
+		LocalDate fromDate = parseDateOrNull(from);
+		LocalDate toDate = parseDateOrNull(to);
+		boolean custom = fromDate != null && toDate != null && !toDate.isBefore(fromDate);
+		String p = normalizeSettlementPeriod(period);
+
+		model.addAttribute("settlement", settlementService.build(store, p, fromDate, toDate));
+		model.addAttribute("period", custom ? "custom" : p);
+		model.addAttribute("from", custom ? fromDate.toString() : "");
+		model.addAttribute("to", custom ? toDate.toString() : "");
+		model.addAttribute("issuedDate", LocalDate.now().toString());
+
+		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로
+		model.addAttribute("settlements",
+				settlementRepository.findByStoreIdOrderByPeriodStartDesc(store.getId()));
+		model.addAttribute("bankRegistered",
+				store.getBankName() != null && !store.getBankName().isBlank()
+						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
+		model.addAttribute("minPayout", net.dsa.girigiri.service.SettlementService.MIN_PAYOUT);
+		return "settlementView/settlement";
+	}
+
+	@GetMapping("/settlement/excel")
+	public ResponseEntity<byte[]> settlementExcel(@RequestParam(defaultValue = "month") String period,
+	                                              @RequestParam(required = false) String from,
+	                                              @RequestParam(required = false) String to,
+	                                              HttpSession session) throws IOException {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		LocalDate fromDate = parseDateOrNull(from);
+		LocalDate toDate = parseDateOrNull(to);
+		String p = normalizeSettlementPeriod(period);
+		byte[] excel = net.dsa.girigiri.util.SettlementExcelGenerator.generate(
+				settlementService.build(store, p, fromDate, toDate));
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + settlementFilename(p, fromDate, toDate, "xlsx") + "\"")
+				.body(excel);
+	}
+
+	@GetMapping("/settlement/pdf")
+	public ResponseEntity<byte[]> settlementPdf(@RequestParam(defaultValue = "month") String period,
+	                                            @RequestParam(required = false) String from,
+	                                            @RequestParam(required = false) String to,
+	                                            HttpSession session) throws IOException {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		LocalDate fromDate = parseDateOrNull(from);
+		LocalDate toDate = parseDateOrNull(to);
+		String p = normalizeSettlementPeriod(period);
+		byte[] pdf = net.dsa.girigiri.util.SettlementPdfGenerator.generate(
+				settlementService.build(store, p, fromDate, toDate));
+		return ResponseEntity.ok()
+				.contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + settlementFilename(p, fromDate, toDate, "pdf") + "\"")
+				.body(pdf);
+	}
+
+	private String normalizeSettlementPeriod(String period) {
+		return switch (period == null ? "" : period) {
+			case "today", "week" -> period;
+			default -> "month";
+		};
+	}
+
+	private LocalDate parseDateOrNull(String s) {
+		if (s == null || s.isBlank()) {
+			return null;
+		}
+		try {
+			return LocalDate.parse(s.trim());
+		} catch (java.time.format.DateTimeParseException e) {
+			return null;
+		}
+	}
+
+	private String settlementFilename(String period, LocalDate from, LocalDate to, String ext) {
+		boolean custom = from != null && to != null && !to.isBefore(from);
+		String tag = custom ? (from + "_" + to) : (period + "-" + LocalDate.now());
+		return "store-settlement-" + tag + "." + ext;
 	}
 
 	/**
@@ -351,6 +472,9 @@ public class StoreController {
 	                         @RequestParam(required = false) String operatingHours,
 	                         @RequestParam(required = false) Double latitude,
 	                         @RequestParam(required = false) Double longitude,
+	                         @RequestParam(required = false) String bankName,
+	                         @RequestParam(required = false) String bankAccount,
+	                         @RequestParam(required = false) String accountHolder,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
@@ -371,9 +495,17 @@ public class StoreController {
 		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
 		store.setLatitude(latitude);
 		store.setLongitude(longitude);
+		// 정산 입금 계좌 (WBS 2.0) — 셋 다 비면 미등록으로 둔다
+		store.setBankName(trimToNull(bankName));
+		store.setBankAccount(trimToNull(bankAccount));
+		store.setAccountHolder(trimToNull(accountHolder));
 		storeRepository.save(store);
 
 		return "redirect:/store/dashboard?edited";
+	}
+
+	private String trimToNull(String s) {
+		return (s == null || s.isBlank()) ? null : s.trim();
 	}
 
 	private List<ProductEntity> fetchTodayProducts(Long storeId, LocalDateTime todayStart, LocalDateTime todayEnd) {
@@ -515,5 +647,8 @@ public class StoreController {
 		model.addAttribute("todayCo2Kg", "0.0");
 		model.addAttribute("draftPendingCount", 0L);
 		model.addAttribute("incomingReservationCount", 0);
+		model.addAttribute("needsAutomationSetup", false);
+		model.addAttribute("needsBankAccount", false);
+		model.addAttribute("settlementPayout", formatWon(0));
 	}
 }

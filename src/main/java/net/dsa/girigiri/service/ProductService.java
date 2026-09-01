@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -55,6 +56,7 @@ public class ProductService {
 	public Long create(Long ownerId, ProductFormDto form, MultipartFile image) {
 		StoreEntity store = requireStore(ownerId);
 		validate(form);
+		Integer ownerRate = resolveOwnerRate(store, form.getDiscountRate());
 
 		// 새로 올린 파일이 우선, 없으면 POS 카탈로그에서 넘어온 사진 URL(currentImageUrl)을 그대로 쓴다.
 		String uploaded = fileStorageUtil.store(image, IMAGE_SUBDIR);
@@ -64,7 +66,7 @@ public class ProductService {
 				.storeId(store.getId())
 				.name(form.getName().trim())
 				.originalPrice(form.getOriginalPrice())
-				.discountedPrice(calcDiscountedPrice(store, form.getOriginalPrice()))
+				.discountedPrice(calcDiscountedPrice(store, form.getOriginalPrice(), ownerRate))
 				.quantity(form.getQuantity())
 				.remainingQuantity(form.getQuantity())
 				.description(blankToNull(form.getDescription()))
@@ -80,6 +82,7 @@ public class ProductService {
 		StoreEntity store = requireStore(ownerId);
 		ProductEntity product = requireOwnedProduct(store, productId);
 		validate(form);
+		Integer ownerRate = resolveOwnerRate(store, form.getDiscountRate());
 
 		int soldQuantity = product.getQuantity() - product.getRemainingQuantity();
 		if (form.getQuantity() < soldQuantity) {
@@ -89,7 +92,7 @@ public class ProductService {
 
 		product.setName(form.getName().trim());
 		product.setOriginalPrice(form.getOriginalPrice());
-		product.setDiscountedPrice(calcDiscountedPrice(store, form.getOriginalPrice()));
+		product.setDiscountedPrice(calcDiscountedPrice(store, form.getOriginalPrice(), ownerRate));
 		// 수량을 늘리면 남은 재고도 같은 만큼 늘린다 (이미 팔린 분은 유지).
 		product.setRemainingQuantity(form.getQuantity() - soldQuantity);
 		product.setQuantity(form.getQuantity());
@@ -113,15 +116,29 @@ public class ProductService {
 		productRepository.save(product);
 	}
 
-	/** "오늘의 구제" 초안 → 실제 판매(active)로 전환. [바로 올리기]. */
+	/**
+	 * "오늘의 구제" 초안 → 실제 판매(active)로 전환. [바로 올리기].
+	 * @return 발행됐으면(또는 이미 발행돼 있으면) true, 마감 임박/정리됨 등으로 못 올렸으면 false
+	 */
 	@Transactional
-	public void publishDraft(Long ownerId, Long productId) {
-		ProductEntity product = requireOwnedProduct(requireStore(ownerId), productId);
+	public boolean publishDraft(Long ownerId, Long productId) {
+		StoreEntity store = requireStore(ownerId);
+		ProductEntity product = requireOwnedProduct(store, productId);
+		if ("active".equals(product.getStatus())) {
+			return true;   // 중복 클릭 — 이미 발행됨
+		}
 		if (!"draft".equals(product.getStatus())) {
-			return;   // 이미 발행됐거나 삭제됨 — 중복 클릭 무시
+			return false;  // skipped 등 — 이미 정리됨
+		}
+		// 마감 10분 전을 넘겼으면 발행 거부 (손님이 예약·픽업할 시간이 없다).
+		// 상태는 draft로 두고 스케줄러 expireStaleDrafts가 실제 마감에 정리 → 그때까진 "등록 마감"으로 카드는 보인다.
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		if (!StoreHoursUtil.canPublishNow(closeAt)) {
+			return false;
 		}
 		product.setStatus("active");
 		productRepository.save(product);
+		return true;
 	}
 
 	/**
@@ -211,10 +228,40 @@ public class ProductService {
 		return product;
 	}
 
-	private int calcDiscountedPrice(StoreEntity store, int originalPrice) {
-		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
-		int rate = DiscountRateCalculator.calculateRate(closingInfo.closeAt());
+	/**
+	 * 할인가 계산. ownerRate(폼에서 점주가 직접 입력한 할인율 %)가 null이면 마감시간 기준 자동값,
+	 * 값이 있으면 그 값으로 하되 자동값보다 낮으면 자동값으로 끌어올린다 (DiscountRateCalculator.effectiveRate).
+	 */
+	private int calcDiscountedPrice(StoreEntity store, int originalPrice, Integer ownerRate) {
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		int rate = DiscountRateCalculator.effectiveRate(ownerRate, closeAt);
 		return DiscountRateCalculator.applyDiscount(originalPrice, rate);
+	}
+
+	/**
+	 * 폼의 할인율 문자열을 검증해서 Integer(또는 null)로. 비우면 null(자동).
+	 * 자동값보다 낮게 넣으면 거부한다 — "많이만 적을 수 있게" (POS 메뉴 설정과 동일 정책).
+	 */
+	private Integer resolveOwnerRate(StoreEntity store, String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		int rate;
+		try {
+			rate = Integer.parseInt(raw.trim());
+		} catch (NumberFormatException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "할인율은 숫자로 입력해 주세요.");
+		}
+		if (rate > 90) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "할인율은 90%를 넘을 수 없어요.");
+		}
+		int auto = DiscountRateCalculator.calculateRate(
+				StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt());
+		if (rate < auto) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"할인율은 마감시간 기준 자동값(" + auto + "%)보다 낮출 수 없어요. 더 깎는 건 가능해요.");
+		}
+		return rate;
 	}
 
 	private void validate(ProductFormDto form) {

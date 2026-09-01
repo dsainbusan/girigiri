@@ -1,0 +1,81 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e4]:
+    - button "뒤로" [ref=f2e5] [cursor=pointer]: ‹
+    - heading "매장 정보 없음" [level=1] [ref=f2e6]
+    - generic [ref=f2e7]: 점주 모드
+  - main [ref=f2e8]:
+    - generic [ref=f2e9]:
+      - generic [ref=f2e10]:
+        - link "재고 관리" [ref=f2e11] [cursor=pointer]:
+          - /url: /store/products
+        - link "매장 정보 수정" [ref=f2e12] [cursor=pointer]:
+          - /url: /store/edit
+      - generic [ref=f2e13]:
+        - generic [ref=f2e14]:
+          - generic [ref=f2e15]: 오늘 매출
+          - generic [ref=f2e16]: 0원
+        - generic [ref=f2e17]:
+          - generic [ref=f2e18]: 판매 / 등록
+          - generic [ref=f2e19]: 0 / 0
+          - generic [ref=f2e20]: 0개 판매중
+        - generic [ref=f2e21]:
+          - generic [ref=f2e22]: 픽업 예약
+          - generic [ref=f2e23]: 0건
+          - generic [ref=f2e24]: 대기 0 · 완료 0 · 취소 0
+        - generic [ref=f2e25]:
+          - generic [ref=f2e26]: 폐기 절감(구제율)
+          - generic [ref=f2e27]: 0%
+          - generic [ref=f2e28]:
+            - generic [ref=f2e29]: 목표 70%
+            - button "✏️" [ref=f2e30] [cursor=pointer]
+      - generic [ref=f2e31]:
+        - generic [ref=f2e33]:
+          - paragraph [ref=f2e34]: 오늘 판매 현황
+          - paragraph [ref=f2e35]: 등록 0개
+        - generic [ref=f2e37]:
+          - generic [ref=f2e38]:
+            - generic [ref=f2e40]:
+              - generic [ref=f2e41]: 남음
+              - generic [ref=f2e42]: 0개
+              - generic [ref=f2e43]: 0개 중
+            - generic [ref=f2e44]:
+              - generic [ref=f2e45]:
+                - generic [ref=f2e46]: 판매
+                - generic [ref=f2e49]: 0개
+              - generic [ref=f2e50]:
+                - generic [ref=f2e51]: 예약됨
+                - generic [ref=f2e54]: 0개
+              - generic [ref=f2e55]:
+                - generic [ref=f2e56]: 남음
+                - generic [ref=f2e59]: 0개
+          - generic [ref=f2e60]:
+            - generic [ref=f2e61]: 마감 후 남은 수량은 폐기로 집계돼요
+            - generic [ref=f2e62]:
+              - text: 남은
+              - strong [ref=f2e63]: 0개
+        - button "최근 7일 보기" [ref=f2e64] [cursor=pointer]
+      - generic [ref=f2e65]:
+        - paragraph [ref=f2e66]: 픽업 처리
+        - generic [ref=f2e67]:
+          - link "QR 픽업 확인" [ref=f2e68] [cursor=pointer]:
+            - /url: /reservation/pickup
+          - link "매장 취소" [ref=f2e69] [cursor=pointer]:
+            - /url: /reservation/store-cancel
+      - generic [ref=f2e70]:
+        - paragraph [ref=f2e71]: 주문 · 설정
+        - generic [ref=f2e72]:
+          - link "들어온 예약 확인" [ref=f2e73] [cursor=pointer]:
+            - /url: /reservation/incoming
+          - link "주문 마감 설정" [ref=f2e74] [cursor=pointer]:
+            - /url: /reservation/settings
+        - link "완료된 거래 내역" [ref=f2e75] [cursor=pointer]:
+          - /url: /reservation/completed
+      - generic [ref=f2e76]:
+        - paragraph [ref=f2e77]: 리포트
+        - paragraph [ref=f2e78]: 오늘 판매·폐기 현황을 문서로 내려받을 수 있습니다.
+        - generic [ref=f2e79]:
+          - link "Excel" [ref=f2e80] [cursor=pointer]:
+            - /url: /store/report/excel
+          - link "PDF" [ref=f2e81] [cursor=pointer]:
+            - /url: /store/report/pdf
+      - button "유저 모드로 전환" [ref=f2e83] [cursor=pointer]

@@ -93,6 +93,25 @@
 			       th:value="${store.operatingHours}" placeholder="예: 09:00 ~ 21:00 (마감 세일 19:00~)" maxlength="100">
 		</div>
 
+		<!-- 5. 정산 입금 계좌 (WBS 2.0) — 주간 정산 지급이 이 계좌로 이체된다. 미등록이면 지급 보류. -->
+		<div class="field" style="margin-top: var(--s-6)">
+			<label class="field__label">정산 입금 계좌</label>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)">
+				매주 정산액이 이 계좌로 입금돼요. 등록 안 하면 지급이 보류됩니다.
+			</p>
+			<div class="u-row" style="gap: var(--s-2)">
+				<select class="input" name="bankName" style="flex: 0 0 40%">
+					<option value="">은행</option>
+					<option th:each="b : ${ {'국민','신한','우리','하나','농협','기업','카카오뱅크','토스뱅크','새마을금고','부산','경남','대구','우체국'} }"
+					        th:value="${b}" th:text="${b}" th:selected="${store.bankName == b}">국민</option>
+				</select>
+				<input class="input" type="text" name="bankAccount" th:value="${store.bankAccount}"
+				       placeholder="계좌번호 (- 없이)" maxlength="40" style="flex: 1">
+			</div>
+			<input class="input" type="text" name="accountHolder" th:value="${store.accountHolder}"
+			       placeholder="예금주" maxlength="40" style="margin-top: var(--s-2)">
+		</div>
+
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">저장</button>
 	</form>
 

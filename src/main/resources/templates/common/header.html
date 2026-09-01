@@ -22,7 +22,7 @@
 
 <!--/*
   강노은: 홈 화면 전용 상단바 (위치 배지 + 알림벨). 뒤로가기 버튼이 없다 — 홈은 최상위 화면이라 불필요.
-  location: 표시할 동네 텍스트. TODO(강노은): 실제 GPS/역지오코딩 연동 전까지는 고정 문자열.
+  location: 표시할 동네 텍스트. 위치 권한을 허용하면 실제 동네 이름(카카오 역지오코딩), 아니면 "내 동네" 고정 문구(HomeController#resolveLocationLabel 참고).
   unreadCount: 안 읽은 알림 개수. 0보다 크면 벨 아이콘에 빨간 점. 알림 기능 붙기 전까지는 항상 0.
 */-->
 <header th:fragment="topbarHome(location, unreadCount)" class="topbar">

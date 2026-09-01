@@ -16,6 +16,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -71,7 +74,6 @@ public class WebSecurityConfig {
 			// 강노은: 문의 게시판(/user/inquiries/**)은 작성자·문의 대상 가게 사장·관리자만 열람 가능해야 해서
 			// 공개 목록에 넣지 않는다 — 로그인 자체는 Spring Security가 막고, "누구 걸 볼 수 있는지"는
 			// InquiryController/InquiryService에서 세션의 userId/role로 추가 필터링한다.
-			, "/reservation/**"   // TODO(송채현) 로그인 전이라 임시 공개. 로그인 붙으면 로그인한 사용자만 접근하도록 되돌릴 것.
 			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
 			, "/styleguide"
 			, "/styleguide/admin"   // 슈퍼어드민 wide 레이아웃 미리보기 (위와 같은 이유로 임시 공개)
@@ -94,6 +96,22 @@ public class WebSecurityConfig {
 				.authorizeHttpRequests(author -> author
 						.requestMatchers(PUBLIC_URLS.toArray(String[]::new)).permitAll()
 						.anyRequest().authenticated()
+				)
+
+				// 추가됨 (2026-08-31) — 왜: REQ-NF-112 검증(비로그인 상태로 챗봇 API를 직접 호출하면
+				// 401/403이 와야 함). /mypage/**가 PUBLIC_URLS에 없어서 비로그인 요청은 인증 필터가
+				// 먼저 걸러내는데, 기본 동작은 로그인 화면(/auth/loginForm)으로 302 리다이렉트라
+				// ChatController의 수동 401 체크(위 클래스 주석 참고)까지 요청이 도달하지 못했다.
+				// 챗봇 API 경로(/mypage/chat/**)만 화면 이동 대신 401을 그대로 돌려주도록 지정한다.
+				// (부가 효과: 챗봇 사용 중 세션이 만료돼도 프론트가 401을 받아 "로그인이 필요해요"를
+				// 보여줄 수 있다 — mypage.html의 res.status===401 분기 참고.)
+				.exceptionHandling(exceptions -> exceptions
+						.defaultAuthenticationEntryPointFor(
+								new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+								// 참고: AntPathRequestMatcher는 향후 제거 예정(deprecated for removal)
+								// 경고가 뜨지만, 이 Spring Security 버전에서는 정상적으로 동작한다.
+								new AntPathRequestMatcher("/mypage/chat/**")
+						)
 				)
 
 				// formLogin을 대체하는 소셜 로그인 설정.

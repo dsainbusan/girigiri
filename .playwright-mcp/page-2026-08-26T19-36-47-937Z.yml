@@ -1,0 +1,119 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e4]:
+    - button "뒤로" [ref=f2e5] [cursor=pointer]: ‹
+    - heading "테스트 베이커리(dashfix)" [level=1] [ref=f2e6]
+    - generic [ref=f2e7]: 점주 모드
+    - button "유저 모드로" [ref=f2e9] [cursor=pointer]
+  - main [ref=f2e10]:
+    - generic [ref=f2e11]:
+      - generic [ref=f2e12]:
+        - link "재고 관리" [ref=f2e13] [cursor=pointer]:
+          - /url: /store/products
+        - link "매장 정보 수정" [ref=f2e14] [cursor=pointer]:
+          - /url: /store/edit
+      - generic [ref=f2e15]:
+        - generic [ref=f2e16]:
+          - generic [ref=f2e17]: 오늘 매출
+          - generic [ref=f2e18]: 6,000원
+          - generic [ref=f2e19]: 어제 대비 신규 매출
+        - generic [ref=f2e20]:
+          - generic [ref=f2e21]: 판매 / 등록
+          - generic [ref=f2e22]: 0 / 0
+          - generic [ref=f2e23]: 0개 판매중
+        - generic [ref=f2e24]:
+          - generic [ref=f2e25]: 픽업 예약
+          - generic [ref=f2e26]: 1건
+          - generic [ref=f2e27]: 대기 0 · 완료 1 · 취소 0
+        - generic [ref=f2e28]:
+          - generic [ref=f2e29]: 폐기 절감(구제율)
+          - generic [ref=f2e30]: 0%
+          - generic [ref=f2e31]:
+            - generic [ref=f2e32]: 목표 70%
+            - button "✏️" [ref=f2e33] [cursor=pointer]
+      - generic [ref=f2e34]:
+        - generic [ref=f2e35]:
+          - generic [ref=f2e36]:
+            - paragraph [ref=f2e37]: 오늘 판매 현황
+            - paragraph [ref=f2e38]: 등록 0개
+          - generic [ref=f2e39]: 마감까지 17시간 23분
+        - generic [ref=f2e40]:
+          - generic [ref=f2e41]:
+            - generic [ref=f2e43]:
+              - generic [ref=f2e44]: 남음
+              - generic [ref=f2e45]: 0개
+              - generic [ref=f2e46]: 0개 중
+            - generic [ref=f2e47]:
+              - generic [ref=f2e48]:
+                - generic [ref=f2e49]: 판매
+                - generic [ref=f2e52]: 0개
+              - generic [ref=f2e53]:
+                - generic [ref=f2e54]: 예약됨
+                - generic [ref=f2e57]: 0개
+              - generic [ref=f2e58]:
+                - generic [ref=f2e59]: 남음
+                - generic [ref=f2e62]: 0개
+          - generic [ref=f2e63]:
+            - generic [ref=f2e64]: 마감 후 남은 수량은 폐기로 집계돼요
+            - generic [ref=f2e65]:
+              - text: 남은
+              - strong [ref=f2e66]: 0개
+        - generic [ref=f2e67]:
+          - generic [ref=f2e68]:
+            - paragraph [ref=f2e69]: 최근 7일 판매 · 폐기
+            - generic [ref=f2e70]: ● 판매 ● 폐기
+          - generic [ref=f2e71]:
+            - generic [ref=f2e72]: 08/21
+            - generic [ref=f2e75]:
+              - generic [ref=f2e76]: "3"
+              - generic [ref=f2e79]: 08/22
+            - generic [ref=f2e80]: 08/23
+            - generic [ref=f2e83]:
+              - generic [ref=f2e84]: "2"
+              - generic [ref=f2e88]: 08/24
+            - generic [ref=f2e89]:
+              - generic [ref=f2e90]: "4"
+              - generic [ref=f2e93]: 08/25
+            - generic [ref=f2e94]:
+              - generic [ref=f2e95]: "0"
+              - generic [ref=f2e98]: 08/26
+            - generic [ref=f2e99]:
+              - generic [ref=f2e100]: "1"
+              - generic [ref=f2e103]: 08/27
+          - paragraph [ref=f2e104]: 최근 7일 · 판매 10개 · 폐기 7개
+      - generic [ref=f2e105]:
+        - paragraph [ref=f2e106]: 최근 7일 절감
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]:
+            - generic [ref=f2e109]: 10개
+            - generic [ref=f2e110]: 구한 음식
+          - generic [ref=f2e111]:
+            - generic [ref=f2e112]: 60,000원
+            - generic [ref=f2e113]: 회수 매출
+          - generic [ref=f2e114]:
+            - generic [ref=f2e115]: 5.0kg
+            - generic [ref=f2e116]: CO₂ 절감
+      - generic [ref=f2e117]:
+        - paragraph [ref=f2e118]: 픽업 처리
+        - generic [ref=f2e119]:
+          - link "QR 픽업 확인" [ref=f2e120] [cursor=pointer]:
+            - /url: /reservation/pickup
+          - link "매장 취소" [ref=f2e121] [cursor=pointer]:
+            - /url: /reservation/store-cancel
+      - generic [ref=f2e122]:
+        - paragraph [ref=f2e123]: 주문 · 설정
+        - generic [ref=f2e124]:
+          - link "들어온 예약 확인" [ref=f2e125] [cursor=pointer]:
+            - /url: /reservation/incoming
+          - link "주문 마감 설정" [ref=f2e126] [cursor=pointer]:
+            - /url: /reservation/settings
+        - link "완료된 거래 내역" [ref=f2e127] [cursor=pointer]:
+          - /url: /reservation/completed
+      - generic [ref=f2e128]:
+        - paragraph [ref=f2e129]: 리포트
+        - paragraph [ref=f2e130]: 오늘 판매·폐기 현황을 문서로 내려받을 수 있습니다.
+        - generic [ref=f2e131]:
+          - link "Excel" [ref=f2e132] [cursor=pointer]:
+            - /url: /store/report/excel
+          - link "PDF" [ref=f2e133] [cursor=pointer]:
+            - /url: /store/report/pdf
+      - button "유저 모드로 전환" [ref=f2e135] [cursor=pointer]

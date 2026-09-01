@@ -1,21 +1,26 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.MyReviewRowDto;
 import net.dsa.girigiri.domain.dto.ReviewRowDto;
 import net.dsa.girigiri.domain.entity.ReviewEntity;
+import net.dsa.girigiri.domain.entity.ReviewSummaryEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.ReviewRepository;
+import net.dsa.girigiri.repository.ReviewSummaryRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.FileStorageUtil;
+import net.dsa.girigiri.util.ReviewSummaryClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
@@ -23,17 +28,29 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
-	
+
 	private final ReviewRepository reviewRepository;
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
 	private final ReservationRepository reservationRepository;
 	private final FileStorageUtil fileStorageUtil;
+	// 추가됨 (강노은) — 왜: "AI 리뷰 요약" 기능용. summarize()는 별도 클래스(ReviewSummaryClient)로
+	// 뗐다 — 이유는 그 클래스 상단 주석 참고(GeminiClient는 송채현 담당이라 안 건드림).
+	private final ReviewSummaryRepository reviewSummaryRepository;
+	private final ReviewSummaryClient reviewSummaryClient;
 
 	private static final String REVIEW_IMAGE_SUBDIR = "reviews";
+
+	// 추가됨 (강노은) — 왜: 리뷰가 너무 적으면(1~2개) "요약"이라 부르기도 애매하고 AI 호출만
+	// 낭비라, 표 요구사항 그대로 10건 이상부터 요약 섹션을 노출한다.
+	private static final int MIN_REVIEWS_FOR_SUMMARY = 10;
+	// 요약에 넣는 리뷰 본문은 최근 것 위주로 이 개수만큼만 — 리뷰가 수백 개인 인기 매장이어도
+	// 프롬프트가 무한정 길어지지 않게(토큰 비용/지연 방지) 상한을 둔다.
+	private static final int MAX_REVIEWS_FOR_SUMMARY_PROMPT = 30;
 
 	// ReservationEntity.status의 "픽업완료" 값. 리뷰는 이 상태의 예약이 있어야 쓸 수 있다.
 	private static final String RESERVATION_STATUS_PICKED = "picked";
@@ -125,7 +142,54 @@ public class ReviewService {
 				.filter(r -> storeId.equals(r.getStoreId()))
 				.count();
 	}
-	
+
+	/**
+	 * 추가됨 (강노은) — 왜: "AI 리뷰 요약" — 리뷰가 {@link #MIN_REVIEWS_FOR_SUMMARY}건 이상인
+	 * 가게만 요약을 보여준다. 캐시(ReviewSummaryEntity)에 저장된 리뷰 개수와 지금 리뷰 개수가
+	 * 같으면 캐시를 그대로 돌려주고(=새 리뷰가 안 생겼으면 Gemini를 다시 안 부름), 다르면 새로
+	 * 생성해서 캐시를 갱신한다. Gemini 호출이 실패해도(설정 안 됨/일시 오류) 화면이 깨지면 안
+	 * 되니, 그 경우 예전 캐시가 있으면 그거라도 보여주고 없으면 조용히 empty를 돌려준다.
+	 */
+	@Transactional
+	public Optional<String> getReviewSummary(Long storeId) {
+		int reviewCount = getReviewCount(storeId);
+		if (reviewCount < MIN_REVIEWS_FOR_SUMMARY) {
+			return Optional.empty();
+		}
+
+		Optional<ReviewSummaryEntity> cached = reviewSummaryRepository.findByStoreId(storeId);
+		if (cached.isPresent() && cached.get().getReviewCountAtSummary() == reviewCount) {
+			return Optional.of(cached.get().getSummary());
+		}
+
+		Optional<String> fresh = reviewSummaryClient.summarize(buildSummaryPrompt(storeId));
+		if (fresh.isEmpty()) {
+			log.warn("> [ReviewService] 리뷰 요약 생성 실패 - storeId={}, 캐시 폴백 사용", storeId);
+			return cached.map(ReviewSummaryEntity::getSummary); // 예전 캐시라도 있으면 그거라도
+		}
+
+		ReviewSummaryEntity entity = cached.orElseGet(() -> ReviewSummaryEntity.builder().storeId(storeId).build());
+		entity.setSummary(fresh.get());
+		entity.setReviewCountAtSummary(reviewCount);
+		entity.setGeneratedAt(LocalDateTime.now());
+		reviewSummaryRepository.save(entity);
+
+		return fresh;
+	}
+
+	/** 최근 리뷰 위주로 "별점 - 내용" 줄글을 만들어 요약 프롬프트에 넣는다. 내용 없는(별점만) 리뷰는 건너뛴다. */
+	private String buildSummaryPrompt(Long storeId) {
+		return reviewRepository.findAll().stream()
+				.filter(r -> storeId.equals(r.getStoreId()))
+				.filter(r -> r.getContent() != null && !r.getContent().isBlank())
+				.sorted(Comparator.comparing(ReviewEntity::getCreatedAt,
+						Comparator.nullsLast(Comparator.reverseOrder())))
+				.limit(MAX_REVIEWS_FOR_SUMMARY_PROMPT)
+				.map(r -> "- (" + (r.getRating() == null ? 0 : r.getRating()) + "점) " + r.getContent())
+				.collect(Collectors.joining("\n"));
+	}
+
+
 	public Optional<ReviewEntity> getMyReview(Long userId, Long storeId) {
 		if (userId == null) {
 			return Optional.empty();

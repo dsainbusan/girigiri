@@ -1,0 +1,8 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - button "뒤로" [ref=e5] [cursor=pointer]: ‹
+    - heading "오류" [level=1] [ref=e6]
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - heading "오류가 발생했습니다" [level=1] [ref=e10]
+      - paragraph [ref=e11]: 알 수 없는 오류가 발생했습니다.

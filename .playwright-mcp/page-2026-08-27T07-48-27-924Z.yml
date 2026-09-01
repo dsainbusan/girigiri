@@ -1,0 +1,221 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - button "뒤로" [ref=f1e5] [cursor=pointer]: ‹
+    - heading "POS 연동" [level=1] [ref=f1e6]
+    - generic [ref=f1e7]: 점주 모드
+    - button "유저 모드로" [ref=f1e9] [cursor=pointer]
+  - main [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - link "매장 정보 수정" [ref=f1e13] [cursor=pointer]:
+        - /url: /store/edit
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]:
+          - paragraph [ref=f1e16]: ✅ 오케이포스 연동됨
+          - paragraph [ref=f1e17]: 메뉴 8개 불러옴 · 마지막 동기화 8/27 16:36
+          - generic [ref=f1e18]:
+            - button "메뉴 다시 불러오기" [ref=f1e20] [cursor=pointer]
+            - button "연동 해제" [ref=f1e22] [cursor=pointer]
+        - generic [ref=f1e23]:
+          - paragraph [ref=f1e24]: 마감 무렵 재고 확인
+          - paragraph [ref=f1e25]: 매일 이 시각에 POS 재고를 확인해서 "지금 이만큼 남았는데 팔래요?"를 물어봐요. (마감 1~2시간 전 권장)
+          - generic [ref=f1e26]:
+            - textbox [ref=f1e27]: 20:00
+            - button "저장" [ref=f1e28] [cursor=pointer]
+          - paragraph [ref=f1e29]: 비우면 자동 생성 안 함.
+        - link "🖥️ POS 시뮬레이터 (시연용)" [ref=f1e30] [cursor=pointer]:
+          - /url: /store/pos/sim
+        - paragraph [ref=f1e31]: 메뉴 · 재고 · 앱 판매 설정
+        - paragraph [ref=f1e32]: "\"마감 무렵 앱에 올리기\"를 켠 메뉴만 자동으로 물어봐요. 파는 개수는 POS 재고를 그대로 쓰고, 아래 두 칸으로 조절해요. · 할인율 — 비우면 자동(마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −20%). 자동값보다 더 깎는 것만 돼요. · 앱 판매 수량 — 비우면 재고 전량. 값을 넣으면 그만큼만 (재고가 더 적은 날은 재고만큼). 정가는 POS 연동값으로 고정돼요."
+        - list [ref=f1e33]:
+          - listitem [ref=f1e34]:
+            - generic [ref=f1e35]:
+              - generic [ref=f1e36]: 🍽️
+              - generic [ref=f1e38]:
+                - generic [ref=f1e39]: 단팥빵
+                - generic [ref=f1e40]: 2,800원 · POS 재고 21개
+            - generic [ref=f1e41]:
+              - generic [ref=f1e42]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e43]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e44]:
+                - generic [ref=f1e45]:
+                  - generic [ref=f1e46]: 할인율
+                  - generic [ref=f1e47]:
+                    - spinbutton "할인율 %" [ref=f1e48]
+                    - generic [ref=f1e49]: "%"
+                - generic [ref=f1e50]:
+                  - generic [ref=f1e51]: 앱 판매 수량
+                  - generic [ref=f1e52]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e53]
+                    - generic [ref=f1e54]: 개
+                - button "저장" [ref=f1e55] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e56] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=43
+          - listitem [ref=f1e57]:
+            - generic [ref=f1e58]:
+              - generic [ref=f1e59]: 🍽️
+              - generic [ref=f1e61]:
+                - generic [ref=f1e62]: 밀크 식빵
+                - generic [ref=f1e63]: 5,500원 · POS 재고 10개
+            - generic [ref=f1e64]:
+              - generic [ref=f1e65]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e66]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e67]:
+                - generic [ref=f1e68]:
+                  - generic [ref=f1e69]: 할인율
+                  - generic [ref=f1e70]:
+                    - spinbutton "할인율 %" [ref=f1e71]
+                    - generic [ref=f1e72]: "%"
+                - generic [ref=f1e73]:
+                  - generic [ref=f1e74]: 앱 판매 수량
+                  - generic [ref=f1e75]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e76]
+                    - generic [ref=f1e77]: 개
+                - button "저장" [ref=f1e78] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e79] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=45
+          - listitem [ref=f1e80]:
+            - generic [ref=f1e81]:
+              - generic [ref=f1e82]: 🍽️
+              - generic [ref=f1e84]:
+                - generic [ref=f1e85]: 베이글
+                - generic [ref=f1e86]: 3,800원 · POS 재고 15개
+            - generic [ref=f1e87]:
+              - generic [ref=f1e88]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e89]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e90]:
+                - generic [ref=f1e91]:
+                  - generic [ref=f1e92]: 할인율
+                  - generic [ref=f1e93]:
+                    - spinbutton "할인율 %" [ref=f1e94]
+                    - generic [ref=f1e95]: "%"
+                - generic [ref=f1e96]:
+                  - generic [ref=f1e97]: 앱 판매 수량
+                  - generic [ref=f1e98]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e99]
+                    - generic [ref=f1e100]: 개
+                - button "저장" [ref=f1e101] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e102] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=48
+          - listitem [ref=f1e103]:
+            - generic [ref=f1e104]:
+              - generic [ref=f1e105]: 🍽️
+              - generic [ref=f1e107]:
+                - generic [ref=f1e108]: 소금빵
+                - generic [ref=f1e109]: 3,000원 · POS 재고 20개
+            - generic [ref=f1e110]:
+              - generic [ref=f1e111]:
+                - checkbox "마감 무렵 앱에 올리기" [checked] [ref=f1e112]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e113]:
+                - generic [ref=f1e114]:
+                  - generic [ref=f1e115]: 할인율
+                  - generic [ref=f1e116]:
+                    - spinbutton "할인율 %" [ref=f1e117]
+                    - generic [ref=f1e118]: "%"
+                - generic [ref=f1e119]:
+                  - generic [ref=f1e120]: 앱 판매 수량
+                  - generic [ref=f1e121]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e122]
+                    - generic [ref=f1e123]: 개
+                - button "저장" [ref=f1e124] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e125] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=42
+          - listitem [ref=f1e126]:
+            - generic [ref=f1e127]:
+              - generic [ref=f1e128]: 🍽️
+              - generic [ref=f1e130]:
+                - generic [ref=f1e131]: 에그타르트
+                - generic [ref=f1e132]: 3,200원 · POS 재고 18개
+            - generic [ref=f1e133]:
+              - generic [ref=f1e134]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e135]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e136]:
+                - generic [ref=f1e137]:
+                  - generic [ref=f1e138]: 할인율
+                  - generic [ref=f1e139]:
+                    - spinbutton "할인율 %" [ref=f1e140]
+                    - generic [ref=f1e141]: "%"
+                - generic [ref=f1e142]:
+                  - generic [ref=f1e143]: 앱 판매 수량
+                  - generic [ref=f1e144]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e145]
+                    - generic [ref=f1e146]: 개
+                - button "저장" [ref=f1e147] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e148] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=47
+          - listitem [ref=f1e149]:
+            - generic [ref=f1e150]:
+              - generic [ref=f1e151]: 🍽️
+              - generic [ref=f1e153]:
+                - generic [ref=f1e154]: 초코 스콘
+                - generic [ref=f1e155]: 4,200원 · POS 재고 14개
+            - generic [ref=f1e156]:
+              - generic [ref=f1e157]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e158]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e159]:
+                - generic [ref=f1e160]:
+                  - generic [ref=f1e161]: 할인율
+                  - generic [ref=f1e162]:
+                    - spinbutton "할인율 %" [ref=f1e163]
+                    - generic [ref=f1e164]: "%"
+                - generic [ref=f1e165]:
+                  - generic [ref=f1e166]: 앱 판매 수량
+                  - generic [ref=f1e167]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e168]
+                    - generic [ref=f1e169]: 개
+                - button "저장" [ref=f1e170] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e171] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=44
+          - listitem [ref=f1e172]:
+            - generic [ref=f1e173]:
+              - generic [ref=f1e174]: 🍽️
+              - generic [ref=f1e176]:
+                - generic [ref=f1e177]: 크루아상
+                - generic [ref=f1e178]: 3,500원 · POS 재고 17개
+            - generic [ref=f1e179]:
+              - generic [ref=f1e180]:
+                - checkbox "마감 무렵 앱에 올리기" [checked] [ref=f1e181]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e182]:
+                - generic [ref=f1e183]:
+                  - generic [ref=f1e184]: 할인율
+                  - generic [ref=f1e185]:
+                    - spinbutton "할인율 %" [ref=f1e186]
+                    - generic [ref=f1e187]: "%"
+                - generic [ref=f1e188]:
+                  - generic [ref=f1e189]: 앱 판매 수량
+                  - generic [ref=f1e190]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e191]: "8"
+                    - generic [ref=f1e192]: 개
+                - button "저장" [ref=f1e193] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e194] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=41
+          - listitem [ref=f1e195]:
+            - generic [ref=f1e196]:
+              - generic [ref=f1e197]: 🍽️
+              - generic [ref=f1e199]:
+                - generic [ref=f1e200]: 통밀 캄파뉴
+                - generic [ref=f1e201]: 7,000원 · POS 재고 8개
+            - generic [ref=f1e202]:
+              - generic [ref=f1e203]:
+                - checkbox "마감 무렵 앱에 올리기" [ref=f1e204]
+                - text: 마감 무렵 앱에 올리기
+              - generic [ref=f1e205]:
+                - generic [ref=f1e206]:
+                  - generic [ref=f1e207]: 할인율
+                  - generic [ref=f1e208]:
+                    - spinbutton "할인율 %" [ref=f1e209]
+                    - generic [ref=f1e210]: "%"
+                - generic [ref=f1e211]:
+                  - generic [ref=f1e212]: 앱 판매 수량
+                  - generic [ref=f1e213]:
+                    - spinbutton "앱 판매 수량 개" [ref=f1e214]
+                    - generic [ref=f1e215]: 개
+                - button "저장" [ref=f1e216] [cursor=pointer]
+              - link "지금 직접 등록하기" [ref=f1e217] [cursor=pointer]:
+                - /url: /store/products/new?menuItemId=46

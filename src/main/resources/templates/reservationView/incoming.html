@@ -60,12 +60,14 @@
 		<p class="u-sub">주문 시각: <strong th:text="${r.reservedAtDisplay}">08월 21일 15:00</strong></p>
 
 		<div class="btn-row" style="display:flex; gap:var(--s-2); margin-top:var(--s-3)">
-			<form th:action="@{/reservation/{id}/accept(id=${r.reservationId})}" method="post" style="flex:1 1 0">
+			<form th:action="@{/reservation/{id}/accept(id=${r.reservationId})}" method="post" style="flex:1 1 0; min-width:0">
 				<button type="submit" class="btn btn--block">수락</button>
 			</form>
-			<button type="button" class="btn btn--outline reject-toggle-btn"
-					style="flex:1 1 0; color:var(--c-danger); border-color:var(--c-danger)"
-					th:attr="data-target='reject-panel-' + ${r.reservationId}">취소</button>
+			<div style="flex:1 1 0; min-width:0">
+				<button type="button" class="btn btn--outline btn--block reject-toggle-btn"
+						style="color:var(--c-danger); border-color:var(--c-danger)"
+						th:attr="data-target='reject-panel-' + ${r.reservationId}">취소</button>
+			</div>
 		</div>
 
 		<!-- 취소 사유 선택 패널. 평소엔 숨겨져 있다가 "취소" 버튼을 누르면 펼쳐진다. -->

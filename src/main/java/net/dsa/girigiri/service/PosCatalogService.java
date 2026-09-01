@@ -19,8 +19,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * "POS json 카탈로그 연동 (가정)" — 2026-08-27 신규 (문창호).
@@ -91,19 +95,23 @@ public class PosCatalogService {
 		store.setPosStoreCode(storeCode.trim());
 		store.setPosConnectedAt(LocalDateTime.now());
 
-		replaceCatalog(store.getId(), sampleCatalogFor(store.getCategory()));
+		syncSampleCatalog(store.getId(), sampleCatalogFor(store.getCategory()));
 		store.setPosLastSyncAt(LocalDateTime.now());
 		storeRepository.save(store);
 	}
 
-	/** [메뉴 다시 불러오기] — mock. 같은 샘플을 다시 밀어넣는다. */
+	/**
+	 * [메뉴 다시 불러오기] — mock. 같은 샘플을 다시 동기화한다.
+	 * posSku 기준 upsert라 점주가 화면에서 조정한 앱판매 on/off·할인율·앱판매수량·재고는 그대로 보존된다
+	 * (예전엔 delete+insert라 resync 누르면 설정이 다 날아갔다).
+	 */
 	@Transactional
 	public void resync(Long ownerId) {
 		StoreEntity store = requireStore(ownerId);
 		if (store.getPosProvider() == null) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "먼저 POS를 연동해 주세요.");
 		}
-		replaceCatalog(store.getId(), sampleCatalogFor(store.getCategory()));
+		syncSampleCatalog(store.getId(), sampleCatalogFor(store.getCategory()));
 		store.setPosLastSyncAt(LocalDateTime.now());
 		storeRepository.save(store);
 	}
@@ -197,6 +205,11 @@ public class PosCatalogService {
 		List<ProductEntity> storeProducts = productRepository.findByStoreId(store.getId());
 		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
 
+		// 마감 10분 전을 넘겼으면 올릴 수도 없는 초안을 만들지 않는다 (prompt 시각을 마감에 너무 붙여둔 경우).
+		if (!StoreHoursUtil.canPublishNow(closeAt)) {
+			return 0;
+		}
+
 		int created = 0;
 		for (MenuItemEntity m : menuItemRepository.findByStoreIdOrderByNameAsc(store.getId())) {
 			if (!m.isAppSaleEnabled() || m.getStockQuantity() == null || m.getStockQuantity() <= 0) {
@@ -234,49 +247,12 @@ public class PosCatalogService {
 		return created;
 	}
 
-	// --- 시뮬레이터(시연용) --------------------------------------------
+	// 시뮬레이터의 아침생산/빨리감기/재고저장은 posSimulator.html이 POST /api/pos/stock →
+	// applyStock() 을 직접 호출한다 (재고 계산은 "매장 POS"인 그 화면이 한다). 여기엔 별도 로직 없음.
 
-	/** "아침 생산" — 앱 판매 대상 메뉴들 재고를 넉넉하게 채운다 (가격 낮을수록 많이). */
-	@Transactional
-	public void simRestock(Long ownerId) {
-		StoreEntity store = requireStore(ownerId);
-		for (MenuItemEntity m : menuItemRepository.findByStoreIdOrderByNameAsc(store.getId())) {
-			m.setStockQuantity(Math.max(5, Math.min(40, 60000 / Math.max(1, m.getOriginalPrice()))));
-			menuItemRepository.save(m);
-		}
-		store.setPosLastSyncAt(LocalDateTime.now());
-		storeRepository.save(store);
-	}
+	// --- 카탈로그 -----------------------------------------------------
 
-	/** "하루 장사 빨리감기" — 재고를 40~85% 정도 팔린 걸로 줄인다. */
-	@Transactional
-	public void simSellDown(Long ownerId) {
-		StoreEntity store = requireStore(ownerId);
-		java.util.Random rnd = new java.util.Random();
-		for (MenuItemEntity m : menuItemRepository.findByStoreIdOrderByNameAsc(store.getId())) {
-			int cur = m.getStockQuantity() == null ? 0 : m.getStockQuantity();
-			if (cur <= 0) {
-				continue;
-			}
-			double soldRatio = 0.40 + rnd.nextDouble() * 0.45;   // 40~85% 판매
-			m.setStockQuantity((int) Math.round(cur * (1 - soldRatio)));
-			menuItemRepository.save(m);
-		}
-		store.setPosLastSyncAt(LocalDateTime.now());
-		storeRepository.save(store);
-	}
-
-	/** 시뮬레이터에서 재고 직접 입력. */
-	@Transactional
-	public void simSetStock(Long ownerId, Long menuItemId, int remaining) {
-		MenuItemEntity m = getOwnedMenuItem(ownerId, menuItemId);
-		m.setStockQuantity(Math.max(0, remaining));
-		menuItemRepository.save(m);
-	}
-
-	// --- 카탈로그 (기존) -----------------------------------------------
-
-	/** 실제 POS가 JSON 배열을 push했을 때 (PosApiController). posSku(없으면 name) 기준 upsert. */
+	/** POS가 메뉴 카탈로그 JSON 배열을 push했을 때 (PosApiController#receiveCatalog). posSku 기준 upsert. */
 	@Transactional
 	public int applyCatalog(Long ownerId, List<PosMenuItemDto> items) {
 		StoreEntity store = requireStore(ownerId);
@@ -286,7 +262,10 @@ public class PosCatalogService {
 					|| dto.getOriginalPrice() == null || dto.getOriginalPrice() <= 0) {
 				continue;
 			}
-			upsert(store.getId(), dto.getPosSku(), dto.getName().trim(), dto.getOriginalPrice(), dto.getImageUrl());
+			MenuItemEntity existing = (dto.getPosSku() != null && !dto.getPosSku().isBlank())
+					? menuItemRepository.findByStoreIdAndPosSku(store.getId(), dto.getPosSku()).orElse(null)
+					: null;
+			upsert(store.getId(), existing, dto.getPosSku(), dto.getName().trim(), dto.getOriginalPrice(), dto.getImageUrl());
 			applied++;
 		}
 		if (store.getPosProvider() == null) {
@@ -300,29 +279,45 @@ public class PosCatalogService {
 
 	// ---------------------------------------------------------------------
 
-	private void replaceCatalog(Long storeId, List<PosMenuItemDto> items) {
-		menuItemRepository.deleteByStoreId(storeId);
+	/** 연동/재동기화가 새 메뉴에 채워주는 초기 재고 — 가격이 쌀수록 많이 만든다는 가정. */
+	private int seedStock(int price) {
+		return Math.max(5, Math.min(40, 60000 / Math.max(1, price)));
+	}
+
+	/**
+	 * mock 샘플 카탈로그를 매장 메뉴와 동기화한다 (posSku 기준).
+	 * - 새 메뉴: 생성 + appSaleEnabled=true + 시드 재고
+	 * - 기존 메뉴: name/originalPrice/imageUrl만 갱신 → 점주 설정(appSaleEnabled/discountRate/appSaleQuantity/stockQuantity) 보존
+	 * - POS 목록에서 사라진 메뉴: 삭제
+	 */
+	private void syncSampleCatalog(Long storeId, List<PosMenuItemDto> items) {
+		Map<String, MenuItemEntity> existingBySku = menuItemRepository.findByStoreIdOrderByNameAsc(storeId).stream()
+				.filter(m -> m.getPosSku() != null && !m.getPosSku().isBlank())
+				.collect(Collectors.toMap(MenuItemEntity::getPosSku, Function.identity(), (a, b) -> a));
+		Set<String> incoming = new HashSet<>();
+
 		for (PosMenuItemDto dto : items) {
-			int price = dto.getOriginalPrice();
-			menuItemRepository.save(MenuItemEntity.builder()
-					.storeId(storeId)
-					.posSku(dto.getPosSku())
-					.name(dto.getName())
-					.originalPrice(price)
-					.imageUrl(dto.getImageUrl())
-					// 연동하면 일단 전부 앱 판매 대상 + "아침 생산" 재고를 채워둔다 (점주가 화면에서 조정).
-					.appSaleEnabled(true)
-					.stockQuantity(Math.max(5, Math.min(40, 60000 / Math.max(1, price))))
-					.build());
+			incoming.add(dto.getPosSku());
+			upsert(storeId, existingBySku.get(dto.getPosSku()), dto.getPosSku(),
+					dto.getName(), dto.getOriginalPrice(), dto.getImageUrl());
+		}
+		for (MenuItemEntity stale : existingBySku.values()) {
+			if (!incoming.contains(stale.getPosSku())) {
+				menuItemRepository.delete(stale);
+			}
 		}
 	}
 
-	private void upsert(Long storeId, String posSku, String name, int originalPrice, String imageUrl) {
-		MenuItemEntity item = (posSku != null && !posSku.isBlank())
-				? menuItemRepository.findByStoreIdAndPosSku(storeId, posSku).orElse(null)
-				: null;
+	/** posSku 기준 upsert. existing이 null이면 새로 만들며 앱판매 on + 시드 재고를 채운다. 그 외 설정은 안 건드린다. */
+	private void upsert(Long storeId, MenuItemEntity existing, String posSku,
+	                    String name, int originalPrice, String imageUrl) {
+		MenuItemEntity item = existing;
 		if (item == null) {
-			item = MenuItemEntity.builder().storeId(storeId).posSku(posSku).build();
+			item = MenuItemEntity.builder()
+					.storeId(storeId).posSku(posSku)
+					.appSaleEnabled(true)
+					.stockQuantity(seedStock(originalPrice))
+					.build();
 		}
 		item.setName(name);
 		item.setOriginalPrice(originalPrice);

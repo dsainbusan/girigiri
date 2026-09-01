@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 예약 생성 흐름을 담당하는 서비스.
@@ -372,16 +373,49 @@ public class ReservationService {
 		return ready.stream().map(this::toIncomingItemDto).toList();
 	}
 
+	// 완료 내역 화면 — 날짜별 그룹 헤더 / 그룹 내 시각 표시용
+	private static final DateTimeFormatter COMPLETED_DATE_FORMAT = DateTimeFormatter.ofPattern("MM월 dd일 (E)", Locale.KOREAN);
+	private static final DateTimeFormatter COMPLETED_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
 	/**
 	 * 추가됨 — 왜: 손님이 실제로 픽업해서 거래가 끝난 내역을 점주가 볼 화면이 없었다. 매장별로 픽업
 	 * 완료(picked) 예약만 최신순으로 보여준다.
 	 */
 	public List<ReservationCompletedItemDto> getCompletedTransactions(Long storeId) {
-		List<ReservationEntity> completed = reservationRepository.findByStoreIdAndStatusOrderByPickedAtDesc(storeId, "picked");
-		return completed.stream().map(this::toCompletedItemDto).toList();
+		return getCompletedTransactions(storeId, null, null, null);
+	}
+
+	/**
+	 * 추가됨 (2026-08-30, 문창호) — 왜: 판매 내역이 쌓이면 원하는 걸 찾기 힘들다. 특정 날짜 / 그 날의
+	 * 시간대(예: 8/26 10:00~12:00)로 좁혀 볼 수 있게 필터를 받는다. 편의점 POS의 "시간대별 매출 조회" 감각.
+	 * date/from/to 모두 null이면 기존과 동일(전체, 최신순).
+	 */
+	public List<ReservationCompletedItemDto> getCompletedTransactions(Long storeId, LocalDate date, LocalTime from, LocalTime to) {
+		return reservationRepository.findByStoreIdAndStatusOrderByPickedAtDesc(storeId, "picked").stream()
+				.filter(r -> inPickupRange(r.getPickedAt(), date, from, to))
+				.map(this::toCompletedItemDto)
+				.toList();
+	}
+
+	private boolean inPickupRange(LocalDateTime pickedAt, LocalDate date, LocalTime from, LocalTime to) {
+		if (date == null && from == null && to == null) {
+			return true;
+		}
+		if (pickedAt == null) {
+			return false;   // 필터가 걸린 상태에선 픽업시각 없는 데이터는 제외
+		}
+		if (date != null && !pickedAt.toLocalDate().equals(date)) {
+			return false;
+		}
+		LocalTime t = pickedAt.toLocalTime();
+		if (from != null && t.isBefore(from)) {
+			return false;
+		}
+		return to == null || !t.isAfter(to);
 	}
 
 	private ReservationCompletedItemDto toCompletedItemDto(ReservationEntity reservation) {
+		LocalDateTime pickedAt = reservation.getPickedAt();
 		return new ReservationCompletedItemDto(
 				reservation.getId(),
 				reservation.getProductName(),
@@ -389,7 +423,11 @@ public class ReservationService {
 				reservation.getTotalPrice(),
 				reservation.getPickupCode(),
 				reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
-				reservation.getPickedAt() != null ? reservation.getPickedAt().format(LIST_DISPLAY_FORMAT) : "-"
+				pickedAt != null ? pickedAt.format(LIST_DISPLAY_FORMAT) : "-",
+				// picked인데 picked_at이 비어 있는 건 정상 픽업 처리를 안 거친 이상 데이터(옛 시드/마이그레이션).
+				// "없음"이 아니라 "미기록"으로 — 노쇼/취소가 아니라 시각만 안 남은 것.
+				pickedAt != null ? pickedAt.format(COMPLETED_DATE_FORMAT) : "픽업 시각 미기록",
+				pickedAt != null ? pickedAt.format(COMPLETED_TIME_FORMAT) : "-"
 		);
 	}
 
@@ -510,6 +548,51 @@ public class ReservationService {
 				store.getStoreName(),
 				resolveStatusBadge(reservation)
 		);
+	}
+
+	/**
+	 * 추가됨 (2026-08-31, 챗봇 "예약 조회" tool용) — 왜: 챗봇이 "지금 취소할 수 있나요?" 같은 질문에
+	 * 추측으로 답하지 않고, cancelReservation()이 실제로 쓰는 것과 완전히 같은 두 가지 조건(주문 후
+	 * USER_CANCEL_WINDOW_MINUTES분 이내 / 매장 마감 CLOSING_CUTOFF_MINUTES분 전까지)으로 지금
+	 * 시점 기준 취소 가능 여부만 조회한다. 실제로 취소를 처리하지는 않는다(읽기 전용) — 조회
+	 * 결과에 따라 챗봇은 안내만 하고, 진짜 취소는 항상 마이페이지 버튼으로만 하게 한다.
+	 *
+	 * userId는 반드시 로그인 세션에서 가져온 값만 넘겨야 한다 — Gemini(모델)가 주는 값을 그대로
+	 * 믿고 쓰면 다른 사람 예약을 조회할 수 있게 되므로, 이 메서드를 호출하는 ChatService가 그
+	 * 책임을 진다(본인 예약만 조회).
+	 */
+	public List<net.dsa.girigiri.domain.dto.ReservationCancelStatusDto> getCancelEligibilityForUser(Long userId) {
+		List<ReservationEntity> active = reservationRepository.findByUserIdAndStatusInOrderByReservedAtDesc(
+				userId, List.of("pending", "confirmed", "ready"));
+
+		LocalDateTime now = LocalDateTime.now();
+
+		return active.stream().map(reservation -> {
+			StoreEntity store = storeRepository.findById(reservation.getStoreId()).orElse(null);
+			String storeName = store != null ? store.getStoreName() : "-";
+
+			boolean pastWindow = reservation.getReservedAt() != null
+					&& Duration.between(reservation.getReservedAt(), now).toMinutes() >= USER_CANCEL_WINDOW_MINUTES;
+			boolean closingSoon = store != null && isTooCloseToClosing(store, now);
+			boolean eligible = !pastWindow && !closingSoon;
+
+			String reason = null;
+			if (pastWindow) {
+				reason = "주문 후 " + USER_CANCEL_WINDOW_MINUTES + "분이 지나서 취소할 수 없어요.";
+			} else if (closingSoon) {
+				reason = "매장 마감 " + CLOSING_CUTOFF_MINUTES + "분 전이라 취소할 수 없어요.";
+			}
+
+			return new net.dsa.girigiri.domain.dto.ReservationCancelStatusDto(
+					reservation.getId(),
+					reservation.getProductName(),
+					storeName,
+					reservation.getStatus(),
+					reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+					eligible,
+					reason
+			);
+		}).toList();
 	}
 
 	/** 픽업/취소/노쇼처럼 이미 끝난 예약을 또 취소하려는 걸 막는 공통 상태 체크. */

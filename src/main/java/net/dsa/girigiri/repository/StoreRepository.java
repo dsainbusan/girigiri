@@ -18,4 +18,7 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
 
 	// 추가됨 (2026-08-27) — 왜: ListingDraftScheduler가 POS 연동 + 재고 스냅샷 시각이 설정된 매장을 훑는다.
 	List<StoreEntity> findByPosProviderIsNotNullAndPosDraftPromptTimeIsNotNull();
+
+	// 추가됨 (2026-09-01, 문창호) — 왜: 주간 정산 스케줄러가 승인된 매장 전체를 훑는다.
+	List<StoreEntity> findByApprovalStatusAndRole(String approvalStatus, String role);
 }

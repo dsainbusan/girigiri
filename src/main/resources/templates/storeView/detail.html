@@ -94,6 +94,21 @@
 				</div>
 			</div>
 
+			<!--/* 강노은: AI 리뷰 요약 — reviewSummary는 리뷰가 10건 이상이고 Gemini 호출까지
+			     성공했을 때만 채워진다(ReviewService.getReviewSummary 참고). null이면 아예 섹션을
+			     숨긴다 — 리뷰가 적은 매장에 "요약할 게 없는" 빈 카드를 보여주지 않기 위해. */-->
+			<div class="card" style="margin-bottom:var(--s-3)" th:if="${reviewSummary != null}">
+				<div class="u-row" style="gap:6px;align-items:flex-start">
+					<span style="font-size:16px">✨</span>
+					<div class="u-grow">
+						<p class="banner__title" style="margin-bottom:2px">AI 리뷰 요약</p>
+						<p class="u-sub" style="font-size:13px;line-height:1.5" th:text="${reviewSummary}">
+							다들 빵이 촉촉하고 양이 많다고 좋아해요. 마감 직전에 가면 품절인 경우가 잦으니 서둘러 방문하는 걸 추천해요.
+						</p>
+					</div>
+				</div>
+			</div>
+
 			<!--/* 강노은: 리뷰 안 쓰고 그냥 둘러만 보고 싶은 사람도 있으니, 폼을 항상 펼쳐두지 않고
 			     "리뷰 작성" 버튼을 눌러야 펼쳐지게 한다. 이 가게에서 예약·픽업까지 완료한 사람만
 			     쓸 수 있게(canReview) 버튼 자체를 가린다 — 실제 제출 검증은 서버(ReviewService)에서도
