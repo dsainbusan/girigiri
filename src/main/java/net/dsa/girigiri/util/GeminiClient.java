@@ -317,13 +317,26 @@ public class GeminiClient {
 				HttpResponse<String> response =
 						httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-				if (response.statusCode() == 503 || response.statusCode() == 429) {
+				if (response.statusCode() == 503) {
 					log.warn("> [GeminiClient] 일시적 실패(재시도 대상) - attempt={}/{}, status={}, body={}",
 							attempt, MAX_ATTEMPTS, response.statusCode(), response.body());
 					if (attempt < MAX_ATTEMPTS) {
 						sleepBeforeRetry(attempt);
 						continue;
 					}
+					return GeminiCallResult.failed(
+							"지금 챗봇 사용자가 많아서 답변이 지연되고 있어요. 잠시 후 다시 시도해주세요.");
+				}
+
+				// 추가됨 (2026-09-01) — 왜: 429는 503과 원인이 다르다. 503은 구글 서버가 일시적으로
+				// 과부하인 경우라 잠깐 기다리면 풀리지만, 429는 "이 API 키의 무료 할당량을 이미 다
+				// 썼다"는 뜻이라 1.5~4.5초 기다린다고 절대 안 풀린다. 실제로 gemini-flash-latest가
+				// 가리키는 모델이 무료 할당량 20건짜리(gemini-3.7-flash)로 바뀌면서, 이 둘을 같이
+				// 취급해 429에도 3번씩 재시도하는 바람에 얼마 안 되는 할당량을 스스로 3배 빠르게
+				// 써버리고 있었다(재현 확인: 메시지 몇 개만 연달아 보내도 바로 429 반복). 그래서
+				// 429는 재시도 없이 바로 실패 처리해서 할당량을 더 이상 낭비하지 않는다.
+				if (response.statusCode() == 429) {
+					log.warn("> [GeminiClient] 할당량 초과(재시도 안 함) - status=429, body={}", response.body());
 					return GeminiCallResult.failed(
 							"지금 챗봇 사용자가 많아서 답변이 지연되고 있어요. 잠시 후 다시 시도해주세요.");
 				}
