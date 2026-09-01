@@ -99,6 +99,17 @@ public class StoreEntity {
 	@Column(name = "pos_draft_prompt_time")
 	private java.time.LocalTime posDraftPromptTime;
 
+	// 추가됨 (2026-09-01, 문창호) — 왜: 주간 정산 지급용 입금 계좌. 슈퍼어드민이 "정산 지급" 화면에서
+	// 이 정보로 이체 목록(Excel)을 만들어 은행 대량이체로 송금한다. 미등록이면 지급 보류.
+	@Column(name = "bank_name", length = 30)
+	private String bankName;
+
+	@Column(name = "bank_account", length = 40)
+	private String bankAccount;
+
+	@Column(name = "account_holder", length = 40)
+	private String accountHolder;
+
 	// 변경됨 — 왜: Store가 자체 loginId/password를 갖는 "독립 계정" 모델(안A)과, 세션 설계
 	// ({ userId, role, viewMode, storeId })가 암시하는 "User가 storeId로 Store를 소유"하는 모델(안B)이
 	// 어긋난다는 지적으로 확정함: 안B로 정리(Store는 로그인 주체가 아니고, User(role=OWNER)가

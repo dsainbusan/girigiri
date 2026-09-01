@@ -210,39 +210,60 @@
 
 /* ---------- 매장 정산서 (일부러 리포트와 다른 "회계 문서" 톤) ---------- */
 .settle-doc {
-  border: 1px solid var(--c-line);
-  border-radius: var(--r-md);
-  overflow: hidden;
   background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-top: 3px solid var(--c-primary);   /* 문서 마커 (상단바와 확실히 구분) */
+  border-radius: var(--r-md);
+  padding: var(--s-4);
 }
-.settle-doc__bar {
+.settle-doc__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-2);
-  padding: var(--s-3) var(--s-4);
-  background: var(--c-dark);
-  color: #fff;
+  padding-bottom: var(--s-3);
+  border-bottom: 2px solid var(--c-dark);   /* letterhead 구분선 */
 }
-.settle-doc__title { font-size: var(--fs-md); font-weight: var(--fw-bold); }
-.settle-doc__store { font-size: var(--fs-xs); color: #cbd5e1; }
+.settle-doc__title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  letter-spacing: -0.01em;
+  color: var(--c-text);
+}
+.settle-doc__store { font-size: var(--fs-xs); color: var(--c-text-sub); }
 .settle-doc__meta {
   display: flex;
-  gap: var(--s-5);
-  padding: var(--s-3) var(--s-4);
+  gap: var(--s-6);
+  padding-top: var(--s-3);
   font-size: var(--fs-xs);
 }
 .settle-doc__meta > div { display: flex; flex-direction: column; gap: 2px; }
 .settle-doc__meta span { color: var(--c-text-sub); }
 .settle-doc__meta b { font-size: var(--fs-sm); color: var(--c-text); }
 
+.settle-period__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--s-4) 0 var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+.settle-period__title::before {
+  content: "";
+  flex: none;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--c-dark);
+}
 .settle-period {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-2);
-  margin-top: var(--s-4);
 }
-.settle-period__label { font-size: var(--fs-xs); color: var(--c-text-sub); }
 .settle-period__pill {
   padding: 4px 12px;
   border: 1px solid var(--c-line);
@@ -252,11 +273,57 @@
   text-decoration: none;
   background: var(--c-surface);
 }
+.settle-period__pill--toggle {
+  margin-left: auto;   /* 맨 오른쪽으로 */
+  font-family: inherit;
+  cursor: pointer;
+}
 .settle-period__pill.is-active {
   background: var(--c-dark);
   border-color: var(--c-dark);
   color: #fff;
   font-weight: var(--fw-bold);
+}
+
+/* 계좌 미등록 경고 배너 */
+.settle-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--c-danger-border);
+  background: var(--c-danger-weak);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  color: var(--c-text);
+  text-decoration: none;
+}
+.settle-alert__go { flex-shrink: 0; font-weight: var(--fw-bold); color: var(--c-danger); white-space: nowrap; }
+
+/* 정산 내역 (주간 확정 기록) */
+.settle-hist { list-style: none; margin: var(--s-2) 0 0; padding: 0; border-top: 1px solid var(--c-line); }
+.settle-hist__item { border-bottom: 1px solid var(--c-line-weak); }
+.settle-hist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-1);
+  text-decoration: none;
+  color: var(--c-text);
+}
+.settle-hist__week { display: block; font-size: var(--fs-sm); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.settle-hist__sub { display: block; margin-top: 2px; font-size: var(--fs-xs); color: var(--c-text-sub); }
+.settle-hist__right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.settle-hist__amt { font-size: var(--fs-sm); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.settle-hist__item--empty {
+  padding: var(--s-5) 0;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--c-text-mut);
+  border-bottom: none;
 }
 
 .settle-range {
@@ -345,10 +412,21 @@
 }
 
 .settle-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: var(--s-5) 0 var(--s-2);
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
   color: var(--c-text);
+}
+.settle-section-title::before {
+  content: "";
+  flex: none;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--c-dark);
 }
 .settle-section-title span { font-weight: var(--fw-regular); color: var(--c-text-sub); }
 

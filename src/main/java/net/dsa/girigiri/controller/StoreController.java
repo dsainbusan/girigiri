@@ -61,6 +61,7 @@ public class StoreController {
 	private final net.dsa.girigiri.repository.ListingTemplateRepository listingTemplateRepository;
 	private final net.dsa.girigiri.service.StoreReportService storeReportService;
 	private final net.dsa.girigiri.service.SettlementService settlementService;
+	private final net.dsa.girigiri.repository.SettlementRepository settlementRepository;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -224,6 +225,10 @@ public class StoreController {
 				&& listingTemplateRepository.findByStoreId(store.getId()).stream().noneMatch(t -> t.isActive());
 		model.addAttribute("needsAutomationSetup", noAutomation);
 
+		// 정산 계좌 미등록 넛지 — 계좌가 없으면 주간 정산이 확정돼도 지급이 보류된다 (WBS 2.0).
+		model.addAttribute("needsBankAccount",
+				store.getBankName() == null || store.getBankName().isBlank());
+
 		// 추가됨 (2026-08-31) — 왜: "돈 받는 것"이 제일 중요한데 정산 페이지 진입점이 토글 뒤에 묻혀
 		// 있었다. 지표 그리드 밑에 "이번 달 정산 예정액" 한 줄 카드로 숫자+버튼을 같이 노출한다.
 		model.addAttribute("settlementPayout", formatWon(settlementService.build(store, "month").payout()));
@@ -342,6 +347,15 @@ public class StoreController {
 		model.addAttribute("period", custom ? "custom" : p);
 		model.addAttribute("from", custom ? fromDate.toString() : "");
 		model.addAttribute("to", custom ? toDate.toString() : "");
+		model.addAttribute("issuedDate", LocalDate.now().toString());
+
+		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로
+		model.addAttribute("settlements",
+				settlementRepository.findByStoreIdOrderByPeriodStartDesc(store.getId()));
+		model.addAttribute("bankRegistered",
+				store.getBankName() != null && !store.getBankName().isBlank()
+						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
+		model.addAttribute("minPayout", net.dsa.girigiri.service.SettlementService.MIN_PAYOUT);
 		return "settlementView/settlement";
 	}
 
@@ -458,6 +472,9 @@ public class StoreController {
 	                         @RequestParam(required = false) String operatingHours,
 	                         @RequestParam(required = false) Double latitude,
 	                         @RequestParam(required = false) Double longitude,
+	                         @RequestParam(required = false) String bankName,
+	                         @RequestParam(required = false) String bankAccount,
+	                         @RequestParam(required = false) String accountHolder,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
@@ -478,9 +495,17 @@ public class StoreController {
 		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
 		store.setLatitude(latitude);
 		store.setLongitude(longitude);
+		// 정산 입금 계좌 (WBS 2.0) — 셋 다 비면 미등록으로 둔다
+		store.setBankName(trimToNull(bankName));
+		store.setBankAccount(trimToNull(bankAccount));
+		store.setAccountHolder(trimToNull(accountHolder));
 		storeRepository.save(store);
 
 		return "redirect:/store/dashboard?edited";
+	}
+
+	private String trimToNull(String s) {
+		return (s == null || s.isBlank()) ? null : s.trim();
 	}
 
 	private List<ProductEntity> fetchTodayProducts(Long storeId, LocalDateTime todayStart, LocalDateTime todayEnd) {
@@ -623,6 +648,7 @@ public class StoreController {
 		model.addAttribute("draftPendingCount", 0L);
 		model.addAttribute("incomingReservationCount", 0);
 		model.addAttribute("needsAutomationSetup", false);
+		model.addAttribute("needsBankAccount", false);
 		model.addAttribute("settlementPayout", formatWon(0));
 	}
 }

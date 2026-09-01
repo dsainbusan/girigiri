@@ -62,6 +62,9 @@ CREATE TABLE store (
     pos_connected_at DATETIME COMMENT 'POS 연동 시각 (2026-08-27 문창호 추가)',
     pos_last_sync_at DATETIME COMMENT 'POS 마지막 동기화 시각 (2026-08-27 문창호 추가)',
     pos_draft_prompt_time TIME COMMENT '매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안 자동 생성. NULL이면 안 함 (B안, 2026-08-27 문창호)',
+    bank_name        VARCHAR(30) COMMENT '정산 입금 계좌 은행 (2026-09-01 문창호, WBS 2.0 매장 정산)',
+    bank_account     VARCHAR(40) COMMENT '정산 입금 계좌번호',
+    account_holder   VARCHAR(40) COMMENT '정산 입금 계좌 예금주',
     role             VARCHAR(20) NOT NULL COMMENT '= OWNER. 보류: users.role과 중복 정보라 실사용 여부 확인 필요',
     owner_id         BIGINT NOT NULL COMMENT 'users.id 참조 (안B 확정) — 이 매장을 소유한 점주(role=OWNER) 계정',
     created_at       DATETIME,
@@ -185,5 +188,33 @@ CREATE TABLE report (
     excel_url          VARCHAR(255),
     pdf_url            VARCHAR(255),
     generated_at       DATETIME,
+    FOREIGN KEY (store_id) REFERENCES store(id)
+);
+
+-- 주간 정산 (2026-09-01 문창호, WBS 2.0 "매장 정산")
+-- 매주 월 00:00 SettlementScheduler가 지난 주(월~일) 매장별 정산액을 계산해 1건씩 생성(status=PENDING).
+-- 슈퍼어드민(/superadmin/settlements)이 이체 목록(Excel) 받아 은행 대량이체 후 지급 완료(PAID) 처리.
+-- 정산액이 10,000원 미만이면 CARRIED로 두고 다음 주 정산에 합산(합산되면 ROLLED).
+CREATE TABLE settlement (
+    id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id              BIGINT NOT NULL,
+    period_start          DATE NOT NULL COMMENT '정산 대상 주간 시작 (월요일)',
+    period_end            DATE NOT NULL COMMENT '정산 대상 주간 끝 (일요일)',
+    gross                 BIGINT NOT NULL COMMENT '총 결제액 (PAID + 결제 후 취소분)',
+    refund                BIGINT NOT NULL COMMENT '환불 차감',
+    net_amount            BIGINT NOT NULL COMMENT '순 결제액 = gross - refund',
+    commission_rate       INT NOT NULL COMMENT '적용 수수료율 % (스냅샷)',
+    commission            BIGINT NOT NULL COMMENT '플랫폼 수수료',
+    week_amount           BIGINT NOT NULL COMMENT '이번 주 순수 정산분 = net - commission',
+    carried_in            BIGINT NOT NULL COMMENT '이전 이월분 합산액',
+    payout                BIGINT NOT NULL COMMENT '이번에 실제 지급되는 금액 (CARRIED/ROLLED면 0)',
+    status                VARCHAR(20) NOT NULL COMMENT 'PENDING(지급 대기) / PAID(지급 완료) / CARRIED(이월) / ROLLED(이월분 합산됨)',
+    merged_into_id        BIGINT COMMENT 'status=ROLLED일 때 어느 정산에 합산됐는지',
+    confirmed_at          DATETIME NOT NULL COMMENT '정산 확정 시각',
+    scheduled_payout_date DATE NOT NULL COMMENT '지급 예정일 (확정일 + 영업일 2일)',
+    paid_at               DATETIME COMMENT '실제 지급 완료 시각',
+    transfer_memo         VARCHAR(200) COMMENT '이체 확인 메모 (슈퍼어드민 입력)',
+    created_at            DATETIME,
+    UNIQUE KEY uk_settlement_store_period (store_id, period_start),
     FOREIGN KEY (store_id) REFERENCES store(id)
 );

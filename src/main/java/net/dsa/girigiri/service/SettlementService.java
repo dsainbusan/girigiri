@@ -41,8 +41,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettlementService {
 
-	/** 플랫폼 수수료율 (%). 팀 확정 전 임시 상수 — 나중에 매장별/설정값으로 뺄 수 있다. */
-	public static final int COMMISSION_RATE_PERCENT = 10;
+	/**
+	 * 플랫폼 수수료율 (%). 정책: 오픈 후 1년간 무료(0%) → 이후 결제액의 5%, 상한 5%.
+	 * 이 앱은 "서비스 3년차" 가정이라 5%가 적용된 상태다.
+	 * 나중에 매장별 우대율(초기 입점 매장 등)을 두려면 이 상수를 매장 설정값으로 빼면 된다.
+	 */
+	public static final int COMMISSION_RATE_PERCENT = 5;
+
+	/** 최소 정산액 — 이 금액 미만이면 이번 주 지급을 미루고 다음 주 정산에 합산한다(소액 이체 방지). */
+	public static final long MIN_PAYOUT = 10_000L;
 
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("MM/dd");
 	private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -106,6 +113,44 @@ public class SettlementService {
 
 		return new SettlementData(store.getStoreName(), w.label(), COMMISSION_RATE_PERCENT,
 				gross, refund, net, commission, payout, lines, refunds);
+	}
+
+	// --- 주간 정산 확정용 집계 (라벨 없이 숫자만) ---------------------------
+
+	/** 한 매장의 [start, end) 구간 집계 결과. build()와 동일 기준(결제 승인일). */
+	public record Agg(long gross, long refund, long net, long commission) {
+		public long weekAmount() {
+			return net - commission;
+		}
+	}
+
+	public Agg aggregate(StoreEntity store, LocalDateTime start, LocalDateTime end) {
+		List<ReservationEntity> reservations = reservationRepository.findByStoreId(store.getId());
+		if (reservations.isEmpty()) {
+			return new Agg(0, 0, 0, 0);
+		}
+		Map<Long, ReservationEntity> byResId = reservations.stream()
+				.collect(Collectors.toMap(ReservationEntity::getId, r -> r, (a, b) -> a));
+		List<PaymentEntity> payments =
+				paymentRepository.findByReservationIdIn(new ArrayList<>(byResId.keySet()));
+
+		long gross = 0, refund = 0, commission = 0;
+		for (PaymentEntity pay : payments) {
+			LocalDateTime paidAt = pay.getPaidAt();
+			if (paidAt == null || paidAt.isBefore(start) || !paidAt.isBefore(end)) {
+				continue;
+			}
+			long amount = pay.getAmount() == null ? 0 : pay.getAmount();
+			if (pay.getPayStatus() == PayStatus.CANCELLED) {
+				gross += amount;
+				refund += amount;
+			} else if (pay.getPayStatus() == PayStatus.PAID) {
+				gross += amount;
+				commission += Math.round(amount * COMMISSION_RATE_PERCENT / 100.0);
+			}
+		}
+		long net = gross - refund;
+		return new Agg(gross, refund, net, commission);
 	}
 
 	// --- 기간 ------------------------------------------------------------

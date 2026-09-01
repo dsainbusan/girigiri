@@ -16,7 +16,11 @@
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<!-- 처리할 일 배너 — 항상 최상단. 각 줄 0건이면 숨김. -->
-	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup}" class="todo-banner">
+	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+		<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
+			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span class="todo-banner__go">›</span>
+		</a>
 		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
 			<span>📦 오늘의 구제 <b th:text="${draftPendingCount}">3</b>건이 발행을 기다려요</span>
 			<span class="todo-banner__go">›</span>
