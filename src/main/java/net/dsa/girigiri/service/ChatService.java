@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.ChatRequestDto;
 import net.dsa.girigiri.domain.dto.ChatResponseDto;
 import net.dsa.girigiri.domain.dto.ReservationCancelStatusDto;
-import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.util.GeminiClient;
 import org.springframework.stereotype.Service;
 
@@ -17,20 +16,23 @@ import java.util.List;
  * 고객 지원 챗봇 서비스.
  * 담당: 송채현 (WBS 6.5 고객 지원 챗봇)
  *
- * 로그인한 사용자의 role(USER/OWNER/ADMIN)에 따라 서로 다른 시스템 프롬프트를 골라 Gemini API에
- * 보낸다 — role=OWNER면 사장님 전용 안내를, 그 외(USER/ADMIN)에는 손님용 안내를 준다.
+ * 로그인한 사용자의 viewMode(OWNER_MODE/USER_MODE)에 따라 서로 다른 시스템 프롬프트를 골라
+ * Gemini API에 보낸다 — viewMode=OWNER_MODE면 사장님 전용 안내를, 그 외(USER_MODE)에는 손님용
+ * 안내를 준다.
  *
  * 변경됨 (2026-08-26) — 왜: 원래는 ClaudeClient(Claude API)를 썼는데, Claude API는 신규 계정에
  * 자동 무료 크레딧이 없어 카드 등록 + 최소 결제가 필요했다. 개발/테스트 단계에서 비용 없이 쓸 수
  * 있는 GeminiClient(Gemini API, 무료 티어)로 교체했다 — CLAUDE.md 기획서(WBS 6.5)엔 "Claude API
  * 연동"이라고 적혀 있으니 팀에 공유하고 문서 업데이트 여부를 논의할 것.
  *
- * 추가됨 (2026-08-25) — 왜: CLAUDE.md의 dual-mode 세션 구조(role 고정 + viewMode 가변)상으로는
- * "화면 분기는 viewMode 기준"이 원칙이지만, 작성 시점엔 viewMode가 아직 세션에 연결돼 있지 않다
- * (WebSecurityConfig의 TODO 참고). 그래서 우선 role 기준으로 분기해뒀다 — 나중에 viewMode(사장님이
- * 손님 모드로 전환한 경우 등)가 연결되면, "사장님이 손님 모드 보는 중엔 손님용 프롬프트를 써야
- * 한다"가 더 정확한 동작이라 분기 기준을 role -> viewMode로 바꾸는 게 맞다. (요구사항정의서
- * REQ-F-120 설명 참고)
+ * 변경됨 (2026-09-01) — 왜: CLAUDE.md의 dual-mode 세션 구조(role 고정 + viewMode 가변)상 원칙은
+ * "화면 분기는 viewMode 기준"인데, 작성 시점(2026-08-25)엔 viewMode가 아직 세션에 연결돼 있지
+ * 않아서 우선 role 기준으로 분기해뒀었다. 이후 문창호님 파트(AuthSessionInitializer, 로그인 시
+ * viewMode 초기화 / AuthController.toggleMode(), 헤더의 유저·점주 모드 전환 토글)가 완료된 걸
+ * 확인해서, 원래 계획대로 role -> viewMode로 분기 기준을 바꿨다. 이제 사장님이 헤더에서 "유저
+ * 모드로" 전환해서 보는 중이면(role은 여전히 OWNER, viewMode만 USER_MODE) 챗봇도 손님용 프롬프트를
+ * 준다 — role 그대로 썼다면 이 경우에도 계속 사장님용 안내가 나가서 실제로 보고 있는 화면과
+ * 안 맞았을 상황. (요구사항정의서 REQ-F-120 설명 참고)
  *
  * FAQ/시스템 프롬프트 내용(REQ-F-121)은 우선 예약·결제·픽업 등 채채님 담당 영역 위주로 채워뒀다.
  * 로그인/지도·찜하기/마이페이지/절약가계부/리뷰 등 다른 팀원 담당 영역은 자리만 만들어뒀으니,
@@ -119,7 +121,7 @@ public class ChatService {
 			  일간/주간 리포트를 Excel·PDF로 다운로드할 수 있어요.
 			""";
 
-	public ChatResponseDto sendMessage(Long userId, String role, ChatRequestDto request) {
+	public ChatResponseDto sendMessage(Long userId, String viewMode, ChatRequestDto request) {
 		if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
 			return ChatResponseDto.failed("메시지를 입력해주세요.");
 		}
@@ -127,19 +129,21 @@ public class ChatService {
 			return ChatResponseDto.failed("메시지가 너무 길어요. " + MAX_MESSAGE_LENGTH + "자 이내로 입력해주세요.");
 		}
 
-		boolean isOwner = UserEntity.ROLE_OWNER.equals(role);
-		String systemPrompt = isOwner ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
+		boolean isOwnerMode = "OWNER_MODE".equals(viewMode);
+		String systemPrompt = isOwnerMode ? OWNER_SYSTEM_PROMPT : CUSTOMER_SYSTEM_PROMPT;
 
-		// 예약 조회 tool은 손님 전용이다(WBS "챗봇 기능 연동" — 본인 예약만 조회). 사장님 채팅에는
-		// tool을 아예 안 실어서(null) GeminiClient가 예전과 완전히 동일하게 동작한다.
+		// 예약 조회 tool은 손님 화면 전용이다(WBS "챗봇 기능 연동" — 본인 예약만 조회). 사장님이
+		// 헤더에서 유저 모드로 전환해서 보는 중이면(viewMode=USER_MODE) 본인 명의 예약을 물어볼 수도
+		// 있으니 이때도 tool을 실어준다. 사장님 모드로 보는 중일 때만 tool 없이(null) 예전과 동일하게
+		// 동작한다.
 		GeminiClient.ReservationToolExecutor toolExecutor =
-				isOwner ? null : () -> buildReservationStatusJson(userId);
+				isOwnerMode ? null : () -> buildReservationStatusJson(userId);
 
 		GeminiClient.ChatResult result = geminiClient.sendMessage(
 				systemPrompt, request.getHistory(), request.getMessage(), toolExecutor);
 
 		if (!result.success()) {
-			log.warn("> [ChatService] Gemini API 응답 실패 - role={}, 사유={}", role, result.failReason());
+			log.warn("> [ChatService] Gemini API 응답 실패 - viewMode={}, 사유={}", viewMode, result.failReason());
 			return ChatResponseDto.failed(result.failReason());
 		}
 

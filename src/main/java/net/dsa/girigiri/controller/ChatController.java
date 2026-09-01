@@ -34,8 +34,11 @@ public class ChatController {
 			return ResponseEntity.status(401).body(ChatResponseDto.failed("로그인이 필요해요."));
 		}
 
-		String role = (String) session.getAttribute("role");
-		ChatResponseDto response = chatService.sendMessage(userId, role, request);
+		// 변경됨 (2026-09-01) — 왜: role은 불변 권한이라 "사장님이 유저 모드로 전환해서 보는 중"인
+		// 경우를 구분 못 한다. AuthController.toggleMode()로 viewMode가 이미 세션에 들어오고 있어서
+		// (문창호님 파트 완료), 화면 분기는 팀 컨벤션대로 viewMode 기준으로 바꿨다.
+		String viewMode = (String) session.getAttribute("viewMode");
+		ChatResponseDto response = chatService.sendMessage(userId, viewMode, request);
 		return ResponseEntity.ok(response);
 	}
 }
