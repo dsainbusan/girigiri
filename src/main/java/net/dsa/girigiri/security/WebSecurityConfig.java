@@ -74,7 +74,6 @@ public class WebSecurityConfig {
 			// 강노은: 문의 게시판(/user/inquiries/**)은 작성자·문의 대상 가게 사장·관리자만 열람 가능해야 해서
 			// 공개 목록에 넣지 않는다 — 로그인 자체는 Spring Security가 막고, "누구 걸 볼 수 있는지"는
 			// InquiryController/InquiryService에서 세션의 userId/role로 추가 필터링한다.
-			, "/reservation/**"   // TODO(송채현) 로그인 전이라 임시 공개. 로그인 붙으면 로그인한 사용자만 접근하도록 되돌릴 것.
 			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
 			, "/styleguide"
 			, "/styleguide/admin"   // 슈퍼어드민 wide 레이아웃 미리보기 (위와 같은 이유로 임시 공개)

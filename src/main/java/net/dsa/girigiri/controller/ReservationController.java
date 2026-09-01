@@ -21,6 +21,7 @@ import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
+import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReceiptRepository;
@@ -86,9 +87,13 @@ public class ReservationController {
 	private final PaymentRepository paymentRepository;
 	private final PortOneClient portOneClient;
 
-	// TODO(송보미 로그인 완료 후): 세션에서 실제 로그인한 userId를 꺼내오도록 교체
-	private Long resolveCurrentUserId() {
-		return 1L;
+	// 변경됨 (2026-09-01) — 왜: 문창호님의 로그인/세션 작업(OAuth2LoginSuccessHandler +
+	// AuthSessionInitializer)이 이미 끝나서 세션에 실제 로그인한 사용자의 userId가 들어있다.
+	// 더 이상 고정 사용자(1L)를 쓸 이유가 없어서 ChatController/MypageController와 동일하게
+	// 세션에서 꺼내오도록 교체했다. /reservation/**을 WebSecurityConfig의 공개 목록에서 뺐기
+	// 때문에, 여기까지 도달했다면 이미 로그인된 상태라 null일 일은 없다.
+	private Long resolveCurrentUserId(HttpSession session) {
+		return (Long) session.getAttribute("userId");
 	}
 
 	// 변경됨 — 왜: 매장별로 필터링하는 화면(완료된 거래 내역 등)에서 하드코딩된 store id=1이 실제
@@ -169,7 +174,8 @@ public class ReservationController {
 	@PostMapping("/prepare")
 	@ResponseBody
 	public ReservationPrepareResponseDto prepare(@RequestParam Long productId,
-												  @RequestParam(defaultValue = "1") int quantity) {
+												  @RequestParam(defaultValue = "1") int quantity,
+												  HttpSession session) {
 		ProductEntity product = productRepository.findById(productId)
 				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + productId));
 		StoreEntity store = storeRepository.findById(product.getStoreId())
@@ -185,7 +191,7 @@ public class ReservationController {
 		LocalDateTime pickupTime = PickupAvailabilityUtil.earliestPickupTime(now, prepTimeMinutes);
 
 		ReservationEntity reservation = reservationService.prepareReservation(
-				resolveCurrentUserId(), productId, quantity, pickupTime);
+				resolveCurrentUserId(session), productId, quantity, pickupTime);
 
 		PaymentEntity payment = paymentRepository.findByReservationId(reservation.getId())
 				.orElseThrow(() -> new EntityNotFoundException("결제 기록을 찾을 수 없습니다. reservationId=" + reservation.getId()));
@@ -234,11 +240,20 @@ public class ReservationController {
 		return ResponseEntity.noContent().build();
 	}
 
-	/** 예약 완료 화면: QR 코드 + 픽업 코드 + 영수증 링크를 보여준다. */
+	/**
+	 * 예약 완료 화면: QR 코드 + 픽업 코드 + 영수증 링크를 보여준다.
+	 *
+	 * 변경됨 (2026-09-01) — 왜: 로그인은 확인하지만 이 예약이 진짜 로그인한 내 예약인지는 확인 안 해서,
+	 * URL의 id만 바꾸면 남의 예약 완료 화면(픽업 코드/QR 포함)을 볼 수 있었다. resolveCurrentUserId와
+	 * 비교해서 본인 예약이 아니면 막는다 (cancel/qrImage/receipt도 동일하게 적용).
+	 */
 	@GetMapping("/{id}/complete")
-	public String complete(@PathVariable Long id, Model model) {
+	public String complete(@PathVariable Long id, HttpSession session, Model model) {
 		ReservationEntity reservation = reservationRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약만 확인할 수 있어요.");
+		}
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
@@ -253,12 +268,18 @@ public class ReservationController {
 		return "reservationView/complete";
 	}
 
-	/** 완료 화면의 <img> 태그가 실제로 부르는 QR 이미지 바이트. */
+	/**
+	 * 완료 화면의 <img> 태그가 실제로 부르는 QR 이미지 바이트.
+	 * 변경됨 (2026-09-01) — 본인 예약이 아니면 QR도 못 보게 막는다 (complete 참고).
+	 */
 	@GetMapping("/{id}/qr-image")
 	@ResponseBody
-	public ResponseEntity<byte[]> qrImage(@PathVariable Long id) {
+	public ResponseEntity<byte[]> qrImage(@PathVariable Long id, HttpSession session) {
 		ReservationEntity reservation = reservationRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약의 QR만 볼 수 있어요.");
+		}
 		try {
 			byte[] png = QrCodeUtil.generateQrImage(reservation.getPickupCode(), 240);
 			return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png);
@@ -270,9 +291,9 @@ public class ReservationController {
 	/** 마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소 3탭. */
 	@GetMapping("/my")
 	public String myReservations(@RequestParam(defaultValue = ReservationService.TAB_PROGRESS) String tab,
-								  Model model) {
+								  HttpSession session, Model model) {
 		List<ReservationListItemDto> reservations =
-				reservationService.getMyReservations(resolveCurrentUserId(), tab);
+				reservationService.getMyReservations(resolveCurrentUserId(session), tab);
 
 		model.addAttribute("reservations", reservations);
 		model.addAttribute("activeTab", tab);
@@ -286,7 +307,15 @@ public class ReservationController {
 	 * flash 메시지로 "환불됩니다" 안내를 목록 화면 맨 위에 한 번 보여준다 (새로고침하면 사라짐).
 	 */
 	@PostMapping("/{id}/cancel")
-	public String cancel(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+	public String cancel(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
+		// 추가됨 (2026-09-01) — 왜: id만 받아서 다른 사람 예약도 취소시킬 수 있는 구멍이 있었다.
+		// 로그인한 본인 예약이 아니면 막는다 (store 쪽 accept/storeCancelById와 동일한 패턴).
+		ReservationEntity reservation = reservationRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약만 취소할 수 있어요.");
+		}
+
 		reservationService.cancelReservation(id);
 		redirectAttributes.addFlashAttribute("cancelledMessage", "예약이 취소됐어요. 결제하신 금액은 환불됩니다.");
 		return "redirect:/reservation/my?tab=cancelled";
@@ -661,9 +690,13 @@ public class ReservationController {
 	 * 자체가 없는 경우에만, 그 자리에서 한 번 만들어준다.
 	 */
 	@GetMapping("/{id}/receipt")
-	public ResponseEntity<?> receipt(@PathVariable Long id) {
-		reservationRepository.findById(id)
+	public ResponseEntity<?> receipt(@PathVariable Long id, HttpSession session) {
+		ReservationEntity reservation = reservationRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + id));
+		// 추가됨 (2026-09-01) — 본인 예약이 아니면 영수증도 못 보게 막는다 (complete/qrImage/cancel 참고).
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약의 영수증만 볼 수 있어요.");
+		}
 
 		ReceiptEntity receipt = receiptRepository.findByReservationId(id)
 				.orElseGet(() -> receiptService.generateReceipt(id));

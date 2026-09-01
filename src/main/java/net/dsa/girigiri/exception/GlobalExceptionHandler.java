@@ -59,6 +59,14 @@ public class GlobalExceptionHandler {
 		return "errorView/custom-error-page";
 	}
 
+	// 로그인은 했지만 본인 예약이 아닌 걸 URL 조작으로 접근하려는 경우 (취소/완료화면/QR/영수증)
+	@ExceptionHandler(ReservationAccessDeniedException.class)
+	public String handleReservationAccessDenied(ReservationAccessDeniedException e, Model model) {
+		log.debug("> [GlobalException] ReservationAccessDeniedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
 	// PortOne 결제 검증 실패 (결제 미완료 / 금액 불일치 등). checkout.html의 confirm-payment API는
 	// 이 예외를 컨트롤러에서 직접 잡아 JSON으로 응답하지만(AJAX라 에러 페이지로 넘기면 안 됨),
 	// 혹시 다른 경로로 이 예외가 여기까지 올라오는 경우를 대비해 폴백으로 남겨둔다.
