@@ -38,13 +38,47 @@
 		</div>
 	</header>
 
-	<!-- 계좌 미등록 안내 — 대시보드 "처리할 일" 배너와 문구·색 통일 (.todo-banner 재사용) -->
-	<div th:if="${!bankRegistered}" class="todo-banner">
-		<a th:href="@{/store/edit}" class="todo-banner__row">
-			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
-			<span class="todo-banner__go">›</span>
-		</a>
-	</div>
+	<!-- 계좌 미등록 안내 -->
+	<a th:if="${!bankRegistered}" th:href="@{/store/edit}" class="settle-alert">
+		<span>⚠️ 정산 입금 계좌가 등록되지 않았어요 — 등록해야 정산금이 지급돼요.</span>
+		<span class="settle-alert__go">계좌 등록 ›</span>
+	</a>
+
+	<!-- ===== 정산 내역 (주간 확정 기록) — 이 페이지에서 제일 중요한 부분 ===== -->
+	<p class="settle-period__title">정산 내역</p>
+	<p class="settle-note" style="margin-top: 0">
+		매주 월요일 00:00에 지난 주(월~일) 정산이 자동 확정돼요. 지급은 확정 후 영업일 2일 이내.
+		정산액이 <b th:text="${#numbers.formatInteger(minPayout, 0, 'COMMA')} + '원'">10,000원</b> 미만이면 다음 주 정산에 합산돼요.
+	</p>
+	<ul class="settle-hist">
+		<li class="settle-hist__item" th:each="s : ${settlements}">
+			<a th:href="@{/store/settlement(from=${s.periodStart}, to=${s.periodEnd})}" class="settle-hist__row">
+				<div>
+					<span class="settle-hist__week"
+					      th:text="${#temporals.format(s.periodStart, 'M/d')} + ' ~ ' + ${#temporals.format(s.periodEnd, 'M/d')}">8/17 ~ 8/23</span>
+					<span class="settle-hist__sub" th:switch="${s.status}">
+						<span th:case="'PAID'"    th:text="${#temporals.format(s.paidAt, 'M월 d일')} + ' 지급 완료'">8월 24일 지급 완료</span>
+						<span th:case="'PENDING'" th:text="${#temporals.format(s.scheduledPayoutDate, 'M월 d일')} + ' 지급 예정'">8월 26일 지급 예정</span>
+						<span th:case="'CARRIED'" th:text="'다음 주 정산에 합산 (금액 ' + ${#numbers.formatInteger(s.weekAmount, 0, 'COMMA')} + '원)'">이월</span>
+						<span th:case="'ROLLED'">다음 정산에 합산됨</span>
+					</span>
+				</div>
+				<div class="settle-hist__right">
+					<span class="settle-hist__amt" th:text="${#numbers.formatInteger(s.status == 'PENDING' or s.status == 'PAID' ? s.payout : s.weekAmount, 0, 'COMMA')} + '원'">32,775원</span>
+					<span class="badge" th:switch="${s.status}"
+					      th:classappend="${s.status == 'PAID'} ? ' badge--success' : (${s.status == 'PENDING'} ? ' badge--accent' : '')">
+						<span th:case="'PAID'">지급 완료</span>
+						<span th:case="'PENDING'">지급 대기</span>
+						<span th:case="'CARRIED'">이월</span>
+						<span th:case="'ROLLED'">합산됨</span>
+					</span>
+				</div>
+			</a>
+		</li>
+		<li class="settle-hist__item settle-hist__item--empty" th:if="${#lists.isEmpty(settlements)}">
+			아직 확정된 정산이 없어요. 첫 주간 정산은 다음 월요일에 잡혀요.
+		</li>
+	</ul>
 
 	<!-- ===== 기간별 조회 (미리보기) — 기간 선택을 헤더 바로 아래에 둬서 바로 찾게 (정산 내역은 아래로) ===== -->
 	<p class="settle-period__title">기간별 조회</p>
