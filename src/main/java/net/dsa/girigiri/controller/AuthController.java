@@ -5,18 +5,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
-import net.dsa.girigiri.repository.StoreRepository;
-import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.service.AuthService;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import java.util.regex.Pattern;
 
 /**
  * 인증 및 회원가입 컨트롤러
@@ -28,13 +24,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class AuthController {
 
-	// 추가됨 (2026-08-21) — 왜: 이메일 가입 시 최소한의 형식 검증용. 완벽한 RFC 5322 검증은 과함 —
-	// "무언가@무언가.무언가" 수준만 걸러도 이 프로젝트 단계에선 충분하다.
-	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-
-	private final UserRepository userRepository;
-	private final StoreRepository storeRepository;
-	private final PasswordEncoder passwordEncoder;
+	private final AuthService authService;
 
 	// 추가됨 — 왜: 회원가입 완료 화면의 "GPS로 활동 지역 채우기" 버튼이 카카오 지오코더(좌표→주소)를
 	// 쓴다 — storeView/edit.html·SuperAdminController와 같은 설정 키 재사용.
@@ -62,30 +52,14 @@ public class AuthController {
 	public String emailSignup(@RequestParam String email,
 	                          @RequestParam String password,
 	                          @RequestParam String passwordConfirm) {
-		String trimmedEmail = email == null ? "" : email.trim();
-		if (!EMAIL_PATTERN.matcher(trimmedEmail).matches()) {
-			return "redirect:/auth/emailSignup?error=email";
-		}
-		if (password == null || password.length() < 8) {
-			return "redirect:/auth/emailSignup?error=password";
-		}
-		if (!password.equals(passwordConfirm)) {
-			return "redirect:/auth/emailSignup?error=mismatch";
-		}
-		if (userRepository.findByOauthProviderAndOauthId("email", trimmedEmail).isPresent()) {
-			return "redirect:/auth/emailSignup?error=duplicate";
-		}
-
-		UserEntity user = UserEntity.builder()
-				.oauthProvider("email")
-				.oauthId(trimmedEmail)
-				.email(trimmedEmail)
-				.password(passwordEncoder.encode(password))
-				.role(UserEntity.ROLE_USER)
-				.build();
-		userRepository.save(user);
-
-		return "redirect:/auth/emailLogin?justSignedUp";
+		AuthService.EmailSignupResult result = authService.emailSignup(email, password, passwordConfirm);
+		return switch (result) {
+			case INVALID_EMAIL -> "redirect:/auth/emailSignup?error=email";
+			case INVALID_PASSWORD -> "redirect:/auth/emailSignup?error=password";
+			case PASSWORD_MISMATCH -> "redirect:/auth/emailSignup?error=mismatch";
+			case DUPLICATE -> "redirect:/auth/emailSignup?error=duplicate";
+			case SUCCESS -> "redirect:/auth/emailLogin?justSignedUp";
+		};
 	}
 
 	/**
@@ -127,7 +101,7 @@ public class AuthController {
 			return "redirect:/auth/loginForm";
 		}
 
-		UserEntity user = userRepository.findById(userId).orElseThrow();
+		UserEntity user = authService.getUserForSignup(userId);
 
 		model.addAttribute("provider", user.getOauthProvider());
 		model.addAttribute("maskedEmail", maskEmail(user.getEmail()));
@@ -147,8 +121,7 @@ public class AuthController {
 	                     @RequestParam(required = false) String region,
 	                     @RequestParam(defaultValue = "USER") String userType,
 	                     HttpSession session) {
-		String trimmedNickname = nickname == null ? "" : nickname.trim();
-		if (trimmedNickname.length() < 2 || trimmedNickname.length() > 10) {
+		if (!authService.isValidNickname(nickname)) {
 			return "redirect:/auth/signup?error";
 		}
 
@@ -157,12 +130,7 @@ public class AuthController {
 			return "redirect:/auth/loginForm";
 		}
 
-		UserEntity user = userRepository.findById(userId).orElseThrow();
-		user.setNickname(trimmedNickname);
-		user.setRegion(region == null || region.isBlank() ? null : region.trim());
-		user.setProfileCompleted(true);
-		user.setRole(UserEntity.ROLE_USER); // 승인 전까지는 기본 USER 권한 유지
-		userRepository.save(user);
+		authService.completeSignup(userId, nickname, region);
 
 		// 사장님으로 시작 선택 시 점주 입점 신청 페이지로 라우팅
 		if ("OWNER".equalsIgnoreCase(userType)) {
@@ -203,31 +171,11 @@ public class AuthController {
 			return "redirect:/auth/loginForm";
 		}
 
-		if (storeName == null || storeName.isBlank() ||
-				businessNumber == null || businessNumber.isBlank() ||
-				category == null || category.isBlank() ||
-				address == null || address.isBlank() ||
-				phone == null || phone.isBlank()) {
+		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone)) {
 			return "redirect:/auth/owner-apply?error";
 		}
 
-		// 기존 신청 건이 있으면 업데이트, 없으면 신규 생성
-		StoreEntity store = storeRepository.findByOwnerId(userId)
-				.orElseGet(() -> StoreEntity.builder()
-						.ownerId(userId)
-						.role(UserEntity.ROLE_OWNER)
-						.build());
-
-		store.setRole(UserEntity.ROLE_OWNER);
-		store.setStoreName(storeName.trim());
-		store.setBusinessNumber(businessNumber.trim());
-		store.setCategory(category.trim());
-		store.setAddress(address.trim());
-		store.setPhone(phone.trim());
-		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
-		store.setApprovalStatus(StoreEntity.STATUS_PENDING); // 승인 대기 상태
-
-		storeRepository.save(store);
+		StoreEntity store = authService.ownerApply(userId, storeName, businessNumber, category, address, phone, operatingHours);
 
 		session.setAttribute("appliedStoreName", store.getStoreName());
 		return "redirect:/auth/owner-apply-complete";

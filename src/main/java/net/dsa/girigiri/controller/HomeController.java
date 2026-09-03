@@ -4,8 +4,6 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreCardDto;
 import net.dsa.girigiri.domain.dto.StoreMapDto;
-import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.HomeService;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.NotificationService;
@@ -30,7 +28,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HomeController {
 
-	private final StoreRepository storeRepository;
 	private final HomeService homeService;
 	private final LikeService likeService;
 	private final NotificationService notificationService;
@@ -50,10 +47,7 @@ public class HomeController {
 						HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
 		var likedStoreIds = likeService.getLikedStoreIds(userId);
-		List<StoreMapDto> stores = storeRepository.findAll().stream()
-				.filter(store -> store.getLatitude() != null && store.getLongitude() != null)
-				.map(this::toMapDto)
-				.toList();
+		List<StoreMapDto> stores = homeService.getMapStores();
 		List<StoreCardDto> storeCards = homeService.getActiveStoreCards(likedStoreIds, lat, lng);
 
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
@@ -80,15 +74,5 @@ public class HomeController {
 			return "내 동네";
 		}
 		return kakaoGeocodingClient.reverseGeocode(lat, lng).orElse("내 동네");
-	}
-
-	private StoreMapDto toMapDto(StoreEntity store) {
-		return StoreMapDto.builder()
-				.id(store.getId())
-				.storeName(store.getStoreName())
-				.category(store.getCategory())
-				.latitude(store.getLatitude())
-				.longitude(store.getLongitude())
-				.build();
 	}
 }

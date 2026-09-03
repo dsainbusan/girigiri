@@ -38,6 +38,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * 예약 생성 흐름을 담당하는 서비스.
@@ -792,5 +793,55 @@ public class ReservationService {
 			case "noshowed" -> "노쇼";
 			default -> reservation.getStatus();
 		};
+	}
+
+	// ── 2026-09-03 추가 (레이어 규칙 2단계) ──────────────────────────────────
+	// ReservationController에 남아있던 나머지 Repository 직접 호출(findByPickupCode 조회,
+	// 결제 기록 조회, 픽업 설정 저장)을 옮겨온다. 위쪽 예약 상태 전이 로직과 달리 여기서부터는
+	// 단순 조회/설정 저장 헬퍼다.
+
+	@Transactional(readOnly = true)
+	public Optional<ReservationEntity> findByPickupCode(String pickupCode) {
+		return reservationRepository.findByPickupCode(pickupCode);
+	}
+
+	@Transactional(readOnly = true)
+	public Optional<StoreEntity> findStoreById(Long storeId) {
+		return storeRepository.findById(storeId);
+	}
+
+	@Transactional(readOnly = true)
+	public PaymentEntity getPaymentByReservationId(Long reservationId) {
+		return paymentRepository.findByReservationId(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("결제 기록을 찾을 수 없습니다. reservationId=" + reservationId));
+	}
+
+	/**
+	 * 매장의 "준비 시간"/"마지막 픽업 시간" 설정 저장. pickupTimeMode: "manual"(직접 입력한
+	 * lastPickupTime 사용) / "close"(영업 종료 시간을 매번 다시 계산해서 사용) / "unlimited"(제한 없음, NULL 저장).
+	 */
+	@Transactional
+	public void updatePickupSettings(StoreEntity store, int prepTimeMinutes, String lastPickupTime, String pickupTimeMode) {
+		// 방어적으로 최소값 보정 (0/음수/공란 입력 방지) — 준비시간이 0 이하면 픽업 가능 시각 계산이 의미없어진다.
+		store.setPrepTimeMinutes(Math.max(prepTimeMinutes, 1));
+
+		switch (pickupTimeMode) {
+			case "unlimited" -> store.setLastPickupTime(null);
+			// operatingHours 파싱 실패하면(예: 그 사이 매장이 영업시간을 이상한 형식으로 바꿨다면) 조용히
+			// 제한없음(null)으로 저장한다 — 화면에서 이 옵션은 파싱 성공했을 때만 보이므로 흔한 경우는 아니다.
+			case "close" -> store.setLastPickupTime(parseClosingTimeOrNull(store.getOperatingHours()));
+			default -> store.setLastPickupTime(
+					(lastPickupTime == null || lastPickupTime.isBlank()) ? null : LocalTime.parse(lastPickupTime));
+		}
+
+		storeRepository.save(store);
+	}
+
+	private LocalTime parseClosingTimeOrNull(String operatingHours) {
+		try {
+			return OperatingHoursUtil.parseClosingTime(operatingHours);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 }

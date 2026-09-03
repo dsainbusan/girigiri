@@ -4,10 +4,10 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
+import net.dsa.girigiri.service.StoreDetailService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,20 +27,16 @@ public class StoreDetailController {
 
 	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
-	private final ProductRepository productRepository;
 	private final LikeService likeService;
 	private final ReviewService reviewService;
 	private final LookupService lookupService;
+	private final StoreDetailService storeDetailService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
 		StoreEntity store = lookupService.getStore(id);
 
-		List<ProductEntity> activeProducts = productRepository.findAll().stream()
-				.filter(p -> id.equals(p.getStoreId()))
-				.filter(p -> "active".equals(p.getStatus()))
-				.filter(p -> p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0)
-				.toList();
+		List<ProductEntity> activeProducts = storeDetailService.getActiveProducts(id);
 
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
 

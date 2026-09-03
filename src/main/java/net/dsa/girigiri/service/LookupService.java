@@ -2,10 +2,14 @@ package net.dsa.girigiri.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.entity.ComplaintEntity;
+import net.dsa.girigiri.domain.entity.NoticeEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.repository.ComplaintRepository;
+import net.dsa.girigiri.repository.NoticeRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
@@ -35,6 +39,8 @@ public class LookupService {
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
 	private final ReservationRepository reservationRepository;
+	private final NoticeRepository noticeRepository;
+	private final ComplaintRepository complaintRepository;
 
 	@Transactional(readOnly = true)
 	public UserEntity getUser(Long id) {
@@ -58,5 +64,17 @@ public class LookupService {
 	public ReservationEntity getReservation(Long id) {
 		return reservationRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다: " + id));
+	}
+
+	@Transactional(readOnly = true)
+	public NoticeEntity getNotice(Long id) {
+		return noticeRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("공지사항을 찾을 수 없습니다: " + id));
+	}
+
+	@Transactional(readOnly = true)
+	public ComplaintEntity getComplaint(Long id) {
+		return complaintRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("신고를 찾을 수 없습니다: " + id));
 	}
 }

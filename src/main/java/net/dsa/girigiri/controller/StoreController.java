@@ -2,15 +2,10 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.dto.DailySalesBarDto;
-import net.dsa.girigiri.domain.dto.WeeklySavingsDto;
-import net.dsa.girigiri.domain.entity.ProductEntity;
-import net.dsa.girigiri.domain.entity.ReservationEntity;
+import net.dsa.girigiri.domain.dto.StoreDashboardStatsDto;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.ProductRepository;
-import net.dsa.girigiri.repository.ReservationRepository;
-import net.dsa.girigiri.repository.StoreRepository;
-import net.dsa.girigiri.util.StoreHoursUtil;
+import net.dsa.girigiri.service.StoreAccessService;
+import net.dsa.girigiri.service.StoreService;
 import net.dsa.girigiri.util.StoreReportExcelGenerator;
 import net.dsa.girigiri.util.StoreReportPdfGenerator;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,12 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 점주 대시보드 (WBS 3.0 매장 운영 — 문창호 담당: POS json 연동, 할인율 자동계산, 판매/등록 현황
@@ -52,16 +42,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class StoreController {
 
-	private static final DateTimeFormatter DAY_LABEL_FORMAT = DateTimeFormatter.ofPattern("MM/dd");
-
-	private final StoreRepository storeRepository;
-	private final ProductRepository productRepository;
-	private final ReservationRepository reservationRepository;
-	private final net.dsa.girigiri.repository.MenuItemRepository menuItemRepository;
-	private final net.dsa.girigiri.repository.ListingTemplateRepository listingTemplateRepository;
+	private final StoreAccessService storeAccessService;
+	private final StoreService storeService;
 	private final net.dsa.girigiri.service.StoreReportService storeReportService;
 	private final net.dsa.girigiri.service.SettlementService settlementService;
-	private final net.dsa.girigiri.repository.SettlementRepository settlementRepository;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -73,165 +57,57 @@ public class StoreController {
 			return "redirect:/auth/loginForm";
 		}
 
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "매장 정보 없음");
 		model.addAttribute("todayLabel", LocalDate.now().format(
 				DateTimeFormatter.ofPattern("M월 d일 EEEE", java.util.Locale.KOREAN)));
 
-		if (store == null) {
-			addEmptyStats(model);
-			return "storeView/dashboard";
-		}
+		StoreDashboardStatsDto stats = store == null
+				? storeService.emptyDashboardStats()
+				: storeService.buildDashboardStats(store);
 
-		LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-		LocalDateTime todayEnd = todayStart.plusDays(1);
+		model.addAttribute("todaySales", stats.todaySales());
+		model.addAttribute("salesDelta", stats.salesDelta());
+		model.addAttribute("salesDeltaClass", stats.salesDeltaClass());
+		model.addAttribute("soldCount", stats.soldCount());
+		model.addAttribute("registeredCount", stats.registeredCount());
+		model.addAttribute("sellingNowCount", stats.sellingNowCount());
+		model.addAttribute("reservationCount", stats.reservationCount());
+		model.addAttribute("reservationWaiting", stats.reservationWaiting());
+		model.addAttribute("reservationDone", stats.reservationDone());
+		model.addAttribute("reservationCancelled", stats.reservationCancelled());
+		model.addAttribute("expiredCount", stats.expiredCount());
+		model.addAttribute("rescueRate", stats.rescueRate());
+		model.addAttribute("rescueGoalPercent", stats.rescueGoalPercent());
+		model.addAttribute("rescueGoal", stats.rescueGoal());
 
-		List<ProductEntity> todayProducts = fetchTodayProducts(store.getId(), todayStart, todayEnd);
+		model.addAttribute("totalQuantity", stats.totalQuantity());
+		model.addAttribute("pickedCount", stats.pickedCount());
+		model.addAttribute("reservedNotPickedCount", stats.reservedNotPickedCount());
+		model.addAttribute("idleCount", stats.idleCount());
+		model.addAttribute("isClosed", stats.isClosed());
+		model.addAttribute("closingCountdownLabel", stats.closingCountdownLabel());
+		model.addAttribute("donutPickedPct", stats.donutPickedPct());
+		model.addAttribute("donutReservedCumPct", stats.donutReservedCumPct());
+		model.addAttribute("donutSoldCumPct", stats.donutSoldCumPct());
 
-		int registeredCount = todayProducts.size();
-		int soldCount = todayProducts.stream()
-				.mapToInt(p -> p.getQuantity() - p.getRemainingQuantity())
-				.sum();
-		int sellingNowCount = (int) todayProducts.stream().filter(p -> "active".equals(p.getStatus())).count();
-		int expiredCount = (int) todayProducts.stream().filter(p -> "expired".equals(p.getStatus())).count();
+		model.addAttribute("weeklySalesBars", stats.weeklySalesBars());
+		model.addAttribute("weeklySoldTotal", stats.weeklySoldTotal());
+		model.addAttribute("weeklyWasteTotal", stats.weeklyWasteTotal());
 
-		// 변경됨 — 왜: 구제율을 "판매수량 ÷ 상품 가짓수(registeredCount)"로 계산하고 있었다 — 수량을
-		// 가짓수로 나누는 단위 불일치 버그라, 상품 1종류를 10개 등록해서 다 팔리면 1000%처럼 나올 수
-		// 있었다. "오늘 판매 현황" 도넛 카드(아래)랑 분모를 맞추기 위해서라도, 등록 "수량 합계"
-		// (totalQuantity) 기준으로 고친다.
-		int totalQuantity = todayProducts.stream().mapToInt(ProductEntity::getQuantity).sum();
-		int rescueRate = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
+		model.addAttribute("weeklyRescuedCount", stats.weeklyRescuedCount());
+		model.addAttribute("weeklyRecoveredAmount", stats.weeklyRecoveredAmount());
+		model.addAttribute("weeklyCo2Kg", stats.weeklyCo2Kg());
+		model.addAttribute("todayCo2Kg", stats.todayCo2Kg());
 
-		// 추가됨 — 왜: "오늘 판매 현황" 도넛 카드 — 마감 전엔 판매(픽업완료)/예약됨(픽업대기)/남음(미정)
-		// 3단계로, 마감 후엔 판매(=픽업완료+픽업대기 합산, 어차피 결제된 거라 다 "살린 것")/폐기 2단계로
-		// 보여준다. "픽업했는지"는 ProductEntity엔 없는 개념이라, 오늘 등록 상품들에 걸린 예약을
-		// 따로 모아서 status로 구분해야 한다.
-		List<Long> todayProductIds = todayProducts.stream().map(ProductEntity::getId).toList();
-		List<ReservationEntity> todayProductReservations =
-				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds);
-		int pickedCount = todayProductReservations.stream()
-				.filter(r -> "picked".equals(r.getStatus()))
-				.mapToInt(ReservationEntity::getReservedQuantity)
-				.sum();
-		int reservedNotPickedCount = soldCount - pickedCount;   // confirmed/ready — 취소분은 이미 remainingQuantity 복구로 soldCount에서 빠져있다.
-		int idleCount = totalQuantity - soldCount;               // 아직 예약조차 안 된 수량
+		model.addAttribute("draftPendingCount", stats.draftPendingCount());
+		model.addAttribute("incomingReservationCount", stats.incomingReservationCount());
 
-		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
-		boolean isClosed = closingInfo.closeAt() != null && !closingInfo.closeAt().isAfter(LocalDateTime.now());
+		model.addAttribute("needsAutomationSetup", stats.needsAutomationSetup());
 
-		// conic-gradient에 바로 꽂을 수 있게 누적 퍼센트로 미리 계산해서 넘긴다 (Thymeleaf에서
-		// 정수 나눗셈/반올림을 직접 하면 실수하기 쉬워서 컨트롤러에서 끝내둔다).
-		int donutPickedPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * pickedCount / totalQuantity);
-		int donutReservedCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * (pickedCount + reservedNotPickedCount) / totalQuantity);
-		int donutSoldCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
+		model.addAttribute("needsBankAccount", stats.needsBankAccount());
 
-		List<ReservationEntity> todayReservations =
-				reservationRepository.findByStoreIdAndPickupTimeBetween(store.getId(), todayStart, todayEnd);
-		int reservationCount = todayReservations.size();
-		int reservationWaiting = (int) todayReservations.stream().filter(r -> "confirmed".equals(r.getStatus())).count();
-		int reservationDone = (int) todayReservations.stream().filter(r -> "picked".equals(r.getStatus())).count();
-		int reservationCancelled = (int) todayReservations.stream().filter(r -> "cancelled".equals(r.getStatus())).count();
-
-		// 변경됨 — 왜: "오늘 매출"이 오늘 등록된 상품(product.registeredAt) 기준으로 계산돼서, 상품을
-		// 며칠 전에 등록해두고 오늘 실제로 팔린 경우엔 매출이 전혀 안 잡히는 문제가 있었다. 실제로 오늘
-		// 돈이 들어온 예약(reservation) 기준으로 바꾼다 — 취소(cancelled)는 환불되니 제외, pending은
-		// 아직 결제 전이라 제외. noshowed는 환불 안 되므로(ReceiptService 참고) 매출에 포함한다.
-		long todaySales = todayReservations.stream()
-				.filter(r -> !"cancelled".equals(r.getStatus()) && !"pending".equals(r.getStatus()))
-				.mapToLong(ReservationEntity::getTotalPrice)
-				.sum();
-
-		// 추가됨 — 왜: "오늘 매출"과 완전히 같은 방식(pickupTime 기준, 취소/대기 제외)으로 어제 매출을
-		// 한 번 더 구해서 증감률을 낸다. 어제 매출이 0원이면 나눗셈이 안 되니 "신규 매출"로 따로 표시.
-		LocalDateTime yesterdayStart = todayStart.minusDays(1);
-		List<ReservationEntity> yesterdayReservations =
-				reservationRepository.findByStoreIdAndPickupTimeBetween(store.getId(), yesterdayStart, todayStart);
-		long yesterdaySales = yesterdayReservations.stream()
-				.filter(r -> !"cancelled".equals(r.getStatus()) && !"pending".equals(r.getStatus()))
-				.mapToLong(ReservationEntity::getTotalPrice)
-				.sum();
-
-		String salesDelta;
-		String salesDeltaClass;
-		if (yesterdaySales == 0) {
-			salesDelta = todaySales == 0 ? "" : "어제 대비 신규 매출";
-			salesDeltaClass = todaySales == 0 ? "u-mut" : "u-primary";
-		} else {
-			int changePct = (int) Math.round(100.0 * (todaySales - yesterdaySales) / yesterdaySales);
-			if (changePct == 0) {
-				salesDelta = "어제와 동일";
-				salesDeltaClass = "u-mut";
-			} else if (changePct > 0) {
-				salesDelta = "▲ 어제 대비 +" + changePct + "%";
-				salesDeltaClass = "u-primary";
-			} else {
-				salesDelta = "▼ 어제 대비 " + changePct + "%";
-				salesDeltaClass = "u-danger";
-			}
-		}
-
-		model.addAttribute("todaySales", formatWon(todaySales));
-		model.addAttribute("salesDelta", salesDelta);
-		model.addAttribute("salesDeltaClass", salesDeltaClass);
-		model.addAttribute("soldCount", soldCount);
-		model.addAttribute("registeredCount", registeredCount);
-		model.addAttribute("sellingNowCount", sellingNowCount);
-		model.addAttribute("reservationCount", reservationCount);
-		model.addAttribute("reservationWaiting", reservationWaiting);
-		model.addAttribute("reservationDone", reservationDone);
-		model.addAttribute("reservationCancelled", reservationCancelled);
-		model.addAttribute("expiredCount", expiredCount);
-		int rescueGoalPercent = store.getRescueGoalPercent() != null ? store.getRescueGoalPercent() : 70;
-		model.addAttribute("rescueRate", rescueRate);
-		model.addAttribute("rescueGoalPercent", rescueGoalPercent);
-		model.addAttribute("rescueGoal", rescueRate >= rescueGoalPercent
-				? "목표 " + rescueGoalPercent + "% 달성"
-				: "목표 " + rescueGoalPercent + "%");
-
-		model.addAttribute("totalQuantity", totalQuantity);
-		model.addAttribute("pickedCount", pickedCount);
-		model.addAttribute("reservedNotPickedCount", reservedNotPickedCount);
-		model.addAttribute("idleCount", idleCount);
-		model.addAttribute("isClosed", isClosed);
-		model.addAttribute("closingCountdownLabel", closingInfo.label());
-		model.addAttribute("donutPickedPct", donutPickedPct);
-		model.addAttribute("donutReservedCumPct", donutReservedCumPct);
-		model.addAttribute("donutSoldCumPct", donutSoldCumPct);
-
-		List<DailySalesBarDto> weeklySalesBars = buildWeeklySalesBars(store.getId(), isClosed);
-		model.addAttribute("weeklySalesBars", weeklySalesBars);
-		model.addAttribute("weeklySoldTotal", weeklySalesBars.stream().mapToInt(DailySalesBarDto::soldCount).sum());
-		model.addAttribute("weeklyWasteTotal", weeklySalesBars.stream().mapToInt(DailySalesBarDto::wasteCount).sum());
-
-		WeeklySavingsDto savings = buildWeeklySavings(store.getId());
-		model.addAttribute("weeklyRescuedCount", savings.rescuedCount());
-		model.addAttribute("weeklyRecoveredAmount", formatWon(savings.recoveredAmount()));
-		model.addAttribute("weeklyCo2Kg", String.format("%.1f", savings.co2Kg()));
-		model.addAttribute("todayCo2Kg", String.format("%.1f", soldCount * CO2_KG_PER_ITEM));
-
-		// 추가됨 (2026-08-27) — 왜: "마감 상품 자동 등록" 알림을 손님용 알림함(/user/alerts) 대신
-		// 대시보드 최상단 "처리할 일" 배너로 보여준다 (점주 화면엔 알림함 진입점이 없어서).
-		// 발행 대기 초안 수 + 매장 수락 대기(confirmed) 예약 수.
-		long draftPendingCount = productRepository.findByStoreId(store.getId()).stream()
-				.filter(p -> "draft".equals(p.getStatus()))
-				.count();
-		int incomingReservationCount =
-				reservationRepository.findByStoreIdAndStatusOrderByReservedAtAsc(store.getId(), "confirmed").size();
-		model.addAttribute("draftPendingCount", draftPendingCount);
-		model.addAttribute("incomingReservationCount", incomingReservationCount);
-
-		// 자동 등록(POS 연동 또는 템플릿)을 하나도 안 해둔 매장엔 "처리할 일" 배너로 넛지한다.
-		boolean noAutomation = store.getPosProvider() == null
-				&& listingTemplateRepository.findByStoreId(store.getId()).stream().noneMatch(t -> t.isActive());
-		model.addAttribute("needsAutomationSetup", noAutomation);
-
-		// 정산 계좌 미등록 넛지 — 계좌가 없으면 주간 정산이 확정돼도 지급이 보류된다 (WBS 2.0).
-		model.addAttribute("needsBankAccount",
-				store.getBankName() == null || store.getBankName().isBlank());
-
-		// 추가됨 (2026-08-31) — 왜: "돈 받는 것"이 제일 중요한데 정산 페이지 진입점이 토글 뒤에 묻혀
-		// 있었다. 지표 그리드 밑에 "이번 달 정산 예정액" 한 줄 카드로 숫자+버튼을 같이 노출한다.
-		model.addAttribute("settlementPayout", formatWon(settlementService.build(store, "month").payout()));
+		model.addAttribute("settlementPayout", stats.settlementPayout());
 
 		return "storeView/dashboard";
 	}
@@ -248,13 +124,12 @@ public class StoreController {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 
-		store.setRescueGoalPercent(Math.max(1, Math.min(100, percent)));
-		storeRepository.save(store);
+		storeService.updateRescueGoal(store, percent);
 		return ResponseEntity.ok().build();
 	}
 
@@ -268,7 +143,7 @@ public class StoreController {
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
@@ -317,7 +192,7 @@ public class StoreController {
 
 	private StoreEntity reportStore(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		return userId == null ? null : storeRepository.findByOwnerId(userId).orElse(null);
+		return userId == null ? null : storeAccessService.findMyStore(userId).orElse(null);
 	}
 
 	/**
@@ -334,7 +209,7 @@ public class StoreController {
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
@@ -350,8 +225,7 @@ public class StoreController {
 		model.addAttribute("issuedDate", LocalDate.now().toString());
 
 		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로
-		model.addAttribute("settlements",
-				settlementRepository.findByStoreIdOrderByPeriodStartDesc(store.getId()));
+		model.addAttribute("settlements", storeService.getSettlementHistory(store.getId()));
 		model.addAttribute("bankRegistered",
 				store.getBankName() != null && !store.getBankName().isBlank()
 						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
@@ -436,7 +310,7 @@ public class StoreController {
 			return "redirect:/auth/loginForm";
 		}
 
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
@@ -447,7 +321,7 @@ public class StoreController {
 		// POS 연동 상태 요약 (자세한 관리는 /store/pos) — 2026-08-27 문창호
 		model.addAttribute("posConnected", store.getPosProvider() != null);
 		model.addAttribute("posProviderLabel", posProviderLabel(store.getPosProvider()));
-		model.addAttribute("posMenuCount", menuItemRepository.countByStoreId(store.getId()));
+		model.addAttribute("posMenuCount", storeService.getPosMenuCount(store.getId()));
 		return "storeView/edit";
 	}
 
@@ -481,174 +355,19 @@ public class StoreController {
 			return "redirect:/auth/loginForm";
 		}
 
-		StoreEntity store = storeRepository.findByOwnerId(userId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
 
-		if (category == null || category.isBlank() || phone == null || phone.isBlank()) {
+		if (!storeService.isEditValid(category, phone)) {
 			return "redirect:/store/edit?error";
 		}
 
-		store.setCategory(category.trim());
-		store.setPhone(phone.trim());
-		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
-		store.setLatitude(latitude);
-		store.setLongitude(longitude);
-		// 정산 입금 계좌 (WBS 2.0) — 셋 다 비면 미등록으로 둔다
-		store.setBankName(trimToNull(bankName));
-		store.setBankAccount(trimToNull(bankAccount));
-		store.setAccountHolder(trimToNull(accountHolder));
-		storeRepository.save(store);
+		storeService.updateStoreInfo(store, category, phone, operatingHours, latitude, longitude,
+				bankName, bankAccount, accountHolder);
 
 		return "redirect:/store/dashboard?edited";
 	}
 
-	private String trimToNull(String s) {
-		return (s == null || s.isBlank()) ? null : s.trim();
-	}
-
-	private List<ProductEntity> fetchTodayProducts(Long storeId, LocalDateTime todayStart, LocalDateTime todayEnd) {
-		return productRepository.findByStoreId(storeId).stream()
-				// "오늘의 구제" 초안(draft) / 오늘 안 함(skipped)은 실제 판매가 아니므로 등록/판매/폐기 집계에서 제외.
-				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
-				.filter(p -> p.getRegisteredAt() != null
-						&& !p.getRegisteredAt().isBefore(todayStart)
-						&& p.getRegisteredAt().isBefore(todayEnd))
-				.toList();
-	}
-
-	// 음식 1개를 구제할 때 절감되는 CO₂ 환산량(kg). TODO(팀): 근거 있는 계수로 조정 — 지금은 임의값.
-	private static final double CO2_KG_PER_ITEM = 0.5;
-
-	/**
-	 * 추가됨 — 왜: "오늘 판매 현황" 도넛 옆 최근 7일 막대그래프.
-	 * 변경됨 (2026-08-27) — 왜: WBS "판매/폐기 절감 통계 그래프" 항목명대로 판매만이 아니라 폐기도
-	 * 같이 봐야 해서 판매(초록)/폐기(빨강) 2색 스택으로 바꿨다.
-	 * - 판매: 픽업 일자(pickupTime) 기준, 취소/미결제 제외 ("오늘 매출"과 동일 정책)
-	 * - 폐기:
-	 *   1) 과거 날짜(어제~6일 전) 상품: 마감일이 지났으므로 미판매 잔여 수량(remainingQuantity)을 폐기로 집계.
-	 *   2) 오늘 상품: 명시적 status='expired' 이거나 당일 영업 마감(isClosed=true)일 때 폐기로 집계.
-	 */
-	private List<DailySalesBarDto> buildWeeklySalesBars(Long storeId, boolean isClosed) {
-		LocalDate today = LocalDate.now();
-		LocalDate windowStart = today.minusDays(6);
-		LocalDateTime rangeStart = windowStart.atStartOfDay();
-		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
-
-		Map<LocalDate, Integer> soldByDate = new HashMap<>();
-		for (ReservationEntity r : reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd)) {
-			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
-				continue;
-			}
-			soldByDate.merge(r.getPickupTime().toLocalDate(), r.getReservedQuantity(), Integer::sum);
-		}
-
-		Map<LocalDate, Integer> wasteByDate = new HashMap<>();
-		for (ProductEntity p : productRepository.findByStoreId(storeId)) {
-			if ("draft".equals(p.getStatus()) || "skipped".equals(p.getStatus()) || p.getRegisteredAt() == null) {
-				continue;
-			}
-			LocalDate d = p.getRegisteredAt().toLocalDate();
-			if (d.isBefore(windowStart) || d.isAfter(today)) {
-				continue;
-			}
-			int remaining = p.getRemainingQuantity() == null ? 0 : p.getRemainingQuantity();
-			if (remaining <= 0) {
-				continue;
-			}
-			if (d.isBefore(today)) {
-				// 과거 일자에 등록되어 남은 수량은 마감일이 지났으므로 폐기 집계
-				wasteByDate.merge(d, remaining, Integer::sum);
-			} else if ("expired".equals(p.getStatus()) || isClosed) {
-				// 오늘 등록 상품은 마감 완료(isClosed) 또는 명시적 expired 상태일 때 폐기 집계
-				wasteByDate.merge(d, remaining, Integer::sum);
-			}
-		}
-
-		int maxTotal = 0;
-		for (int i = 0; i <= 6; i++) {
-			LocalDate d = today.minusDays(i);
-			maxTotal = Math.max(maxTotal, soldByDate.getOrDefault(d, 0) + wasteByDate.getOrDefault(d, 0));
-		}
-
-		List<DailySalesBarDto> bars = new ArrayList<>();
-		for (int i = 6; i >= 0; i--) {
-			LocalDate date = today.minusDays(i);
-			int sold = soldByDate.getOrDefault(date, 0);
-			int waste = wasteByDate.getOrDefault(date, 0);
-			int soldPct = maxTotal == 0 ? 0 : (int) Math.round(100.0 * sold / maxTotal);
-			int wastePct = maxTotal == 0 ? 0 : (int) Math.round(100.0 * waste / maxTotal);
-			// 값이 있는데 막대가 안 보일 만큼 작으면 "0"과 구분이 안 되니 최소 높이를 준다.
-			if (sold > 0 && soldPct < 4) soldPct = 4;
-			if (waste > 0 && wastePct < 4) wastePct = 4;
-			bars.add(new DailySalesBarDto(date.format(DAY_LABEL_FORMAT), sold, waste, soldPct, wastePct, date.equals(today)));
-		}
-		return bars;
-	}
-
-	/**
-	 * 추가됨 (2026-08-27) — 왜: WBS "판매/폐기 절감 통계 그래프" + "음식 구제 개수·환경 뱃지".
-	 * 최근 7일간 앱 판매로 폐기를 면한 개수 / 회수 매출 / CO₂ 절감량.
-	 */
-	private WeeklySavingsDto buildWeeklySavings(Long storeId) {
-		LocalDate today = LocalDate.now();
-		LocalDateTime rangeStart = today.minusDays(6).atStartOfDay();
-		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
-
-		int rescued = 0;
-		long recovered = 0;
-		for (ReservationEntity r : reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd)) {
-			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
-				continue;
-			}
-			rescued += r.getReservedQuantity();
-			recovered += r.getTotalPrice();
-		}
-		return new WeeklySavingsDto(rescued, recovered, rescued * CO2_KG_PER_ITEM);
-	}
-
-	private String formatWon(long amount) {
-		return String.format("%,d원", amount);
-	}
-
-	private void addEmptyStats(Model model) {
-		model.addAttribute("todaySales", formatWon(0));
-		model.addAttribute("salesDelta", "");
-		model.addAttribute("salesDeltaClass", "u-mut");
-		model.addAttribute("soldCount", 0);
-		model.addAttribute("registeredCount", 0);
-		model.addAttribute("sellingNowCount", 0);
-		model.addAttribute("reservationCount", 0);
-		model.addAttribute("reservationWaiting", 0);
-		model.addAttribute("reservationDone", 0);
-		model.addAttribute("reservationCancelled", 0);
-		model.addAttribute("expiredCount", 0);
-		model.addAttribute("rescueRate", 0);
-		model.addAttribute("rescueGoalPercent", 70);
-		model.addAttribute("rescueGoal", "목표 70%");
-
-		model.addAttribute("totalQuantity", 0);
-		model.addAttribute("pickedCount", 0);
-		model.addAttribute("reservedNotPickedCount", 0);
-		model.addAttribute("idleCount", 0);
-		model.addAttribute("isClosed", false);
-		model.addAttribute("closingCountdownLabel", "");
-		model.addAttribute("donutPickedPct", 0);
-		model.addAttribute("donutReservedCumPct", 0);
-		model.addAttribute("donutSoldCumPct", 0);
-
-		model.addAttribute("weeklySalesBars", List.of());
-		model.addAttribute("weeklySoldTotal", 0);
-		model.addAttribute("weeklyWasteTotal", 0);
-		model.addAttribute("weeklyRescuedCount", 0);
-		model.addAttribute("weeklyRecoveredAmount", formatWon(0));
-		model.addAttribute("weeklyCo2Kg", "0.0");
-		model.addAttribute("todayCo2Kg", "0.0");
-		model.addAttribute("draftPendingCount", 0L);
-		model.addAttribute("incomingReservationCount", 0);
-		model.addAttribute("needsAutomationSetup", false);
-		model.addAttribute("needsBankAccount", false);
-		model.addAttribute("settlementPayout", formatWon(0));
-	}
 }

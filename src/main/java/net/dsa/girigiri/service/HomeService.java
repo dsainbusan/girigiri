@@ -2,6 +2,7 @@ package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreCardDto;
+import net.dsa.girigiri.domain.dto.StoreMapDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
@@ -10,6 +11,7 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.DistanceUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -33,6 +35,27 @@ public class HomeService {
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReservationRepository reservationRepository;
+
+	/**
+	 * 지도(stores)용: 좌표 있는 매장 전체. 카테고리 필터는 적용하지 않는다.
+	 */
+	@Transactional(readOnly = true)
+	public List<StoreMapDto> getMapStores() {
+		return storeRepository.findAll().stream()
+				.filter(store -> store.getLatitude() != null && store.getLongitude() != null)
+				.map(this::toMapDto)
+				.toList();
+	}
+
+	private StoreMapDto toMapDto(StoreEntity store) {
+		return StoreMapDto.builder()
+				.id(store.getId())
+				.storeName(store.getStoreName())
+				.category(store.getCategory())
+				.latitude(store.getLatitude())
+				.longitude(store.getLongitude())
+				.build();
+	}
 
 	/**
 	 * 홈 배너용: 오늘 픽업 완료된 예약 건수. ("오늘 N명이 마감 음식을 구했어요")

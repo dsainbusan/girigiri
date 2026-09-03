@@ -111,6 +111,18 @@ public class ReceiptService {
 		return receiptRepository.save(receipt);
 	}
 
+	/**
+	 * 2026-09-03 추가 (레이어 규칙 2단계) — ReservationController#receipt에 있던
+	 * receiptRepository.findByReservationId(...).orElseGet(() -> generateReceipt(...)) 그대로 이관.
+	 * 보통은 DB에 이미 있는 Receipt를 찾아 쓰고, sample-data.sql로 직접 넣어 우리 코드를 한 번도
+	 * 안 거친 예약처럼 레코드 자체가 없는 경우에만 그 자리에서 새로 만든다.
+	 */
+	@Transactional
+	public ReceiptEntity getOrGenerateReceipt(Long reservationId) {
+		return receiptRepository.findByReservationId(reservationId)
+				.orElseGet(() -> generateReceipt(reservationId));
+	}
+
 	/** Supabase 설정 전까지 쓰는 로컬 저장 폴백. pdfUrl 자리엔 로컬 파일 경로가 그대로 들어간다. */
 	private String saveLocalFallback(Long reservationId, String fileName, byte[] pdf) {
 		try {
