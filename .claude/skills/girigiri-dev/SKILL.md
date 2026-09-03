@@ -59,10 +59,17 @@ public String suspend(@PathVariable Long id) {
 **컨트롤러 크기 상한**: 엔드포인트 15개 또는 300줄을 넘으면 도메인 단위로 클래스를 분리한다
 (예: `SuperAdminMemberController`, `SuperAdminNoticeController`).
 
-> **기존 코드에 소급 적용하지 않는다.** 2026-09-03 이전에 작성된 컨트롤러
-> (`SuperAdminController`, `ReservationController`, `StoreController`, `MypageController`, `AuthController`)는
-> 마감까지 현행 유지한다. 이 규칙은 **오늘 이후 새로 쓰거나 크게 고치는 코드**에만 적용한다.
-> 기존 코드 정리는 9/18 기능 동결 이후 별도 진행한다.
+> **적용 범위.** 이 규칙은 오늘 이후 새로 쓰는 코드에 적용한다.
+> 기존 코드는 `refactor/service-layer` 브랜치에서 조장이 순차적으로 정리 중이며,
+> 팀원이 개별적으로 소급 수정할 필요는 없다.
+>
+> | 대상 | 상태 |
+> |---|---|
+> | ProductController, StoreDetailController, MypageController, AuthController, HomeController | 정리 진행 중 (조장) |
+> | StoreController (문창호), ReservationController (송채현) | 담당자와 일정 협의 후 진행 |
+> | SuperAdminController | 9/18 이후 |
+>
+> 정리 중인 파일은 조장에게 확인 후 수정한다 — 충돌 방지 목적이다.
 
 ## 엔티티 작성 패턴
 
