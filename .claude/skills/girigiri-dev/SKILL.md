@@ -1,6 +1,6 @@
 ---
 name: girigiri-dev
-description: girigiri 프로젝트에서 엔티티/컨트롤러/리포지토리/서비스를 추가하거나 수정할 때 따라야 할 패키지 구조, 네이밍, 커밋 컨벤션을 안내. 새 기능 구현, 코드 추가 작업 시 사용.
+description: girigiri 프로젝트에서 엔티티/컨트롤러/리포지토리/서비스를 추가하거나 수정할 때 따라야 할 레이어 규칙, 패키지 구조, 네이밍, CSS 경계, 버튼/스타일 컨벤션, 커밋 규칙을 안내. 새 기능 구현, 코드 추가·수정 작업 시 항상 사용.
 ---
 
 # girigiri 개발 컨벤션
@@ -23,6 +23,46 @@ src/main/java/net/dsa/girigiri/
 ```
 
 새 기능을 추가할 때는 이 구조를 그대로 따른다 — 임의로 새 최상위 패키지를 만들지 않는다.
+
+## 레이어 규칙 (2026-09-03 추가) ★ 신규 코드 필수
+
+패키지 구조만으로는 부족했다. **어느 레이어가 무엇을 호출할 수 있는지**를 명시한다.
+
+```
+Controller  →  Service  →  Repository
+   (금지: Controller → Repository 직접 호출)
+```
+
+- **Controller는 Repository를 주입받지 않는다.** `private final XxxRepository`가 컨트롤러에 있으면 리뷰 반려.
+- Controller가 하는 일은 3가지뿐: 요청 파라미터 받기 / Service 호출 / 뷰 이름·리다이렉트 반환.
+- 다음은 전부 Service에 있어야 한다: 엔티티 조회·저장, `setStatus()` 같은 상태 변경, 입력값 검증, 날짜 파싱, 엔티티 빌드.
+- 상태를 바꾸거나 2개 이상 테이블을 건드리는 Service 메서드에는 `@Transactional`을 **메서드 레벨**로 붙인다 (클래스 레벨 금지 — 범위를 눈으로 확인할 수 있어야 한다).
+
+```java
+// ❌ 반려
+@PostMapping("/members/{id}/suspend")
+public String suspend(@PathVariable Long id) {
+    UserEntity user = userRepository.findById(id).orElseThrow(...);
+    user.setStatus(UserEntity.STATUS_SUSPENDED);
+    userRepository.save(user);
+    return "redirect:/superadmin/members";
+}
+
+// ✅ 통과
+@PostMapping("/members/{id}/suspend")
+public String suspend(@PathVariable Long id) {
+    memberAdminService.suspend(id);
+    return "redirect:/superadmin/members";
+}
+```
+
+**컨트롤러 크기 상한**: 엔드포인트 15개 또는 300줄을 넘으면 도메인 단위로 클래스를 분리한다
+(예: `SuperAdminMemberController`, `SuperAdminNoticeController`).
+
+> **기존 코드에 소급 적용하지 않는다.** 2026-09-03 이전에 작성된 컨트롤러
+> (`SuperAdminController`, `ReservationController`, `StoreController`, `MypageController`, `AuthController`)는
+> 마감까지 현행 유지한다. 이 규칙은 **오늘 이후 새로 쓰거나 크게 고치는 코드**에만 적용한다.
+> 기존 코드 정리는 9/18 기능 동결 이후 별도 진행한다.
 
 ## 엔티티 작성 패턴
 
@@ -81,6 +121,66 @@ public class XxxEntity {
 - 컴포넌트 생김새가 헷갈리면 `/styleguide`(`StyleguideController`, 로그인 불필요)에서 확인하고 복붙한다.
 - 공통 파일(`templates/common/*.html`, `static/css/{tokens,base,layout,components}.css`) 오너는 송보미(조장)다 — 새 컴포넌트/토큰 추가는 오너에게 요청하거나 PR 리뷰를 거친다.
 
+## CSS 경계 규칙 (2026-09-03 추가) ★ 슈퍼어드민 도입으로 신규
+
+슈퍼어드민은 유저·매장과 **완전히 다른 디자인 시스템**을 쓴다. 두 시스템은 토큰 이름부터 다르므로 절대 섞지 않는다.
+
+| | 유저 · 매장 | 슈퍼어드민 |
+|---|---|---|
+| 대상 폴더 | `templates/` (superAdminView 제외) | `templates/superAdminView/**` |
+| 레이아웃 | `common/layout :: layout(...)` | `common/layout-admin :: layoutAdmin(...)` |
+| CSS | `tokens.css` + `base.css` + `layout.css` + `components.css` | `layout-admin.css` |
+| 토큰 | `--c-primary`, `--s-4`, `--r-md`, `--fs-lg` | `--gray-500`, `--blue-600`, `--radius-md` |
+| 컴포넌트 | `.btn--outline`, `.store-card`, `.chip` | `.info-row`, `.field-group`, `.link-action`, `.badge` |
+| 간격 | `.stack` / 토큰 기반 | `.mt-24`, `.mb-16` |
+
+- 유저·매장 화면에서 `field-group`, `info-row` 등 어드민 클래스를 쓰지 않는다. 반대도 마찬가지다.
+- `layout-admin.css`는 자기 변수를 자기 안에서 정의한다. `tokens.css` 변수를 여기서 참조하지 않는다.
+- 어드민 전용 버튼이 필요하면 `components.css`를 고치지 말고 `layout-admin.css`에 추가한다.
+
+## 버튼 규칙 (2026-09-03 추가)
+
+### 가로폭 — 한 가지 방법만 쓴다
+
+인라인 `style="flex:1"`(20건), `style="width:100%"`(10건)이 혼재해 버튼 크기가 어긋나는 문제가 있었다.
+
+- 버튼 하나가 단독으로 가로를 채울 때 → `btn--block`
+- `u-row` 안에 버튼 2개 이상을 나란히 둘 때 → 각 버튼에 `u-grow`, `btn--block`은 쓰지 않는다
+- 인라인 `style`로 폭을 지정하지 않는다
+
+### 세로 간격
+
+`style="margin-top: var(--s-3)"`을 태그마다 적지 않는다. 부모에 `.stack`을 붙이면 자식 간격이 자동으로 잡힌다.
+
+```html
+<div class="stack">
+  <input class="field">
+  <input class="field">
+  <button class="btn btn--block">저장</button>
+</div>
+```
+
+### 라벨 문구
+
+`~로 가기`, `~에서 확인하기` 같은 서술형을 쓰지 않는다. 아래 표에 없는 문구가 필요하면 조장에게 요청해 표에 추가한다.
+
+| 상황 | 문구 | variant |
+|---|---|---|
+| 저장 / 제출 | `저장` | 기본 |
+| 신규 등록 | `등록` | 기본 |
+| 목록으로 복귀 | `목록` | `outline` |
+| 직전 화면 취소 | `취소` | `outline` |
+| 삭제 | `삭제` | `danger` |
+| 내 정보 | `마이페이지` | 상단 네비에서만 |
+
+### 프래그먼트 우선
+
+버튼은 `common/components.html`의 `btn` 프래그먼트를 쓴다. 클래스를 손으로 적지 않는다.
+
+```html
+<div th:replace="~{common/components :: btn('저장', '', @{/store/settings})}"></div>
+```
+
 ## Dual-mode 세션 규칙 (중요)
 
 세션 구조:
@@ -116,6 +216,30 @@ feat: add security stub with form-login placeholder
 ```
 
 `main` 브랜치에는 직접 커밋하지 않는다 — 기능 브랜치(`dev` 또는 `feature/*`)에서 작업 후 PR로 병합한다.
+
+## 일정 고정선 (2026-09-03 확정)
+
+| 날짜 | 내용 |
+|---|---|
+| **9/18** | 기능 동결. 이후 신규 기능 추가 금지, 버그 수정·정리만 |
+| **9/30** | 코드 프리즈 (이상적 마감) |
+| 10/6 | 1차 제출 (문서 6종) |
+| 10/7 | 발표 |
+| 10/16 | 2차 제출 (시연 영상) |
+
+9/18 이후 새 기능 브랜치를 만들지 않는다. 9/18~9/30은 QA, 버그 수정, 인라인 스타일 정리, 레이어 규칙 소급 정리에 쓴다.
+
+## 커밋 전 셀프 체크
+
+새 코드를 올리기 전에 아래를 확인한다. AI에게 코드를 요청할 때도 이 목록을 함께 전달한다.
+
+- [ ] Controller에 `Repository`를 주입하지 않았는가
+- [ ] 상태 변경 Service 메서드에 `@Transactional`을 붙였는가
+- [ ] 컨트롤러가 300줄 / 엔드포인트 15개를 넘지 않는가
+- [ ] `style="..."`에 `16px`, `#15803D` 같은 값을 직접 쓰지 않았는가 (토큰만 사용)
+- [ ] 버튼을 `btn` 프래그먼트로 만들었는가, 라벨이 표에 있는 문구인가
+- [ ] `superAdminView/`와 나머지의 CSS 클래스를 섞지 않았는가
+- [ ] 커밋 메시지가 `feat:` / `fix:` / `refactor:` 형식인가
 
 ## 담당자 - 폴더 매핑 (CLAUDE.md 역할분담 요약, 2026-08-21 갱신)
 
