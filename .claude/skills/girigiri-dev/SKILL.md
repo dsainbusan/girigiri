@@ -258,4 +258,4 @@ feat: add security stub with form-login placeholder
 | 강노은 | HomeController/home.html 등 지도·메인 화면, mapView/, 카카오맵 연동, productView/(상품 상세), 카테고리 필터, 찜하기, 리뷰, 실시간 알림(WebSocket/SSE) |
 | 송채현 | 예약 서비스 코어, 결제(PortOne), QR 발급, 영수증 PDF, 고객 지원 챗봇 |
 
-> 최신 담당/일정은 WBS 기준으로 CLAUDE.md 쪽이 우선한다 — 이 표는 요약이라 세부 일정 변경 시 CLAUDE.md를 먼저 확인할 것.
+> 최신 담당/일정은 WBS 기준으로 CLAUDE.md 쪽이 우선한다 — 이 표는 요약이라 세부 일정 변경 시q CLAUDE.md를 먼저 확인할 것.
