@@ -114,9 +114,7 @@ public class StoreReportController {
 		model.addAttribute("storeName", store.getStoreName());
 		model.addAttribute("settlements", storeService.getSettlementHistory(store.getId()));
 		model.addAttribute("currentWeek", settlementService.currentWeek(store));
-		model.addAttribute("bankRegistered",
-				store.getBankName() != null && !store.getBankName().isBlank()
-						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
+		model.addAttribute("bankRegistered", settlementService.isBankRegistered(store));
 		model.addAttribute("minPayout", net.dsa.girigiri.service.SettlementService.MIN_PAYOUT);
 		return "settlementView/settlement";
 	}
@@ -138,10 +136,10 @@ public class StoreReportController {
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
-		LocalDate fromDate = parseDateOrNull(from);
-		LocalDate toDate = parseDateOrNull(to);
+		LocalDate fromDate = settlementService.parseDateOrNull(from);
+		LocalDate toDate = settlementService.parseDateOrNull(to);
 		boolean custom = fromDate != null && toDate != null && !toDate.isBefore(fromDate);
-		String p = normalizeSettlementPeriod(period);
+		String p = settlementService.normalizeSettlementPeriod(period);
 
 		model.addAttribute("settlement", settlementService.build(store, p, fromDate, toDate));
 		model.addAttribute("period", custom ? "custom" : p);
@@ -160,9 +158,9 @@ public class StoreReportController {
 		if (store == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
-		LocalDate fromDate = parseDateOrNull(from);
-		LocalDate toDate = parseDateOrNull(to);
-		String p = normalizeSettlementPeriod(period);
+		LocalDate fromDate = settlementService.parseDateOrNull(from);
+		LocalDate toDate = settlementService.parseDateOrNull(to);
+		String p = settlementService.normalizeSettlementPeriod(period);
 		byte[] excel = net.dsa.girigiri.util.SettlementExcelGenerator.generate(
 				settlementService.build(store, p, fromDate, toDate));
 		return ResponseEntity.ok()
@@ -180,33 +178,15 @@ public class StoreReportController {
 		if (store == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
-		LocalDate fromDate = parseDateOrNull(from);
-		LocalDate toDate = parseDateOrNull(to);
-		String p = normalizeSettlementPeriod(period);
+		LocalDate fromDate = settlementService.parseDateOrNull(from);
+		LocalDate toDate = settlementService.parseDateOrNull(to);
+		String p = settlementService.normalizeSettlementPeriod(period);
 		byte[] pdf = net.dsa.girigiri.util.SettlementPdfGenerator.generate(
 				settlementService.build(store, p, fromDate, toDate));
 		return ResponseEntity.ok()
 				.contentType(MediaType.APPLICATION_PDF)
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + settlementFilename(p, fromDate, toDate, "pdf") + "\"")
 				.body(pdf);
-	}
-
-	private String normalizeSettlementPeriod(String period) {
-		return switch (period == null ? "" : period) {
-			case "today", "week" -> period;
-			default -> "month";
-		};
-	}
-
-	private LocalDate parseDateOrNull(String s) {
-		if (s == null || s.isBlank()) {
-			return null;
-		}
-		try {
-			return LocalDate.parse(s.trim());
-		} catch (java.time.format.DateTimeParseException e) {
-			return null;
-		}
 	}
 
 	private String settlementFilename(String period, LocalDate from, LocalDate to, String ext) {

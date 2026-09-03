@@ -11,6 +11,7 @@ import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreProductService;
+import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -244,9 +245,7 @@ public class StoreProductController {
 	// ---------------------------------------------------------------------
 
 	private StockItemDto toStockItem(ProductEntity p, String category) {
-		int discountRate = (p.getOriginalPrice() == null || p.getOriginalPrice() == 0 || p.getDiscountedPrice() == null)
-				? 0
-				: (int) Math.round(100.0 * (p.getOriginalPrice() - p.getDiscountedPrice()) / p.getOriginalPrice());
+		int discountRate = DiscountRateCalculator.fromPrices(p.getOriginalPrice(), p.getDiscountedPrice());
 
 		boolean hasStock = p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0;
 		String statusLabel;

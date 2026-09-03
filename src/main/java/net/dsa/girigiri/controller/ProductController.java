@@ -6,6 +6,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
+import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,8 +30,8 @@ public class ProductController {
 		ProductEntity product = lookupService.getProduct(id);
 		StoreEntity store = storeRepository.findById(product.getStoreId()).orElse(null);
 
-		int discountRate = discountRate(product);
-		int savedAmount = nullToZero(product.getOriginalPrice()) - nullToZero(product.getDiscountedPrice());
+		int discountRate = DiscountRateCalculator.fromPrices(product.getOriginalPrice(), product.getDiscountedPrice());
+		int savedAmount = DiscountRateCalculator.savedAmount(product.getOriginalPrice(), product.getDiscountedPrice());
 
 		double avgRating = 0;
 		int reviewCount = 0;
@@ -78,16 +79,5 @@ public class ProductController {
 			case "카페" -> "☕";
 			default -> "🍽️";
 		};
-	}
-
-	private int discountRate(ProductEntity product) {
-		if (product.getOriginalPrice() == null || product.getOriginalPrice() == 0 || product.getDiscountedPrice() == null) {
-			return 0;
-		}
-		return (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
-	}
-
-	private int nullToZero(Integer value) {
-		return value == null ? 0 : value;
 	}
 }

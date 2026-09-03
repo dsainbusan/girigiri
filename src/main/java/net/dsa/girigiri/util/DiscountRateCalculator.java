@@ -55,4 +55,28 @@ public final class DiscountRateCalculator {
 	public static int applyDiscount(int originalPrice, int rate) {
 		return (int) Math.round(originalPrice * (100 - rate) / 100.0);
 	}
+
+	/**
+	 * 원가/할인가 두 값으로 실제 적용된 할인율(%)을 역산한다. calculateRate/effectiveRate와는
+	 * 반대 방향 계산 — 마감시간 기준 자동값이 아니라, 저장된 두 가격의 차이를 화면에 보여주기
+	 * 위한 값이다. 원가가 없거나 0이거나 할인가가 없으면 0.
+	 * 2026-09-03 — ProductController/StoreDetailController/StoreProductController에 각각
+	 * 있던 동일 계산을 여기로 모았다(레이어 규칙 정리). 계산식은 한 글자도 바뀌지 않았다.
+	 */
+	public static int fromPrices(Integer originalPrice, Integer discountedPrice) {
+		if (originalPrice == null || originalPrice == 0 || discountedPrice == null) {
+			return 0;
+		}
+		return (int) Math.round(100.0 * (originalPrice - discountedPrice) / originalPrice);
+	}
+
+	/**
+	 * 원가와 할인가의 차액(절약액). 둘 중 하나라도 null이면 0으로 취급한다.
+	 * 2026-09-03 — ProductController.detail()의 savedAmount 계산을 옮겼다.
+	 */
+	public static int savedAmount(Integer originalPrice, Integer discountedPrice) {
+		int original = originalPrice == null ? 0 : originalPrice;
+		int discounted = discountedPrice == null ? 0 : discountedPrice;
+		return original - discounted;
+	}
 }

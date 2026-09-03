@@ -8,6 +8,7 @@ import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.service.StoreDetailService;
+import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -93,17 +94,10 @@ public class StoreDetailController {
 	}
 
 	private ProductRow toProductRow(ProductEntity product) {
-		int discountRate = discountRate(product);
+		int discountRate = DiscountRateCalculator.fromPrices(product.getOriginalPrice(), product.getDiscountedPrice());
 		return new ProductRow(product.getId(), product.getName(),
 				formatWon(product.getOriginalPrice()), formatWon(product.getDiscountedPrice()),
 				"-" + discountRate + "%", product.getRemainingQuantity());
-	}
-
-	private int discountRate(ProductEntity product) {
-		if (product.getOriginalPrice() == null || product.getOriginalPrice() == 0 || product.getDiscountedPrice() == null) {
-			return 0;
-		}
-		return (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
 	}
 
 	private String formatWon(Integer price) {

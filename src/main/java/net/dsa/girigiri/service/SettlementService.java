@@ -171,6 +171,31 @@ public class SettlementService {
 		return new SettlementWeekPreview(monday, sunday, amount, sunday.plusDays(1), today.getDayOfWeek().getValue());
 	}
 
+	// --- 컨트롤러에서 이관 (2026-09-03, 레이어 규칙 정리) ---------------------
+
+	public LocalDate parseDateOrNull(String s) {
+		if (s == null || s.isBlank()) {
+			return null;
+		}
+		try {
+			return LocalDate.parse(s.trim());
+		} catch (java.time.format.DateTimeParseException e) {
+			return null;
+		}
+	}
+
+	public String normalizeSettlementPeriod(String period) {
+		return switch (period == null ? "" : period) {
+			case "today", "week" -> period;
+			default -> "month";
+		};
+	}
+
+	public boolean isBankRegistered(StoreEntity store) {
+		return store.getBankName() != null && !store.getBankName().isBlank()
+				&& store.getBankAccount() != null && !store.getBankAccount().isBlank();
+	}
+
 	// --- 기간 ------------------------------------------------------------
 
 	private record Window(LocalDateTime start, LocalDateTime end, String label) {}
