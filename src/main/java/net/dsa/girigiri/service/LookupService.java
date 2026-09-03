@@ -27,9 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 던지는 예외는 EntityNotFoundException 하나로 통일한다.
  * GlobalExceptionHandler가 이미 이 예외를 errorView/custom-error-page로 처리하고 있다.
  *
- * ※ 주의: SuperAdminController는 현재 ResponseStatusException(404)를 던지고 있어
- *   이 헬퍼로 바꾸면 "404 응답" → "에러 페이지 렌더링"으로 동작이 바뀐다.
- *   슈퍼어드민은 마지막 순서(9/18 이후)에 옮기고, 그때 화면을 직접 확인할 것.
+ * 슈퍼어드민 포함 전 컨트롤러가 이 헬퍼를 사용한다.
  */
 @Service
 @RequiredArgsConstructor

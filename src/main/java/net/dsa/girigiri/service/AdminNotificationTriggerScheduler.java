@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * 슈퍼어드민 알림 패널(회원/게시판/예약)용 트리거. NotificationTriggerScheduler(강노은, 유저/예약용)와
  * 동일한 방식 — 다른 사람 코드에 훅을 심는 대신 이미 있는 Repository를 주기적으로 읽기만 해서 변화를
- * 감지한다. 관리자 세션/권한 분리가 아직 없어(문창호 작업 전) 수신자는 SuperAdminController#replyToInquiry
+ * 감지한다. 관리자 세션/권한 분리가 아직 없어(문창호 작업 전) 수신자는 SuperAdminSupportController#replyToInquiry
  * 와 동일한 스톱갭인 "role=ADMIN인 첫 계정"으로 고정한다 — role 분리가 끝나면 실제 로그인한 운영자
  * 계정들로 교체할 것.
  */

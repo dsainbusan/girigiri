@@ -7,11 +7,10 @@ import net.dsa.girigiri.domain.dto.StockItemDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.MenuItemEntity;
-import net.dsa.girigiri.domain.entity.ListingTemplateEntity;
-import net.dsa.girigiri.repository.ListingTemplateRepository;
-import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
+import net.dsa.girigiri.service.StoreAccessService;
+import net.dsa.girigiri.service.StoreProductService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -45,9 +44,9 @@ public class StoreProductController {
 	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("M/d");
 
 	private final ProductService productService;
-	private final StoreRepository storeRepository;
+	private final StoreAccessService storeAccessService;
 	private final PosCatalogService posCatalogService;
-	private final ListingTemplateRepository listingTemplateRepository;
+	private final StoreProductService storeProductService;
 
 	@GetMapping
 	public String list(HttpSession session, Model model) {
@@ -55,7 +54,7 @@ public class StoreProductController {
 		if (ownerId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		StoreEntity store = storeRepository.findByOwnerId(ownerId).orElse(null);
+		StoreEntity store = storeAccessService.findMyStore(ownerId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
 		}
@@ -85,8 +84,7 @@ public class StoreProductController {
 		model.addAttribute("posProviderLabel", PosCatalogService.providerLabel(store.getPosProvider()));
 		model.addAttribute("posDraftPromptLabel",
 				store.getPosDraftPromptTime() == null ? null : store.getPosDraftPromptTime().format(TIME_FMT));
-		model.addAttribute("hasActiveTemplate",
-				listingTemplateRepository.findByStoreId(store.getId()).stream().anyMatch(ListingTemplateEntity::isActive));
+		model.addAttribute("hasActiveTemplate", storeProductService.hasActiveTemplate(store.getId()));
 
 		// 마감 10분 전을 넘기면 초안 [바로 올리기]를 닫는다 (손님이 예약·픽업할 시간이 없어서).
 		model.addAttribute("canPublishDrafts", StoreHoursUtil.canPublishNow(
@@ -151,7 +149,7 @@ public class StoreProductController {
 		// 할인율은 따로 저장 안 하므로 원가·할인가로 역산한다. 단 "지금 자동값보다 큰 값"(=점주가 일부러
 		// 더 깎은 값)일 때만 채워서 유지하고, 그 이하면 비워둔다 — 예전 자동값이 현재 자동값보다 낮아
 		// 저장이 거부되는 걸 막기 위해(비어 있으면 저장 시 현재 자동값으로 재계산).
-		StoreEntity ownStore = storeRepository.findByOwnerId(ownerId).orElse(null);
+		StoreEntity ownStore = storeAccessService.findMyStore(ownerId).orElse(null);
 		if (ownStore != null && product.getOriginalPrice() != null && product.getOriginalPrice() > 0
 				&& product.getDiscountedPrice() != null) {
 			int rate = (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
