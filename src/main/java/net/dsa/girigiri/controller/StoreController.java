@@ -196,15 +196,38 @@ public class StoreController {
 	}
 
 	/**
-	 * 매장 정산 페이지 — 미리보기 화면 (WBS 2.0, 문창호). 기간별 결제 집계 / 수수료·정산 예정액 / 정산 내역.
-	 * period: today / week / month(기본). from·to(yyyy-MM-dd)를 둘 다 주면 그 날짜 구간으로 집계(preset 무시).
-	 * 판매·폐기 리포트와 다른 문서 — 이건 회계(정산)용.
+	 * 매장 정산 — 목록 화면 (WBS 2.0, 문창호). "내 정산 확인"만: 이번 정산 주간(진행 중) + 확정된 주간 기록.
+	 * 특정 기간의 계산식·거래 명세·정산서 다운로드는 /store/settlement/detail 로 분리(목록→상세).
 	 */
 	@GetMapping("/settlement")
-	public String settlementPage(@RequestParam(defaultValue = "month") String period,
-	                             @RequestParam(required = false) String from,
-	                             @RequestParam(required = false) String to,
-	                             HttpSession session, Model model) {
+	public String settlementPage(HttpSession session, Model model) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
+			return "redirect:/auth/loginForm";
+		}
+		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
+		if (store == null) {
+			return "redirect:/auth/owner-apply";
+		}
+		model.addAttribute("storeName", store.getStoreName());
+		model.addAttribute("settlements", storeService.getSettlementHistory(store.getId()));
+		model.addAttribute("currentWeek", settlementService.currentWeek(store));
+		model.addAttribute("bankRegistered",
+				store.getBankName() != null && !store.getBankName().isBlank()
+						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
+		model.addAttribute("minPayout", net.dsa.girigiri.service.SettlementService.MIN_PAYOUT);
+		return "settlementView/settlement";
+	}
+
+	/**
+	 * 매장 정산 — 상세(정산서) 화면. period: today / week / month(기본). from·to(yyyy-MM-dd) 둘 다 주면 그 구간.
+	 * 목록의 주간 행 클릭 또는 "기간 직접 조회"로 진입. 뒤로가기 = 목록.
+	 */
+	@GetMapping("/settlement/detail")
+	public String settlementDetail(@RequestParam(defaultValue = "month") String period,
+	                               @RequestParam(required = false) String from,
+	                               @RequestParam(required = false) String to,
+	                               HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
@@ -223,15 +246,7 @@ public class StoreController {
 		model.addAttribute("from", custom ? fromDate.toString() : "");
 		model.addAttribute("to", custom ? toDate.toString() : "");
 		model.addAttribute("issuedDate", LocalDate.now().toString());
-
-		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로. currentWeek = 아직 확정 안 된 이번 주.
-		model.addAttribute("settlements", storeService.getSettlementHistory(store.getId()));
-		model.addAttribute("currentWeek", settlementService.currentWeek(store));
-		model.addAttribute("bankRegistered",
-				store.getBankName() != null && !store.getBankName().isBlank()
-						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());
-		model.addAttribute("minPayout", net.dsa.girigiri.service.SettlementService.MIN_PAYOUT);
-		return "settlementView/settlement";
+		return "settlementView/settlementDetail";
 	}
 
 	@GetMapping("/settlement/excel")

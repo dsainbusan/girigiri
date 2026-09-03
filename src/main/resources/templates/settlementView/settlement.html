@@ -3,20 +3,14 @@
       th:replace="~{common/layout :: layout('매장 정산', ~{:: #content}, '', true, '점주 모드', null)}">
 <body>
 <!--/*
-	매장 정산 페이지 — WBS 2.0 "매장 정산 페이지 (기간별 결제 집계 / 수수료·정산 예정액 / 정산 내역 목록)"
-	문창호, 2026-08-31.
-
-	판매·폐기 리포트(/store/report)와 헷갈리지 않게 일부러 다르게 생겼다:
-	 - 리포트 = 운영·환경 성적표 (구제율 hero, 초록, 막대·도넛)
-	 - 정산 = "정산서" 문서 (검은 헤더 바 + 세로 계산식 원장 + 거래 명세 리스트)
-	집계 기준은 결제 승인일(payment.paid_at). period: today / week / month(기본).
-	화면·Excel·PDF 숫자는 SettlementService 하나에서 나온다.
-	⚠️ 지금은 MySQL 조회. 나중에 SettlementService 조회부만 Supabase REST(JSON)로 교체 예정.
+	매장 정산 — 목록 화면 (WBS 2.0, 문창호). /store/settlement
+	여기는 "내 정산 확인"만 한다: 이번 정산 주간(진행 중) + 확정된 주간 기록.
+	특정 기간의 계산식·거래 명세·정산서 다운로드는 /store/settlement/detail 로 분리(목록→상세).
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<!-- 정산서 헤더 — 상단바(네이비)와 연속돼 보이지 않게 연한 초록 틴트 패널. 문서 아이콘 + 제목 + 매장명 + 메타. -->
+	<!-- 정산서 헤더 — 상단바(네이비)와 연속돼 보이지 않게 연한 초록 틴트 패널 -->
 	<header class="settle-doc">
 		<div class="settle-doc__icon">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -29,170 +23,32 @@
 			</svg>
 		</div>
 		<div class="settle-doc__body">
-			<div class="settle-doc__title">매장 정산서</div>
-			<div class="settle-doc__store" th:text="${settlement.storeName}">행복분식 신촌점</div>
+			<div class="settle-doc__title">매장 정산</div>
+			<div class="settle-doc__store" th:text="${storeName}">행복분식 신촌점</div>
 			<div class="settle-doc__meta">
-				<span>정산 기간 <b th:text="${settlement.periodLabel}">2026-08-26 ~ 2026-09-01</b></span>
-				<span>발행일 <b th:text="${issuedDate}">2026-09-01</b></span>
+				<span>매주 월~일 정산 · 수수료 <b>5%</b></span>
 			</div>
 		</div>
 	</header>
 
-	<!-- 계좌 미등록 안내 -->
-	<a th:if="${!bankRegistered}" th:href="@{/store/edit}" class="settle-alert">
-		<span>⚠️ 정산 입금 계좌가 등록되지 않았어요 — 등록해야 정산금이 지급돼요.</span>
-		<span class="settle-alert__go">계좌 등록 ›</span>
-	</a>
+	<!-- 계좌 미등록 안내 — 대시보드 "처리할 일" 배너와 문구·색 통일 (.todo-banner 재사용) -->
+	<div th:if="${!bankRegistered}" class="todo-banner">
+		<a th:href="@{/store/edit}" class="todo-banner__row">
+			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span class="todo-banner__go">›</span>
+		</a>
+	</div>
 
-	<!-- ===== 정산 내역 (주간 확정 기록) — 이 페이지에서 제일 중요한 부분 ===== -->
 	<p class="settle-period__title">정산 내역</p>
 	<p class="settle-note" style="margin-top: 0">
 		매주 월요일 00:00에 지난 주(월~일) 정산이 자동 확정돼요. 지급은 확정 후 영업일 2일 이내.
 		정산액이 <b th:text="${#numbers.formatInteger(minPayout, 0, 'COMMA')} + '원'">10,000원</b> 미만이면 다음 주 정산에 합산돼요.
 	</p>
-	<ul class="settle-hist">
-		<li class="settle-hist__item" th:each="s : ${settlements}">
-			<a th:href="@{/store/settlement(from=${s.periodStart}, to=${s.periodEnd})}" class="settle-hist__row">
-				<div>
-					<span class="settle-hist__week"
-					      th:text="${#temporals.format(s.periodStart, 'M/d')} + ' ~ ' + ${#temporals.format(s.periodEnd, 'M/d')}">8/17 ~ 8/23</span>
-					<span class="settle-hist__sub" th:switch="${s.status}">
-						<span th:case="'PAID'"    th:text="${#temporals.format(s.paidAt, 'M월 d일')} + ' 지급 완료'">8월 24일 지급 완료</span>
-						<span th:case="'PENDING'" th:text="${#temporals.format(s.scheduledPayoutDate, 'M월 d일')} + ' 지급 예정'">8월 26일 지급 예정</span>
-						<span th:case="'CARRIED'" th:text="'다음 주 정산에 합산 (금액 ' + ${#numbers.formatInteger(s.weekAmount, 0, 'COMMA')} + '원)'">이월</span>
-						<span th:case="'ROLLED'">다음 정산에 합산됨</span>
-					</span>
-				</div>
-				<div class="settle-hist__right">
-					<span class="settle-hist__amt" th:text="${#numbers.formatInteger(s.status == 'PENDING' or s.status == 'PAID' ? s.payout : s.weekAmount, 0, 'COMMA')} + '원'">32,775원</span>
-					<span class="badge" th:switch="${s.status}"
-					      th:classappend="${s.status == 'PAID'} ? ' badge--success' : (${s.status == 'PENDING'} ? ' badge--accent' : '')">
-						<span th:case="'PAID'">지급 완료</span>
-						<span th:case="'PENDING'">지급 대기</span>
-						<span th:case="'CARRIED'">이월</span>
-						<span th:case="'ROLLED'">합산됨</span>
-					</span>
-				</div>
-			</a>
-		</li>
-		<li class="settle-hist__item settle-hist__item--empty" th:if="${#lists.isEmpty(settlements)}">
-			아직 확정된 정산이 없어요. 첫 주간 정산은 다음 월요일에 잡혀요.
-		</li>
-	</ul>
 
-	<!-- ===== 기간별 조회 (미리보기) — 기간 선택을 헤더 바로 아래에 둬서 바로 찾게 (정산 내역은 아래로) ===== -->
-	<p class="settle-period__title">기간별 조회</p>
-	<p class="settle-note" style="margin-top: 0">원하는 기간의 정산액을 미리 보고 Excel·PDF로 받을 수 있어요.</p>
-	<!-- 기간 선택 — 리포트의 풀폭 세그먼트 토글과 다르게 작은 인라인 pill.
-	     "직접 선택"을 누르면 그때만 날짜 입력칸이 열린다(커스텀 기간이 이미 적용된 상태면 열려 있음). -->
-	<div class="settle-period">
-		<a th:href="@{/store/settlement(period='today')}" class="settle-period__pill"
-		   th:classappend="${period == 'today'} ? ' is-active'">오늘</a>
-		<a th:href="@{/store/settlement(period='week')}" class="settle-period__pill"
-		   th:classappend="${period == 'week'} ? ' is-active'">최근 7일</a>
-		<a th:href="@{/store/settlement(period='month')}" class="settle-period__pill"
-		   th:classappend="${period == 'month'} ? ' is-active'">이번 달</a>
-		<button type="button" id="settle-range-toggle" class="settle-period__pill settle-period__pill--toggle"
-		        th:classappend="${period == 'custom'} ? ' is-active'"
-		        aria-controls="settle-range-form" th:attr="aria-expanded=${period == 'custom'}">📅 직접 선택</button>
-	</div>
-	<form method="get" th:action="@{/store/settlement}" class="settle-range" id="settle-range-form"
-	      th:classappend="${period != 'custom'} ? ' is-hidden'">
-		<input type="date" name="from" th:value="${from}" class="settle-range__date" aria-label="시작일" required>
-		<span class="settle-range__tilde">~</span>
-		<input type="date" name="to" th:value="${to}" class="settle-range__date" aria-label="종료일" required>
-		<button type="submit" class="settle-range__btn is-active">조회</button>
-	</form>
-
-	<!-- 정산 계산 원장 — 세로 계산식(+/−/=). 정산 페이지의 핵심이자 리포트와 가장 다른 부분. -->
-	<div class="settle-ledger">
-		<div class="settle-ledger__line">
-			<span>총 결제액</span>
-			<span class="settle-num" th:text="'+' + ${#numbers.formatInteger(settlement.gross, 0, 'COMMA')} + '원'">+37,600원</span>
-		</div>
-		<div class="settle-ledger__line">
-			<span>환불</span>
-			<span class="settle-num settle-num--minus"
-			      th:text="(${settlement.refund} > 0 ? '−' : '') + ${#numbers.formatInteger(settlement.refund, 0, 'COMMA')} + '원'">−5,400원</span>
-		</div>
-		<div class="settle-ledger__line settle-ledger__line--subtotal">
-			<span>순 결제액</span>
-			<span class="settle-num" th:text="${#numbers.formatInteger(settlement.net, 0, 'COMMA')} + '원'">32,200원</span>
-		</div>
-		<div class="settle-ledger__line">
-			<span>플랫폼 수수료 <em th:text="${settlement.commissionRatePercent} + '%'">5%</em></span>
-			<span class="settle-num settle-num--minus"
-			      th:text="(${settlement.commission} > 0 ? '−' : '') + ${#numbers.formatInteger(settlement.commission, 0, 'COMMA')} + '원'">−3,220원</span>
-		</div>
-		<div class="settle-ledger__total">
-			<span>이 기간 정산액</span>
-			<span class="settle-num" th:text="${#numbers.formatInteger(settlement.payout, 0, 'COMMA')} + '원'">28,980원</span>
-		</div>
-	</div>
-	<p class="settle-note">
-		이 기간의 정산액 미리보기예요. 실제 지급은 아래 "정산 내역"의 주간 확정분 기준이에요.
-		<br>환불된 결제엔 수수료를 매기지 않아요. 오픈 후 1년간은 무료였고 현재 수수료는 5%. (결제 승인일 기준)
-	</p>
-
-	<!-- 정산 대상 거래 — 통장 명세처럼 (리포트의 격자 표와 다르게) -->
-	<p class="settle-section-title">정산 대상 거래 <span th:text="'· ' + ${#lists.size(settlement.lines)} + '건'">· 5건</span></p>
-	<ul class="settle-txns">
-		<li class="settle-txn" th:each="l : ${settlement.lines}">
-			<div class="settle-txn__row">
-				<span class="settle-txn__date" th:text="${l.dateLabel}">08/24</span>
-				<span class="settle-txn__name" th:text="${l.name}">식빵 마감세트</span>
-				<span class="settle-txn__amt" th:text="${#numbers.formatInteger(l.amount, 0, 'COMMA')} + '원'">5,400원</span>
-			</div>
-			<div class="settle-txn__sub">
-				<span class="settle-txn__tag" th:text="${l.status}">픽업 완료</span>
-				<span th:text="'수수료 −' + ${#numbers.formatInteger(l.commission, 0, 'COMMA')} + ' · 정산 ' + ${#numbers.formatInteger(l.payout, 0, 'COMMA')} + '원'">수수료 −540 · 정산 4,860원</span>
-			</div>
-		</li>
-		<li class="settle-txn settle-txn--empty" th:if="${#lists.isEmpty(settlement.lines)}">
-			이 기간에 정산 대상 결제가 없어요.
-		</li>
-	</ul>
-	<div class="settle-txns__foot" th:if="${!#lists.isEmpty(settlement.lines)}">
-		<span>합계</span>
-		<span>
-			결제 <b th:text="${#numbers.formatInteger(settlement.net, 0, 'COMMA')}">32,200</b> ·
-			수수료 <b th:text="'−' + ${#numbers.formatInteger(settlement.commission, 0, 'COMMA')}">−3,220</b> ·
-			정산 <b class="u-primary" th:text="${#numbers.formatInteger(settlement.payout, 0, 'COMMA')} + '원'">28,980원</b>
-		</span>
-	</div>
-
-	<!-- 환불 내역 (있을 때만) — 빨강 틴트로 확실히 구분 -->
-	<div th:if="${!#lists.isEmpty(settlement.refunds)}">
-		<p class="settle-section-title">환불 내역 <span th:text="'· ' + ${#lists.size(settlement.refunds)} + '건'">· 1건</span></p>
-		<ul class="settle-txns settle-txns--refund">
-			<li class="settle-txn" th:each="r : ${settlement.refunds}">
-				<div class="settle-txn__row">
-					<span class="settle-txn__date" th:text="${r.dateLabel}">08/24</span>
-					<span class="settle-txn__name" th:text="${r.name}">식빵 마감세트</span>
-					<span class="settle-txn__amt settle-txn__amt--minus"
-					      th:text="'−' + ${#numbers.formatInteger(r.amount, 0, 'COMMA')} + '원'">−5,400원</span>
-				</div>
-				<div class="settle-txn__sub"><span class="settle-txn__tag settle-txn__tag--refund">환불 완료 · 수수료 없음</span></div>
-			</li>
-		</ul>
-	</div>
-
-	<!-- 정산서 내려받기 -->
-	<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-5)">
-		<a th:href="@{/store/settlement/excel(period=${period},from=${from},to=${to})}" class="btn btn--outline btn--block">정산서 Excel</a>
-		<a th:href="@{/store/settlement/pdf(period=${period},from=${from},to=${to})}" class="btn btn--outline btn--block">정산서 PDF</a>
-	</div>
-
-	<!-- ===== 정산 내역 (주간 확정 기록) ===== -->
-	<p class="settle-period__title" style="margin-top: var(--s-8)">정산 내역</p>
-	<p class="settle-note" style="margin-top: 0">
-		매주 월요일 00:00에 지난 주(월~일) 정산이 자동 확정돼요. 지급은 확정 후 영업일 2일 이내.
-		정산액이 <b th:text="${#numbers.formatInteger(minPayout, 0, 'COMMA')} + '원'">10,000원</b> 미만이면 다음 주 정산에 합산돼요.
-	</p>
 	<ul class="settle-hist">
 		<!-- 이번 정산 주간 (진행 중) — 지급 주기와 같은 월~일. 아직 확정 전이라 주황 톤 -->
 		<li class="settle-hist__item settle-hist__item--current">
-			<a th:href="@{/store/settlement(from=${currentWeek.periodStart}, to=${currentWeek.periodEnd})}" class="settle-hist__row">
+			<a th:href="@{/store/settlement/detail(from=${currentWeek.periodStart}, to=${currentWeek.periodEnd})}" class="settle-hist__row">
 				<div>
 					<span class="settle-hist__week"
 					      th:text="${#temporals.format(currentWeek.periodStart, 'M/d')} + ' ~ ' + ${#temporals.format(currentWeek.periodEnd, 'M/d')}">9/1 ~ 9/7</span>
@@ -205,8 +61,9 @@
 				</div>
 			</a>
 		</li>
+		<!-- 확정된 주간 -->
 		<li class="settle-hist__item" th:each="s : ${settlements}">
-			<a th:href="@{/store/settlement(from=${s.periodStart}, to=${s.periodEnd})}" class="settle-hist__row">
+			<a th:href="@{/store/settlement/detail(from=${s.periodStart}, to=${s.periodEnd})}" class="settle-hist__row">
 				<div>
 					<span class="settle-hist__week"
 					      th:text="${#temporals.format(s.periodStart, 'M/d')} + ' ~ ' + ${#temporals.format(s.periodEnd, 'M/d')}">8/17 ~ 8/23</span>
@@ -234,27 +91,17 @@
 		</li>
 	</ul>
 
+	<!-- 특정 기간을 골라서 계산식·거래 명세·정산서(Excel/PDF)를 보고 싶을 때 -->
+	<a th:href="@{/store/settlement/detail(period='month')}" class="btn btn--outline btn--block" style="margin-top: var(--s-4)">
+		기간 직접 조회 · 정산서 받기
+	</a>
+
 	<script th:inline="none">
 	(function () {
 		var back = document.querySelector('.topbar__back[data-back]');
 		if (!back) { return; }
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
-	})();
-
-	// "직접 선택" 토글 — 누를 때만 날짜 입력칸이 열린다.
-	(function () {
-		var btn = document.getElementById('settle-range-toggle');
-		var form = document.getElementById('settle-range-form');
-		if (!btn || !form) { return; }
-		btn.addEventListener('click', function () {
-			var opened = form.classList.toggle('is-hidden') === false;
-			btn.setAttribute('aria-expanded', opened);
-			if (opened) {
-				var first = form.querySelector('input[name="from"]');
-				if (first) { first.focus(); }
-			}
-		});
 	})();
 	</script>
 </div>

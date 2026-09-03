@@ -208,22 +208,28 @@
   white-space: nowrap;
 }
 
-/* ---------- 매장 정산서 (일부러 리포트와 다른 "회계 문서" 톤) ---------- */
+/* ---------- 매장 정산서 헤더 (연한 초록 틴트 패널 — 상단바 네이비와 연속돼 보이지 않게) ---------- */
 .settle-doc {
-  background: var(--c-surface);
-  border: 1px solid var(--c-line);
-  border-top: 3px solid var(--c-primary);   /* 문서 마커 (상단바와 확실히 구분) */
-  border-radius: var(--r-md);
-  padding: var(--s-4);
-}
-.settle-doc__head {
+  /* .page(padding: var(--s-5)) 밖으로 빼서 상단바 바로 아래 붙는 풀블리드 틴트 스트립으로 */
+  margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1) var(--s-4);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-2);
-  padding-bottom: var(--s-3);
-  border-bottom: 2px solid var(--c-dark);   /* letterhead 구분선 */
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--c-primary-weak);
+  border-bottom: 1px solid var(--c-primary-border);
 }
+.settle-doc__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--c-primary-border);
+  color: var(--c-primary-strong);
+  display: grid;
+  place-items: center;
+}
+.settle-doc__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .settle-doc__title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-black);
@@ -233,8 +239,9 @@
 .settle-doc__store { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text); }
 .settle-doc__meta {
   display: flex;
-  gap: var(--s-6);
-  padding-top: var(--s-3);
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-2);
+  margin-top: var(--s-1);
   font-size: var(--fs-xs);
   color: var(--c-text-sub);
   font-variant-numeric: tabular-nums;
