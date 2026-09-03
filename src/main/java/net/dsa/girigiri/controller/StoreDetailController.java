@@ -5,17 +5,15 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
-import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.LikeService;
+import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.util.StoreHoursUtil;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -29,15 +27,14 @@ public class StoreDetailController {
 
 	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
-	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
 	private final LikeService likeService;
 	private final ReviewService reviewService;
+	private final LookupService lookupService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
-		StoreEntity store = storeRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "가게를 찾을 수 없습니다: " + id));
+		StoreEntity store = lookupService.getStore(id);
 
 		List<ProductEntity> activeProducts = productRepository.findAll().stream()
 				.filter(p -> id.equals(p.getStoreId()))
