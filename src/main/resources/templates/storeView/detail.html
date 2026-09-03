@@ -18,17 +18,17 @@
 		<div class="u-row" style="justify-content:space-between">
 			<div>
 				<h1 th:text="${store.storeName}">가게명</h1>
-				<div class="u-sub" style="font-size:13px;margin-top:2px"
+				<div class="u-sub" style="font-size:var(--fs-sm);margin-top:2px"
 				     th:text="${store.category} + (${store.address} != null ? ' · ' + ${store.address} : '')">베이커리 · 광안동</div>
 			</div>
 			<button type="button" class="store-card__like" data-like-btn style="font-size:24px"
 			        th:classappend="${liked} ? ' is-liked'" th:attr="data-store-id=${store.id}">&hearts;</button>
 		</div>
 
-		<div class="u-row" style="gap:6px;margin-top:8px" th:if="${reviewCount} > 0">
+		<div class="u-row" style="gap:6px;margin-top:var(--s-2)" th:if="${reviewCount} > 0">
 			<span class="star" style="font-size:14px">★★★★☆</span>
 			<b style="font-size:14px" th:text="${avgRating}">4.6</b>
-			<span class="u-mut" style="font-size:13px" th:text="'(' + ${reviewCount} + ')'">(128)</span>
+			<span class="u-mut" style="font-size:var(--fs-sm)" th:text="'(' + ${reviewCount} + ')'">(128)</span>
 		</div>
 
 		<div class="tabs" data-tabs style="margin-top:var(--s-4)">
@@ -46,23 +46,23 @@
 			<div class="info-row">
 				<span class="info-row__ico">🕘</span>
 				<div class="u-grow">
-					<b style="font-size:13px">영업시간</b>
-					<span class="u-sub" style="font-size:13px"
+					<b style="font-size:var(--fs-sm)">영업시간</b>
+					<span class="u-sub" style="font-size:var(--fs-sm)"
 					      th:text="${store.operatingHours} + (${#strings.isEmpty(closingLabel)} ? '' : ' · ' + ${closingLabel})">07:00–21:00</span>
 				</div>
 			</div>
-			<div class="info-row" th:if="${store.address != null}" style="margin-top:8px">
+			<div class="info-row" th:if="${store.address != null}" style="margin-top:var(--s-2)">
 				<span class="info-row__ico">📍</span>
 				<div class="u-grow">
-					<span class="u-sub" style="font-size:13px" th:text="${store.address}">주소</span>
+					<span class="u-sub" style="font-size:var(--fs-sm)" th:text="${store.address}">주소</span>
 				</div>
 			</div>
 
-			<div class="u-row" style="gap:8px;margin-top:var(--s-4)">
+			<div class="u-row" style="gap:var(--s-2);margin-top:var(--s-4)">
 				<a th:href="@{/user/inquiries/new(storeId=${store.id})}" class="btn btn--outline u-grow">이 가게에 문의하기</a>
 				<a th:href="@{/user/support}" class="btn btn--outline u-grow">내 문의 내역</a>
 			</div>
-			<a th:if="${loggedIn}" th:href="@{/user/reviews/my}" class="btn btn--outline btn--block" style="margin-top:8px">내가 쓴 리뷰 관리</a>
+			<a th:if="${loggedIn}" th:href="@{/user/reviews/my}" class="btn btn--outline btn--block" style="margin-top:var(--s-2)">내가 쓴 리뷰 관리</a>
 		</div>
 
 		<!-- ================= 상품 탭 ================= -->
@@ -72,10 +72,10 @@
 					<span class="store-card__thumb" th:style="'background:' + ${thumbColor}" th:text="${thumbEmoji}">빵</span>
 					<span class="store-card__body">
 						<span class="store-card__name" th:text="${p.name}">상품명</span>
-						<span class="price" style="margin-top:4px">
+						<span class="price" style="margin-top:var(--s-1)">
 							<span class="badge badge--discount" th:text="${p.discountRate}">-51%</span>
 							<span class="price__orig" th:text="${p.origPrice}">12,000원</span>
-							<span class="price__sale" style="font-size:15px" th:text="${p.salePrice}">5,900원</span>
+							<span class="price__sale" style="font-size:var(--fs-md)" th:text="${p.salePrice}">5,900원</span>
 						</span>
 						<span class="store-card__left" th:text="${p.remainingQuantity} + '개 남음'">3개 남음</span>
 					</span>
@@ -102,7 +102,7 @@
 					<span style="font-size:16px">✨</span>
 					<div class="u-grow">
 						<p class="banner__title" style="margin-bottom:2px">AI 리뷰 요약</p>
-						<p class="u-sub" style="font-size:13px;line-height:1.5" th:text="${reviewSummary}">
+						<p class="u-sub" style="font-size:var(--fs-sm);line-height:1.5" th:text="${reviewSummary}">
 							다들 빵이 촉촉하고 양이 많다고 좋아해요. 마감 직전에 가면 품절인 경우가 잦으니 서둘러 방문하는 걸 추천해요.
 						</p>
 					</div>
@@ -122,7 +122,7 @@
 
 			<div class="card" id="review-write-form" data-reopen-btn="review-write-btn"
 			     th:if="${loggedIn and myRating == 0 and canReview}" hidden>
-				<p class="field__label" style="margin-bottom:8px">리뷰 남기기</p>
+				<p class="field__label" style="margin-bottom:var(--s-2)">리뷰 남기기</p>
 				<form th:action="@{/user/stores/{id}/reviews(id=${store.id})}" method="post" enctype="multipart/form-data">
 					<div class="star-input">
 						<input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
@@ -136,7 +136,7 @@
 					     고르게 유도하고(서버에서도 다시 검증), data-photo-* 훅은 app.js가 잡는다.
 					     label 대신 div+role="button"인 이유: label의 콘텐츠 모델은 phrasing content만
 					     허용하는데 안에 <p>(block) 등을 넣어야 해서, 클릭은 JS가 input.click()으로 위임한다. */-->
-					<div class="review-upload" style="margin-top:8px" data-photo-dropzone
+					<div class="review-upload" style="margin-top:var(--s-2)" data-photo-dropzone
 					     role="button" tabindex="0" aria-label="리뷰 사진 선택 (드래그 앤 드롭 가능)">
 						<input type="file" name="imagePhoto" class="review-upload__input"
 						       accept="image/jpeg,image/png,image/webp,image/gif" data-photo-input tabindex="-1">
@@ -152,7 +152,7 @@
 						</div>
 					</div>
 					<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 (선택)</p>
-					<div class="u-row" style="gap:8px;margin-top:10px">
+					<div class="u-row" style="gap:var(--s-2);margin-top:10px">
 						<button type="submit" class="btn u-grow">리뷰 등록하기</button>
 						<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
 					</div>
@@ -161,7 +161,7 @@
 
 			<div class="card" id="review-edit-form" data-reopen-btn="review-edit-btn"
 			     th:if="${loggedIn and myRating > 0}" hidden>
-				<p class="field__label" style="margin-bottom:8px">내 리뷰 수정하기</p>
+				<p class="field__label" style="margin-bottom:var(--s-2)">내 리뷰 수정하기</p>
 				<form th:action="@{/user/stores/{id}/reviews(id=${store.id})}" method="post" enctype="multipart/form-data"
 				      onsubmit="return confirm('리뷰를 수정하시겠습니까?')">
 					<div class="star-input">
@@ -177,7 +177,7 @@
 					     미리보기 상태로 보여준다. "✕ 제거"를 누르면 숨은 removeImage 필드가 true로 바뀌고
 					     idle(업로드 안내) 상태로 돌아간다. 새 파일을 고르면 그걸로 교체(removeImage 무시).
 					     아무것도 안 건드리면 기존 사진이 그대로 유지된다. */-->
-					<div class="review-upload" style="margin-top:8px" data-photo-dropzone
+					<div class="review-upload" style="margin-top:var(--s-2)" data-photo-dropzone
 					     role="button" tabindex="0" aria-label="리뷰 사진 선택 (드래그 앤 드롭 가능)">
 						<input type="file" name="imagePhoto" class="review-upload__input"
 						       accept="image/jpeg,image/png,image/webp,image/gif" data-photo-input tabindex="-1">
@@ -196,14 +196,14 @@
 						</div>
 					</div>
 					<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 · 새 사진을 고르면 기존 사진 대신 저장돼요</p>
-					<div class="u-row" style="gap:8px;margin-top:10px">
+					<div class="u-row" style="gap:var(--s-2);margin-top:10px">
 						<button type="submit" class="btn u-grow">리뷰 수정하기</button>
 						<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
 					</div>
 				</form>
 			</div>
 			<p th:unless="${loggedIn}" class="u-sub">
-				<a th:href="@{/auth/loginForm}" class="u-primary" style="font-weight:700">로그인</a> 하면 리뷰를 남길 수 있어요.
+				<a th:href="@{/auth/loginForm}" class="u-primary" style="font-weight:var(--fw-bold)">로그인</a> 하면 리뷰를 남길 수 있어요.
 			</p>
 
 			<div style="display:flex;flex-direction:column;gap:0;margin-top:10px">
@@ -211,26 +211,26 @@
 					<div class="list-row__body">
 						<div class="u-row" style="justify-content:space-between">
 							<span class="u-row" style="gap:6px">
-								<b style="font-size:13px" th:text="${r.reviewerName}">닉네임</b>
+								<b style="font-size:var(--fs-sm)" th:text="${r.reviewerName}">닉네임</b>
 								<span th:if="${r.mine}" class="badge badge--success" style="font-size:10px">내 리뷰</span>
 							</span>
-							<span class="u-mut" style="font-size:11px">
+							<span class="u-mut" style="font-size:var(--fs-xs)">
 								<span th:text="${r.createdAtLabel}">3일 전</span>
 								<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
 							</span>
 						</div>
-						<div style="color:var(--c-accent);font-size:13px;margin-top:2px" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
-						<p style="font-size:13px;margin-top:4px" th:text="${r.content}">리뷰 내용</p>
+						<div style="color:var(--c-accent);font-size:var(--fs-sm);margin-top:2px" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
+						<p style="font-size:var(--fs-sm);margin-top:var(--s-1)" th:text="${r.content}">리뷰 내용</p>
 						<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
 						     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
 						     style="margin-top:6px;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
 						<div class="u-row" style="gap:6px;margin-top:6px">
 							<button th:if="${r.mine}" type="button" id="review-edit-btn" class="btn btn--outline" data-toggle-target="review-edit-form"
-							        style="padding:4px 12px;font-size:12px">수정</button>
+							        style="padding:var(--s-1) var(--s-3);font-size:12px">수정</button>
 							<form th:if="${r.canDelete}" th:action="@{/user/stores/{id}/reviews/{reviewId}/delete(id=${store.id}, reviewId=${r.id})}"
 							      method="post" onsubmit="return confirm('리뷰를 삭제할까요?')">
 								<button type="submit" class="btn btn--outline"
-								        style="padding:4px 12px;font-size:12px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+								        style="padding:var(--s-1) var(--s-3);font-size:12px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
 							</form>
 						</div>
 					</div>
