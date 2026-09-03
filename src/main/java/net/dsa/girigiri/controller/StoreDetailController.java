@@ -54,11 +54,11 @@ public class StoreDetailController {
 		model.addAttribute("myRating", myReview.map(r -> r.getRating()).orElse(0));
 		model.addAttribute("myContent", myReview.map(r -> r.getContent()).orElse(""));
 		model.addAttribute("myImageUrl", myReview.map(r -> r.getImageUrl()).orElse(""));
-		// 강노은: (2026-08-26) 원래는 이 가게에서 예약 후 픽업까지 완료한 사람만 새 리뷰를 쓸 수
-		// 있어야 하지만(reviewService.canWriteReview), 예약·픽업 플로우가 아직 테스트가 안 된
-		// 상태라 요청으로 이 제한을 임시로 꺼둔다. 테스트 끝나면 아래 줄만 원래대로 되돌리면 됨:
-		// model.addAttribute("canReview", reviewService.canWriteReview(userId, id));
-		model.addAttribute("canReview", true);
+		// 강노은: (2026-09-03) 예약·픽업 플로우 테스트가 끝나서 원래 규칙(픽업완료 후에만 작성
+		// 가능)으로 되돌린다. 2026-08-26~09-03 사이엔 canReview=true로 임시로 꺼뒀었음 — 챗봇
+		// FAQ(ChatService)에 "픽업 완료해야 리뷰 작성 가능"이라고 안내문을 넣으면서 실제 동작과
+		// 어긋나 있는 걸 발견해서 같이 되돌림.
+		model.addAttribute("canReview", reviewService.canWriteReview(userId, id));
 		model.addAttribute("closingLabel", closingInfo.label());
 		model.addAttribute("products", activeProducts.stream().map(this::toProductRow).toList());
 		model.addAttribute("liked", likeService.isLiked(userId, id));
