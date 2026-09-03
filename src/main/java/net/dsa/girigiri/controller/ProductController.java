@@ -3,17 +3,15 @@ package net.dsa.girigiri.controller;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.util.StoreHoursUtil;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @RequestMapping("/user/products")
@@ -22,14 +20,13 @@ public class ProductController {
 
 	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
-	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReviewService reviewService;
+	private final LookupService lookupService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, Model model) {
-		ProductEntity product = productRepository.findById(id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다: " + id));
+		ProductEntity product = lookupService.getProduct(id);
 		StoreEntity store = storeRepository.findById(product.getStoreId()).orElse(null);
 
 		int discountRate = discountRate(product);
