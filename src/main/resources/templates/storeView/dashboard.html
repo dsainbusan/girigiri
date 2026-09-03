@@ -63,7 +63,7 @@
 		<div class="stat-card">
 			<span class="stat-card__label">폐기 절감(구제율)</span>
 			<span class="stat-card__value" th:text="${rescueRate} + '%'">75%</span>
-			<div class="u-row" style="gap: 4px; align-items: center;">
+			<div class="u-row" style="gap: var(--s-1); align-items: center;">
 				<span class="stat-card__delta u-primary" id="rescue-goal-text" th:text="${rescueGoal}">목표 70% 달성</span>
 				<button type="button" id="rescue-goal-edit-btn" class="rescue-goal-edit-btn"
 				        th:attr="data-rescue-rate=${rescueRate},data-goal-percent=${rescueGoalPercent}"
