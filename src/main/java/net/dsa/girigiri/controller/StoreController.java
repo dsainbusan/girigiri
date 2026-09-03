@@ -224,8 +224,9 @@ public class StoreController {
 		model.addAttribute("to", custom ? toDate.toString() : "");
 		model.addAttribute("issuedDate", LocalDate.now().toString());
 
-		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로
+		// 정산 내역 (주간 확정 기록) — 최근 주간이 위로. currentWeek = 아직 확정 안 된 이번 주.
 		model.addAttribute("settlements", storeService.getSettlementHistory(store.getId()));
+		model.addAttribute("currentWeek", settlementService.currentWeek(store));
 		model.addAttribute("bankRegistered",
 				store.getBankName() != null && !store.getBankName().isBlank()
 						&& store.getBankAccount() != null && !store.getBankAccount().isBlank());

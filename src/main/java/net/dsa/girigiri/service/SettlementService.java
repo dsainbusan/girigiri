@@ -2,6 +2,7 @@ package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.SettlementData;
+import net.dsa.girigiri.domain.dto.SettlementWeekPreview;
 import net.dsa.girigiri.domain.entity.PayStatus;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
@@ -10,9 +11,11 @@ import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -151,6 +154,21 @@ public class SettlementService {
 		}
 		long net = gross - refund;
 		return new Agg(gross, refund, net, commission);
+	}
+
+	// --- 이번 정산 주간 (진행 중 미리보기) -------------------------------
+
+	/**
+	 * 이번 정산 주간(이번 주 월~일)의 현재까지 쌓인 정산액. 다음 월요일 00:00에 확정된다.
+	 * SettlementBatchService.confirmWeek()이 실제로 처리하는 "지난 주"와 같은 월~일 경계를 쓴다.
+	 */
+	public SettlementWeekPreview currentWeek(StoreEntity store) {
+		LocalDate today = LocalDate.now();
+		LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		LocalDate sunday = monday.plusDays(6);
+		Agg agg = aggregate(store, monday.atStartOfDay(), monday.plusDays(7).atStartOfDay());
+		long amount = Math.max(0, agg.weekAmount());
+		return new SettlementWeekPreview(monday, sunday, amount, sunday.plusDays(1), today.getDayOfWeek().getValue());
 	}
 
 	// --- 기간 ------------------------------------------------------------
