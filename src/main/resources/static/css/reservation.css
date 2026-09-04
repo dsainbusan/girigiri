@@ -133,6 +133,8 @@
 	font-size: var(--fs-md);
 	font-weight: var(--fw-medium);
 	line-height: 1.4;
+	/* 스캔된 문자열(엉뚱한 QR의 긴 URL 등)이 박스를 뚫고 나가지 않게 줄바꿈 */
+	overflow-wrap: anywhere;
 }
 .scan-status.status-loading {
 	background: var(--c-bg);

@@ -212,31 +212,17 @@
 .settle-doc {
   /* .page(padding: var(--s-5)) 밖으로 빼서 상단바 바로 아래 붙는 풀블리드 틴트 스트립으로 */
   margin: calc(var(--s-5) * -1) calc(var(--s-5) * -1) var(--s-4);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-3);
   padding: var(--s-4);
   background: var(--c-primary-weak);
   border-bottom: 1px solid var(--c-primary-border);
 }
-.settle-doc__icon {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r-sm);
-  background: var(--c-primary-border);
-  color: var(--c-primary-strong);
-  display: grid;
-  place-items: center;
-}
-.settle-doc__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .settle-doc__title {
   font-size: var(--fs-lg);
   font-weight: var(--fw-black);
   letter-spacing: -0.02em;
   color: var(--c-primary-strong);
 }
-.settle-doc__store { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text); }
+.settle-doc__store { display: block; margin-top: 3px; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text); }
 .settle-doc__meta {
   display: flex;
   flex-wrap: wrap;
@@ -290,6 +276,15 @@
   border-color: var(--c-dark);
   color: #fff;
   font-weight: var(--fw-bold);
+}
+
+/* 현재 조회 중인 기간 — 크게 (pill 위에) */
+.settle-period__current {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 계좌 미등록 안내는 대시보드와 동일하게 .todo-banner 재사용 (별도 스타일 없음) */
