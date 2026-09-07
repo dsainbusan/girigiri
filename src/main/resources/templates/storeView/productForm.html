@@ -49,6 +49,18 @@
 			<label class="field__label" for="name">품목명 <span class="u-accent">*</span></label>
 			<input class="input" type="text" id="name" name="name" th:value="${form.name}"
 			       placeholder="예: 오늘의 모둠빵 세트" required maxlength="100">
+			<!-- 강노은: 상품 사진 자동 태깅 — 위 ①에서 사진을 고르면 AI가 사진만 보고 카테고리·품목명을
+			     추측해서 여기 보여준다(품목명이 비어있을 때만 입력칸에 자동으로 채워줌). 카테고리는
+			     product 테이블에 별도 컬럼이 없어(카테고리는 상품이 아니라 매장 단위 값) 채워줄 칸이
+			     없어서 참고용 문구로만 보여준다. 추천이든 자동으로 채워진 값이든 이 입력칸은 그냥
+			     보통 text input이라 언제든 자유롭게 고쳐 쓸 수 있다. -->
+			<p id="photoTagLoading" class="u-sub is-hidden" style="font-size: var(--fs-xs); margin-top: 4px">
+				📷 사진을 보고 추천을 준비하고 있어요…
+			</p>
+			<p id="photoTagHint" class="u-sub is-hidden" style="font-size: var(--fs-xs); margin-top: 4px">
+				📷 AI 추천 — 카테고리: <strong id="photoTagCategory"></strong> · 품목명: <strong id="photoTagName"></strong>
+				(자유롭게 수정하세요)
+			</p>
 		</div>
 
 		<!-- 3. 원가 -->
@@ -141,6 +153,53 @@
 				}
 				el.addEventListener('input', fit);
 				fit();   // 수정 화면에서 기존 설명이 있을 때 초기 높이 맞추기
+			});
+		})();
+	</script>
+
+	<!-- 강노은: 상품 사진 자동 태깅 — 위 미리보기 스크립트와 별개 리스너로 붙인다(기존 로직은
+	     안 건드림). 사진을 고르면 폼 제출 전에 바로 /api/store/products/photo-tag로 그 사진만
+	     보내 카테고리·품목명 추천을 받는다. 실패해도(.env 미설정/일시 오류) 조용히 무시 — 추천은
+	     부가 기능이라 실패해도 상품 등록 자체는 그대로 가능해야 한다. -->
+	<script>
+		(function () {
+			var input = document.getElementById('image');
+			var nameInput = document.getElementById('name');
+			var loading = document.getElementById('photoTagLoading');
+			var hint = document.getElementById('photoTagHint');
+			var categorySpan = document.getElementById('photoTagCategory');
+			var nameSpan = document.getElementById('photoTagName');
+			if (!input || !nameInput || !loading || !hint) return;
+
+			input.addEventListener('change', function () {
+				var file = input.files && input.files[0];
+				hint.classList.add('is-hidden');
+				if (!file) return;
+
+				loading.classList.remove('is-hidden');
+				var formData = new FormData();
+				formData.append('image', file);
+
+				fetch('/api/store/products/photo-tag', { method: 'POST', body: formData })
+					.then(function (res) { return res.ok ? res.json() : null; })
+					.then(function (suggestion) {
+						loading.classList.add('is-hidden');
+						if (!suggestion || (!suggestion.category && !suggestion.itemName)) return;
+
+						if (suggestion.category) categorySpan.textContent = suggestion.category;
+						if (suggestion.itemName) nameSpan.textContent = suggestion.itemName;
+						hint.classList.remove('is-hidden');
+
+						// 품목명은 아직 비어있을 때만 자동으로 채운다 — 이미 사장님이 뭔가 입력해둔
+						// 값을 사진 추천으로 덮어쓰면 안 된다. 채워준 뒤에도 그냥 보통 입력칸이라
+						// 자유롭게 고쳐 쓸 수 있다.
+						if (suggestion.itemName && !nameInput.value.trim()) {
+							nameInput.value = suggestion.itemName;
+						}
+					})
+					.catch(function () {
+						loading.classList.add('is-hidden'); // 네트워크 오류 등 — 조용히 무시
+					});
 			});
 		})();
 	</script>
