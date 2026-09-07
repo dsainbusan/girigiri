@@ -13,6 +13,8 @@ import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.dto.StoreCancelStatsDto;
+import net.dsa.girigiri.domain.entity.CouponEntity;
+import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
@@ -94,6 +96,14 @@ public class ReservationService {
 	private final ReceiptService receiptService;
 	private final PortOneClient portOneClient;
 	private final PlatformTransactionManager transactionManager;
+	// 추가됨 (2026-09-07, 송채현, WBS "쿠폰 발급/관리") — 쿠폰을 썼던 예약이 취소될 때 복구하고,
+	// 매장 귀책 취소일 때는 보상 쿠폰을 새로 지급한다. 아래 각 취소/노쇼 처리 메서드 참고.
+	private final CouponService couponService;
+	// 매장 귀책 취소로 보상 쿠폰을 줄 때 손님에게 바로 알려주기 위해. 예약 이벤트를 폴링으로 감지하는
+	// NotificationTriggerScheduler(강노은)와 달리, 여기는 내 파일이라 직접 호출한다 — 다른 사람 파일을
+	// 안 건드리려고 폴링 방식을 쓰는 팀 컨벤션은 "남의 코드에 훅을 안 심는다"가 핵심이라 내 서비스
+	// 안에서 다른 사람이 만든 공용 서비스(NotificationService)를 호출하는 것과는 상충하지 않는다.
+	private final NotificationService notificationService;
 
 	// 결제 실패 처리(재고복구·결제실패기록·예약취소)를 confirmPayment()의 메인 트랜잭션과
 	// 분리된 "독립 트랜잭션"으로 즉시 커밋하기 위한 템플릿.
@@ -120,6 +130,9 @@ public class ReservationService {
 			reservation.setCancelledBy("SYSTEM");
 			reservation.setCancelReason("결제 실패: " + failReason);
 			reservationRepository.save(reservation);
+
+			// 결제가 실제로 안 됐으니 쿠폰을 쓴 적이 있어도 손님 잘못이 아니라 복구한다.
+			couponService.restore(reservation.getCouponId());
 		});
 	}
 
@@ -132,22 +145,47 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity prepareReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime) {
+		return prepareReservation(userId, productId, quantity, pickupTime, null);
+	}
 
-		// 1. 재고 차감. 재고가 없으면 여기서 OutOfStockException이 터지면서 아래 코드는 실행되지 않는다.
+	/**
+	 * 쿠폰을 적용한 예약 준비 — 2026-09-07 추가 (채채 확인, 체크아웃 쿠폰 연동, WBS "할인코드 적용/검증").
+	 * couponId가 null이면 기존 동작(할인 없음)과 완전히 같다 — 위 4개 인자짜리 메서드가 이 메서드를
+	 * couponId=null로 호출하도록 바꿔서, 이 클래스 밖의 다른 호출부(테스트 포함)는 하나도 안 바뀐다.
+	 *
+	 * 쿠폰 사용 처리(couponService.markUsed)는 재고 차감과 똑같이 "낙관적으로 먼저 써버리고, 실패하면
+	 * 되돌리는" 방식이다 — 결제가 실패하거나 예약이 취소되면 ReservationService 안의 다른 메서드들
+	 * (markPaymentFailedInNewTransaction/cancelPendingReservation/expireStalePendingReservations/
+	 * cancelReservation/cancelByStore)이 reservation.getCouponId()로 couponService.restore()를
+	 * 호출해서 다시 쓸 수 있게 돌려놓는다 — 이 메서드에서 따로 롤백 처리를 안 해도 되는 이유.
+	 */
+	@Transactional
+	public ReservationEntity prepareReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime, Long couponId) {
+
+		// 1. 쿠폰을 골랐다면 재고를 건드리기 전에 먼저 검증한다 (본인 소유 + 미사용 + 미만료).
+		//    유효하지 않으면 CouponService.validateForRedeem이 ResponseStatusException을 던지고,
+		//    이 메서드가 @Transactional이라 여기까지 온 변경사항(아직 없음)은 자동 롤백된다.
+		CouponEntity coupon = couponId != null ? couponService.validateForRedeem(userId, couponId) : null;
+
+		// 2. 재고 차감. 재고가 없으면 여기서 OutOfStockException이 터지면서 아래 코드는 실행되지 않는다.
 		//    (동시에 여러 명이 예약해도 안전하게 처리되는 부분은 StockService가 이미 책임진다.)
 		stockService.decreaseStock(productId, quantity);
 
-		// 2. 가격 계산을 위해 상품 정보 조회
+		// 3. 가격 계산을 위해 상품 정보 조회
 		ProductEntity product = productRepository.findById(productId)
 				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + productId));
 
 		int totalPrice = product.getDiscountedPrice() * quantity;
+		if (coupon != null) {
+			int discountAmount = totalPrice * coupon.getDiscountRate() / 100;
+			totalPrice = Math.max(totalPrice - discountAmount, 0);
+		}
 
-		// 3. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
+		// 4. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
 		//    무관하게 예약 하나당 하나면 되고, confirmed로 바뀐 뒤에 새로 만들 이유가 없다)
 		String pickupCode = net.dsa.girigiri.util.QrCodeUtil.generatePickupCode();
 
-		// 4. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
+		// 5. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
 		ReservationEntity reservation = ReservationEntity.builder()
 				.userId(userId)
 				.productId(productId)
@@ -155,13 +193,20 @@ public class ReservationService {
 				.storeId(product.getStoreId())
 				.reservedQuantity(quantity)
 				.totalPrice(totalPrice)
+				.couponId(couponId)
 				.pickupTime(pickupTime)
 				.pickupCode(pickupCode)
 				.status("pending")
 				.build();
 		reservation = reservationRepository.save(reservation);
 
-		// 5. 결제 레코드를 "ready"(결제 대기)로 미리 만들어둔다. merchantUid가 곧 PortOne의
+		// 5-1. 쿠폰을 실제로 골랐으면 이 시점에 사용 처리한다 (재고와 동일한 낙관적 처리 — 위 메서드
+		// 설명 참고). 같은 쿠폰으로 결제창을 여러 번 열어서 중복 적용하는 걸 여기서 막는다.
+		if (couponId != null) {
+			couponService.markUsed(couponId);
+		}
+
+		// 6. 결제 레코드를 "ready"(결제 대기)로 미리 만들어둔다. merchantUid가 곧 PortOne의
 		//    paymentId다 — 서버가 미리 발급해서 프론트에 내려주고, 프론트는 이 값 그대로
 		//    PortOne.requestPayment()에 넘긴다 (프론트가 마음대로 paymentId를 만들게 하면 나중에
 		//    confirmPayment에서 어떤 결제 기록과 매칭해야 할지 알 수 없어서, 반드시 서버가 먼저
@@ -265,6 +310,10 @@ public class ReservationService {
 		reservation.setStatus("cancelled");
 		reservation.setCancelledBy("SYSTEM");
 		reservation.setCancelReason("결제 미완료로 취소됨");
+
+		// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
+		couponService.restore(reservation.getCouponId());
+
 		return reservationRepository.save(reservation);
 	}
 
@@ -298,6 +347,9 @@ public class ReservationService {
 			reservation.setStatus("cancelled");
 			reservation.setCancelledBy("SYSTEM");
 			reservation.setCancelReason("결제 시간 초과로 자동 취소됨");
+
+			// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
+			couponService.restore(reservation.getCouponId());
 		}
 		reservationRepository.saveAll(stale);
 
@@ -487,6 +539,10 @@ public class ReservationService {
 		reservation.setCancelledBy("USER");
 		ReservationEntity saved = reservationRepository.save(reservation);
 
+		// 5-1. 쿠폰을 썼던 거면 복구 (2026-09-07, 채채 확인) — 손님이 "물건을 샀다가 취소"한 일반적인
+		// 경우라 복구 대상. 복구 안 하는 예외는 딱 하나, 손님 본인 노쇼(processNoShows())뿐이다.
+		couponService.restore(reservation.getCouponId());
+
 		// 6. 영수증도 지금 시점에 바로 다시 만들어둔다 (취소 안내 배너 + QR 제외 버전으로).
 		//    조회할 때마다 다시 만드는 대신, 상태가 바뀌는 "이 순간" 딱 한 번만 다시 만들면 된다.
 		receiptService.generateReceipt(reservationId);
@@ -518,6 +574,15 @@ public class ReservationService {
 		reservation.setCancelledBy("STORE");
 		reservation.setCancelReason(resolvedReason);
 		ReservationEntity saved = reservationRepository.save(reservation);
+
+		// 매장 귀책 취소 (2026-09-07, 채채 확인) — 손님 잘못이 전혀 없는 취소라 두 가지를 한다:
+		//   1) 쓴 쿠폰이 있으면 복구
+		//   2) 매장 책임이니 사과 성격의 보상 쿠폰을 새로 하나 지급
+		couponService.restore(reservation.getCouponId());
+		CouponEntity compensationCoupon = couponService.issueStoreCompensationCoupon(reservation.getUserId(), reservation.getId());
+		notificationService.createNotification(reservation.getUserId(), NotificationEntity.TYPE_STORE_CANCEL_COUPON,
+				"매장 사정으로 예약이 취소돼서 " + compensationCoupon.getDiscountRate() + "% 보상 쿠폰을 내 쿠폰함에 넣어드렸어요.",
+				"/coupons", "store_cancel_coupon:" + reservation.getId());
 
 		// 취소 안내 배너 + QR 제외 버전으로 영수증도 이 시점에 바로 다시 만들어둔다.
 		receiptService.generateReceipt(reservationId);
@@ -709,6 +774,9 @@ public class ReservationService {
 
 		for (ReservationEntity reservation : overdue) {
 			reservation.setStatus("noshowed");
+			// (2026-09-07, 채채 확인) — 여기서는 의도적으로 couponService.restore()를 호출하지 않는다.
+			// 손님이 안 나타난 건 본인 잘못이라, 썼던 쿠폰이 있어도 복구해주지 않기로 했다 — 다른
+			// 취소 경로(위 cancelReservation/cancelByStore/결제실패 등)와 유일하게 다른 부분이다.
 		}
 		reservationRepository.saveAll(overdue);
 
