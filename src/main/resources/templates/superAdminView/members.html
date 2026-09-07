@@ -7,7 +7,7 @@
   요청으로 되돌렸다). 탭은 전체/일반 회원(USER)/점주 회원(OWNER)/정지 회원 — 운영자(ADMIN) 계정은
   수가 적고 이 화면의 주 관리 대상이 아니라서 전용 탭 없이 "전체"에서만 보인다.
 
-  화면 표시 컬럼: 회원 ID(u.id)/닉네임/이메일/권한/상태/가입일/관리 — 최근수정일은 화면에서 뺐다(이메일은
+  화면 표시 컬럼: 회원 번호(u.id)/닉네임/이메일/권한/상태/가입일/관리 — 최근수정일은 화면에서 뺐다(이메일은
   이후 요청으로 다시 넣음). CSV 다운로드(exportMembers)는 이 화면과 별개라 최근수정일까지 그대로 포함.
 
   상태 배지·버튼 문구도 "이용중/이용정지" 어휘로 통일했다: 정상→이용중, 정지됨→이용정지, 개별 행
@@ -109,7 +109,7 @@
       <thead>
         <tr>
           <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
-          <th>회원 ID</th>
+          <th>회원 번호</th>
           <th>닉네임</th>
           <th>이메일</th>
           <th>권한</th>
