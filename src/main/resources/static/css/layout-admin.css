@@ -739,9 +739,18 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
   border: 1px solid var(--gray-300);
 }
 
-/* 매장 관리 표 — 텍스트가 길어도 안 밀리게(고정 레이아웃 + 말줄임) */
+/* 매장 관리 표 — 텍스트가 길어도 안 밀리게(고정 레이아웃 + 말줄임).
+   2026-09-08 — 회원 관리 표(.member-table)와 좌우 간격/톤이 다르다는 피드백으로 맞췄다: colgroup으로
+   8개 컬럼 폭을 퍼센트로 고정(체크박스/매장 번호/매장명/카테고리/주소/연락처/상태/관리)하고, 체크박스
+   (1번째)·관리(8번째) 칸은 버튼이 잘리면 안 되니 말줄임 대상에서 뺐다 — .member-table과 완전히 동일한
+   패턴(둘 다 8컬럼이라 nth-child 범위도 그대로 재사용). */
 .store-table { table-layout: fixed; width: 100%; }
-.store-table td, .store-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.store-table td:nth-child(n+2):nth-child(-n+7),
+.store-table th:nth-child(n+2):nth-child(-n+7) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* 신고·문의(reports.html) 표 3개 전용 — "탭 옮길 때마다 표가 왔다갔다해서 통일성이 없다"는 피드백으로
    세 탭의 표를 컬럼 개수·순서·폭·헤더까지 완전히 동일하게(제목/매장명/작성자/접수일/답변일/상태) 맞췄다
