@@ -3,9 +3,9 @@
       th:replace="~{common/layout :: layout('매출 리포트', ~{:: #content}, '', true, '점주 모드', null)}">
 <body>
 <!--/*
-	매출 리포트 — WBS 3.0 확장, 문창호. /store/sales-report?period=today|thisweek|lastweek (또는 ?from=&to=)
-	매출 성과(총매출·전주 대비·상품별·일별)를 Supabase(sales 테이블) 데이터로 조회한다.
-	판매·폐기 리포트(/store/report, MySQL·운영/환경 지표)와는 컨트롤러·라우트·소스가 전부 다른 별개 기능.
+	매출 리포트 — WBS 3.0, 문창호. /store/sales-report?period=today|thisweek|lastweek (또는 ?from=&to=)
+	Supabase(sales 테이블)의 (날짜,상품)별 마감 스냅샷으로 매출 성과 + 구제 성과를 함께 낸다.
+	기존 판매·폐기 리포트(/store/report)를 이 화면으로 대체한다.
 	기간 pill(오늘/이번 주/지난 주) + 직접 선택. 주 경계는 정산 주(월~일)와 같아서 정산 확정분과 대조된다.
 	화면 숫자는 SalesReportService.build() 하나에서 나온다.
 */-->
@@ -26,7 +26,7 @@
 
 		<!-- 조회 기간 — 정산 상세와 동일한 pill + 직접 선택 -->
 		<p class="settle-period__title">조회 기간</p>
-		<p class="settle-period__current" th:text="${report.periodLabel}">2026년 9월</p>
+		<p class="settle-period__current" th:text="${report.periodLabel}">2026-09-08 ~ 2026-09-14 (이번 주)</p>
 		<div class="settle-period">
 			<a th:href="@{/store/sales-report(period='today')}" class="settle-period__pill"
 			   th:classappend="${report.periodKey == 'today'} ? ' is-active'">오늘</a>
@@ -45,16 +45,16 @@
 			<button type="submit" class="settle-range__btn is-active">조회</button>
 		</form>
 
-		<!-- 총매출 -->
+		<!-- 매출 -->
 		<div class="card" style="margin-top: var(--s-4)">
 			<div class="u-row" style="justify-content: space-between; align-items: baseline">
-				<span class="u-bold" style="font-size: var(--fs-sm)">총매출</span>
+				<span class="u-bold" style="font-size: var(--fs-sm)">회수 매출</span>
 				<span class="u-bold u-primary" style="font-size: var(--fs-xl)"
 				      th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')} + '원'">1,240,000원</span>
 			</div>
 			<div class="report-summary" style="margin-top: var(--s-2)">
-				<div><span>판매 건수</span><b th:text="${report.orderCount} + '건'">42건</b></div>
-				<div><span>판매 수량</span><b th:text="${report.itemCount} + '개'">88개</b></div>
+				<div><span>판매 수량</span><b th:text="${report.soldCount} + '개'">88개</b></div>
+				<div><span>할인 제공액</span><b th:text="${#numbers.formatInteger(report.discountGiven, 0, 'COMMA')} + '원'">92,000원</b></div>
 				<div th:if="${report.prevTotalSales != null}">
 					<span>전주(<span th:text="${#numbers.formatInteger(report.prevTotalSales, 0, 'COMMA')}">280,000</span>원) 대비</span>
 					<b th:classappend="${report.deltaPercent >= 0} ? ' u-primary' : ' u-danger'"
@@ -63,20 +63,45 @@
 			</div>
 		</div>
 
+		<!-- 구제 · 폐기 -->
+		<div class="card" style="margin-top: var(--s-3)">
+			<div class="u-row" style="justify-content: space-between; align-items: baseline">
+				<span class="u-bold" style="font-size: var(--fs-sm)">구제율</span>
+				<span class="u-bold u-primary" style="font-size: var(--fs-xl)"
+				      th:text="${report.rescueRatePercent} + '%'">82%</span>
+			</div>
+			<div class="report-summary" style="margin-top: var(--s-2)">
+				<div><span>등록</span><b th:text="${report.registeredCount} + '개'">107개</b></div>
+				<div><span>판매</span><b th:text="${report.soldCount} + '개'">88개</b></div>
+				<div><span>폐기</span><b th:text="${report.wastedCount} + '개'">19개</b></div>
+				<div><span>CO₂ 절감</span><b th:text="${report.co2Kg} + 'kg'">26.4kg</b></div>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-2)">
+				구제율 = 판매 ÷ 등록. CO₂ 절감은 카테고리별 배출계수 × 판매 수량 추정치예요.
+			</p>
+		</div>
+
 		<!-- 빈 상태 -->
 		<div th:if="${report.empty}" class="card" style="margin-top: var(--s-3); text-align: center">
 			<p class="u-sub" style="font-size: var(--fs-sm)">이 기간에 매출 데이터가 없어요.</p>
 		</div>
 
 		<div th:unless="${report.empty}">
-			<!-- 일별 그래프 (기간이 2일 이상일 때만) -->
+			<!-- 일별 그래프 (판매 초록 / 폐기 빨강 스택) -->
 			<div th:if="${report.showGraph}">
-				<p class="u-bold" style="font-size: var(--fs-sm); margin-top: var(--s-4)">일별 매출</p>
+				<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-top: var(--s-4)">
+					<p class="u-bold" style="font-size: var(--fs-sm)">일별 판매 · 폐기</p>
+					<span class="u-sub" style="font-size: var(--fs-xs)">
+						<span style="color: var(--c-primary)">● 판매</span>
+						<span style="color: var(--c-danger); margin-left: 6px">● 폐기</span>
+					</span>
+				</div>
 				<div class="bar-chart">
 					<div class="bar-chart__col" th:each="d : ${report.days}"
-					     th:title="${d.label + ' · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원 (' + d.count + '건)'}">
+					     th:title="${d.label + ' · 판매 ' + d.soldQty + ' / 폐기 ' + d.wastedQty + ' · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}">
 						<div class="bar-chart__track">
-							<div class="bar-chart__seg bar-chart__seg--sold" th:style="'height:' + ${d.barPercent} + '%'"></div>
+							<div class="bar-chart__seg bar-chart__seg--waste" th:style="'height:' + ${d.wastedHeightPercent} + '%'"></div>
+							<div class="bar-chart__seg bar-chart__seg--sold" th:style="'height:' + ${d.soldHeightPercent} + '%'"></div>
 						</div>
 						<div class="bar-chart__label" th:text="${d.showLabel} ? ${d.label} : ''">1</div>
 					</div>
@@ -84,33 +109,43 @@
 			</div>
 
 			<!-- 상품별 -->
-			<p class="u-bold" style="font-size: var(--fs-sm); margin-top: var(--s-4)">상품별 매출</p>
+			<p class="u-bold" style="font-size: var(--fs-sm); margin-top: var(--s-4)">상품별</p>
 			<div class="report-table-wrap" style="margin-top: var(--s-2)">
 				<table class="report-table">
 					<thead>
-					<tr><th style="text-align:left">상품명</th><th>카테고리</th><th>수량</th><th>매출</th><th>비중</th></tr>
+					<tr><th style="text-align:left">상품명</th><th>등록</th><th>판매</th><th>폐기</th><th>매출</th><th>구제율</th></tr>
 					</thead>
 					<tbody>
 					<tr th:each="p : ${report.products}">
 						<td style="text-align:left" th:text="${p.name}">크림빵</td>
-						<td th:text="${p.category} ?: '-'">베이커리</td>
-						<td th:text="${p.qty}">20</td>
+						<td th:text="${p.registeredQty}">30</td>
+						<td th:text="${p.soldQty}">25</td>
+						<td th:text="${p.wastedQty}">5</td>
 						<td th:text="${#numbers.formatInteger(p.amount, 0, 'COMMA')}">50,000</td>
-						<td th:text="${p.sharePercent} + '%'">18%</td>
+						<td th:text="${p.rescueRatePercent} + '%'">83%</td>
 					</tr>
 					</tbody>
 					<tfoot>
 					<tr>
-						<td colspan="2" style="text-align:left">합계</td>
-						<td th:text="${report.itemCount}">88</td>
+						<td style="text-align:left">합계</td>
+						<td th:text="${report.registeredCount}">107</td>
+						<td th:text="${report.soldCount}">88</td>
+						<td th:text="${report.wastedCount}">19</td>
 						<td th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')}">1,240,000</td>
-						<td>100%</td>
+						<td th:text="${report.rescueRatePercent} + '%'">82%</td>
 					</tr>
 					</tfoot>
 				</table>
 			</div>
 		</div>
 
+		<!-- 리포트 파일 — 새 탭에서 열리고, 저장은 뷰어의 다운로드 버튼으로 -->
+		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-4)">
+			<a th:href="@{/store/sales-report/excel(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
+			   target="_blank" rel="noopener" class="btn btn--outline btn--block">Excel</a>
+			<a th:href="@{/store/sales-report/pdf(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
+			   target="_blank" rel="noopener" class="btn btn--outline btn--block">PDF</a>
+		</div>
 	</div>
 
 	<script th:inline="none">

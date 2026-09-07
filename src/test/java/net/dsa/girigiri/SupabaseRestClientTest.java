@@ -54,11 +54,12 @@ class SupabaseRestClientTest {
 	}
 
 	@Test
-	void SalesRow_of는_금액을_단가곱수량으로_채운다() {
-		SalesRow row = SalesRow.of(2L, LocalDate.of(2026, 9, 1), "크림빵", "베이커리", 3, 2500);
+	void SalesRow_파생값_계산() {
+		SalesRow row = SalesRow.of(2L, LocalDate.of(2026, 9, 1), "크림빵", "베이커리", 5, 4, 2800, 2000);
 
-		assertEquals(7500, row.amount());
-		assertEquals(List.of(2L, 3, 2500), List.of(row.storeId(), row.qty(), row.unitPrice()));
+		assertEquals(8000, row.revenue());        // 판매 4 × 할인가 2000
+		assertEquals(1, row.wastedQty());         // 등록 5 − 판매 4
+		assertEquals(3200, row.discountGiven());  // 판매 4 × (2800 − 2000)
 	}
 
 	/**
@@ -79,16 +80,17 @@ class SupabaseRestClientTest {
 		client.delete("sales", filter);   // 앞선 실패로 남은 게 있으면 정리
 		try {
 			client.insertAll("sales", List.of(
-					SalesRow.of(sentinelStoreId, LocalDate.of(2026, 9, 1), "smoke test bun", "bakery", 2, 3000),
-					SalesRow.of(sentinelStoreId, LocalDate.of(2026, 9, 2), "smoke test milk", "beverage", 1, 1500)
+					SalesRow.of(sentinelStoreId, LocalDate.of(2026, 9, 1), "smoke test bun", "bakery", 5, 4, 3000, 2000),
+					SalesRow.of(sentinelStoreId, LocalDate.of(2026, 9, 2), "smoke test milk", "beverage", 3, 2, 2000, 1500)
 			));
 
-			List<SalesRow> rows = client.select("sales", filter + "&order=sold_at.asc", SalesRow.class);
+			List<SalesRow> rows = client.select("sales", filter + "&order=sale_date.asc", SalesRow.class);
 
 			assertEquals(2, rows.size());
 			assertEquals(sentinelStoreId, rows.get(0).storeId());
-			assertEquals(LocalDate.of(2026, 9, 1), rows.get(0).soldAt());   // snake_case(sold_at) → LocalDate 역직렬화 확인
-			assertEquals(6000, rows.get(0).amount());
+			assertEquals(LocalDate.of(2026, 9, 1), rows.get(0).saleDate());   // snake_case(sale_date) → LocalDate 역직렬화 확인
+			assertEquals(4, rows.get(0).soldQty());
+			assertEquals(8000, rows.get(0).revenue());   // 판매 4 × 할인가 2000
 			assertTrue(rows.get(0).id() != null && rows.get(0).createdAt() != null);  // DB가 채운 값
 		} finally {
 			client.delete("sales", filter);

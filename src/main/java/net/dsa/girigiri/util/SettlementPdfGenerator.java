@@ -8,7 +8,7 @@ import java.io.IOException;
 
 /**
  * 매장 정산 PDF 생성 (WBS 2.0, 문창호). SettlementExcelGenerator와 데이터 소스(SettlementData)는
- * 동일, 출력 포맷만 PDF. StoreReportPdfGenerator와 같은 패턴 — HTML 문자열 → PDF 렌더링.
+ * 동일, 출력 포맷만 PDF. openhtmltopdf로 HTML 문자열 → PDF 렌더링 (다른 *PdfGenerator와 같은 패턴).
  *
  * ⚠️ openhtmltopdf는 HTML을 XML로 파싱한다 — &nbsp; 같은 명명 엔티티는 파싱 실패. 리터럴만 쓸 것.
  */
