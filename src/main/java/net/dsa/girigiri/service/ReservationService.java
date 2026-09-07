@@ -104,6 +104,8 @@ public class ReservationService {
 	// 안 건드리려고 폴링 방식을 쓰는 팀 컨벤션은 "남의 코드에 훅을 안 심는다"가 핵심이라 내 서비스
 	// 안에서 다른 사람이 만든 공용 서비스(NotificationService)를 호출하는 것과는 상충하지 않는다.
 	private final NotificationService notificationService;
+	// 문창호 (2026-09-07) — 픽업 완료 시 매출 리포트(Supabase)에 즉시 반영. best-effort, 실패해도 픽업엔 영향 없음.
+	private final SalesSyncService salesSyncService;
 
 	// 결제 실패 처리(재고복구·결제실패기록·예약취소)를 confirmPayment()의 메인 트랜잭션과
 	// 분리된 "독립 트랜잭션"으로 즉시 커밋하기 위한 템플릿.
@@ -379,7 +381,13 @@ public class ReservationService {
 
 		reservation.setStatus("picked");
 		reservation.setPickedAt(java.time.LocalDateTime.now());
-		return reservationRepository.save(reservation);
+		ReservationEntity saved = reservationRepository.save(reservation);
+
+		// 문창호 (2026-09-07) — 픽업이 확정됐으니 이 매장의 오늘 매출을 Supabase 매출 리포트에 반영.
+		// SalesSyncService가 예외를 삼키므로 여기서 픽업 흐름이 깨질 일은 없다.
+		salesSyncService.syncStoreToday(saved.getStoreId());
+
+		return saved;
 	}
 
 	/**

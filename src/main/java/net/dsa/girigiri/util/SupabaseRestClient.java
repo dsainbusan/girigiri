@@ -89,16 +89,10 @@ public class SupabaseRestClient {
 	/** POST /rest/v1/{table} — 행 여러 개를 한 번에 삽입. 반환값은 안 받는다(Prefer: return=minimal). */
 	public void insertAll(String table, List<?> rows) {
 		requireConfigured();
-		String json;
-		try {
-			json = objectMapper.writeValueAsString(rows);
-		} catch (IOException e) {
-			throw new IllegalStateException("Supabase 요청 직렬화 실패 (table=" + table + ")", e);
-		}
 		HttpRequest request = baseRequest(baseUrl + "/rest/v1/" + table)
 				.header("Content-Type", "application/json")
 				.header("Prefer", "return=minimal")
-				.POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+				.POST(HttpRequest.BodyPublishers.ofString(toJson(table, rows), StandardCharsets.UTF_8))
 				.build();
 		send(request, "삽입");
 	}
@@ -106,6 +100,29 @@ public class SupabaseRestClient {
 	/** 행 1개 삽입. */
 	public void insert(String table, Object row) {
 		insertAll(table, List.of(row));
+	}
+
+	/**
+	 * POST /rest/v1/{table}?on_conflict=... 로 upsert. onConflict 컬럼 조합에 대응하는
+	 * 행이 이미 있으면 통째로 덮어쓴다(merge-duplicates). 그 컬럼들은 테이블에 UNIQUE 제약이 있어야 한다.
+	 * 매출 동기화(SalesSyncService)가 "오늘 이 매장 이 상품" 행을 최신 등록/판매 수치로 계속 갱신하는 용도.
+	 */
+	public void upsert(String table, List<?> rows, String onConflict) {
+		requireConfigured();
+		HttpRequest request = baseRequest(baseUrl + "/rest/v1/" + table + "?on_conflict=" + onConflict)
+				.header("Content-Type", "application/json")
+				.header("Prefer", "resolution=merge-duplicates,return=minimal")
+				.POST(HttpRequest.BodyPublishers.ofString(toJson(table, rows), StandardCharsets.UTF_8))
+				.build();
+		send(request, "upsert");
+	}
+
+	private String toJson(String table, List<?> rows) {
+		try {
+			return objectMapper.writeValueAsString(rows);
+		} catch (IOException e) {
+			throw new IllegalStateException("Supabase 요청 직렬화 실패 (table=" + table + ")", e);
+		}
 	}
 
 	/** DELETE /rest/v1/{table}?{query} — 조건에 맞는 행 삭제. 데모 데이터 초기화용. */

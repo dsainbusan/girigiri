@@ -5,7 +5,13 @@
 --   회수 매출 = sold_qty * sale_price / 폐기 = registered_qty - sold_qty
 --   구제율 = sold_qty / registered_qty / CO2 = 카테고리 계수 (SalesReportService)
 -- store_id 2 = 창호베이커리(실계정), 5 = dashfix 테스트. 기준일 2026-09-07(월).
+--
+-- ★ 이 제약이 있어야 SalesSyncService의 upsert(픽업 완료/스케줄러 → 오늘 매출 반영)가 동작한다.
+--   테이블 새로 만들었으면 한 번만 실행하면 된다.
 -- =====================================================================
+alter table public.sales
+  add constraint sales_store_date_product_uniq unique (store_id, sale_date, product_name);
+
 delete from public.sales where store_id in (2, 5);
 insert into public.sales (store_id, sale_date, product_name, category, registered_qty, sold_qty, original_price, sale_price) values
   (2, '2026-08-19', '크림빵', '베이커리', 4, 3, 2800, 2000),
