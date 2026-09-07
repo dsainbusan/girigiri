@@ -37,14 +37,50 @@ public class SuperAdminStoreService {
 
 	// 변경됨 — 왜: "승인대기/매장목록을 따로 나누지 말고 전체 하나로, 대기 매장은 필터로 보게 해달라"는
 	// 요청 — REJECTED만 빼고 전부 한 리스트로 묶은 뒤, filter=PENDING일 때만 대기 매장으로 좁힌다.
+	// 추가됨 (2026-09-08) — 왜: 매장 검색 기능 요청. SuperAdminMemberService.findFilteredMembers()와
+	// 같은 자리(필터 전에)에서 걸러낸다 — 매장명/주소/연락처 중 하나라도 검색어를 포함하면 매칭.
+	// 이미 findAll() 후 자바에서 필터링하던 기존 방식 그대로라, 리포지토리 쿼리 메서드는 새로 안 만들었다.
 	@Transactional(readOnly = true)
-	public List<StoreEntity> findStores(String normalizedFilter) {
+	public List<StoreEntity> findStores(String q, String normalizedFilter) {
+		String keyword = q == null ? "" : q.trim();
 		List<StoreEntity> all = storeRepository.findAll().stream()
 				.filter(s -> !StoreEntity.STATUS_REJECTED.equals(s.getApprovalStatus()))
+				.filter(s -> keyword.isEmpty() || matchesKeyword(s, keyword))
 				.toList();
 		return "PENDING".equals(normalizedFilter)
 				? all.stream().filter(s -> StoreEntity.STATUS_PENDING.equals(s.getApprovalStatus())).toList()
 				: all;
+	}
+
+	private boolean matchesKeyword(StoreEntity store, String keyword) {
+		String lower = keyword.toLowerCase();
+		return containsIgnoreCase(store.getStoreName(), lower)
+				|| containsIgnoreCase(store.getAddress(), lower)
+				|| containsIgnoreCase(store.getPhone(), lower);
+	}
+
+	private boolean containsIgnoreCase(String value, String lowerKeyword) {
+		return value != null && value.toLowerCase().contains(lowerKeyword);
+	}
+
+	// 추가됨 (2026-09-08) — 왜: "선택 매장 정지/정지 해제" 요청. SuperAdminMemberService.bulkSuspend/
+	// bulkUnsuspend와 동일한 패턴.
+	@Transactional
+	public void bulkSuspend(List<Long> ids) {
+		if (ids != null && !ids.isEmpty()) {
+			List<StoreEntity> targets = storeRepository.findAllById(ids);
+			targets.forEach(s -> s.setStatus(StoreEntity.STATUS_SUSPENDED));
+			storeRepository.saveAll(targets);
+		}
+	}
+
+	@Transactional
+	public void bulkUnsuspend(List<Long> ids) {
+		if (ids != null && !ids.isEmpty()) {
+			List<StoreEntity> targets = storeRepository.findAllById(ids);
+			targets.forEach(s -> s.setStatus(StoreEntity.STATUS_ACTIVE));
+			storeRepository.saveAll(targets);
+		}
 	}
 
 	/**

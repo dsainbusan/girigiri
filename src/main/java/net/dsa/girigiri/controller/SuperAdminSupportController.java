@@ -1,11 +1,15 @@
 package net.dsa.girigiri.controller;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.dto.SupportReportsDataDto;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.service.InquiryService;
 import net.dsa.girigiri.service.LookupService;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.SuperAdminSupportService;
 import net.dsa.girigiri.util.PaginationUtil;
 import org.springframework.stereotype.Controller;
@@ -15,6 +19,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) "신고·문의(Support)" 화면 라우팅.
@@ -31,6 +37,7 @@ public class SuperAdminSupportController {
 	private final SuperAdminSupportService supportService;
 	private final InquiryService inquiryService;
 	private final LookupService lookupService;
+	private final ReservationService reservationService;
 
 	/**
 	 * 신고접수/매장문의/유저문의를 탭으로 나눠 보여준다 — 다른 필터 탭들과 동일하게 쿼리파라미터(tab)로
@@ -96,6 +103,61 @@ public class SuperAdminSupportController {
 	@PostMapping("/complaints/{id}/reply")
 	public String replyToComplaint(@PathVariable Long id, @RequestParam String content) {
 		supportService.replyToComplaint(id, content);
+		return "redirect:/superadmin/complaints/" + id;
+	}
+
+	/**
+	 * 신고 상세에서 픽업 코드를 입력하는 동안, 어떤 예약을 취소하려는 건지 미리 보여주는 조회 전용
+	 * API — ReservationPickupController#pickupLookup과 같은 DTO(PickupLookupResponseDto) 재사용.
+	 * 점주용 매장 취소 조회(ReservationStoreController#storeCancelLookup)와 달리 매장 소유 제한이
+	 * 없다 — 신고는 어느 매장의 예약이든 대상이 될 수 있어서 운영자는 전체 매장을 조회할 수 있어야 한다.
+	 */
+	@GetMapping("/complaints/reservation-lookup")
+	@ResponseBody
+	public PickupLookupResponseDto reservationLookup(@RequestParam String pickupCode) {
+		ReservationEntity reservation = reservationService.findByPickupCode(pickupCode).orElse(null);
+		if (reservation == null) {
+			return PickupLookupResponseDto.notFound();
+		}
+
+		String blockedMessage = switch (reservation.getStatus()) {
+			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
+			case "cancelled" -> "이미 취소된 예약이에요.";
+			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
+			default -> null;   // "pending", "confirmed", "ready"만 정상 진행
+		};
+		if (blockedMessage != null) {
+			return PickupLookupResponseDto.blocked(blockedMessage);
+		}
+
+		String storeName = reservationService.findStoreById(reservation.getStoreId())
+				.map(store -> store.getStoreName())
+				.orElse("-");
+
+		return PickupLookupResponseDto.success(storeName, reservation.getProductName(),
+				reservation.getReservedQuantity(), reservation.getTotalPrice());
+	}
+
+	/**
+	 * 신고 처리로 예약을 바로 취소 — ReservationService.cancelByAdmin이 환불(PortOne)·쿠폰 복구까지
+	 * 담당한다. 시간 제한 없음, cancelledBy="ADMIN"으로 남아서 매장 신뢰도 통계(cancelledBy="STORE"
+	 * 기준)엔 안 잡힌다. 이 신고를 처리했다는 의미로 답변(reply)과는 별개 액션이라, 상태를 자동으로
+	 * RESOLVED로 바꾸지는 않는다 — 운영자가 답변까지 남겨야 처리완료로 넘어간다.
+	 */
+	@PostMapping("/complaints/{id}/cancel-reservation")
+	public String cancelReservation(@PathVariable Long id,
+	                                 @RequestParam String pickupCode,
+	                                 @RequestParam(required = false) String reason,
+	                                 RedirectAttributes redirectAttributes) {
+		lookupService.getComplaint(id);
+
+		ReservationEntity target = reservationService.findByPickupCode(pickupCode)
+				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
+
+		ReservationEntity cancelled = reservationService.cancelByAdmin(target.getId(), reason);
+
+		redirectAttributes.addFlashAttribute("cancelledMessage",
+				cancelled.getProductName() + " (" + cancelled.getPickupCode() + ") 예약이 취소되고 환불 처리됐어요.");
 		return "redirect:/superadmin/complaints/" + id;
 	}
 }

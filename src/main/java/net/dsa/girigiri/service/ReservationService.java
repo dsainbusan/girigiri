@@ -591,6 +591,45 @@ public class ReservationService {
 	}
 
 	/**
+	 * 운영자(슈퍼어드민)가 신고 처리 중 예약을 취소한다 — 손님/매장 어느 쪽 귀책인지 딱 잘라 말하기
+	 * 애매한 분쟁 조정 성격이라 cancelByStore와는 다르게 다룬다.
+	 * 2026-09-07 신설 — 왜: 신고 상세 화면에 "바로 취소" 버튼을 붙여달라는 요청. 지금까지 슈퍼어드민은
+	 * 신고에 텍스트 답변만 남길 뿐 실제 예약/결제를 손댈 방법이 없었다(신고 처리로 취소했다고 답변은
+	 * 남기는데 실제 데이터는 안 바뀌는 문제).
+	 * - 시간 제한 없음(cancelByStore와 동일) — 신고는 보통 정상 취소 창(주문 후 30분/마감 30분 전)이
+	 *   이미 지난 뒤에 처리되므로 cancelReservation(손님용)의 시간 제한을 걸면 대부분 막힌다.
+	 * - cancelledBy="ADMIN"으로 남긴다. "STORE"를 재사용하면 매장 귀책이 아닌 취소까지
+	 *   countByStoreIdAndCancelledBy(storeId, "STORE") 기준 매장 신뢰도 통계에 섞여 들어간다.
+	 * - 보상 쿠폰은 자동 지급하지 않는다 — 매장 귀책이 확정된 상황(cancelByStore)과 달리, 신고 처리는
+	 *   경우에 따라 손님 귀책일 수도 있어서 보상 여부는 운영자가 답변에서 별도로 판단할 몫으로 남긴다.
+	 * - 재고는 cancelByStore처럼 복구하지 않는다 — 분쟁 조정 취소는 재고 상태와 무관한 경우가 많고,
+	 *   실제로 재고를 다시 팔 수 있는지는 매장이 재고 관리 화면에서 직접 판단해야 더 정확하다.
+	 */
+	@Transactional
+	public ReservationEntity cancelByAdmin(Long reservationId, String reason) {
+		ReservationEntity reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+
+		checkCancellableState(reservation);
+
+		String resolvedReason = (reason == null || reason.isBlank()) ? "운영자 처리로 취소됨" : reason;
+
+		markPaymentCancelled(reservationId, resolvedReason);
+
+		reservation.setStatus("cancelled");
+		reservation.setCancelledBy("ADMIN");
+		reservation.setCancelReason(resolvedReason);
+		ReservationEntity saved = reservationRepository.save(reservation);
+
+		// 쓴 쿠폰이 있으면 복구 — 손님 본인 노쇼(processNoShows)를 제외한 모든 취소 경로와 동일한 정책.
+		couponService.restore(reservation.getCouponId());
+
+		receiptService.generateReceipt(reservationId);
+
+		return saved;
+	}
+
+	/**
 	 * 매장 취소 화면용 "취소 가능한 예약" 목록 — checkCancellableState와 동일한 기준(픽업/취소/노쇼가
 	 * 아닌 예약)으로, 오래된 주문부터 보여준다. 픽업 코드를 직접 타이핑하지 않고 여기서 골라 취소한다.
 	 * 변경됨 — 왜: storeId 조건이 없어서 전체 매장 예약이 다 섞여서 나오던 버그를 고쳤다.
