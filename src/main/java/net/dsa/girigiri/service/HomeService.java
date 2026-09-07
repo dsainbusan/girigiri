@@ -43,6 +43,7 @@ public class HomeService {
 	public List<StoreMapDto> getMapStores() {
 		return storeRepository.findAll().stream()
 				.filter(store -> store.getLatitude() != null && store.getLongitude() != null)
+				.filter(store -> !StoreEntity.STATUS_SUSPENDED.equals(store.getStatus()))
 				.map(this::toMapDto)
 				.toList();
 	}
@@ -90,6 +91,7 @@ public class HomeService {
 				));
 
 		Map<Long, StoreEntity> storesById = storeRepository.findAllById(bestProductByStoreId.keySet()).stream()
+				.filter(store -> !StoreEntity.STATUS_SUSPENDED.equals(store.getStatus()))
 				.collect(Collectors.toMap(StoreEntity::getId, store -> store));
 
 		Map<Long, StoreHoursUtil.ClosingInfo> closingInfoByStoreId = storesById.entrySet().stream()

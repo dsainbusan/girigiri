@@ -49,6 +49,7 @@ public class SearchService {
 	public List<StoreCardDto> search(String keyword, String sort, String priceBucket, String pickupBucket,
 									  Set<Long> likedStoreIds, Double userLat, Double userLng) {
 		Map<Long, StoreEntity> storesById = storeRepository.findAll().stream()
+				.filter(s -> !StoreEntity.STATUS_SUSPENDED.equals(s.getStatus()))
 				.collect(Collectors.toMap(StoreEntity::getId, s -> s));
 
 		String kw = keyword == null ? "" : keyword.trim().toLowerCase();
