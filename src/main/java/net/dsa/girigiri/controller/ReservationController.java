@@ -13,6 +13,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.ReservationAccessDeniedException;
+import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
@@ -23,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
@@ -61,6 +63,11 @@ public class ReservationController {
 	private final ReservationService reservationService;
 	private final LookupService lookupService;
 	private final PortOneClient portOneClient;
+	// 추가됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동) — 체크아웃 화면에 "지금 쓸 수 있는 쿠폰" 목록을
+	// 보여주기 위해서만 쓴다. 실제 검증/사용 처리는 ReservationService.prepareReservation 안에서
+	// CouponService를 직접 호출하므로(레이어 규칙: 비즈니스 로직은 서비스에), 여기 컨트롤러는 화면에
+	// 보여줄 목록을 조회하는 것뿐이다.
+	private final CouponService couponService;
 
 	// 변경됨 (2026-09-01) — 왜: 문창호님의 로그인/세션 작업(OAuth2LoginSuccessHandler +
 	// AuthSessionInitializer)이 이미 끝나서 세션에 실제 로그인한 사용자의 userId가 들어있다.
@@ -84,6 +91,7 @@ public class ReservationController {
 	@GetMapping("/checkout")
 	public String checkout(@RequestParam Long productId,
 							@RequestParam(defaultValue = "1") int quantity,
+							HttpSession session,
 							Model model) {
 		ProductEntity product = lookupService.getProduct(productId);
 		StoreEntity store = lookupService.getStore(product.getStoreId());
@@ -127,6 +135,10 @@ public class ReservationController {
 		model.addAttribute("portOneStoreId", portOneClient.getStoreId());
 		model.addAttribute("portOneChannelKey", portOneClient.getChannelKey());
 
+		// 추가됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동) — 지금 이 회원이 실제로 고를 수 있는
+		// (미사용 + 미만료) 쿠폰만 내려준다. 품절 화면에서는 어차피 결제 자체를 못 하니 조회를 건너뛴다.
+		model.addAttribute("usableCoupons", soldOut ? List.of() : couponService.listUsableForUser(resolveCurrentUserId(session)));
+
 		return "reservationView/checkout";
 	}
 
@@ -139,10 +151,19 @@ public class ReservationController {
 	 *  좀 지나 실제 제출하는 사이에 마감시간을 넘겨버렸을 수도 있어서, 진짜로 예약을 만들기
 	 *  직전에 다시 확인한다.)
 	 */
+	/**
+	 * 변경됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동) — couponId를 선택했으면 같이 넘겨서
+	 * ReservationService.prepareReservation이 검증 + 할인 계산 + 사용 처리까지 하게 한다. 쿠폰이
+	 * 이미 쓴 거거나 기한이 지났으면 ResponseStatusException이 올라오는데, 이 API는 AJAX라 그대로
+	 * 두면 GlobalExceptionHandler가 HTML 에러 페이지 이름을 돌려줘서 프론트의 JSON 파싱이 깨진다 —
+	 * confirmPayment()가 PaymentVerificationException을 잡는 것과 동일한 패턴으로 여기서 직접 잡아
+	 * success:false로 응답한다 (재고는 여기까지 안 왔거나, 왔어도 서비스 내부 트랜잭션이 롤백해준다).
+	 */
 	@PostMapping("/prepare")
 	@ResponseBody
 	public ReservationPrepareResponseDto prepare(@RequestParam Long productId,
 												  @RequestParam(defaultValue = "1") int quantity,
+												  @RequestParam(required = false) Long couponId,
 												  HttpSession session) {
 		ProductEntity product = lookupService.getProduct(productId);
 		StoreEntity store = lookupService.getStore(product.getStoreId());
@@ -156,12 +177,17 @@ public class ReservationController {
 
 		LocalDateTime pickupTime = PickupAvailabilityUtil.earliestPickupTime(now, prepTimeMinutes);
 
-		ReservationEntity reservation = reservationService.prepareReservation(
-				resolveCurrentUserId(session), productId, quantity, pickupTime);
+		ReservationEntity reservation;
+		try {
+			reservation = reservationService.prepareReservation(
+					resolveCurrentUserId(session), productId, quantity, pickupTime, couponId);
+		} catch (ResponseStatusException e) {
+			return ReservationPrepareResponseDto.failure(e.getReason() != null ? e.getReason() : "쿠폰을 사용할 수 없어요.");
+		}
 
 		PaymentEntity payment = reservationService.getPaymentByReservationId(reservation.getId());
 
-		return new ReservationPrepareResponseDto(
+		return ReservationPrepareResponseDto.success(
 				reservation.getId(), payment.getMerchantUid(), reservation.getTotalPrice(), product.getName());
 	}
 

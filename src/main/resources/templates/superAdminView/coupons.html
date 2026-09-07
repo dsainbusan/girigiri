@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--/*
+  프로모션 쿠폰 캠페인 관리 — 2026-09-07 신규 (송채현). /superadmin/coupons 로 접속.
+  notices.html과 동일한 .data-table 패턴을 따른다. 발급 인원(claimedCount)은
+  SuperAdminCouponService가 CouponRepository로 계산해서 내려준다.
+
+  추가됨 (2026-09-07, 채채 확인) — 웰컴/매장취소보상 쿠폰 할인율("쿠폰 정책") 편집 폼을 위에 추가했다.
+  프로모션 캠페인처럼 여러 건이 아니라 값 2개뿐이라 별도 페이지 없이 여기 목록 화면 위에 뒀다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('쿠폰 캠페인 관리', ~{:: #content}, 'coupons', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <section class="mb-16">
+    <h2 style="margin-bottom: 4px">쿠폰 정책 — 웰컴 · 매장취소보상 할인율</h2>
+    <p class="text-muted text-muted--sm" style="margin-bottom: 12px">
+      회원가입 시 자동 발급되는 웰컴 쿠폰과, 매장 사정으로 예약이 취소됐을 때 자동 발급되는 보상 쿠폰의
+      할인율이에요. 프로모션 코드 쿠폰과 다르게 회원이 직접 받는 게 아니라 시스템이 자동으로 발급하지만,
+      몇 %를 줄지는 이 화면에서 슈퍼어드민이 정해요.
+    </p>
+    <p class="form-error" th:if="${param.error != null and param.error[0] == 'policy'}">할인율은 1~90 사이 숫자로 입력해 주세요.</p>
+    <p class="text-muted text-muted--sm" th:if="${param.saved}">저장되었습니다.</p>
+    <form th:action="@{/superadmin/coupons/policy}" method="post" class="form-narrow">
+      <div class="field-group">
+        <label class="field-group__label" for="welcomeDiscountRate">웰컴 쿠폰 할인율(%) <span class="req">*</span></label>
+        <input class="field" type="number" id="welcomeDiscountRate" name="welcomeDiscountRate" min="1" max="90" required
+               th:value="${policy.welcomeDiscountRate}">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="compensationDiscountRate">매장취소 보상 쿠폰 할인율(%) <span class="req">*</span></label>
+        <input class="field" type="number" id="compensationDiscountRate" name="compensationDiscountRate" min="1" max="90" required
+               th:value="${policy.compensationDiscountRate}">
+      </div>
+      <button type="submit" class="btn btn--primary btn--sm">정책 저장</button>
+    </form>
+  </section>
+
+  <div class="toolbar">
+    <p class="result-count result-count--inline">전체 캠페인 <b th:text="${#lists.size(campaigns)}">0</b>건</p>
+    <div class="toolbar__spacer"></div>
+    <a class="btn btn--primary btn--sm" th:href="@{/superadmin/coupons/new}"><svg class="icon"><use href="#i-pencil"/></svg>새 캠페인 만들기</a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:22%"><col style="width:18%"><col style="width:12%"><col style="width:16%"><col style="width:12%"><col style="width:12%"><col style="width:8%">
+      </colgroup>
+      <thead>
+        <tr><th>캠페인명</th><th>코드</th><th>할인율</th><th>만료일</th><th>발급 인원</th><th>상태</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(campaigns)}">
+          <td colspan="7" class="table-empty">등록된 쿠폰 캠페인이 없습니다.</td>
+        </tr>
+        <tr th:each="c : ${campaigns}">
+          <td class="cell-name" th:text="${c.name}">추석 프로모션</td>
+          <td th:text="${c.code}">AUTUMN2026</td>
+          <td th:text="${c.discountRate} + '%'">10%</td>
+          <td th:text="${c.expiresAtLabel}">2026-09-30</td>
+          <td th:text="${c.claimedCount} + '명'">0명</td>
+          <td>
+            <span class="badge badge--success" th:if="${c.statusLabel == '진행중'}">진행중</span>
+            <span class="badge badge--neutral" th:if="${c.statusLabel == '비활성'}">비활성</span>
+            <span class="badge badge--danger" th:if="${c.statusLabel == '기한 만료'}">기한 만료</span>
+          </td>
+          <td>
+            <form th:action="@{/superadmin/coupons/{id}/toggle(id=${c.id})}" method="post" style="display:inline">
+              <button type="submit" class="btn btn--sm btn--ghost" th:text="${c.active} ? '끄기' : '켜기'">끄기</button>
+            </form>
+            <form th:action="@{/superadmin/coupons/{id}/delete(id=${c.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('이 캠페인을 삭제할까요?')">
+              <button type="submit" class="btn btn--sm btn--ghost"><svg class="icon"><use href="#i-trash"/></svg></button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

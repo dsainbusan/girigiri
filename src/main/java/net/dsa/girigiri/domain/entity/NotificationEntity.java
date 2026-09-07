@@ -36,6 +36,13 @@ public class NotificationEntity {
 	public static final String TYPE_ADMIN_NEW_INQUIRY = "ADMIN_NEW_INQUIRY";       // 새 문의 등록
 	public static final String TYPE_ADMIN_NEW_RESERVATION = "ADMIN_NEW_RESERVATION"; // 새 예약 등록
 
+	// 추가됨 (송채현, 2026-09-07) — 왜: 신규 가입 시 자동 발급되는 웰컴 쿠폰 안내용. 위 ADMIN_* 추가 때와
+	// 동일하게 스키마 변경 없이 타입 문자열만 추가한다 (WelcomeCouponScheduler 참고).
+	public static final String TYPE_WELCOME_COUPON = "WELCOME_COUPON";             // 웰컴 쿠폰 발급 안내
+	// 추가됨 (송채현, 2026-09-07) — 왜: 매장 귀책으로 예약이 취소돼 보상 쿠폰이 지급됐을 때 안내용
+	// (ReservationService#cancelByStore 참고).
+	public static final String TYPE_STORE_CANCEL_COUPON = "STORE_CANCEL_COUPON";   // 매장 취소 보상 쿠폰 지급
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

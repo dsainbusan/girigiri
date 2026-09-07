@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--/*
+  새 쿠폰 캠페인 만들기 — 2026-09-07 신규 (송채현). /superadmin/coupons/new 로 접속.
+  회원은 여기서 만든 code를 앱에서 직접 입력해 "발급받기" 한다(CouponController, 회원용 화면 별도).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('새 쿠폰 캠페인', ~{:: #content}, 'coupons', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/coupons}">&larr; 쿠폰 캠페인 목록</a>
+
+  <p class="form-error" th:if="${param.error == 'code'}">이미 사용 중인 코드예요.</p>
+  <p class="form-error" th:if="${param.error != null and param.error != 'code'}">필수 항목을 모두 올바르게 입력해 주세요.</p>
+
+  <form th:action="@{/superadmin/coupons/new}" method="post" class="form-narrow">
+    <div class="field-group">
+      <label class="field-group__label" for="name">캠페인명 <span class="req">*</span></label>
+      <input class="field" type="text" id="name" name="name" required maxlength="100" placeholder="예: 추석 프로모션 (관리용, 회원에게 안 보여요)">
+    </div>
+
+    <div class="field-group">
+      <label class="field-group__label" for="code">발급 코드 <span class="req">*</span></label>
+      <input class="field" type="text" id="code" name="code" required maxlength="30" placeholder="예: AUTUMN2026" style="text-transform:uppercase">
+      <p class="text-muted text-muted--sm">회원이 앱에서 이 코드를 입력하면 쿠폰을 받아요. 대소문자 구분 없이 저장돼요.</p>
+    </div>
+
+    <div class="field-group">
+      <label class="field-group__label" for="discountRate">할인율(%) <span class="req">*</span></label>
+      <input class="field" type="number" id="discountRate" name="discountRate" required min="1" max="90" placeholder="1~90">
+    </div>
+
+    <div class="field-group">
+      <label class="field-group__label" for="expiresAt">만료일 <span class="req">*</span></label>
+      <input class="field" type="date" id="expiresAt" name="expiresAt" required>
+      <p class="text-muted text-muted--sm">발급받은 쿠폰은 이 날짜 자정까지 쓸 수 있어요. 회원마다 발급 시점이 달라도 만료일은 동일해요.</p>
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block mt-24">캠페인 만들기</button>
+  </form>
+
+</div>
+</body>
+</html>
