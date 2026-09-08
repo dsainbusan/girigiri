@@ -38,4 +38,14 @@ public class EmailUserPrincipal implements UserDetails, UserPrincipal {
 	public String getUsername() {
 		return user.getEmail();
 	}
+
+	// 추가됨 (2026-09-08) — 왜: 코드 감사에서 "회원 정지"가 실제로 로그인을 막지 않는다는 게
+	// 발견됐다(SuperAdminMemberService.suspend()가 status를 SUSPENDED로 바꾸긴 하는데, 로그인
+	// 경로 어디서도 이 값을 안 읽고 있었음). DaoAuthenticationProvider는 인증 성공 판정 전에
+	// isEnabled()를 확인해서 false면 DisabledException을 던지고 formLogin의 failureUrl로 보낸다 —
+	// Spring Security의 표준 훅이라 여기 하나만 고치면 이메일 로그인 경로는 해결된다.
+	@Override
+	public boolean isEnabled() {
+		return !UserEntity.STATUS_SUSPENDED.equals(user.getStatus());
+	}
 }
