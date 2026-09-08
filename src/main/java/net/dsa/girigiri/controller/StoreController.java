@@ -193,7 +193,7 @@ public class StoreController {
 			return "redirect:/auth/owner-apply";
 		}
 
-		if (!storeService.isEditValid(category, phone)) {
+		if (!storeService.isEditValid(category, phone, operatingHours)) {
 			return "redirect:/store/edit?error";
 		}
 

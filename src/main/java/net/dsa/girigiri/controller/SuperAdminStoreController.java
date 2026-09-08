@@ -208,7 +208,7 @@ public class SuperAdminStoreController {
 	                               @RequestParam(required = false) Double longitude) {
 		lookupService.getStore(id);
 
-		if (!storeService.isEditValid(storeName, category, phone, address)) {
+		if (!storeService.isEditValid(storeName, category, phone, address, operatingHours)) {
 			return "redirect:/superadmin/stores/" + id + "/edit?error";
 		}
 

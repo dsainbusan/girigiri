@@ -171,7 +171,7 @@ public class AuthController {
 			return "redirect:/auth/loginForm";
 		}
 
-		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone)) {
+		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone, operatingHours)) {
 			return "redirect:/auth/owner-apply?error";
 		}
 

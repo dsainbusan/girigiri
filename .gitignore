@@ -47,3 +47,5 @@ receipts/
 chatbot-test/
 receipts/test-output-*
 .gitignore
+# Playwright MCP 스크린샷/스냅샷 산출물
+.playwright-mcp/

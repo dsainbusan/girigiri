@@ -1,0 +1,52 @@
+/*
+ * 로그인/가입(authView) 화면 전용 스타일.
+ * 공통 파일(components.css 등, 조장 오너)은 건드리지 않고 여기서만 쓰는 것만 둔다.
+ * tokens.css의 CSS 변수를 그대로 재사용한다.
+ */
+
+/* 소셜/이메일 시작하기 버튼 — 라벨은 가운데, 브랜드 아이콘은 왼쪽에 고정.
+   .btn--block(display:flex; justify-content:center)을 안 깨려고 아이콘은 absolute로 띄운다. */
+.oauth-btn {
+	position: relative;
+}
+.oauth-btn__ico {
+	position: absolute;
+	left: 16px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.oauth-btn__ico svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+/* 3개 소셜 버튼과 "이메일" 사이 구분선 — 소셜이 기본, 이메일은 대안이라는 위계를 준다. */
+.oauth-or {
+	display: flex;
+	align-items: center;
+	gap: var(--s-3);
+	margin: var(--s-4) 0;
+	color: var(--c-text-mut);
+	font-size: var(--fs-xs);
+}
+.oauth-or::before,
+.oauth-or::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--c-line);
+}
+
+/* 이메일 버튼 — 소셜 버튼보다 한 톤 낮게 (테두리 없이 옅은 회색). 구글 버튼(흰 배경 + 테두리)과 확실히 달라 보이게. */
+.oauth-email {
+	background: var(--c-bg);
+	color: var(--c-text-sub);
+	border: none;
+	font-weight: var(--fw-bold);
+}
