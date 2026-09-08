@@ -31,11 +31,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 점주용 상품(재고) 등록/수정/삭제/품절 화면 — WBS 3.0.
+ * 점주용 상품(재고) 목록/등록/수정 화면 — WBS 3.0.
  * (원래 CLAUDE.md 역할표상 김태훈 담당 → 2026-08-26 문창호 인계.)
  *
  * 라우팅(/store/products/**)은 StoreController(@RequestMapping("/store"))와 겹치지 않는다.
  * CRUD·소유권 검증·할인가 자동계산·사진 저장은 ProductService가 담당한다.
+ *
+ * 2026-09-08 — 발행/보류/품절/판매재개/삭제 같은 단순 상태 전환 액션 5개는
+ * StoreProductActionController로 분리했다(코드 감사에서 이 파일이 300줄 넘김 지적, 레이어 규칙
+ * 정리와 같은 취지). URL은 그대로라 하나도 안 바뀐다.
  */
 @Controller
 @RequestMapping("/store/products")
@@ -193,57 +197,9 @@ public class StoreProductController {
 		return publishedOk ? "redirect:/store/products" : "redirect:/store/products?tooLate";
 	}
 
-	@PostMapping("/{id}/publish")
-	public String publish(@PathVariable Long id, HttpSession session) {
-		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		boolean ok = productService.publishDraft(ownerId, id);
-		return ok ? "redirect:/store/products" : "redirect:/store/products?tooLate";
-	}
-
-	@PostMapping("/{id}/discard")
-	public String discard(@PathVariable Long id, HttpSession session) {
-		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		productService.discardDraft(ownerId, id);
-		return "redirect:/store/products";
-	}
-
-	@PostMapping("/{id}/soldout")
-	public String soldOut(@PathVariable Long id, HttpSession session) {
-		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		productService.markSoldOut(ownerId, id);
-		return "redirect:/store/products";
-	}
-
-	@PostMapping("/{id}/resume")
-	public String resume(@PathVariable Long id, HttpSession session) {
-		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		productService.resumeSelling(ownerId, id);
-		return "redirect:/store/products";
-	}
-
-	@PostMapping("/{id}/delete")
-	public String delete(@PathVariable Long id, HttpSession session) {
-		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		productService.delete(ownerId, id);
-		return "redirect:/store/products";
-	}
-
 	// ---------------------------------------------------------------------
+	// 발행/보류/품절/판매재개/삭제 액션은 StoreProductActionController로 옮겼다
+	// (2026-09-08, 코드 감사 — 이 파일이 자체 300줄 분리 기준을 넘겨서 분리).
 
 	private StockItemDto toStockItem(ProductEntity p, String category) {
 		int discountRate = DiscountRateCalculator.fromPrices(p.getOriginalPrice(), p.getDiscountedPrice());
