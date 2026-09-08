@@ -7,6 +7,9 @@ import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.SuperAdminStoreService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,11 +17,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) "매장 관리" 화면 라우팅.
@@ -36,9 +43,10 @@ public class SuperAdminStoreController {
 	private String kakaoMapJsKey;
 
 	@GetMapping("/stores")
-	public String stores(@RequestParam(required = false) String filter, Model model) {
+	public String stores(@RequestParam(required = false) String q,
+	                      @RequestParam(required = false) String filter, Model model) {
 		String normalizedFilter = "PENDING".equals(filter) ? "PENDING" : null;
-		List<StoreEntity> stores = storeService.findStores(normalizedFilter);
+		List<StoreEntity> stores = storeService.findStores(q, normalizedFilter);
 
 		// 대기 매장은 "대기" 배지로 고정 표시하니 영업시간 기준 영업중/휴업 판정은 대기가 아닌 매장만 계산.
 		Map<Long, Boolean> openStatusMap = new HashMap<>();
@@ -54,7 +62,74 @@ public class SuperAdminStoreController {
 		model.addAttribute("stores", stores);
 		model.addAttribute("openStatusMap", openStatusMap);
 		model.addAttribute("filter", normalizedFilter);
+		model.addAttribute("q", q);
 		return "superAdminView/stores";
+	}
+
+	/**
+	 * 검색/필터 조건 그대로 CSV로 내려받는다 — SuperAdminMemberController#exportMembers와 동일 패턴
+	 * (BOM 붙여서 엑셀에서 한글 안 깨지게, csvField로 큰따옴표 이스케이프).
+	 * 목록 표엔 "영업중/휴업"(영업시간 기준 실시간 계산값)이 배지로 보이지만, CSV엔 원본 승인상태
+	 * (PENDING/APPROVED/REJECTED)만 담는다 — members.csv도 계산값이 아니라 저장된 status 그대로 담는
+	 * 것과 같은 이유(내려받은 시점 이후엔 영업중/휴업 판정이 계속 바뀌는 값이라 스냅샷으로 안 맞음).
+	 */
+	@GetMapping("/stores/export")
+	public ResponseEntity<byte[]> exportStores(@RequestParam(required = false) String q,
+	                                            @RequestParam(required = false) String filter) {
+		List<StoreEntity> stores = storeService.findStores(q, "PENDING".equals(filter) ? "PENDING" : null);
+
+		DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+		StringBuilder csv = new StringBuilder("﻿");
+		csv.append("매장 번호,매장명,카테고리,주소,연락처,승인상태,가입일\n");
+		for (StoreEntity s : stores) {
+			csv.append(s.getId()).append(',')
+					.append(csvField(s.getStoreName())).append(',')
+					.append(csvField(s.getCategory())).append(',')
+					.append(csvField(s.getAddress())).append(',')
+					.append(csvField(s.getPhone())).append(',')
+					.append(csvField(s.getApprovalStatus())).append(',')
+					.append(s.getCreatedAt() != null ? s.getCreatedAt().format(dateFormat) : "")
+					.append('\n');
+		}
+
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=stores.csv")
+				.contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+				.body(csv.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private String csvField(String value) {
+		String safe = value == null ? "" : value.replace("\"", "\"\"");
+		return "\"" + safe + "\"";
+	}
+
+	/**
+	 * 표 왼쪽 체크박스로 여러 매장을 골라 한 번에 정지/정지 해제 — SuperAdminMemberController의
+	 * bulk-suspend/bulk-unsuspend와 동일 패턴. q/filter를 리다이렉트에 실어 보내서 검색·필터 걸어둔
+	 * 채로 처리해도 그 화면으로 돌아간다.
+	 */
+	@PostMapping("/stores/bulk-suspend")
+	public String bulkSuspendStores(@RequestParam(required = false) List<Long> ids,
+	                                 @RequestParam(required = false) String q,
+	                                 @RequestParam(required = false) String filter) {
+		storeService.bulkSuspend(ids);
+		return "redirect:" + buildStoresRedirectUri(q, filter);
+	}
+
+	@PostMapping("/stores/bulk-unsuspend")
+	public String bulkUnsuspendStores(@RequestParam(required = false) List<Long> ids,
+	                                   @RequestParam(required = false) String q,
+	                                   @RequestParam(required = false) String filter) {
+		storeService.bulkUnsuspend(ids);
+		return "redirect:" + buildStoresRedirectUri(q, filter);
+	}
+
+	private String buildStoresRedirectUri(String q, String filter) {
+		return UriComponentsBuilder.fromPath("/superadmin/stores")
+				.queryParamIfPresent("q", Optional.ofNullable(q).filter(s -> !s.isBlank()))
+				.queryParamIfPresent("filter", Optional.ofNullable(filter))
+				.build()
+				.toUriString();
 	}
 
 	@PostMapping("/stores/{id}/approve")

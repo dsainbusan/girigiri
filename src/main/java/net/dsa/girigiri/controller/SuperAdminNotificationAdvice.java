@@ -19,13 +19,20 @@ import java.util.Map;
  * 2026-09-03 — SuperAdminController를 도메인별(Member/Store/Notice/Support)로 분리하면서 assignableTypes를
  * 5개 컨트롤러 전부로 넓혔다 — 예전엔 SuperAdminController 하나가 전체 34개 엔드포인트를 갖고 있어서 이
  * 한 줄로 전체 화면이 커버됐지만, 분리 후 그대로 두면 나머지 4개 컨트롤러 화면엔 이 공통 크롬이 안 뜬다.
+ *
+ * 2026-09-07 — 쿠폰 캠페인 관리(SuperAdminCouponController) 신설분 추가하면서 똑같은 실수가 재발했었다
+ * (assignableTypes에 등록을 빼먹어서 /superadmin/coupons가 그냥 에러 페이지로 떨어졌음). 새 슈퍼어드민
+ * 컨트롤러를 추가할 때마다 이 목록도 같이 챙겨야 한다 — 안 그러면 여기 있는 @ModelAttribute들이 모델에
+ * 하나도 안 채워지고, layout-admin.html이 그 값들을 null과 비교하는 SpringEL 식(${unreadNotificationCount
+ * > 0} 등)을 쓰고 있어서 배지가 안 뜨는 정도가 아니라 템플릿 렌더링 자체가 예외로 죽는다.
  */
 @ControllerAdvice(assignableTypes = {
 		SuperAdminController.class,
 		SuperAdminMemberController.class,
 		SuperAdminStoreController.class,
 		SuperAdminNoticeController.class,
-		SuperAdminSupportController.class
+		SuperAdminSupportController.class,
+		SuperAdminCouponController.class
 })
 @RequiredArgsConstructor
 public class SuperAdminNotificationAdvice {

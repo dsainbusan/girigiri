@@ -51,6 +51,22 @@
 			<button type="submit" class="btn btn--outline btn--block">예약 취소</button>
 		</form>
 	</div>
+
+	<!-- 강노은: 상단 '<' 버튼이 공용 헤더 기본값인 history.back()이라, 진행중→픽업완료→노쇼·취소
+		 탭을 오가다 누르면 마이페이지가 아니라 방금 봤던 다른 탭으로 돌아가버렸다(사용자 리포트로
+		 확인). 이 화면의 상위 화면은 항상 마이페이지이므로, 이 페이지에서만 기본 동작을 막고
+		 /mypage로 고정한다 — common/header.html·app.js(다른 화면 전체가 쓰는 공용 파일)는 그대로
+		 두고, 이 페이지 안에서만 data-back 속성을 떼어내 오버라이드한다. -->
+	<script>
+		(function () {
+			var backBtn = document.querySelector('.topbar__back');
+			if (!backBtn) return;
+			backBtn.removeAttribute('data-back'); // app.js의 기본 history.back() 바인딩을 막는다
+			backBtn.addEventListener('click', function () {
+				window.location.href = '/mypage';
+			});
+		})();
+	</script>
 </div>
 </body>
 </html>

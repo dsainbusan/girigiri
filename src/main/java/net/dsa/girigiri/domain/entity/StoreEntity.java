@@ -24,6 +24,13 @@ public class StoreEntity {
 	public static final String STATUS_APPROVED = "APPROVED"; // 승인 완료
 	public static final String STATUS_REJECTED = "REJECTED"; // 반려
 
+	// 추가됨 (2026-09-08) — 왜: 슈퍼어드민 "선택 매장 정지/정지 해제" 요청. UserEntity.status(ACTIVE/
+	// SUSPENDED)와 같은 이름·값 컨벤션. approvalStatus(입점 심사)와는 별개 축이라 컬럼을 따로 뒀다 —
+	// 승인된 매장이라도 정지되면 소비자 화면(홈/검색)에서 숨긴다. 회원 정지와 마찬가지로 지금은 화면
+	// 노출만 막는 수준이고, 점주 대시보드 접근 자체를 차단하지는 않는다.
+	public static final String STATUS_ACTIVE = "ACTIVE";
+	public static final String STATUS_SUSPENDED = "SUSPENDED";
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -79,6 +86,12 @@ public class StoreEntity {
 	@Builder.Default
 	@Column(name = "approval_status", length = 20)
 	private String approvalStatus = STATUS_PENDING;
+
+	// 추가됨 (2026-09-08) — 왜: 슈퍼어드민 매장 정지. ddl-auto=update로 컬럼만 새로 생겨서 기존 매장
+	// 로우는 DB값이 NULL로 남는다 — null을 "정지 아님"으로 취급하도록 모든 조회 로직에서
+	// STATUS_SUSPENDED.equals(status)로만 체크한다(status == null이면 자동으로 false).
+	@Column(name = "status", length = 20)
+	private String status;   // ACTIVE / SUSPENDED (null이면 ACTIVE와 동일하게 취급)
 
 	// 추가됨 (2026-08-27, 문창호) — 왜: "POS json 카탈로그 연동 (가정)". 진짜 POS 단말은 없어서,
 	// 점주가 연동 화면에서 POS사 + 매장 코드를 넣으면 mock으로 샘플 메뉴 카탈로그(MenuItemEntity)를

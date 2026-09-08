@@ -42,6 +42,12 @@ public class ReservationEntity {
 	@Column(name = "total_price", nullable = false)
 	private Integer totalPrice;
 
+	// 추가됨 (2026-09-07, 송채현, WBS "쿠폰 발급/관리") — 이 예약에 쿠폰을 썼으면 CouponEntity.id,
+	// 안 썼으면 null. 체크아웃에서 실제로 쿠폰을 골라 쓰는 화면 연결은 다음 작업("할인코드 적용/검증")에서
+	// 붙인다 — 지금은 취소/노쇼 시 CouponService.restore()가 참조할 수 있도록 컬럼만 먼저 추가해둔다.
+	@Column(name = "coupon_id")
+	private Long couponId;
+
 	@Column(name = "pickup_time")
 	private LocalDateTime pickupTime;
 
@@ -76,8 +82,8 @@ public class ReservationEntity {
 	// status가 "cancelled"일 때만 값이 채워진다. 누가/왜 취소했는지 구분해서 남겨서
 	// 나중에 매장 신뢰도(취소율) 계산 등에 쓸 수 있게 한다.
 	@Column(name = "cancelled_by", length = 10)
-	private String cancelledBy;   // "USER"(손님이 취소) / "STORE"(매장이 취소, 재고 문제 등)
+	private String cancelledBy;   // "USER"(손님이 취소) / "STORE"(매장이 취소, 재고 문제 등) / "ADMIN"(운영자가 신고 처리로 취소)
 
 	@Column(name = "cancel_reason", length = 255)
-	private String cancelReason;  // STORE 취소일 때 사유 텍스트 (예: "재고 부족")
+	private String cancelReason;  // STORE/ADMIN 취소일 때 사유 텍스트 (예: "재고 부족")
 }

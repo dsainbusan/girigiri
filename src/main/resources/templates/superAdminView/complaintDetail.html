@@ -18,6 +18,18 @@
   글씨)를 쓰고 있어서 storeDetail.html/memberDetail.html의 .link-action(파란색, 좀 더 굵음)과 톤이
   달랐다 — 클래스만 .link-action mb-16으로 맞췄다(라벨 텍스트는 탭에 따라 돌아가는 곳이 달라
   "목록으로"를 그대로 둠).
+
+  추가됨 (2026-09-08) — 왜: "신고 상세에서 바로 예약 취소" 요청. 지금까지 운영자는 신고에 텍스트 답변만
+  남길 뿐 실제 예약/결제는 못 건드렸다. Complaint 엔티티엔 어떤 예약 때문인지 연결하는 컬럼이 없어서
+  (신고 대상은 매장/회원 단위) 픽업 코드를 직접 입력해서 찾는 방식으로 뒀다 — 예약할 때 발급되는
+  픽업 코드는 손님/매장이 이미 알고 있는 값이라 신고 내용에 같이 적혀오는 경우가 많다.
+  reservationView/pickup.html의 스캔 확인 fetch 패턴을 그대로 재사용
+  (GET /superadmin/complaints/reservation-lookup으로 미리보기 → 맞으면 POST .../cancel-reservation
+  으로 실제 취소). 취소는 ReservationService.cancelByAdmin이 처리 — 시간 제한 없이 가능, 환불까지
+  자동, 매장 귀책(STORE)과는 분리해서 cancelledBy="ADMIN"으로 남는다(매장 신뢰도 통계에 안 잡히게).
+  보상 쿠폰은 자동 지급 안 함 — 귀책이 어느 쪽인지는 운영자가 답변에서 판단.
+  이 액션은 답변(reply)과 별개라 신고 상태를 자동으로 처리완료로 바꾸지 않는다 — 취소만 하고 답변은
+  따로 남겨야 "처리완료" 배지가 붙는다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('신고 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
@@ -45,6 +57,72 @@
       </div>
       <div class="info-row__value info-row--pre" th:text="${complaint.content}">신고 내용</div>
     </div>
+  </div>
+
+  <p class="text-muted text-muted--sm" th:if="${cancelledMessage != null}" th:text="${cancelledMessage}">취소 처리 결과</p>
+
+  <div class="reply-box">
+    <div class="reply-box__label">예약 취소</div>
+    <p class="form-hint mb-8">
+      신고와 관련된 예약을 픽업 코드로 찾아 취소·환불 처리합니다. 시간 제한 없이 언제든 가능해요.
+    </p>
+    <div class="flex-row">
+      <input class="field" type="text" id="cancelPickupCode" placeholder="예: PICK-1004" maxlength="30" style="flex:1">
+      <button type="button" id="cancelLookupBtn" class="btn btn--outline-neutral btn--sm" style="flex:none">조회</button>
+    </div>
+    <span id="cancelLookupStatus" class="badge badge--neutral mt-8" style="display:none"></span>
+
+    <form id="cancelForm" th:action="@{/superadmin/complaints/{id}/cancel-reservation(id=${complaint.id})}" method="post"
+          onsubmit="return confirm('이 예약을 취소하고 환불할까요? 되돌릴 수 없어요.')" style="display:none">
+      <input type="hidden" id="cancelPickupCodeHidden" name="pickupCode">
+      <div class="field-group">
+        <label class="field-group__label" for="cancelReason">취소 사유</label>
+        <input class="field" type="text" id="cancelReason" name="reason" maxlength="255"
+               placeholder="예: 매장 응대 지연으로 신고 접수, 확인 후 취소 처리">
+      </div>
+      <button type="submit" class="btn btn--outline-danger btn--sm mt-8">예약 취소 · 환불 처리</button>
+    </form>
+
+    <script th:inline="none">
+      (function () {
+        var codeInput = document.getElementById('cancelPickupCode');
+        var lookupBtn = document.getElementById('cancelLookupBtn');
+        var statusEl = document.getElementById('cancelLookupStatus');
+        var form = document.getElementById('cancelForm');
+        var hiddenCode = document.getElementById('cancelPickupCodeHidden');
+
+        function setStatus(text, variant) {
+          statusEl.textContent = text;
+          statusEl.className = 'badge badge--' + variant + ' mt-8';
+          statusEl.style.display = 'inline-block';
+        }
+
+        lookupBtn.addEventListener('click', function () {
+          var code = (codeInput.value || '').trim();
+          if (!code) {
+            return;
+          }
+          form.style.display = 'none';
+          setStatus('조회 중...', 'neutral');
+
+          fetch('/superadmin/complaints/reservation-lookup?pickupCode=' + encodeURIComponent(code))
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (data.ok) {
+                setStatus(data.storeName + ' · ' + data.productName + ' × ' + data.quantity + '개 · '
+                    + data.totalPrice.toLocaleString() + '원', 'success');
+                hiddenCode.value = code;
+                form.style.display = 'block';
+              } else {
+                setStatus(data.message, 'danger');
+              }
+            })
+            .catch(function () {
+              setStatus('조회에 실패했어요. 다시 시도해 주세요.', 'danger');
+            });
+        });
+      })();
+    </script>
   </div>
 
   <div class="reply-view" th:if="${complaint.adminReply != null}">

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('내 쿠폰함', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	내 쿠폰함 — 2026-09-07 신규 (송채현). 웰컴/매장취소보상 쿠폰은 자동으로 여기 쌓이고,
+	프로모션 쿠폰은 /coupons/claim에서 코드로 받으면 여기 추가된다.
+	체크아웃에서 이 중 하나를 골라 쓰는 연결은 다음 작업("할인코드 적용/검증")에서 붙인다 — 지금은 보기만.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<a th:href="@{/coupons/claim}" class="btn btn--block" style="margin-bottom: var(--s-4)">코드로 쿠폰 받기</a>
+
+	<div th:if="${#lists.isEmpty(coupons)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+		아직 쿠폰이 없어요.<br>가입하면 웰컴 쿠폰이 자동으로 들어와요.
+	</div>
+
+	<ul>
+		<li th:each="c : ${coupons}" class="stock-item" th:classappend="${c.used or c.expired} ? ' is-dim'">
+			<div class="stock-item__head">
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${c.discountRate} + '% 할인 쿠폰'">10% 할인 쿠폰</span>
+						<span class="stock-item__status" th:text="${c.statusLabel}">사용 가능</span>
+					</div>
+					<span class="stock-item__meta" th:text="${c.sourceLabel}">웰컴 쿠폰</span>
+					<span class="stock-item__meta" th:text="${c.expiresAtLabel} + ' 까지'">2026-09-30 까지</span>
+				</div>
+			</div>
+		</li>
+	</ul>
+</div>
+</body>
+</html>

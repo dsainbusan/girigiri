@@ -40,8 +40,24 @@
 	<!-- 최대 수량에 닿았을 때만 보이는 안내 문구. 평소엔 숨겨져 있다 -->
 	<p id="qty-max-hint" class="u-mut u-center" th:unless="${soldOut}" style="display:none; font-size:var(--fs-xs); margin-top:var(--s-1)">최대 수량입니다</p>
 
+	<!-- 추가됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동, WBS "할인코드 적용/검증") — 왜: 지금까지는
+		쿠폰을 "받기"만 할 수 있고 실제 결제에서 쓸 방법이 없었다. 지금 이 회원이 쓸 수 있는(미사용+
+		미만료) 쿠폰만 드롭다운으로 보여주고, 고르면 아래 결제 예정 금액이 바로 할인 반영해서 다시
+		계산된다(화면 표시용 — 실제 최종 금액은 /reservation/prepare에서 서버가 다시 계산해서 확정한다,
+		이 select 값을 그대로 믿지 않음). 쿠폰이 하나도 없으면 "사용 안 함"만 있는 select만 보인다. -->
 	<div class="card" th:unless="${soldOut}" style="margin-top:var(--s-3)">
-		<p class="u-sub">결제 예정 금액: <strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong></p>
+		<label class="u-sub" for="coupon-select">쿠폰 사용</label>
+		<select id="coupon-select" class="field" style="margin-top:var(--s-2); width:100%">
+			<option value="">쿠폰 사용 안 함</option>
+			<option th:each="c : ${usableCoupons}" th:value="${c.id}"
+					th:text="${c.discountRate} + '% 할인 쿠폰 (' + ${c.expiresAtLabel} + ' 까지)'">10% 할인 쿠폰 (2026-10-07 까지)</option>
+		</select>
+		<p class="text-muted text-muted--sm" th:if="${#lists.isEmpty(usableCoupons)}" style="margin-top:var(--s-1)">지금 쓸 수 있는 쿠폰이 없어요.</p>
+	</div>
+
+	<div class="card" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+		<p class="u-sub" id="coupon-discount-display" style="display:none"></p>
+		<p class="u-sub" style="margin-top:var(--s-1)">결제 예정 금액: <strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong></p>
 	</div>
 
 	<!--
@@ -142,6 +158,10 @@
 			var productId = /*[[${productId}]]*/ 0;
 			var hiddenInput = document.getElementById('qty-hidden-input');
 			var qty = parseInt(hiddenInput.value, 10);
+			// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 드롭다운에서 고른 쿠폰 id. 안 골랐으면 빈
+			// 문자열이라 couponId 파라미터 자체를 아예 안 보낸다(서버는 없으면 null로 받아 기존과 동일하게 동작).
+			var couponSelect = document.getElementById('coupon-select');
+			var couponId = couponSelect ? couponSelect.value : '';
 
 			// prepare()가 성공하면(=재고가 이미 차감된 상태) 이 값이 채워진다. 그 뒤 어디서 실패하든
 			// (결제창 취소, PortOne 호출 자체 오류 등) 이 값이 있으면 releasePending()으로 재고를 바로
@@ -149,15 +169,30 @@
 			var prepared = null;
 
 			try {
+				var prepareBody = 'productId=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty);
+				if (couponId) {
+					prepareBody += '&couponId=' + encodeURIComponent(couponId);
+				}
 				var prepareRes = await fetch('/reservation/prepare', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: 'productId=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty)
+					body: prepareBody
 				});
 				if (!prepareRes.ok) {
 					throw new Error('예약 준비에 실패했어요.');
 				}
 				prepared = await prepareRes.json();
+
+				// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 쿠폰이 이미 쓴 거거나 기한이 지났으면
+				// 서버(ReservationController.prepare)가 success:false로 응답한다. 이 경우는 재고가
+				// 아예 차감 안 됐거나(검증을 재고 차감보다 먼저 하므로) 트랜잭션이 롤백된 상태라
+				// releasePending을 부를 필요가 없다 — prepared를 null로 되돌려서 catch 블록에서도
+				// 잘못 releasePending을 호출하지 않게 한다.
+				if (!prepared.success) {
+					alert(prepared.message || '예약 준비에 실패했어요.');
+					prepared = null;
+					return;
+				}
 
 				var storeId = /*[[${portOneStoreId}]]*/ '';
 				var channelKey = /*[[${portOneChannelKey}]]*/ '';
@@ -236,14 +271,42 @@
 		var totalEl = document.getElementById('total-price-display');
 		var hiddenInput = document.getElementById('qty-hidden-input');
 		var maxHint = document.getElementById('qty-max-hint');
+		// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 화면 표시용 할인 미리보기 계산에만 쓴다.
+		// 실제 최종 결제금액은 이 값을 그대로 믿지 않고 /reservation/prepare에서 서버가 다시 계산해서
+		// 확정한다(위 startPayment 참고) — 여기서 discountRate를 조작해도 실제 결제금액엔 영향 없다.
+		var couponSelectEl = document.getElementById('coupon-select');
+		var couponDiscountEl = document.getElementById('coupon-discount-display');
+
+		function selectedCouponRate() {
+			if (!couponSelectEl || !couponSelectEl.value) { return 0; }
+			var selectedOption = couponSelectEl.options[couponSelectEl.selectedIndex];
+			var match = selectedOption.textContent.match(/^(\d+)%/);
+			return match ? parseInt(match[1], 10) : 0;
+		}
 
 		function render() {
 			valueEl.value = qty;
-			totalEl.textContent = (unitPrice * qty).toLocaleString() + '원';
+			var subtotal = unitPrice * qty;
+			var rate = selectedCouponRate();
+			var discountAmount = Math.floor(subtotal * rate / 100);
+			var finalTotal = Math.max(subtotal - discountAmount, 0);
+			totalEl.textContent = finalTotal.toLocaleString() + '원';
+			if (couponDiscountEl) {
+				if (rate > 0) {
+					couponDiscountEl.textContent = '쿠폰 할인 -' + discountAmount.toLocaleString() + '원 적용';
+					couponDiscountEl.style.display = 'block';
+				} else {
+					couponDiscountEl.style.display = 'none';
+				}
+			}
 			hiddenInput.value = qty;
 			minusBtn.disabled = (qty <= 1);
 			plusBtn.disabled = (qty >= max);
 			maxHint.style.display = (qty >= max) ? 'block' : 'none';
+		}
+
+		if (couponSelectEl) {
+			couponSelectEl.addEventListener('change', render);
 		}
 
 		minusBtn.addEventListener('click', function () {

@@ -4,8 +4,9 @@
   StoreRepository.findAll()에서 반려(REJECTED)만 뺀 전체 매장을 표 하나로 보여준다 — 승인대기/매장목록을
   따로 나누지 말고 전체로, 대기 매장은 필터로 보게 해달라는 요청으로 예전 2표 구조를 되돌렸다.
   "대기" 필터(filter=PENDING)를 고르면 approvalStatus=PENDING인 매장만 좁혀서 보여준다.
-  매장명 칸을 클릭하면 /superadmin/stores/{id} 상세로 이동(표 행 자체는 <a>가 될 수 없어 매장명 셀만
-  링크) — 대기 중인 매장도 상세 페이지가 이미 "대기중" 배지를 지원해서 문제없이 들어간다.
+  행 아무 곳이나 클릭하면 /superadmin/stores/{id} 상세로 이동한다(.row-clickable + data-href,
+  members.html과 동일 패턴) — 대기 중인 매장도 상세 페이지가 이미 "대기중" 배지를 지원해서 문제없이
+  들어간다. 매장명 셀의 <a>는 접근성/키보드 포커스용으로 남겨둠.
   대표 연락처(phone)는 상세 화면까지 안 들어가도 목록에서 바로 보이게 컬럼으로 뺐다(요청) — StoreEntity엔
   email 필드가 없어서(전화번호·사업자번호만 있음) 매장 쪽엔 이메일 컬럼을 안 만든다, 이 연락처 컬럼이
   그 역할을 대신한다.
@@ -14,12 +15,25 @@
   수정 + 삭제만. 수정은 기존 /superadmin/stores/{id}/edit 화면 재사용. 삭제(SuperAdminController#deleteStore,
   신규)는 withdrawMember(회원 강제 탈퇴)와 동일한 가드 — 미완료 예약이 있으면 막고(?deleteError), 통과하면
   그 매장의 상품도 같이 지운다(FK 연관관계 매핑이 없어 고아로 남는 걸 방지).
-  회원 관리(members.html)와 달리 체크박스/일괄 액션은 없음(요청 범위 밖).
   TODO(송보미): 반려(REJECTED) 액션은 아직 없음 — 필요해지면 승인 버튼 옆에 추가할 것.
 
   매장명 링크가 이제 filter를 같이 실어 보낸다 — "매장 상세의 '← 매장 목록'이 원래 보던 탭(대기 등)
   으로 정확히 돌아가게 해달라"는 요청. SuperAdminController#storeDetail이 받아 모델에 얹고,
   storeDetail.html이 그대로 다시 실어 "← 매장 목록" 링크를 만든다.
+
+  추가됨 (2026-09-08) — 왜: 매장 검색 기능 요청. members.html의 검색창(.search/.toolbar)을 그대로
+  재사용 — 매장명·주소·연락처 중 하나라도 검색어를 포함하면 매칭(SuperAdminStoreService#matchesKeyword).
+  탭 링크도 q를 같이 실어 보내서 검색 중에 "대기" 탭으로 옮겨도 검색어가 안 풀린다. 회원 관리와 달리
+  페이지네이션이 없어서 page는 안 들고 다닌다.
+  같은 요청으로 "매장 번호"(store.id) 컬럼도 맨 앞에 추가 — members.html의 "회원 번호"와 동일한 취지.
+  그리고 "매장명 말고 행 아무데나 눌러도 상세로 가게 해달라"는 요청으로 .row-clickable + data-href +
+  맨 아래 클릭 위임 스크립트도 추가(members.html과 동일 패턴, 버튼/폼/링크 클릭은 closest()로 걸러 무시).
+
+  추가됨 (2026-09-08) — 왜: "선택 매장 정지/정지 해제" 요청. members.html의 체크박스 + 일괄 액션 폼을
+  그대로 재사용(StoreEntity.status, ACTIVE/SUSPENDED 컬럼 신설). 지금은 UserEntity.status(회원 정지)와
+  같은 수준 — 소비자 화면(홈/검색, HomeService·SearchService에서 status=SUSPENDED 제외)에서만 숨기고,
+  점주 대시보드 접근 자체를 막지는 않는다. approvalStatus(입점 심사)와는 별개 축이라 "대기" 매장도
+  정지 가능하고, "정지됨" 배지가 대기/영업중/휴업보다 우선해서 보인다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('매장 관리', ~{:: #content}, 'stores', '슈퍼어드민')}">
@@ -27,20 +41,52 @@
 <div id="content" th:fragment="content">
 
   <div class="tabs">
-    <a class="tab" th:classappend="${filter == null} ? ' is-active'" th:href="@{/superadmin/stores}">전체</a>
-    <a class="tab" th:classappend="${filter == 'PENDING'} ? ' is-active'" th:href="@{/superadmin/stores(filter='PENDING')}">대기</a>
+    <a class="tab" th:classappend="${filter == null} ? ' is-active'" th:href="@{/superadmin/stores(q=${q})}">전체</a>
+    <a class="tab" th:classappend="${filter == 'PENDING'} ? ' is-active'" th:href="@{/superadmin/stores(q=${q}, filter='PENDING')}">대기</a>
   </div>
 
   <p class="form-error" th:if="${param.deleteError}">
     미완료 예약이 있어 삭제할 수 없어요 — 픽업/취소/노쇼 처리가 끝난 뒤 다시 시도해 주세요.
   </p>
 
+  <form class="toolbar" method="get" th:action="@{/superadmin/stores}">
+    <div class="search">
+      <input class="field" type="search" name="q" placeholder="매장명 · 주소 · 연락처 검색" th:value="${q}">
+      <button class="search__submit" type="submit" aria-label="검색"><svg class="icon"><use href="#i-search"/></svg></button>
+    </div>
+    <input type="hidden" name="filter" th:value="${filter}">
+    <a class="link-action" th:if="${not #strings.isEmpty(q)}" th:href="@{/superadmin/stores(filter=${filter})}">초기화</a>
+    <div class="toolbar__actions">
+      <a class="link-action" th:href="@{/superadmin/stores/export(q=${q}, filter=${filter})}"><svg class="icon"><use href="#i-download"/></svg>매장 목록 다운로드</a>
+    </div>
+  </form>
+
   <p class="result-count">매장 <b th:text="${stores.size()}">0</b>곳 조회되었습니다.</p>
+
+  <form id="bulk-form" method="post" th:action="@{/superadmin/stores/bulk-suspend(q=${q}, filter=${filter})}"></form>
+  <div class="section-row">
+    <button class="btn btn--outline-danger btn--sm" type="submit" form="bulk-form"
+            th:formaction="@{/superadmin/stores/bulk-suspend(q=${q}, filter=${filter})}">선택 매장 정지</button>
+    <button class="btn btn--outline btn--sm" type="submit" form="bulk-form"
+            th:formaction="@{/superadmin/stores/bulk-unsuspend(q=${q}, filter=${filter})}">선택 매장 정지 해제</button>
+  </div>
 
   <div class="table-wrap">
     <table class="data-table store-table">
+      <colgroup>
+        <col style="width:5%">
+        <col style="width:6%">
+        <col style="width:14%">
+        <col style="width:8%">
+        <col style="width:20%">
+        <col style="width:11%">
+        <col style="width:8%">
+        <col style="width:28%">
+      </colgroup>
       <thead>
         <tr>
+          <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
+          <th>매장 번호</th>
           <th>매장명</th>
           <th>카테고리</th>
           <th>주소</th>
@@ -51,24 +97,28 @@
       </thead>
       <tbody>
         <tr th:if="${#lists.isEmpty(stores)}">
-          <td colspan="6" class="table-empty">모든 매장이 입점 완료했습니다.</td>
+          <td colspan="8" class="table-empty">모든 매장이 입점 완료했습니다.</td>
         </tr>
-        <tr th:each="store : ${stores}">
+        <tr class="row-clickable" th:each="store : ${stores}" th:attr="data-href=@{/superadmin/stores/{id}(id=${store.id}, filter=${filter})}">
+          <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${store.id}" form="bulk-form"></td>
+          <td th:text="${store.id}">1</td>
           <td class="cell-name"><a th:href="@{/superadmin/stores/{id}(id=${store.id}, filter=${filter})}" th:text="${store.storeName}">매장명</a></td>
           <td th:text="${store.category}">카테고리</td>
           <td th:text="${store.address}">주소</td>
           <td th:text="${store.phone} ?: '-'">010-0000-0000</td>
           <td>
-            <span class="badge badge--neutral" th:if="${store.approvalStatus == 'PENDING'}">대기</span>
-            <span class="badge badge--success" th:if="${store.approvalStatus != 'PENDING' and openStatusMap[store.id]}">영업중</span>
-            <span class="badge badge--danger" th:if="${store.approvalStatus != 'PENDING' and !openStatusMap[store.id]}">휴업</span>
+            <span class="badge badge--danger" th:if="${store.status == 'SUSPENDED'}">정지됨</span>
+            <span class="badge badge--neutral" th:if="${store.status != 'SUSPENDED' and store.approvalStatus == 'PENDING'}">대기</span>
+            <span class="badge badge--success" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and openStatusMap[store.id]}">영업중</span>
+            <span class="badge badge--danger" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and !openStatusMap[store.id]}">휴업</span>
           </td>
           <td class="action-row">
             <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post">
               <button class="chip-btn" type="submit">승인</button>
             </form>
             <a class="chip-btn chip-btn--neutral" th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}">수정</a>
-            <form th:action="@{/superadmin/stores/{id}/delete(id=${store.id})}" method="post">
+            <form th:action="@{/superadmin/stores/{id}/delete(id=${store.id})}" method="post"
+                  onsubmit="return confirm('이 매장을 삭제할까요? 등록된 상품도 함께 삭제되고 되돌릴 수 없어요.')">
               <button class="chip-btn chip-btn--danger" type="submit">삭제</button>
             </form>
           </td>
@@ -76,6 +126,15 @@
       </tbody>
     </table>
   </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
 
 </div>
 </body>
