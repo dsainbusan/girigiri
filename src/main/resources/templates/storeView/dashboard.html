@@ -212,8 +212,8 @@
 				</div>
 			</div>
 
-			<a th:href="@{/store/report(period='daily')}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
-				📄 오늘 리포트 보기 (Excel · PDF)
+			<a th:href="@{/store/sales-report}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
+				📈 매출 리포트 (Excel · PDF)
 			</a>
 		</div>
 
@@ -259,8 +259,8 @@
 				</div>
 			</div>
 
-			<a th:href="@{/store/report(period='weekly')}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
-				📄 주간 리포트 보기 (Excel · PDF)
+			<a th:href="@{/store/sales-report(period='lastweek')}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-4)">
+				📈 매출 리포트 (Excel · PDF)
 			</a>
 		</div>
 	</div>

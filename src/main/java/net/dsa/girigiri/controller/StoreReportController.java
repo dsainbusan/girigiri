@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
-import net.dsa.girigiri.util.StoreReportExcelGenerator;
-import net.dsa.girigiri.util.StoreReportPdfGenerator;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,8 +19,10 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 /**
- * 점주용 판매·폐기 리포트 및 정산 화면 (WBS 3.0/2.0, 문창호 담당).
+ * 점주용 매장 정산 화면 (WBS 2.0, 문창호 담당).
  * 2026-09-03 — 373줄이던 StoreController에서 분리했다(레이어 규칙 정리, 도메인 분할).
+ * 2026-09-07 — 여기 있던 판매·폐기 리포트(/report*)는 매출 리포트(SalesReportController, Supabase)로
+ *              통합돼서 삭제했다. 클래스명은 diff 최소화를 위해 그대로 두고 정산만 담당한다.
  * @RequestMapping("/store")은 그대로라 URL은 하나도 안 바뀐다.
  */
 @Controller
@@ -32,65 +32,7 @@ public class StoreReportController {
 
 	private final StoreAccessService storeAccessService;
 	private final StoreService storeService;
-	private final net.dsa.girigiri.service.StoreReportService storeReportService;
 	private final net.dsa.girigiri.service.SettlementService settlementService;
-
-	/**
-	 * 판매·폐기 리포트 — 미리보기 화면 (WBS 3.0, 문창호). 대시보드 "오늘"/"최근 7일" 탭에서 진입.
-	 * period: daily(오늘, 기본) / weekly(최근 7일). 이 화면에서 Excel/PDF 다운로드로 이어진다.
-	 */
-	@GetMapping("/report")
-	public String reportPage(@RequestParam(defaultValue = "daily") String period, HttpSession session, Model model) {
-		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
-		if (store == null) {
-			return "redirect:/auth/owner-apply";
-		}
-		boolean weekly = "weekly".equals(period);
-		model.addAttribute("report", storeReportService.build(store, weekly));
-		model.addAttribute("period", weekly ? "weekly" : "daily");
-		return "reportView/report";
-	}
-
-	/**
-	 * 리포트 Excel 다운로드. dashboard()와 같은 집계(StoreReportService)를 써서 화면·파일 숫자가 항상 일치한다.
-	 */
-	@GetMapping("/report/excel")
-	public ResponseEntity<byte[]> reportExcel(@RequestParam(defaultValue = "daily") String period, HttpSession session) throws IOException {
-		StoreEntity store = reportStore(session);
-		if (store == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
-		boolean weekly = "weekly".equals(period);
-		byte[] excel = StoreReportExcelGenerator.generate(storeReportService.build(store, weekly));
-
-		// 파일명에 한글(매장명)을 넣으면 일부 브라우저에서 Content-Disposition 인코딩이 깨질 수 있어 ASCII로 고정.
-		String filename = "store-report-" + (weekly ? "weekly-" : "") + LocalDate.now() + ".xlsx";
-		return ResponseEntity.ok()
-				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-				.body(excel);
-	}
-
-	/** 리포트 PDF 다운로드. reportExcel()과 데이터 소스 동일, 포맷만 PDF. */
-	@GetMapping("/report/pdf")
-	public ResponseEntity<byte[]> reportPdf(@RequestParam(defaultValue = "daily") String period, HttpSession session) throws IOException {
-		StoreEntity store = reportStore(session);
-		if (store == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
-		boolean weekly = "weekly".equals(period);
-		byte[] pdf = StoreReportPdfGenerator.generate(storeReportService.build(store, weekly));
-
-		String filename = "store-report-" + (weekly ? "weekly-" : "") + LocalDate.now() + ".pdf";
-		return ResponseEntity.ok()
-				.contentType(MediaType.APPLICATION_PDF)
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-				.body(pdf);
-	}
 
 	private StoreEntity reportStore(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
