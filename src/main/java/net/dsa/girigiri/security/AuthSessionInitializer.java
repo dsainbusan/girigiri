@@ -18,6 +18,14 @@ public final class AuthSessionInitializer {
 		session.setAttribute("role", user.getRole());
 		session.setAttribute("viewMode", UserEntity.ROLE_OWNER.equals(user.getRole()) ? "OWNER_MODE" : "USER_MODE");
 
+		// 추가됨 (2026-09-08) — 왜: role=ADMIN으로 로그인해도 profileCompleted 기준으로만 목적지를
+		// 정해서 항상 유저 홈("/")으로 떨어졌다(사용자 리포트로 발견) — 운영자 계정은 애초에 셀프
+		// 가입 플로우(회원가입 완료 화면)를 거칠 일이 없으니 profileCompleted 체크보다 먼저 확인해서
+		// 곧장 슈퍼어드민 대시보드로 보낸다.
+		if (UserEntity.ROLE_ADMIN.equals(user.getRole())) {
+			return "/superadmin/dashboard";
+		}
+
 		return user.isProfileCompleted() ? "/" : "/auth/signup";
 	}
 }
