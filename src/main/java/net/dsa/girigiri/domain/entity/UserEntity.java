@@ -9,7 +9,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")   // "user"는 MySQL 예약어라 회피
+// "user"는 MySQL 예약어라 회피. uniqueConstraints 추가됨 (2026-09-08, 코드 감사) — 왜: 로그인 키인
+// (oauth_provider, oauth_id)에 유니크 제약이 없었다. 동시에 첫 로그인이 두 번 들어가면(더블클릭 등)
+// 같은 조합으로 행이 2개 생기고, 그 뒤로 그 계정은 findByOauthProviderAndOauthId가 단건이 아니라
+// 여러 건을 찾아 IncorrectResultSizeDataAccessException을 던져서 영구히 로그인 불가가 된다.
+// 이메일 로그인도 oauth_provider="email"/oauth_id=이메일 규칙을 쓰므로(EmailUserDetailsService)
+// 이 제약 하나로 소셜·이메일 계정 중복 가입을 전부 막는다. 반영 전 DB에 중복 데이터 없는 것 확인함.
+@Table(name = "users", uniqueConstraints = @UniqueConstraint(name = "uk_users_oauth", columnNames = {"oauth_provider", "oauth_id"}))
 @Getter
 @Setter
 @Builder

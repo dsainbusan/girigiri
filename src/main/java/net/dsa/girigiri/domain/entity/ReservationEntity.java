@@ -51,7 +51,9 @@ public class ReservationEntity {
 	@Column(name = "pickup_time")
 	private LocalDateTime pickupTime;
 
-	@Column(name = "pickup_code", length = 30)
+	// unique 추가됨 (2026-09-08, 코드 감사) — QrCodeUtil.generatePickupCode()의 코드 공간을 늘려서
+	// 충돌 가능성은 사실상 0에 가깝게 낮췄지만(주석 참고), DB 차원의 마지막 안전장치로 유니크 제약도 건다.
+	@Column(name = "pickup_code", length = 30, unique = true)
 	private String pickupCode;   // QR/픽업 확인 코드
 
 	@Column(name = "status", nullable = false, length = 20)
