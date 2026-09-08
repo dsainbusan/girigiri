@@ -28,7 +28,8 @@ import java.util.List;
 public class SuperAdminMemberService {
 
 	// MypageService.withdraw()의 자진 탈퇴와 동일한 가드 — 미완료 예약이 있으면 탈퇴(삭제)를 막는다.
-	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = List.of("pending", "confirmed");
+	// (2026-09-08, 코드 감사) ReservationService.INCOMPLETE_STATUSES로 통일 — "ready" 누락 수정.
+	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = ReservationService.INCOMPLETE_STATUSES;
 
 	private final UserRepository userRepository;
 	private final ReservationRepository reservationRepository;

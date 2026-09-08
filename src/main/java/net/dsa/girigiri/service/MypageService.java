@@ -22,7 +22,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MypageService {
 
-	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = List.of("pending", "confirmed");
+	// 변경됨 (2026-09-08, 코드 감사) — 왜: "ready"(결제완료+매장수락, 픽업 대기)가 빠져 있어서
+	// 그 상태의 예약을 가진 회원이 탈퇴할 수 있었다 — ReservationService.INCOMPLETE_STATUSES로
+	// 통일(다른 두 곳 SuperAdminMemberService/SuperAdminStoreService도 동일하게 맞춤).
+	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = ReservationService.INCOMPLETE_STATUSES;
 
 	private final UserRepository userRepository;
 	private final ReservationRepository reservationRepository;
