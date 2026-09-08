@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.http.HttpStatus;
 
@@ -41,6 +42,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
+	// 추가됨 (2026-09-08, 코드 감사) — 가벼운 CSRF 미티게이션(Origin/Referer 검증). 필터체인에 등록만
+	// 하면 되고 별도 설정은 없다 — OriginCheckFilter 클래스 주석 참고.
+	private final OriginCheckFilter originCheckFilter;
 	private final CustomOAuth2UserService customOAuth2UserService;
 	// 추가됨 — 왜: LINE은 openid 스코프가 필수라 구글/카카오와 다른 OIDC 로그인 경로를 타는데,
 	// 이 경로는 userService가 아니라 별도의 oidcUserService로 지정해야 우리 회원 자동 생성 로직이 호출된다.
@@ -77,8 +81,10 @@ public class WebSecurityConfig {
 			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
 			, "/styleguide"
 			, "/styleguide/admin"   // 슈퍼어드민 wide 레이아웃 미리보기 (위와 같은 이유로 임시 공개)
-			, "/superadmin/**"      // TODO(송보미): 슈퍼어드민 화면 스캐폴딩. 문창호의 role 분리 작업 끝나면
-			                         //   role=SUPERADMIN 기준 접근 제어로 교체하고 이 줄은 제거할 것.
+			// "/superadmin/**"는 여기 있었다 — 코드 감사(2026-09-08)에서 발견: 로그인 없이 매장
+			// 삭제·회원 강제탈퇴·신고 처리로 예약 취소·회원 CSV 다운로드까지 익명으로 가능했다.
+			// 이 줄을 빼서 "로그인은 했는지"를 여기서 걸러내고, "ADMIN이 맞는지"는
+			// SuperAdminAccessInterceptor(WebMvcConfig에 등록)가 담당한다.
 			// 추가됨 (2026-08-21) — 왜: 이메일 가입/로그인 화면. 로그인 전 단계라 permitAll 없이는
 			// 접근 자체가 막힌다(/auth/emailLogin은 formLogin의 loginProcessingUrl이기도 하다).
 			, "/auth/emailSignup"
@@ -89,9 +95,12 @@ public class WebSecurityConfig {
 	protected SecurityFilterChain config(HttpSecurity http) throws Exception {
 		http
 				// 개발 단계: CORS/CSRF/기본 로그인창 비활성화
+				// (2026-09-08, 코드 감사) CSRF는 여전히 비활성 상태다(앱 전체 폼에 토큰을 넣는 큰 작업이라
+				// 이번 범위 밖) — 대신 OriginCheckFilter로 가벼운 미티게이션만 건다(아래 addFilterBefore).
 				.csrf(AbstractHttpConfigurer::disable)
 				.cors(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
+				.addFilterBefore(originCheckFilter, UsernamePasswordAuthenticationFilter.class)
 
 				.authorizeHttpRequests(author -> author
 						.requestMatchers(PUBLIC_URLS.toArray(String[]::new)).permitAll()
