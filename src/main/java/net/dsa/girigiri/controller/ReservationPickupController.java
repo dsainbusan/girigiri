@@ -13,6 +13,8 @@ import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReceiptService;
 import net.dsa.girigiri.service.ReservationService;
+import net.dsa.girigiri.service.StoreAccessService;
+import net.dsa.girigiri.util.SupabaseStorageClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +23,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
@@ -43,11 +44,22 @@ public class ReservationPickupController {
 	private final ReservationService reservationService;
 	private final ReceiptService receiptService;
 	private final LookupService lookupService;
+	private final StoreAccessService storeAccessService;
+	private final SupabaseStorageClient supabaseStorageClient;
 
 	/** 사장님이 픽업 현장에서 픽업 코드를 입력하는 화면. */
 	@GetMapping("/pickup")
 	public String pickupForm() {
 		return "reservationView/pickup";
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — 왜: pickup/pickupBatch가 픽업 코드만으로 예약을 찾아 상태를
+	// 바꾸면서 매장 소유권을 확인하지 않고 있었다 — ReservationStoreController#storeCancel이 이미
+	// "다른 매장 픽업 코드를 알기만 하면 취소시킬 수 있는 구멍"을 고친 것과 같은 유형의 버그가
+	// 픽업 확인 경로에는 남아있던 것. 그 컨트롤러와 동일한 패턴(resolveCurrentStoreId)을 쓴다.
+	private Long resolveCurrentStoreId(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		return storeAccessService.getMyStore(userId).getId();
 	}
 
 	/**
@@ -92,11 +104,18 @@ public class ReservationPickupController {
 	 */
 	@PostMapping("/pickup/batch")
 	@ResponseBody
-	public List<PickupBatchItemResultDto> pickupBatch(@RequestParam List<String> pickupCodes) {
+	public List<PickupBatchItemResultDto> pickupBatch(@RequestParam List<String> pickupCodes, HttpSession session) {
+		Long storeId = resolveCurrentStoreId(session);
 		List<PickupBatchItemResultDto> results = new ArrayList<>();
 
 		for (String pickupCode : pickupCodes) {
 			try {
+				ReservationEntity target = reservationService.findByPickupCode(pickupCode)
+						.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
+				if (!target.getStoreId().equals(storeId)) {
+					throw new PickupNotAllowedException("다른 매장의 예약은 픽업 처리할 수 없어요.");
+				}
+
 				ReservationEntity reservation = reservationService.confirmPickup(pickupCode);
 				results.add(PickupBatchItemResultDto.success(
 						pickupCode,
@@ -119,7 +138,13 @@ public class ReservationPickupController {
 	 *  필요해질 수도 있어 일단 남겨둔다.)
 	 */
 	@PostMapping("/pickup")
-	public String pickup(@RequestParam String pickupCode, Model model) {
+	public String pickup(@RequestParam String pickupCode, HttpSession session, Model model) {
+		ReservationEntity target = reservationService.findByPickupCode(pickupCode)
+				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
+		if (!target.getStoreId().equals(resolveCurrentStoreId(session))) {
+			throw new PickupNotAllowedException("다른 매장의 예약은 픽업 처리할 수 없어요.");
+		}
+
 		ReservationEntity reservation = reservationService.confirmPickup(pickupCode);
 
 		StoreEntity store = reservationService.findStoreById(reservation.getStoreId()).orElse(null);
@@ -135,10 +160,16 @@ public class ReservationPickupController {
 	}
 
 	/**
-	 * 영수증 PDF는 이제 (Supabase가 설정돼 있으면) Supabase Storage 클라우드에 있어서, 그 실제 URL로
-	 * 리다이렉트만 시켜준다. Supabase가 아직 설정 안 된 상태라면 ReceiptService가 예전처럼 로컬
-	 * receipts/ 폴더에 저장해뒀을 거라, 그 경우엔 예전처럼 파일을 직접 읽어서 내려준다.
-	 * (pdfUrl이 http(s)로 시작하는지 보고 두 경우를 구분한다.)
+	 * 영수증 PDF는 (Supabase가 설정돼 있으면) Supabase Storage 클라우드에 있다. Supabase가 아직 설정
+	 * 안 된 상태라면 ReceiptService가 예전처럼 로컬 receipts/ 폴더에 저장해뒀을 거라, 그 경우엔 예전처럼
+	 * 파일을 직접 읽어서 내려준다. (pdfUrl이 http(s)로 시작하는지 보고 두 경우를 구분한다.)
+	 *
+	 * 수정됨 (2026-09-08, 코드 감사) — 왜: Supabase 케이스에서 그 공개 URL로 그냥 302 리다이렉트만
+	 * 시켜주고 있었다 — 파일명이 receipt-{reservationId}.pdf라 URL 패턴만 알면 아래 소유권 체크를
+	 * 완전히 건너뛰고 순차 조회로 전체 영수증을 긁어갈 수 있었다(코드 감사에서 발견). 이제 서버가
+	 * SupabaseStorageClient.downloadPdf()로 대신 받아서 바이트로 내려준다 — 브라우저는 Supabase URL을
+	 * 아예 볼 일이 없어져서, 아래 소유권 체크가 실질적인 게이트가 된다. 업로드/저장 구조(publicUrl을
+	 * DB에 그대로 저장해두고 재사용하는 방식)는 그대로 둔다.
 	 *
 	 * 영수증은 원래 결제 확인 시점(ReservationService.confirmPayment)에 한 번 만들어지고, 이후 취소/노쇼로 상태가
 	 * 바뀌는 "그 순간"(cancelReservation/cancelByStore/processNoShows 안에서) 다시 만들어지기 때문에,
@@ -159,7 +190,11 @@ public class ReservationPickupController {
 		String pdfUrl = receipt.getPdfUrl();
 
 		if (pdfUrl.startsWith("http://") || pdfUrl.startsWith("https://")) {
-			return ResponseEntity.status(302).location(URI.create(pdfUrl)).build();
+			byte[] pdf = supabaseStorageClient.downloadPdf(pdfUrl);
+			return ResponseEntity.ok()
+					.contentType(MediaType.APPLICATION_PDF)
+					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=receipt-" + id + ".pdf")
+					.body(pdf);
 		}
 
 		// Supabase 미설정 상태의 로컬 폴백: pdfUrl에 로컬 파일 경로가 그대로 들어있다.

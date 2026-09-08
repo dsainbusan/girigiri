@@ -99,4 +99,36 @@ public class SupabaseStorageClient {
 	public String publicUrl(String path) {
 		return baseUrl + "/storage/v1/object/public/" + bucket + "/" + path;
 	}
+
+	/**
+	 * 추가됨 (2026-09-08, 코드 감사) — 왜: publicUrl()로 만든 링크를 그대로 브라우저에 302 리다이렉트
+	 * 시켜주던 게(ReservationPickupController#receipt) 문제였다 — 파일명이 receipt-{reservationId}.pdf
+	 * 라 URL 패턴만 알면 인증 없이 순차 조회로 전체 영수증을 긁어갈 수 있었다.
+	 * 버킷/업로드 구조(publicUrl 저장 방식)는 그대로 두고, 다운로드만 서버가 대신 받아서 바이트로
+	 * 돌려준다 — 그러면 컨트롤러가 이미 하고 있던 소유권 체크(ReservationAccessDeniedException) 뒤에만
+	 * 이 메서드가 호출되므로, 브라우저는 Supabase URL 자체를 볼 일이 없다.
+	 */
+	public byte[] downloadPdf(String publicUrl) {
+		try {
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(publicUrl))
+					.timeout(Duration.ofSeconds(20))
+					.GET()
+					.build();
+
+			HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+			if (response.statusCode() / 100 != 2) {
+				throw new IllegalStateException(
+						"Supabase에서 영수증을 받아오지 못했어요 (status=" + response.statusCode() + "): " + publicUrl);
+			}
+
+			return response.body();
+		} catch (IOException | InterruptedException e) {
+			if (e instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
+			throw new IllegalStateException("영수증 다운로드 중 오류가 발생했어요. url=" + publicUrl, e);
+		}
+	}
 }
