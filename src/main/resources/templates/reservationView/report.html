@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--/*
+  예약 신고 접수 — /reservation/{id}/report. 내 예약 목록(myReservations.html)의 "신고하기" 버튼에서
+  들어온다. 2026-09-08 신설 — ComplaintService.submitFromReservation이 신고 대상(매장)·연결된
+  예약(targetReservationId)을 자동으로 채워서, 슈퍼어드민 신고 상세 화면이 픽업 코드 검색 없이
+  바로 이 예약을 보여주고 취소할 수 있게 한다.
+  사유는 storeCancel.html의 칩 프리셋 패턴을 재사용(직접 입력도 가능).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('신고하기', ~{:: #content}, '', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<a th:href="@{/reservation/my}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 내 예약으로</a>
+
+	<div class="card">
+		<h3 th:text="${reservation.productName}">상품명</h3>
+		<p class="u-sub" th:text="'수량 ' + ${reservation.reservedQuantity} + '개 · ' + ${reservation.totalPrice} + '원'">수량 1개 · 3000원</p>
+		<p class="u-sub" th:text="'픽업 코드 ' + ${reservation.pickupCode}">픽업 코드 PICK-1001</p>
+	</div>
+
+	<form th:action="@{/reservation/{id}/report(id=${reservation.id})}" method="post" style="margin-top:var(--s-3)">
+		<div class="field">
+			<label class="field__label">신고 사유</label>
+			<div class="chip-row" style="flex-wrap:wrap; margin: var(--s-2) 0">
+				<button type="button" class="chip" data-reason="상품 상태 불량">상품 상태 불량</button>
+				<button type="button" class="chip" data-reason="픽업 응대 불친절">픽업 응대 불친절</button>
+				<button type="button" class="chip" data-reason="노쇼 처리 오류">노쇼 처리 오류</button>
+				<button type="button" class="chip" data-reason="환불이 안 됨">환불이 안 됨</button>
+				<button type="button" class="chip" data-reason="">기타 (직접 입력)</button>
+			</div>
+			<input type="text" name="reason" id="reasonInput" class="input" required maxlength="100" placeholder="신고 사유를 골라주세요">
+		</div>
+		<div class="field" style="margin-top:var(--s-3)">
+			<label class="field__label">상세 내용</label>
+			<textarea name="content" class="input" required maxlength="1000" style="min-height:140px;resize:vertical"
+			          placeholder="무슨 일이 있었는지 자세히 적어주세요"></textarea>
+		</div>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">신고 접수</button>
+	</form>
+
+	<script th:inline="none">
+		(function () {
+			var chips = document.querySelectorAll('.chip[data-reason]');
+			var reasonInput = document.getElementById('reasonInput');
+			chips.forEach(function (chip) {
+				chip.addEventListener('click', function () {
+					chips.forEach(function (c) { c.classList.remove('is-active'); });
+					chip.classList.add('is-active');
+					var preset = chip.getAttribute('data-reason');
+					reasonInput.value = preset;
+					if (!preset) {
+						reasonInput.focus();
+					}
+				});
+			});
+		})();
+	</script>
+</div>
+</body>
+</html>

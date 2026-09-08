@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.dto.SupportReportsDataDto;
+import net.dsa.girigiri.domain.entity.ComplaintEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
@@ -90,13 +91,31 @@ public class SuperAdminSupportController {
 		model.addAttribute("authorName", inquiryService.getAuthorName(inquiry.getUserId()));
 		model.addAttribute("authorExists", supportService.userExists(inquiry.getUserId()));
 		model.addAttribute("storeName", inquiryService.getStoreName(inquiry.getStoreId()));
+		model.addAttribute("reservationSummary", inquiryService.getReservationSummary(inquiry.getReservationId()));
 		model.addAttribute("comments", inquiryService.getComments(id, adminId, UserEntity.ROLE_ADMIN));
 		return "superAdminView/inquiryDetail";
 	}
 
+	/**
+	 * 신고 상세. targetReservationId가 있는 신고(2026-09-08 이후 "예약 상세에서 신고하기"로 접수된
+	 * 것)는 픽업 코드 검색 없이 바로 그 예약 정보를 보여준다 — 그 전에 SQL로 넣은 신고나 매장 관련
+	 * 신고는 이 값이 없어서 기존처럼 검색으로 대응한다(complaintDetail.html의 분기 참고).
+	 */
 	@GetMapping("/complaints/{id}")
 	public String complaintDetail(@PathVariable Long id, Model model) {
-		model.addAttribute("complaint", lookupService.getComplaint(id));
+		ComplaintEntity complaint = lookupService.getComplaint(id);
+		model.addAttribute("complaint", complaint);
+
+		if (complaint.getTargetReservationId() != null) {
+			reservationService.findById(complaint.getTargetReservationId()).ifPresent(reservation -> {
+				model.addAttribute("linkedReservation", reservation);
+				model.addAttribute("linkedReservationBlockedMessage", blockedMessageFor(reservation));
+				model.addAttribute("linkedReservationStoreName", reservationService.findStoreById(reservation.getStoreId())
+						.map(store -> store.getStoreName())
+						.orElse("-"));
+			});
+		}
+
 		return "superAdminView/complaintDetail";
 	}
 
@@ -120,12 +139,7 @@ public class SuperAdminSupportController {
 			return PickupLookupResponseDto.notFound();
 		}
 
-		String blockedMessage = switch (reservation.getStatus()) {
-			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
-			case "cancelled" -> "이미 취소된 예약이에요.";
-			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
-			default -> null;   // "pending", "confirmed", "ready"만 정상 진행
-		};
+		String blockedMessage = blockedMessageFor(reservation);
 		if (blockedMessage != null) {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}
@@ -136,6 +150,17 @@ public class SuperAdminSupportController {
 
 		return PickupLookupResponseDto.success(storeName, reservation.getProductName(),
 				reservation.getReservedQuantity(), reservation.getTotalPrice());
+	}
+
+	/** reservationLookup·complaintDetail 둘 다 쓰는 "취소 가능 상태인지" 판정 — 취소만 놓고 보면 되니
+	 * ReservationStoreController#storeCancelLookup과 동일 기준(pending/confirmed/ready만 정상). */
+	private String blockedMessageFor(ReservationEntity reservation) {
+		return switch (reservation.getStatus()) {
+			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
+			case "cancelled" -> "이미 취소된 예약이에요.";
+			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
+			default -> null;   // "pending", "confirmed", "ready"만 정상 진행
+		};
 	}
 
 	/**

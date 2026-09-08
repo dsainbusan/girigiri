@@ -920,6 +920,13 @@ public class ReservationService {
 		return reservationRepository.findByPickupCode(pickupCode);
 	}
 
+	// 추가됨 (2026-09-08) — 신고 상세 화면이 ComplaintEntity.targetReservationId로 예약을 바로
+	// 찾아 보여줄 때 쓴다. 삭제된 적 없는 값이라 사실상 항상 있지만, 혹시 몰라 Optional로 둔다.
+	@Transactional(readOnly = true)
+	public Optional<ReservationEntity> findById(Long id) {
+		return reservationRepository.findById(id);
+	}
+
 	@Transactional(readOnly = true)
 	public Optional<StoreEntity> findStoreById(Long storeId) {
 		return storeRepository.findById(storeId);

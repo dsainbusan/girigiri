@@ -13,6 +13,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.ReservationAccessDeniedException;
+import net.dsa.girigiri.service.ComplaintService;
 import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
@@ -68,6 +69,9 @@ public class ReservationController {
 	// CouponService를 직접 호출하므로(레이어 규칙: 비즈니스 로직은 서비스에), 여기 컨트롤러는 화면에
 	// 보여줄 목록을 조회하는 것뿐이다.
 	private final CouponService couponService;
+	// 추가됨 (2026-09-08) — "예약 상세에서 신고하기" 버튼. 신고 처리(슈퍼어드민)와는 별개로,
+	// 신고 접수(손님)만 담당하는 서비스라 이름을 다르게 뒀다(ComplaintService 상단 주석 참고).
+	private final ComplaintService complaintService;
 
 	// 변경됨 (2026-09-01) — 왜: 문창호님의 로그인/세션 작업(OAuth2LoginSuccessHandler +
 	// AuthSessionInitializer)이 이미 끝나서 세션에 실제 로그인한 사용자의 userId가 들어있다.
@@ -306,5 +310,39 @@ public class ReservationController {
 		reservationService.cancelReservation(id);
 		redirectAttributes.addFlashAttribute("cancelledMessage", "예약이 취소됐어요. 결제하신 금액은 환불됩니다.");
 		return "redirect:/reservation/my?tab=cancelled";
+	}
+
+	/**
+	 * "신고하기" 버튼 — 내 예약 목록(myReservations.html)의 각 예약 카드에서 접수한다.
+	 * 2026-09-08 신설 — 지금까지 슈퍼어드민이 신고를 "처리"하는 화면만 있고 손님이 신고를 "접수"하는
+	 * 화면이 없었다(신고 데이터는 시드로만 넣었음). ComplaintService.submitFromReservation이 신고
+	 * 대상(매장)과 연결된 예약을 자동으로 채워서, 신고 상세 화면에서 운영자가 픽업 코드를 다시
+	 * 검색할 필요 없이 바로 그 예약을 취소할 수 있게 한다.
+	 */
+	@GetMapping("/{id}/report")
+	public String reportForm(@PathVariable Long id, HttpSession session, Model model) {
+		ReservationEntity reservation = lookupService.getReservation(id);
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
+		}
+
+		model.addAttribute("reservation", reservation);
+		return "reservationView/report";
+	}
+
+	@PostMapping("/{id}/report")
+	public String submitReport(@PathVariable Long id,
+	                            @RequestParam String reason,
+	                            @RequestParam String content,
+	                            HttpSession session,
+	                            RedirectAttributes redirectAttributes) {
+		ReservationEntity reservation = lookupService.getReservation(id);
+		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
+			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
+		}
+
+		complaintService.submitFromReservation(reservation, reason, content);
+		redirectAttributes.addFlashAttribute("reportedMessage", "신고가 접수됐어요. 운영자가 확인 후 처리할게요.");
+		return "redirect:/reservation/my";
 	}
 }

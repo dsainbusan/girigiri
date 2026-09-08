@@ -30,6 +30,13 @@
   보상 쿠폰은 자동 지급 안 함 — 귀책이 어느 쪽인지는 운영자가 답변에서 판단.
   이 액션은 답변(reply)과 별개라 신고 상태를 자동으로 처리완료로 바꾸지 않는다 — 취소만 하고 답변은
   따로 남겨야 "처리완료" 배지가 붙는다.
+
+  추가됨 (2026-09-08) — 왜: "예약 상세에서 신고하기" 버튼(reservationView/report.html, 손님용)이
+  생기면서 ComplaintEntity.targetReservationId가 채워지는 신고가 생겼다. 이 값이 있으면
+  SuperAdminSupportController#complaintDetail이 미리 그 예약을 조회해서(linkedReservation) 픽업
+  코드 검색 UI를 건너뛰고 바로 미리보기+취소 폼을 보여준다 — 이미 취소/픽업완료/노쇼된 예약이면
+  linkedReservationBlockedMessage로 배지만 보여주고 폼은 숨긴다. targetReservationId가 없는(그
+  전에 SQL로 넣었거나 매장 관련) 신고는 예전처럼 검색 방식 그대로 쓴다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('신고 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
@@ -61,7 +68,32 @@
 
   <p class="text-muted text-muted--sm" th:if="${cancelledMessage != null}" th:text="${cancelledMessage}">취소 처리 결과</p>
 
-  <div class="reply-box">
+  <!-- "예약 상세에서 신고하기"로 접수된 신고(targetReservationId 있음) — 검색 없이 바로 보여준다. -->
+  <div class="reply-box" th:if="${linkedReservation != null}">
+    <div class="reply-box__label">예약 취소</div>
+    <p class="form-hint mb-8">이 신고와 연결된 예약이에요 — 픽업 코드를 검색하지 않아도 바로 처리할 수 있어요.</p>
+    <div class="info-row--pre"
+         th:text="${linkedReservationStoreName} + ' · ' + ${linkedReservation.productName} + ' × ' + ${linkedReservation.reservedQuantity} + '개 · ' + ${linkedReservation.totalPrice} + '원 · ' + ${linkedReservation.pickupCode}">
+      매장명 · 상품명 × 1개 · 3000원 · PICK-1004
+    </div>
+
+    <span class="badge badge--danger mt-8" th:if="${linkedReservationBlockedMessage != null}" th:text="${linkedReservationBlockedMessage}">이미 취소된 예약이에요.</span>
+
+    <form th:if="${linkedReservationBlockedMessage == null}"
+          th:action="@{/superadmin/complaints/{id}/cancel-reservation(id=${complaint.id})}" method="post"
+          onsubmit="return confirm('이 예약을 취소하고 환불할까요? 되돌릴 수 없어요.')" class="mt-8">
+      <input type="hidden" name="pickupCode" th:value="${linkedReservation.pickupCode}">
+      <div class="field-group">
+        <label class="field-group__label" for="cancelReasonLinked">취소 사유</label>
+        <input class="field" type="text" id="cancelReasonLinked" name="reason" maxlength="255"
+               placeholder="예: 매장 응대 지연으로 신고 접수, 확인 후 취소 처리">
+      </div>
+      <button type="submit" class="btn btn--outline-danger btn--sm mt-8">예약 취소 · 환불 처리</button>
+    </form>
+  </div>
+
+  <!-- 그 전에 SQL로 넣은 신고, 매장 관련 신고 등 targetReservationId가 없는 경우 — 기존 검색 방식. -->
+  <div class="reply-box" th:if="${linkedReservation == null}">
     <div class="reply-box__label">예약 취소</div>
     <p class="form-hint mb-8">
       신고와 관련된 예약을 픽업 코드로 찾아 취소·환불 처리합니다. 시간 제한 없이 언제든 가능해요.

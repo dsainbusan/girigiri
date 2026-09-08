@@ -42,6 +42,14 @@ public class ComplaintEntity {
 	@Column(name = "target_store_id")
 	private Long targetStoreId;   // 대상이 매장이면 채움 — 있으면 targetName을 매장 상세 링크로 감쌈
 
+	// 추가됨 (2026-09-08) — 왜: 예약 상세에서 "신고하기" 버튼으로 접수된 신고는 어떤 예약 때문인지
+	// 이 컬럼으로 바로 연결된다. 이게 있으면 슈퍼어드민 신고 상세 화면이 픽업 코드 검색 없이 바로
+	// 그 예약을 보여주고 취소할 수 있다(SuperAdminSupportController#complaintDetail 참고). 기존처럼
+	// SQL로 직접 넣은 신고나 매장 관련 신고는 이 값이 null일 수 있다 — 그 경우 픽업 코드 검색으로
+	// 대응(예전 동작 그대로 유지).
+	@Column(name = "target_reservation_id")
+	private Long targetReservationId;
+
 	@Column(name = "reason", nullable = false, length = 100)
 	private String reason;   // 신고 사유 요약 — 목록 제목으로 씀
 
