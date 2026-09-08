@@ -32,9 +32,9 @@ import java.time.format.DateTimeFormatter;
  * - "어제 대비" 매출 증감은 다음 단계 TODO — 지금 샘플 데이터가 전부 NOW() 타임스탬프라 어제
  *   데이터가 없어서, 가짜 값을 보여주느니 빈 값으로 둔다.
  *
- * 2026-09-03 — 373줄이던 이 클래스에서 리포트/정산 엔드포인트를 분리했다(레이어 규칙 정리, 도메인 분할).
- * 이후 판매·폐기 리포트는 매출 리포트(SalesReportController, Supabase)로 흡수됐고, 정산은
- * SettlementController에 남았다. 이 클래스는 대시보드·구제율 목표·매장 정보 수정만 담당한다.
+ * 2026-09-03 — 373줄이던 이 클래스에서 리포트/정산 엔드포인트를 StoreReportController로 분리했다.
+ * 이후(2026-09-07) 판매·폐기 리포트는 매출 리포트(SalesReportController, Supabase)로 흡수돼서
+ * StoreReportController엔 정산만 남았다. 이 클래스는 대시보드·구제율 목표·매장 정보 수정만 담당한다.
  */
 @Controller
 @RequestMapping("/store")
