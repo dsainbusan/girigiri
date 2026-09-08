@@ -9,18 +9,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * StoreEntity.operatingHours("09:00 ~ 22:00" 형태)에서 마감 시각을 계산하는 공용 유틸.
+ * StoreEntity.operatingHours("09:00 ~ 22:00" 형태)에서 마감 시각을 계산하고
+ * 영업시간 형식을 검증·조합하는 공용 유틸.
  * 홈 화면 카드(HomeService)와 상품 상세(ProductController) 양쪽에서 같은 로직을 쓴다.
  */
 public final class StoreHoursUtil {
 
 	private static final DateTimeFormatter HOUR_FORMAT = DateTimeFormatter.ofPattern("H:mm");
+	private static final DateTimeFormatter STANDARD_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
 	// 변경됨 — 왜: 매장 정보 수정 폼(storeView/edit.html)의 placeholder가 "09:00 ~ 21:00 (마감 세일
 	// 19:00~)"처럼 마감 시각 뒤에 괄호 설명을 붙이는 걸 유도하는데, 아래 파싱이 "~" 뒤 문자열
 	// 전체를 그대로 LocalTime.parse에 넘기면 괄호 때문에 항상 실패해서 대시보드 마감 배지가 빈
 	// 채로 나왔다(직접 재현해서 확인함). "~" 뒤에서 첫 번째로 나오는 "H:mm" 패턴만 뽑아 쓰도록 고친다.
 	private static final Pattern TIME_TOKEN = Pattern.compile("(\\d{1,2}:\\d{2})");
+	private static final Pattern SALE_TIME_PATTERN = Pattern.compile("마감\\s*세일\\s*:?\\s*(\\d{1,2}:\\d{2})");
 
 	/**
 	 * "오늘의 구제" 초안을 발행(등록)할 수 있는 마지막 여유(분).
@@ -56,12 +59,8 @@ public final class StoreHoursUtil {
 			return new ClosingInfo("", false, null);
 		}
 		try {
-			String[] parts = operatingHours.split("~");
-			LocalTime closeTime = firstTimeToken(parts[1]);
-			if (closeTime == null) {
-				return new ClosingInfo("", false, null);
-			}
-			LocalTime openTime = parts.length > 0 ? firstTimeToken(parts[0]) : null;
+			LocalTime closeTime = parseClosingTime(operatingHours);
+			LocalTime openTime = parseOpeningTime(operatingHours);
 
 			// 자정을 넘기는 영업시간(예: 18:00 ~ 02:00): 마감 시각이 시작 시각보다 이르면 마감은 "다음날"이다.
 			// 단, 지금이 이미 마감 시각 이전(새벽)이면 어제 시작한 영업이 오늘 새벽에 끝나는 것이라 "오늘".
@@ -84,6 +83,89 @@ public final class StoreHoursUtil {
 			return new ClosingInfo(label, urgent, close);
 		} catch (Exception e) {
 			return new ClosingInfo("", false, null);
+		}
+	}
+
+	/**
+	 * "09:00 ~ 22:00"에서 마감 시각 22:00(LocalTime)을 추출한다.
+	 * "~" 뒤의 첫 번째 H:mm 패턴을 읽으며, 형식이 올바르지 않으면 IllegalArgumentException을 던진다.
+	 */
+	public static LocalTime parseClosingTime(String operatingHours) {
+		if (operatingHours == null || !operatingHours.contains("~")) {
+			throw new IllegalArgumentException("영업시간 형식을 읽을 수 없어요: " + operatingHours);
+		}
+		String[] parts = operatingHours.split("~", 2);
+		String closingPart = parts.length > 1 ? parts[1].trim() : "";
+		LocalTime closeTime = firstTimeToken(closingPart);
+		if (closeTime == null) {
+			throw new IllegalArgumentException("영업시간 형식을 읽을 수 없어요: " + operatingHours);
+		}
+		return closeTime;
+	}
+
+	/**
+	 * "09:00 ~ 22:00"에서 시작 시각 09:00(LocalTime)을 추출한다.
+	 * "~" 앞의 첫 번째 H:mm 패턴을 읽으며, 없으면 null을 반환한다.
+	 */
+	public static LocalTime parseOpeningTime(String operatingHours) {
+		if (operatingHours == null || !operatingHours.contains("~")) {
+			return null;
+		}
+		String[] parts = operatingHours.split("~", 2);
+		return firstTimeToken(parts[0].trim());
+	}
+
+	/**
+	 * "09:00 ~ 22:00 (마감 세일 19:00~)"에서 마감 세일 시작 시각 19:00(LocalTime)을 추출한다.
+	 * 패턴이 없거나 파싱 실패 시 null을 반환한다.
+	 */
+	public static LocalTime parseSaleStartTime(String operatingHours) {
+		if (operatingHours == null) {
+			return null;
+		}
+		Matcher matcher = SALE_TIME_PATTERN.matcher(operatingHours);
+		if (matcher.find()) {
+			try {
+				return LocalTime.parse(matcher.group(1), HOUR_FORMAT);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 시작 시각, 마감 시각, 마감 세일 시작 시각(선택)을 표준 문자열 포맷으로 조합한다.
+	 * 예: "09:00 ~ 22:00" 또는 "09:00 ~ 22:00 (마감 세일 20:00~)"
+	 */
+	public static String formatOperatingHours(LocalTime openTime, LocalTime closeTime, LocalTime saleStartTime) {
+		if (openTime == null || closeTime == null) {
+			return null;
+		}
+		String base = openTime.format(STANDARD_FORMAT) + " ~ " + closeTime.format(STANDARD_FORMAT);
+		if (saleStartTime != null) {
+			return base + " (마감 세일 " + saleStartTime.format(STANDARD_FORMAT) + "~)";
+		}
+		return base;
+	}
+
+	/**
+	 * 문자열이 유효한 영업시간 형식(시작과 마감 시각이 모두 존재하는지)인지 검증한다.
+	 * null이거나 공백이면 설정 안 함으로 간주하여 true를 반환한다.
+	 */
+	public static boolean isValidFormat(String operatingHours) {
+		if (operatingHours == null || operatingHours.isBlank()) {
+			return true;
+		}
+		if (!operatingHours.contains("~")) {
+			return false;
+		}
+		try {
+			LocalTime open = parseOpeningTime(operatingHours);
+			LocalTime close = parseClosingTime(operatingHours);
+			return open != null && close != null;
+		} catch (Exception e) {
+			return false;
 		}
 	}
 

@@ -204,6 +204,10 @@ public class StoreService {
 		return !(category == null || category.isBlank() || phone == null || phone.isBlank());
 	}
 
+	public boolean isEditValid(String category, String phone, String operatingHours) {
+		return isEditValid(category, phone) && StoreHoursUtil.isValidFormat(operatingHours);
+	}
+
 	/**
 	 * 상호명/사업자등록번호/주소/위치(latitude/longitude 직접 입력)는 여기서 받지 않는다 — 자세한
 	 * 사유는 원래 StoreController#editSubmit 주석 참고(승인 심사 근거값 보호, 카카오맵 Geocoder로
@@ -215,7 +219,11 @@ public class StoreService {
 	                             String bankName, String bankAccount, String accountHolder) {
 		store.setCategory(category.trim());
 		store.setPhone(phone.trim());
-		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
+		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
+		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {
+			throw new IllegalArgumentException("영업시간 형식이 올바르지 않아요: " + trimmedHours);
+		}
+		store.setOperatingHours(trimmedHours);
 		store.setLatitude(latitude);
 		store.setLongitude(longitude);
 		// 정산 입금 계좌 (WBS 2.0) — 셋 다 비면 미등록으로 둔다

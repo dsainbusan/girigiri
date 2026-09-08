@@ -17,6 +17,7 @@ import net.dsa.girigiri.repository.ReviewSummaryRepository;
 import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -198,6 +199,10 @@ public class SuperAdminStoreService {
 				|| phone == null || phone.isBlank() || address == null || address.isBlank());
 	}
 
+	public boolean isEditValid(String storeName, String category, String phone, String address, String operatingHours) {
+		return isEditValid(storeName, category, phone, address) && StoreHoursUtil.isValidFormat(operatingHours);
+	}
+
 	/**
 	 * 점주 본인용 /store/edit는 상호명/사업자번호/주소를 승인 심사 근거라는 이유로 일부러 막아뒀지만,
 	 * 운영자는 그 제한을 받을 이유가 없어(오히려 오탈자·정보 오류를 고쳐줘야 하는 쪽) 전체 필드를 연다.
@@ -213,7 +218,11 @@ public class SuperAdminStoreService {
 		store.setPhone(phone.trim());
 		store.setAddress(address.trim());
 		store.setBusinessNumber(businessNumber != null && !businessNumber.isBlank() ? businessNumber.trim() : null);
-		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
+		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
+		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {
+			throw new IllegalArgumentException("영업시간 형식이 올바르지 않아요: " + trimmedHours);
+		}
+		store.setOperatingHours(trimmedHours);
 		store.setLatitude(latitude);
 		store.setLongitude(longitude);
 		storeRepository.save(store);

@@ -91,9 +91,36 @@
     </div>
 
     <div class="field-group">
-      <label class="field-group__label" for="operatingHours">영업시간 및 마감세일 예상 시간</label>
-      <input class="field" type="text" id="operatingHours" name="operatingHours" th:value="${store.operatingHours}"
-             placeholder="예: 09:00 ~ 21:00 (마감 세일 19:00~)" maxlength="100">
+      <label class="field-group__label">영업시간 및 마감세일 예상 시간</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1;">
+          <label for="openTimeInput" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">영업 시작</label>
+          <input class="field" type="time" id="openTimeInput">
+        </div>
+        <span style="padding-top:18px;font-weight:600;color:var(--text-muted);">~</span>
+        <div style="flex:1;">
+          <label for="closeTimeInput" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">영업 마감</label>
+          <input class="field" type="time" id="closeTimeInput">
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <label style="font-size:12px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="saleTimeCheck" style="width:15px;height:15px;">
+          <span>마감 세일 시작 시각 설정 (선택)</span>
+        </label>
+      </div>
+      <div id="saleTimeRow" style="margin-top:8px;display:none;">
+        <div style="max-width:200px;">
+          <label for="saleTimeInput" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;">마감 세일 시작</label>
+          <input class="field" type="time" id="saleTimeInput">
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+          설정 시 손님에게 "마감 세일 00:00~" 안내 문구가 함께 노출됩니다.
+        </p>
+      </div>
+
+      <input type="hidden" id="operatingHours" name="operatingHours" th:value="${store.operatingHours}">
     </div>
 
     <button type="submit" class="btn btn--primary btn--block mt-24">저장</button>
@@ -204,6 +231,81 @@
     });
   </script>
 
+  <!-- 영업시간 구조화 입력 및 hidden 값 동기화 -->
+  <script th:inline="none">
+  (function () {
+    var hiddenInput = document.getElementById('operatingHours');
+    var openEl = document.getElementById('openTimeInput');
+    var closeEl = document.getElementById('closeTimeInput');
+    var saleCheck = document.getElementById('saleTimeCheck');
+    var saleRow = document.getElementById('saleTimeRow');
+    var saleEl = document.getElementById('saleTimeInput');
+    var form = hiddenInput ? hiddenInput.closest('form') : null;
+
+    if (!hiddenInput || !openEl || !closeEl) return;
+
+    var raw = hiddenInput.value ? hiddenInput.value.trim() : '';
+    if (raw) {
+      var parts = raw.split('~');
+      if (parts.length >= 2) {
+        var openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
+        if (openMatch) {
+          openEl.value = openMatch[1].length === 4 ? '0' + openMatch[1] : openMatch[1];
+        }
+        var closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
+        if (closeMatch) {
+          closeEl.value = closeMatch[1].length === 4 ? '0' + closeMatch[1] : closeMatch[1];
+        }
+      }
+      var saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
+      if (saleMatch && saleEl && saleCheck) {
+        saleCheck.checked = true;
+        if (saleRow) saleRow.style.display = 'block';
+        saleEl.value = saleMatch[1].length === 4 ? '0' + saleMatch[1] : saleMatch[1];
+      }
+    }
+
+    function updateHidden() {
+      var openVal = openEl.value;
+      var closeVal = closeEl.value;
+      if (!openVal || !closeVal) {
+        hiddenInput.value = '';
+        return;
+      }
+      var res = openVal + ' ~ ' + closeVal;
+      if (saleCheck && saleCheck.checked && saleEl && saleEl.value) {
+        res += ' (마감 세일 ' + saleEl.value + '~)';
+      }
+      hiddenInput.value = res;
+    }
+
+    if (saleCheck && saleRow) {
+      saleCheck.addEventListener('change', function () {
+        saleRow.style.display = saleCheck.checked ? 'block' : 'none';
+        if (!saleCheck.checked && saleEl) {
+          saleEl.value = '';
+        }
+        updateHidden();
+      });
+    }
+
+    openEl.addEventListener('change', updateHidden);
+    closeEl.addEventListener('change', updateHidden);
+    if (saleEl) saleEl.addEventListener('change', updateHidden);
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        updateHidden();
+        if ((openEl.value && !closeEl.value) || (!openEl.value && closeEl.value)) {
+          e.preventDefault();
+          alert('영업 시작 시각과 마감 시각을 모두 선택해 주세요.');
+          if (!openEl.value) openEl.focus();
+          else closeEl.focus();
+        }
+      });
+    }
+  })();
+  </script>
 </div>
 </body>
 </html>

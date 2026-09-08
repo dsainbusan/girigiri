@@ -5,6 +5,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -96,6 +97,12 @@ public class AuthService {
 				phone == null || phone.isBlank());
 	}
 
+	public boolean isOwnerApplyValid(String storeName, String businessNumber, String category,
+	                                  String address, String phone, String operatingHours) {
+		return isOwnerApplyValid(storeName, businessNumber, category, address, phone)
+				&& StoreHoursUtil.isValidFormat(operatingHours);
+	}
+
 	/**
 	 * 점주 입점 신청서 제출 처리
 	 * - 매장 정보 및 사업자 등록번호를 PENDING 상태로 저장
@@ -117,7 +124,11 @@ public class AuthService {
 		store.setCategory(category.trim());
 		store.setAddress(address.trim());
 		store.setPhone(phone.trim());
-		store.setOperatingHours(operatingHours != null && !operatingHours.isBlank() ? operatingHours.trim() : null);
+		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
+		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {
+			throw new IllegalArgumentException("영업시간 형식이 올바르지 않아요: " + trimmedHours);
+		}
+		store.setOperatingHours(trimmedHours);
 		store.setApprovalStatus(StoreEntity.STATUS_PENDING); // 승인 대기 상태
 
 		return storeRepository.save(store);
