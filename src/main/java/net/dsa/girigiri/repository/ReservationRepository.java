@@ -24,6 +24,12 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 픽업 현장에서 QR/픽업코드로 예약을 찾을 때 사용
 	Optional<ReservationEntity> findByPickupCode(String pickupCode);
 
+	// 추가됨 (2026-09-08, 코드 감사) — ReservationService.generateUniquePickupCode()가 새로 생성한
+	// 픽업 코드가 이미 쓰이고 있는지 확인할 때 사용. pickup_code에 걸린 DB unique 제약이 마지막
+	// 안전망이라면, 이건 그 전에 미리 걸러서 저장 단계에서 DataIntegrityViolationException으로
+	// 예약 생성 자체가 실패하는 걸 막는 1차 방어선.
+	boolean existsByPickupCode(String pickupCode);
+
 	// 마이페이지 예약 목록(진행중/픽업완료/노쇼·취소 탭)에서 사용. 최근 예약이 위로 오게 정렬.
 	List<ReservationEntity> findByUserIdAndStatusInOrderByReservedAtDesc(Long userId, List<String> statuses);
 
@@ -32,8 +38,11 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 
 	long countByStoreIdAndCancelledBy(Long storeId, String cancelledBy);
 
-	// 노쇼 자동 처리용: 아직 픽업 안 됐는데(confirmed) 픽업 마감시간이 이미 지난 예약들
-	List<ReservationEntity> findByStatusAndPickupTimeBefore(String status, java.time.LocalDateTime time);
+	// 추가됨 (2026-09-08, 코드 감사) — 왜: getStoreCancelStats의 분모(total)를 countByStoreId로
+	// 구하면 결제까지 안 가고 포기한(pending) 예약까지 다 세어버려서, 트래픽만 많고 결제 전환이
+	// 낮은 매장일수록 분모가 부풀어 취소율이 실제보다 좋게(희석되어) 나온다. "결제까지 갔던"
+	// 예약(pending 제외)만 분모로 삼기 위한 카운트.
+	long countByStoreIdAndStatusNot(Long storeId, String status);
 
 	// 추가됨 (2026-08-21) — 왜: 노쇼 자동 처리가 이제 confirmed/ready 두 상태를 다 봐야 해서
 	// (매장이 아직 안 왔거나, 수락은 했는데 손님이 안 온 경우 둘 다 노쇼 후보) 상태 여러 개로 조회.

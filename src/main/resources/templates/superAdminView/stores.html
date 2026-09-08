@@ -100,8 +100,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr th:if="${#lists.isEmpty(stores)}">
+        <!-- 변경됨 (2026-09-08) — "대기" 탭이 비었을 때만 "모든 매장이 입점 완료했습니다"가 맞는
+             안내다. "전체" 탭(또는 검색 결과)이 비었을 때 이 문구가 뜨면 사실과 다르다는 지적으로,
+             탭에 따라 다른 문구를 보여주게 나눴다. -->
+        <tr th:if="${#lists.isEmpty(stores) and filter == 'PENDING'}">
           <td colspan="8" class="table-empty">모든 매장이 입점 완료했습니다.</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(stores) and filter != 'PENDING'}">
+          <td colspan="8" class="table-empty">입점된 매장이 없습니다.</td>
         </tr>
         <tr class="row-clickable" th:each="store : ${stores}" th:attr="data-href=@{/superadmin/stores/{id}(id=${store.id}, filter=${filter})}">
           <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${store.id}" form="bulk-form"></td>

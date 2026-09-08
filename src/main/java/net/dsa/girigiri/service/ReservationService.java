@@ -115,37 +115,6 @@ public class ReservationService {
 	// 문창호 (2026-09-07) — 픽업 완료 시 매출 리포트(Supabase)에 즉시 반영. best-effort, 실패해도 픽업엔 영향 없음.
 	private final SalesSyncService salesSyncService;
 
-	// 결제 실패 처리(재고복구·결제실패기록·예약취소)를 confirmPayment()의 메인 트랜잭션과
-	// 분리된 "독립 트랜잭션"으로 즉시 커밋하기 위한 템플릿.
-	//
-	// 왜 필요한가 (2026-08-26 발견된 버그 수정) — confirmPayment()는 @Transactional인데, 결제
-	// 검증 실패 시 재고복구+취소 처리를 저장한 다음 PaymentVerificationException을 던진다.
-	// 이 예외가 @Transactional 메서드 밖으로 나가면 Spring이 그 메서드 안에서 한 저장을
-	// "전부 실패"로 보고 롤백해버려서, 실제로는 재고복구·취소 처리가 하나도 반영되지 않고
-	// 예약이 pending인 채로 재고를 계속 붙잡고 있는 문제가 있었다.
-	// PROPAGATION_REQUIRES_NEW로 별도 트랜잭션을 만들면, confirmPayment()가 나중에 예외를
-	// 던져서 자기 트랜잭션을 롤백하더라도 이 안에서 한 저장은 이미 커밋된 뒤라 영향을 안 받는다.
-	// (같은 클래스 안에서 private 메서드에 @Transactional(REQUIRES_NEW)를 붙이기만 하면 Spring의
-	// self-invocation 문제로 조용히 무시되므로, 프록시를 안 타는 TransactionTemplate으로 직접 처리한다.)
-	private void markPaymentFailedInNewTransaction(PaymentEntity payment, ReservationEntity reservation, String failReason) {
-		TransactionTemplate requiresNew = new TransactionTemplate(transactionManager);
-		requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-		requiresNew.executeWithoutResult(status -> {
-			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
-
-			payment.fail(failReason);
-			paymentRepository.save(payment);
-
-			reservation.setStatus("cancelled");
-			reservation.setCancelledBy("SYSTEM");
-			reservation.setCancelReason("결제 실패: " + failReason);
-			reservationRepository.save(reservation);
-
-			// 결제가 실제로 안 됐으니 쿠폰을 쓴 적이 있어도 손님 잘못이 아니라 복구한다.
-			couponService.restore(reservation.getCouponId());
-		});
-	}
-
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
 	 * 아직 결제가 된 게 아니므로 영수증은 만들지 않는다 (confirmPayment 성공 시에만 만든다).
@@ -165,7 +134,7 @@ public class ReservationService {
 	 *
 	 * 쿠폰 사용 처리(couponService.markUsed)는 재고 차감과 똑같이 "낙관적으로 먼저 써버리고, 실패하면
 	 * 되돌리는" 방식이다 — 결제가 실패하거나 예약이 취소되면 ReservationService 안의 다른 메서드들
-	 * (markPaymentFailedInNewTransaction/cancelPendingReservation/expireStalePendingReservations/
+	 * (confirmPayment의 결제 실패 처리/cancelPendingReservation/expireStalePendingReservations/
 	 * cancelReservation/cancelByStore)이 reservation.getCouponId()로 couponService.restore()를
 	 * 호출해서 다시 쓸 수 있게 돌려놓는다 — 이 메서드에서 따로 롤백 처리를 안 해도 되는 이유.
 	 */
@@ -193,7 +162,7 @@ public class ReservationService {
 
 		// 4. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
 		//    무관하게 예약 하나당 하나면 되고, confirmed로 바뀐 뒤에 새로 만들 이유가 없다)
-		String pickupCode = net.dsa.girigiri.util.QrCodeUtil.generatePickupCode();
+		String pickupCode = generateUniquePickupCode();
 
 		// 5. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
 		ReservationEntity reservation = ReservationEntity.builder()
@@ -238,13 +207,20 @@ public class ReservationService {
 	 * 검증 실패(결제 미완료/금액 불일치/이미 처리된 예약 등)면 예약을 취소 처리하고 재고를 복구한
 	 * 뒤 PaymentVerificationException을 던진다 — 실패한 채로 재고만 계속 붙잡고 있으면 안 되기 때문.
 	 */
-	@Transactional
+	// 추가됨/변경됨 (2026-09-08, 코드 감사 — 두 번째 반영) — noRollbackFor: 아래 결제 검증 실패
+	// 분기에서 PaymentVerificationException을 던지기 "전에" 재고복구/결제실패기록/예약취소를 같은
+	// 트랜잭션 안에서 저장한다. 예전엔 이 부분을 별도 트랜잭션(REQUIRES_NEW, markPaymentFailedInNewTransaction)
+	// 으로 커밋한 뒤에 예외를 던졌는데, findByIdForUpdate로 이 예약 행에 락을 걸어둔 상태에서
+	// REQUIRES_NEW로 같은 행에 또 쓰려고 하면 서로 다른 커넥션끼리 같은 락을 기다리다 자기 자신과
+	// 데드락이 난다(실제로 테스트에서 MySQL Lock wait timeout으로 재현 확인함, 2026-09-08). 별도
+	// 트랜잭션 없이 noRollbackFor로 "이 예외가 나도 지금까지 한 저장은 롤백하지 말라"고 표시하면,
+	// 커넥션을 하나만 쓰면서도 실패 처리가 안전하게 커밋된 뒤 예외가 호출부로 전달된다.
+	@Transactional(noRollbackFor = PaymentVerificationException.class)
 	public ReservationEntity confirmPayment(Long reservationId, String paymentId) {
-		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 바꿔서 이 예약 행을 PortOne 검증
-		// 호출이 끝날 때까지 잠근다. expireStalePendingReservations가 같은 예약을 "결제 안 하고
-		// 포기됨"으로 착각해 동시에 취소시키던 레이스(A2)를 막는 핵심 — 그 스케줄러도 같은 락을 쓰므로
-		// 이 트랜잭션이 끝날 때까지 대기했다가, 그때는 이미 상태가 pending이 아니라서 자기 조건문에서
-		// 자연히 스킵된다.
+		// findByIdForUpdate로 이 예약 행을 PortOne 검증 호출이 끝날 때까지 잠근다.
+		// expireStalePendingReservations가 같은 예약을 "결제 안 하고 포기됨"으로 착각해 동시에
+		// 취소시키던 레이스를 막는 핵심 — 그 스케줄러도 같은 락을 쓰므로 이 트랜잭션이 끝날 때까지
+		// 대기했다가, 그때는 이미 상태가 pending이 아니라서 자기 조건문에서 자연히 스킵된다.
 		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
@@ -265,10 +241,20 @@ public class ReservationService {
 		if (!result.paid()) {
 			// 결제 실패/취소 -> 재고를 다시 돌려놓고, 예약도 취소된 걸로 확정지어야 한다
 			// (pending으로 계속 남겨두면 재고를 영구히 붙잡고 있는 셈이라 다른 손님이 못 산다).
-			// 아래에서 바로 예외를 던지면 이 메서드의 @Transactional이 방금 한 저장까지 통째로
-			// 롤백해버리므로, 별도 트랜잭션(markPaymentFailedInNewTransaction)으로 먼저 확실히
-			// 커밋해둔 다음에 예외를 던진다.
-			markPaymentFailedInNewTransaction(payment, reservation, result.failReason());
+			// 메서드 상단의 @Transactional(noRollbackFor=...) 덕분에, 아래에서 예외를 던져도
+			// 이 저장들은 롤백되지 않고 그대로 커밋된다.
+			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
+
+			payment.fail(result.failReason());
+			paymentRepository.save(payment);
+
+			reservation.setStatus("cancelled");
+			reservation.setCancelledBy("SYSTEM");
+			reservation.setCancelReason("결제 실패: " + result.failReason());
+			reservationRepository.save(reservation);
+
+			// 결제가 실제로 안 됐으니 쿠폰을 쓴 적이 있어도 손님 잘못이 아니라 복구한다.
+			couponService.restore(reservation.getCouponId());
 
 			throw new PaymentVerificationException(result.failReason());
 		}
@@ -345,8 +331,21 @@ public class ReservationService {
 	 * 거의 없어야 정상이다.)
 	 *
 	 * @return 이번에 자동 취소된 예약 개수
+	 *
+	 * 전면 수정됨 (2026-09-08, 코드 감사) — 이전 구현은 아래 두 가지 문제가 있었다:
+	 *   1) (치명적) confirmPayment()가 PortOne에 결제 확인을 묻는 동안엔 이 예약이 여전히 "pending"
+	 *      상태라, 하필 그 순간 PENDING_EXPIRY_MINUTES가 지났으면 여기서 "결제 포기"로 착각하고
+	 *      재고 복구 + 로컬 취소를 해버릴 수 있었다 — 카드는 이미 결제됐는데 예약은 취소된 채로
+	 *      남고, PortOne에 환불 요청도 안 나가서 돈이 밖에 떠 있는 상황이 아무 데도 기록되지 않았다.
+	 *      confirmPayment가 findByIdForUpdate로 락을 걸게 됐어도, "락을 걸기 직전"이나 "락을 풀고
+	 *      커밋 완료 후 아주 잠깐" 같은 좁은 틈은 여전히 있어서, 로컬 상태만 보고 판단하면 안 된다.
+	 *   2) (일반) 메서드 전체가 하나의 @Transactional이라, 루프 중간에 하나가 실패하면(예:
+	 *      PaymentEntity.cancel()이 이미 PAID인 행에서 IllegalStateException을 던지는 경우) 그
+	 *      배치 전체가 조용히 롤백됐다 — 이미 처리됐어야 할 다른 항목들까지 전부 원래대로 되돌아간다.
+	 * 이제 후보 하나하나를 findByIdForUpdate로 다시 잠가서 최신 상태를 확인하고(1번의 절반), PortOne에
+	 * 실제로 결제됐는지 마지막으로 한 번 더 물어본 뒤(1번 완전 해결 — 로컬 상태 대신 PG 원본을 믿는다),
+	 * 항목마다 독립된 트랜잭션 + try/catch로 처리해서 하나가 실패해도 나머지는 그대로 진행된다(2번 해결).
 	 */
-	@Transactional
 	public int expireStalePendingReservations() {
 		LocalDateTime cutoff = LocalDateTime.now().minusMinutes(PENDING_EXPIRY_MINUTES);
 		List<Long> staleIds = reservationRepository.findByStatusIn(List.of("pending")).stream()
@@ -354,20 +353,60 @@ public class ReservationService {
 				.map(ReservationEntity::getId)
 				.toList();
 
-		// 변경됨 (2026-09-08, 코드 감사) — id만 먼저 뽑아두고, 항목마다 findByIdForUpdate로 다시 잠근
-		// 뒤 상태를 재확인한다. confirmPayment가 이 사이 같은 예약을 확정시켰다면(그 트랜잭션이 락을
-		// 쥐고 있는 동안엔 여기서 대기하다가, 풀린 뒤엔 이미 status가 pending이 아니게 바뀐 뒤라면)
-		// 여기서 조용히 건너뛴다 — 결제 성공한 예약을 취소해버리는 사고(A2 레이스)를 막는 핵심.
 		int expiredCount = 0;
-		for (Long id : staleIds) {
-			ReservationEntity reservation = reservationRepository.findByIdForUpdate(id).orElse(null);
+		for (Long reservationId : staleIds) {
+			try {
+				if (expireOnePendingReservation(reservationId)) {
+					expiredCount++;
+				}
+			} catch (Exception e) {
+				log.error("> [ReservationService] 만료 예약 자동취소 처리 중 오류 (건너뛰고 계속 진행) - reservationId={}",
+						reservationId, e);
+			}
+		}
+		return expiredCount;
+	}
+
+	/**
+	 * expireStalePendingReservations의 항목 1건 처리 — 독립된 트랜잭션(REQUIRES_NEW)으로 실행해서,
+	 * 이 항목이 실패해도 이미 처리된 다른 항목의 커밋에는 영향이 없다. (같은 클래스 안에서 private
+	 * 메서드에 @Transactional(REQUIRES_NEW)를 붙이면 프록시를 안 타서 조용히 무시되므로,
+	 * TransactionTemplate을 직접 쓴다.)
+	 *
+	 * @return 실제로 취소 처리했으면 true, 그 사이 이미 처리됐거나(락 재확인 결과 pending이 아님)
+	 *         PortOne에서 이미 결제완료로 확인돼 건너뛰었으면 false
+	 */
+	private boolean expireOnePendingReservation(Long reservationId) {
+		TransactionTemplate requiresNew = new TransactionTemplate(transactionManager);
+		requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		return Boolean.TRUE.equals(requiresNew.execute(status -> {
+			// 후보 목록을 만든 뒤 여기 오기까지 시간이 걸릴 수 있으니, 락을 걸고 최신 상태를 다시
+			// 확인한다 — confirmPayment()가 그 사이 먼저 확정(confirmed)했거나 다른 경로로 이미
+			// 취소됐으면 더 이상 손댈 대상이 아니다.
+			ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId).orElse(null);
 			if (reservation == null || !"pending".equals(reservation.getStatus())) {
-				continue;
+				return false;
+			}
+
+			// 로컬 상태만 믿지 않고, 결제 시도 흔적(merchantUid)이 있으면 PortOne에 마지막으로 한 번 더
+			// 확인한다 — confirmPayment 콜백을 못 받았을 뿐 실제로는 결제가 이미 완료된 경우, 여기서
+			// 그냥 취소해버리면 "돈은 나갔는데 예약은 사라지는" 사고가 나기 때문이다. 이 경우는 자동
+			// 처리하지 않고 크게 로그를 남겨서 사람이 확인하게 한다.
+			Optional<PaymentEntity> paymentOpt = paymentRepository.findByReservationId(reservationId);
+			if (paymentOpt.isPresent() && portOneClient.isConfigured()) {
+				PortOneClient.PortOneVerifyResult result =
+						portOneClient.verifyPayment(paymentOpt.get().getMerchantUid(), reservation.getTotalPrice());
+				if (result.paid()) {
+					log.error("> [ReservationService] 만료 처리 대상이지만 PortOne에는 이미 결제완료로 확인됨 - " +
+									"자동 취소하지 않고 건너뜀(수동 확인 필요). reservationId={}, merchantUid={}",
+							reservationId, paymentOpt.get().getMerchantUid());
+					return false;
+				}
 			}
 
 			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
 
-			paymentRepository.findByReservationId(reservation.getId()).ifPresent(payment -> {
+			paymentOpt.ifPresent(payment -> {
 				payment.cancel("결제 시간 초과로 자동 취소됨");
 				paymentRepository.save(payment);
 			});
@@ -375,14 +414,13 @@ public class ReservationService {
 			reservation.setStatus("cancelled");
 			reservation.setCancelledBy("SYSTEM");
 			reservation.setCancelReason("결제 시간 초과로 자동 취소됨");
-			reservationRepository.save(reservation);
 
 			// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
 			couponService.restore(reservation.getCouponId());
-			expiredCount++;
-		}
 
-		return expiredCount;
+			reservationRepository.save(reservation);
+			return true;
+		}));
 	}
 
 	/**
@@ -602,7 +640,11 @@ public class ReservationService {
 
 		checkCancellableState(reservation);
 
-		String resolvedReason = (reason == null || reason.isBlank()) ? "매장 사정으로 취소됨" : reason;
+		// 길이 제한(255자)이 걸린 ReservationEntity.cancelReason / PaymentCancelEntity.reason에
+		// 그대로 저장하는 값이라, storeCancel.html 폼에 프론트 maxlength가 없는 걸 감안해 여기서
+		// 한 번 더 잘라준다 (2026-09-08, 코드 감사) — 안 자르면 긴 사유 입력 시 취소 처리 자체가
+		// 저장 단계에서 500으로 실패한다.
+		String resolvedReason = truncateReason((reason == null || reason.isBlank()) ? "매장 사정으로 취소됨" : reason);
 
 		// 결제가 이미 완료(paid)된 건이면 PortOne에 실제 환불을 요청한다 — 손님 잘못이 아니므로
 		// (매장 취소는 재고 착오 등 매장 사정이 이유라서) 로컬 상태는 예외 없이 항상 "cancelled"로 바뀐다.
@@ -651,7 +693,8 @@ public class ReservationService {
 
 		checkCancellableState(reservation);
 
-		String resolvedReason = (reason == null || reason.isBlank()) ? "운영자 처리로 취소됨" : reason;
+		// truncateReason (2026-09-08, 코드 감사) — cancelByStore와 동일한 이유.
+		String resolvedReason = truncateReason((reason == null || reason.isBlank()) ? "운영자 처리로 취소됨" : reason);
 
 		markPaymentCancelled(reservationId, resolvedReason);
 
@@ -675,7 +718,7 @@ public class ReservationService {
 	 */
 	public List<CancellableReservationDto> getCancellableReservations(Long storeId) {
 		List<ReservationEntity> cancellable =
-				reservationRepository.findByStoreIdAndStatusInOrderByReservedAtAsc(storeId, List.of("pending", "confirmed", "ready"));
+				reservationRepository.findByStoreIdAndStatusInOrderByReservedAtAsc(storeId, CANCELLABLE_STATUSES);
 		return cancellable.stream().map(this::toCancellableDto).toList();
 	}
 
@@ -707,7 +750,7 @@ public class ReservationService {
 	 */
 	public List<net.dsa.girigiri.domain.dto.ReservationCancelStatusDto> getCancelEligibilityForUser(Long userId) {
 		List<ReservationEntity> active = reservationRepository.findByUserIdAndStatusInOrderByReservedAtDesc(
-				userId, List.of("pending", "confirmed", "ready"));
+				userId, CANCELLABLE_STATUSES);
 
 		LocalDateTime now = LocalDateTime.now();
 
@@ -739,14 +782,55 @@ public class ReservationService {
 		}).toList();
 	}
 
+	// 추가됨 (2026-09-08, 코드 감사) — QrCodeUtil.generatePickupCode()의 엔트로피를 늘려서
+	// 충돌 확률을 크게 낮췄지만(QrCodeUtil 주석 참고) 0은 아니라서, 저장 전에 이미 쓰인 코드인지
+	// 한 번 더 확인하고 충돌이면 재생성한다. DB의 unique 제약(ReservationEntity.pickupCode)이
+	// 마지막 안전망이다.
+	private static final int PICKUP_CODE_GENERATION_MAX_ATTEMPTS = 5;
+
+	private String generateUniquePickupCode() {
+		for (int attempt = 0; attempt < PICKUP_CODE_GENERATION_MAX_ATTEMPTS; attempt++) {
+			String candidate = net.dsa.girigiri.util.QrCodeUtil.generatePickupCode();
+			if (!reservationRepository.existsByPickupCode(candidate)) {
+				return candidate;
+			}
+			log.warn("> [ReservationService] 픽업 코드 충돌 발생, 재생성합니다 - candidate={}, attempt={}", candidate, attempt + 1);
+		}
+		throw new IllegalStateException("픽업 코드 생성에 반복적으로 실패했어요. 잠시 후 다시 시도해주세요.");
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — "취소 가능한 상태"를 checkCancellableState(예외 던지는 쪽)와
+	// getCancellableReservations/getCancelEligibilityForUser(목록 조회 쪽)가 각자 따로 표현하고
+	// 있었다(전자는 switch로 "안 되는 상태"를 나열, 후자는 List.of(...)로 "되는 상태"를 나열 —
+	// 우연히 서로 반대쪽까지 일치했지만 한 군데를 고치면 다른 데를 빠뜨리기 쉬운 구조였다). 이제 이
+	// 목록 하나만 진짜 기준으로 삼는다.
+	private static final List<String> CANCELLABLE_STATUSES = List.of("pending", "confirmed", "ready");
+
 	/** 픽업/취소/노쇼처럼 이미 끝난 예약을 또 취소하려는 걸 막는 공통 상태 체크. */
 	private void checkCancellableState(ReservationEntity reservation) {
-		switch (reservation.getStatus()) {
-			case "picked" -> throw new CancellationNotAllowedException("이미 픽업 완료된 예약은 취소할 수 없어요.");
-			case "cancelled" -> throw new CancellationNotAllowedException("이미 취소된 예약이에요.");
-			case "noshowed" -> throw new CancellationNotAllowedException("이미 노쇼 처리된 예약이라 취소할 수 없어요.");
-			default -> { }   // "pending", "confirmed" 상태만 정상적으로 아래 로직 진행
+		if (CANCELLABLE_STATUSES.contains(reservation.getStatus())) {
+			return;
 		}
+		String message = switch (reservation.getStatus()) {
+			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
+			case "cancelled" -> "이미 취소된 예약이에요.";
+			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
+			default -> "취소할 수 없는 상태의 예약이에요. (현재 상태: " + reservation.getStatus() + ")";
+		};
+		throw new CancellationNotAllowedException(message);
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — cancelByStore/cancelByAdmin의 취소 사유 자유입력을
+	// ReservationEntity.cancelReason / PaymentCancelEntity.reason(둘 다 varchar(255))에 그대로
+	// 저장하는데, storeCancel.html 폼엔 길이 제한(maxlength)이 없다. 여기서 한 번 더 잘라서
+	// 저장 단계 길이초과로 취소 처리 자체가 500 에러로 실패하는 걸 막는다.
+	private static final int CANCEL_REASON_MAX_LENGTH = 255;
+
+	private String truncateReason(String reason) {
+		if (reason == null || reason.length() <= CANCEL_REASON_MAX_LENGTH) {
+			return reason;
+		}
+		return reason.substring(0, CANCEL_REASON_MAX_LENGTH);
 	}
 
 	/**
@@ -816,9 +900,16 @@ public class ReservationService {
 		});
 	}
 
-	/** 매장 신뢰도(취소율) 통계: 전체 예약 중 "매장 사정으로" 취소된 비율. 손님 취소는 매장 잘못이 아니라서 뺀다. */
+	/**
+	 * 매장 신뢰도(취소율) 통계: 전체 예약 중 "매장 사정으로" 취소된 비율. 손님 취소는 매장 잘못이 아니라서 뺀다.
+	 *
+	 * 변경됨 (2026-09-08, 코드 감사) — 왜: 분모(total)를 countByStoreId로 구하면 결제까지 안 가고
+	 * 포기한(pending) 예약까지 다 세어버려서, 트래픽만 많고 결제 전환이 낮은 매장일수록 분모가
+	 * 부풀어 취소율이 실제보다 좋게(희석되어) 나온다. "결제까지 갔던"(pending 제외) 예약만 분모로
+	 * 삼도록 바꿨다.
+	 */
 	public StoreCancelStatsDto getStoreCancelStats(Long storeId) {
-		long total = reservationRepository.countByStoreId(storeId);
+		long total = reservationRepository.countByStoreIdAndStatusNot(storeId, "pending");
 		long storeCancelled = reservationRepository.countByStoreIdAndCancelledBy(storeId, "STORE");
 		double rate = total == 0 ? 0.0 : (storeCancelled * 100.0 / total);
 		return new StoreCancelStatsDto(total, storeCancelled, rate);
