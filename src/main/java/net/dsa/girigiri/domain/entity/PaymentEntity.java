@@ -116,7 +116,7 @@ public class PaymentEntity extends BaseTimeEntity {
 			throw new IllegalStateException("이미 결제 완료(PAID)된 건은 실패 처리할 수 없어요. paymentId=" + this.id);
 		}
 		this.payStatus = PayStatus.FAILED;
-		this.failReason = reason;
+		this.failReason = truncateFailReason(reason);
 	}
 
 	/**
@@ -133,7 +133,7 @@ public class PaymentEntity extends BaseTimeEntity {
 			return;
 		}
 		this.payStatus = PayStatus.CANCELLED;
-		this.failReason = reason;
+		this.failReason = truncateFailReason(reason);
 	}
 
 	/** 이미 PAID였던 건을 환불 처리한다(PortOne 실제 환불 요청은 호출부에서 별도 처리). PAID가 아니면 예외. */
@@ -142,6 +142,21 @@ public class PaymentEntity extends BaseTimeEntity {
 			throw new IllegalStateException("결제 완료(PAID) 상태가 아니면 환불 처리할 수 없어요. 현재 상태=" + this.payStatus);
 		}
 		this.payStatus = PayStatus.CANCELLED;
-		this.failReason = note;
+		this.failReason = truncateFailReason(note);
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — 왜: PortOneClient가 PG사 원본 에러 바디를 그대로 이어붙여서
+	// fail_reason(255)를 넘기는 경우가 있었다(markPaymentCancelled 쪽에서 특히). 컬럼 길이를 넘으면
+	// 이 저장 자체가 DataIntegrityViolationException으로 실패해서, 그걸 감싼 cancelReservation/
+	// cancelByStore 트랜잭션 전체가 롤백돼버렸다 — "환불 API 한 번 실패했다고 취소 자체가 막히면
+	// 안 된다"는 설계 의도와 정반대로 동작한 것. 세 상태 전이(fail/cancel/applyCancel) 전부 여기를
+	// 거치게 해서 한 곳만 지키면 된다.
+	private static final int FAIL_REASON_MAX_LENGTH = 255;
+
+	private String truncateFailReason(String reason) {
+		if (reason == null || reason.length() <= FAIL_REASON_MAX_LENGTH) {
+			return reason;
+		}
+		return reason.substring(0, FAIL_REASON_MAX_LENGTH);
 	}
 }
