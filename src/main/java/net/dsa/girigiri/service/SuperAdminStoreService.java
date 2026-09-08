@@ -1,6 +1,7 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.StoreRecentStatsDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.SettlementEntity;
@@ -30,6 +31,7 @@ import java.util.Optional;
  *
  * SuperAdminController의 매장 관리 관련 Repository 직접 호출·검증·상태 변경 로직을 옮겨온다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SuperAdminStoreService {
@@ -111,6 +113,14 @@ public class SuperAdminStoreService {
 		store.setApprovalStatus(StoreEntity.STATUS_APPROVED);
 		storeRepository.save(store);
 
+		// 변경됨 (2026-09-08, 코드 감사) — owner_id 컬럼(StoreEntity)이 nullable이라("User가 Store를
+		// 소유한다"는 확정 모델(안B)인데도 DB 제약은 아직 non-null이 아님), owner_id가 비어있는 매장을
+		// 승인하면 findById(null)이 .ifPresent 이전에 IllegalArgumentException부터 던졌다. null이면
+		// 그냥 role 동기화만 건너뛴다 — 승인 자체는 이미 위에서 끝났으니 막을 이유가 없다.
+		if (store.getOwnerId() == null) {
+			log.warn("> [SuperAdminStoreService] owner_id가 없는 매장을 승인함 - storeId={}", id);
+			return;
+		}
 		userRepository.findById(store.getOwnerId()).ifPresent(owner -> {
 			owner.setRole(UserEntity.ROLE_OWNER);
 			userRepository.save(owner);
@@ -156,12 +166,18 @@ public class SuperAdminStoreService {
 		reviewSummaryRepository.deleteByStoreId(id);
 		reportRepository.deleteByStoreId(id);
 
-		userRepository.findById(store.getOwnerId())
-				.filter(owner -> UserEntity.ROLE_OWNER.equals(owner.getRole()))
-				.ifPresent(owner -> {
-					owner.setRole(UserEntity.ROLE_USER);
-					userRepository.save(owner);
-				});
+		// 변경됨 (2026-09-08, 코드 감사) — approve()와 같은 이유. owner_id가 없는 매장이면 되돌릴
+		// role도 없으니 이 블록만 건너뛰고 매장 삭제는 그대로 진행한다.
+		if (store.getOwnerId() != null) {
+			userRepository.findById(store.getOwnerId())
+					.filter(owner -> UserEntity.ROLE_OWNER.equals(owner.getRole()))
+					.ifPresent(owner -> {
+						owner.setRole(UserEntity.ROLE_USER);
+						userRepository.save(owner);
+					});
+		} else {
+			log.warn("> [SuperAdminStoreService] owner_id가 없는 매장을 삭제함 - storeId={}", id);
+		}
 
 		storeRepository.deleteById(id);
 	}

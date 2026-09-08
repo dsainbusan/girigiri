@@ -41,9 +41,8 @@ public class HomeService {
 	 */
 	@Transactional(readOnly = true)
 	public List<StoreMapDto> getMapStores() {
-		return storeRepository.findAll().stream()
-				.filter(store -> store.getLatitude() != null && store.getLongitude() != null)
-				.filter(store -> !StoreEntity.STATUS_SUSPENDED.equals(store.getStatus()))
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB 쿼리로.
+		return storeRepository.findMapMarkerCandidates(StoreEntity.STATUS_SUSPENDED).stream()
 				.map(this::toMapDto)
 				.toList();
 	}
@@ -62,11 +61,14 @@ public class HomeService {
 	 * 홈 배너용: 오늘 픽업 완료된 예약 건수. ("오늘 N명이 마감 음식을 구했어요")
 	 */
 	public long getTodayRescueCount() {
+		// 변경됨 (2026-09-08, 코드 감사) — findAll()로 예약 테이블 전체 이력을 매번 훑던 걸 DB
+		// COUNT 쿼리로 바꾼다(데이터가 쌓일수록 계속 느려지던 부분).
 		LocalDate today = LocalDate.now();
-		return reservationRepository.findAll().stream()
-				.filter(r -> "picked".equals(r.getStatus()))
-				.filter(r -> r.getPickedAt() != null && r.getPickedAt().toLocalDate().equals(today))
-				.count();
+		// countByStatusAndPickedAtBetween은 양끝 포함(BETWEEN)이라, 상한을 내일 자정 그대로 쓰면
+		// 정확히 그 시각(00:00:00.000000000)에 픽업된 건까지 포함돼버린다 — 나노초 하나를 빼서
+		// "오늘 하루" 경계를 정확히 맞춘다.
+		return reservationRepository.countByStatusAndPickedAtBetween(
+				"picked", today.atStartOfDay(), today.plusDays(1).atStartOfDay().minusNanos(1));
 	}
 
 	/**
@@ -81,9 +83,8 @@ public class HomeService {
 	 * 필드에 재사용(전에는 두 번 파싱했음), 거리 계산은 중복돼있던 걸 DistanceUtil로 통합.
 	 */
 	public List<StoreCardDto> getActiveStoreCards(Set<Long> likedStoreIds, Double userLat, Double userLng) {
-		Map<Long, ProductEntity> bestProductByStoreId = productRepository.findAll().stream()
-				.filter(product -> STATUS_ACTIVE.equals(product.getStatus()))
-				.filter(product -> product.getRemainingQuantity() != null && product.getRemainingQuantity() > 0)
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB 쿼리로.
+		Map<Long, ProductEntity> bestProductByStoreId = productRepository.findByStatusAndRemainingQuantityGreaterThan(STATUS_ACTIVE, 0).stream()
 				.collect(Collectors.toMap(
 						ProductEntity::getStoreId,
 						product -> product,

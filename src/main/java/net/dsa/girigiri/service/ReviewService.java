@@ -51,6 +51,12 @@ public class ReviewService {
 	// 요약에 넣는 리뷰 본문은 최근 것 위주로 이 개수만큼만 — 리뷰가 수백 개인 인기 매장이어도
 	// 프롬프트가 무한정 길어지지 않게(토큰 비용/지연 방지) 상한을 둔다.
 	private static final int MAX_REVIEWS_FOR_SUMMARY_PROMPT = 30;
+	// 추가됨 (2026-09-08, 코드 감사) — Gemini 응답 길이를 MAX_OUTPUT_TOKENS=300과 프롬프트의
+	// "120자 정도" 부탁으로만 제한하고 있어서, ReviewSummaryEntity.summary(varchar(1000))보다 긴
+	// 응답이 한 번만 와도 저장 시 DataIntegrityViolationException으로 그 매장 상세 페이지 전체가
+	// 500으로 죽었다 — 클래스 주석이 명시한 "실패해도 화면은 안 깨져야 한다"와 정반대로 동작하던 부분.
+	// ReservationService.truncateReason/PaymentEntity.truncateFailReason과 같은 패턴으로 저장 직전에 자른다.
+	private static final int SUMMARY_MAX_LENGTH = 1000;
 
 	// ReservationEntity.status의 "픽업완료" 값. 리뷰는 이 상태의 예약이 있어야 쓸 수 있다.
 	private static final String RESERVATION_STATUS_PICKED = "picked";
@@ -168,13 +174,22 @@ public class ReviewService {
 			return cached.map(ReviewSummaryEntity::getSummary); // 예전 캐시라도 있으면 그거라도
 		}
 
+		String summary = truncateSummary(fresh.get());
 		ReviewSummaryEntity entity = cached.orElseGet(() -> ReviewSummaryEntity.builder().storeId(storeId).build());
-		entity.setSummary(fresh.get());
+		entity.setSummary(summary);
 		entity.setReviewCountAtSummary(reviewCount);
 		entity.setGeneratedAt(LocalDateTime.now());
 		reviewSummaryRepository.save(entity);
 
-		return fresh;
+		return Optional.of(summary);
+	}
+
+	private String truncateSummary(String summary) {
+		if (summary != null && summary.length() > SUMMARY_MAX_LENGTH) {
+			log.warn("> [ReviewService] AI 리뷰 요약이 {}자를 넘어 잘랐어요 (원래 {}자)", SUMMARY_MAX_LENGTH, summary.length());
+			return summary.substring(0, SUMMARY_MAX_LENGTH);
+		}
+		return summary;
 	}
 
 	/** 최근 리뷰 위주로 "별점 - 내용" 줄글을 만들어 요약 프롬프트에 넣는다. 내용 없는(별점만) 리뷰는 건너뛴다. */

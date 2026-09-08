@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
@@ -82,6 +83,18 @@ public class GlobalExceptionHandler {
 	public String handleInvalidImageFile(InvalidImageFileException e, Model model) {
 		log.debug("> [GlobalException] InvalidImageFileException: {}", e.getMessage());
 		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — FileStorageUtil은 5MB를 넘으면 InvalidImageFileException으로
+	// 친절하게 안내하지만, 멀티파트 파서 한도(application.properties의 max-file-size=10MB)를 넘는
+	// 파일은 그 검증 코드에 도달하기도 전에 Spring이 이 예외를 던져버려서 안내 없이 여기 없었으면
+	// 맨 아래 handleException(Exception)의 "알 수 없는 오류"로 떨어졌다. 스마트폰 사진(10MB+ 흔함)에서
+	// 실사용자가 만날 수 있는 조합이라 같은 5MB 안내로 잡아준다.
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public String handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e, Model model) {
+		log.debug("> [GlobalException] MaxUploadSizeExceededException: {}", e.getMessage());
+		model.addAttribute("message", "이미지 파일은 5MB 이하만 업로드할 수 있어요.");
 		return "errorView/custom-error-page";
 	}
 

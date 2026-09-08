@@ -1,6 +1,7 @@
 package net.dsa.girigiri.util;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -50,14 +51,34 @@ public final class StoreHoursUtil {
 			return new ClosingInfo("", false, null);
 		}
 		try {
-			String closePart = operatingHours.split("~")[1].trim();
+			String[] parts = operatingHours.split("~", 2);
+			String openPart = parts[0].trim();
+			String closePart = parts[1].trim();
+
 			Matcher matcher = TIME_TOKEN.matcher(closePart);
 			if (!matcher.find()) {
 				return new ClosingInfo("", false, null);
 			}
 			LocalTime closeTime = LocalTime.parse(matcher.group(1), HOUR_FORMAT);
-			LocalDateTime close = LocalDateTime.now().toLocalDate().atTime(closeTime);
 			LocalDateTime now = LocalDateTime.now();
+			LocalDate closeDate = now.toLocalDate();
+
+			// 추가됨 (2026-09-08, 코드 감사) — 마감이 자정을 넘기는 매장(예: 18:00~02:00)은 마감시각을
+			// 항상 "오늘 날짜"로 고정해서 계산했더니, 자정 넘는 마감은 계산 즉시 과거가 되어 "영업 종료"가
+			// 하루 종일 뜨고 canPublishNow가 영원히 false가 되는 문제가 있었다(밤늦게 파는 포차·야식
+			// 매장이 실제로 부딪히는 조합). 오픈시각도 같이 파싱해서 "마감 <= 오픈"(자정을 넘긴다는 뜻)
+			// 이고 지금이 오픈시각 이후(=아직 자정 전, 오늘 영업 중)면 마감을 내일 날짜로 계산한다.
+			// 오픈시각 파싱에 실패하면(형식이 다르거나 없으면) 안전하게 예전 동작(오늘 날짜)으로 폴백한다.
+			Matcher openMatcher = TIME_TOKEN.matcher(openPart);
+			if (openMatcher.find()) {
+				LocalTime openTime = LocalTime.parse(openMatcher.group(1), HOUR_FORMAT);
+				boolean crossesMidnight = !closeTime.isAfter(openTime);
+				if (crossesMidnight && !now.toLocalTime().isBefore(openTime)) {
+					closeDate = closeDate.plusDays(1);
+				}
+			}
+
+			LocalDateTime close = closeDate.atTime(closeTime);
 
 			if (!close.isAfter(now)) {
 				return new ClosingInfo("영업 종료", false, close);

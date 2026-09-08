@@ -80,7 +80,11 @@ public class ProductService {
 	@Transactional
 	public void update(Long ownerId, Long productId, ProductFormDto form, MultipartFile image, boolean removeImage) {
 		StoreEntity store = requireStore(ownerId);
-		ProductEntity product = requireOwnedProduct(store, productId);
+		// 변경됨 (2026-09-08, 코드 감사) — 락 없는 requireOwnedProduct(findById) 대신 findByIdForUpdate로
+		// 이 상품 행을 잠근다. 점주가 수정 폼을 띄운 사이 손님이 예약(StockService.decreaseStock, 같은
+		// 락을 씀)하면 그 감소분이 아래 remainingQuantity 재계산에 반영이 안 돼 이 save()로 지워지는
+		// lost update가 있었다 — 락으로 두 트랜잭션이 겹치지 않게 한다.
+		ProductEntity product = requireOwnedProductForUpdate(store, productId);
 		validate(form);
 		Integer ownerRate = resolveOwnerRate(store, form.getDiscountRate());
 
@@ -180,8 +184,14 @@ public class ProductService {
 		product.setStatus("active");
 
 		if (product.getRemainingQuantity() == null || product.getRemainingQuantity() == 0) {
+			// 수정됨 (2026-09-08, 코드 감사) — 예전엔 "cancelled 상태만 아니면 다 뺀다"였는데, 그러면
+			// cancelByStore/cancelByAdmin으로 매장 귀책 취소된 예약(재고를 의도적으로 복구 안 함,
+			// ReservationService 참고 — "재고 착오라 복구하면 없는 재고가 있는 것처럼 된다")까지
+			// "이제 다시 판매 가능한 수량"으로 쳐서, 판매 재개 버튼 한 번에 실재하지 않는 음식이
+			// 되살아났다. cancelledBy가 USER/SYSTEM인 취소(취소 시점에 실제로 재고를 복구한 경로)만
+			// "빠진 것"으로 치고, 그 외(진행중 상태 + STORE/ADMIN 취소 + 노쇼)는 여전히 "쓴 것"으로 센다.
 			int reserved = reservationRepository.findByProductIdIn(List.of(productId)).stream()
-					.filter(r -> !"cancelled".equals(r.getStatus()))
+					.filter(r -> !stockAlreadyRestoredAtCancel(r))
 					.mapToInt(r -> r.getReservedQuantity() == null ? 0 : r.getReservedQuantity())
 					.sum();
 			int total = product.getQuantity() == null ? 0 : product.getQuantity();
@@ -228,6 +238,18 @@ public class ProductService {
 		return product;
 	}
 
+	// 추가됨 (2026-09-08, 코드 감사) — update()처럼 remainingQuantity를 읽어서 재계산 후 저장하는
+	// 메서드 전용. StockService(예약 재고 차감/복구)와 같은 findByIdForUpdate 락을 써서, 이 상품에
+	// 대한 예약 처리와 점주의 수정 저장이 서로 겹치지 않게 한다.
+	private ProductEntity requireOwnedProductForUpdate(StoreEntity store, Long productId) {
+		ProductEntity product = productRepository.findByIdForUpdate(productId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "상품을 찾을 수 없어요."));
+		if (!store.getId().equals(product.getStoreId())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 매장의 상품은 건드릴 수 없어요.");
+		}
+		return product;
+	}
+
 	/**
 	 * 할인가 계산. ownerRate(폼에서 점주가 직접 입력한 할인율 %)가 null이면 마감시간 기준 자동값,
 	 * 값이 있으면 그 값으로 하되 자동값보다 낮으면 자동값으로 끌어올린다 (DiscountRateCalculator.effectiveRate).
@@ -262,6 +284,17 @@ public class ProductService {
 					"할인율은 마감시간 기준 자동값(" + auto + "%)보다 낮출 수 없어요. 더 깎는 건 가능해요.");
 		}
 		return rate;
+	}
+
+	/**
+	 * cancelReservation(USER)·expireStalePendingReservations/confirmPayment 실패 처리(SYSTEM)는
+	 * 취소 시점에 stockService.restoreStock을 호출해 재고를 실제로 돌려놓는다 — 이 예약들은
+	 * resumeSelling의 재계산에서 "이미 반영된 것"이니 다시 빼면 안 된다. cancelByStore(STORE)/
+	 * cancelByAdmin(ADMIN)은 그 호출을 의도적으로 안 하므로 여전히 "재고를 쓴 채로 남아있는 것".
+	 */
+	private boolean stockAlreadyRestoredAtCancel(ReservationEntity reservation) {
+		return "cancelled".equals(reservation.getStatus())
+				&& ("USER".equals(reservation.getCancelledBy()) || "SYSTEM".equals(reservation.getCancelledBy()));
 	}
 
 	private void validate(ProductFormDto form) {

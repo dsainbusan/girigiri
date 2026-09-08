@@ -56,9 +56,8 @@ public class RecommendationService {
 														 Set<Long> excludeStoreIds, Double userLat, Double userLng) {
 		// 강노은: HomeService처럼 매장당 할인율 1위 상품 하나만 남긴다 — 안 그러면 한 가게 상품이
 		// 추천 4칸을 다 차지할 수 있다(리뷰 지적 사항).
-		Map<Long, ProductEntity> bestProductByStoreId = productRepository.findAll().stream()
-				.filter(p -> STATUS_ACTIVE.equals(p.getStatus()))
-				.filter(p -> p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0)
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB 쿼리로(HomeService와 동일 패턴).
+		Map<Long, ProductEntity> bestProductByStoreId = productRepository.findByStatusAndRemainingQuantityGreaterThan(STATUS_ACTIVE, 0).stream()
 				.filter(p -> !excludeStoreIds.contains(p.getStoreId()))
 				.collect(Collectors.toMap(
 						ProductEntity::getStoreId,

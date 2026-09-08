@@ -27,4 +27,9 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
 	// 발행 안 된 초안 정리용 (ListingDraftScheduler.expireStaleDrafts)
 	List<ProductEntity> findByStatus(String status);
+
+	// 추가됨 (2026-09-08, 코드 감사) — 홈 화면 카드/추천 목록용. HomeService#getActiveStoreCards와
+	// RecommendationService#getRecommendations가 각각 findAll() 후 자바에서 "active + 재고 있음"만
+	// 걸러내던 걸 DB 쿼리로 옮긴다(둘이 완전히 같은 필터라 여기 하나로 통합).
+	List<ProductEntity> findByStatusAndRemainingQuantityGreaterThan(String status, int remainingQuantity);
 }

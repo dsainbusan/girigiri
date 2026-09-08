@@ -78,9 +78,9 @@ public class NotificationService {
 		if (userId == null) {
 			return 0;
 		}
-		return (int) notificationRepository.findAll().stream()
-				.filter(n -> userId.equals(n.getUserId()) && !n.isRead())
-				.count();
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB COUNT 쿼리로
+		// (거의 모든 화면 헤더에서 매 요청 호출됨).
+		return (int) notificationRepository.countByUserIdAndReadFalse(userId);
 	}
 
 	/** 로그인한 사용자용 SSE 구독. 서버가 이 연결을 붙잡아뒀다가 새 알림이 생기면 밀어준다. */

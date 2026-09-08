@@ -79,4 +79,9 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 
 	// 매장 정산 집계용 (SettlementService, 문창호 2026-08-31) — 그 매장의 전체 예약 → 결제 조인
 	List<ReservationEntity> findByStoreId(Long storeId);
+
+	// 추가됨 (2026-09-08, 코드 감사) — 홈 화면 "오늘 N명이 마감 음식을 구했어요" 배너용
+	// (HomeService#getTodayRescueCount). 예전엔 findAll()로 예약 테이블 전체 이력을 매 홈 화면
+	// 요청마다 훑었다 — 데이터가 쌓일수록 계속 느려지는 구조라 DB에서 바로 세도록 바꾼다.
+	long countByStatusAndPickedAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

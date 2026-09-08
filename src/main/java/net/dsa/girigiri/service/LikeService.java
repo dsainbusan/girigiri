@@ -34,8 +34,8 @@ public class LikeService {
 		if (userId == null) {
 			return Set.of();
 		}
-		return likeRepository.findAll().stream()
-				.filter(l -> userId.equals(l.getUserId()))
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB 쿼리로.
+		return likeRepository.findByUserId(userId).stream()
 				.map(LikeEntity::getStoreId)
 				.collect(Collectors.toSet());
 	}
@@ -47,9 +47,8 @@ public class LikeService {
 	/** @return 토글 후 상태 (true = 찜한 상태가 됨) */
 	@Transactional
 	public boolean toggle(Long userId, Long storeId) {
-		List<LikeEntity> existing = likeRepository.findAll().stream()
-				.filter(l -> userId.equals(l.getUserId()) && storeId.equals(l.getStoreId()))
-				.toList();
+		// 변경됨 (2026-09-08, 코드 감사) — findAll() + 자바 필터링 대신 DB 쿼리로.
+		List<LikeEntity> existing = likeRepository.findByUserIdAndStoreId(userId, storeId);
 
 		if (!existing.isEmpty()) {
 			likeRepository.deleteAll(existing);
