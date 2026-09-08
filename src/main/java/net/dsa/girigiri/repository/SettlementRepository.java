@@ -17,6 +17,11 @@ public interface SettlementRepository extends JpaRepository<SettlementEntity, Lo
 	// 매장 "정산 내역" — 최근 주간이 위로
 	List<SettlementEntity> findByStoreIdOrderByPeriodStartDesc(Long storeId);
 
+	// 추가됨 (2026-09-08, 코드 감사) — 매장 삭제 가드용: 아직 지급 안 됐거나(PENDING) 다음 정산으로
+	// 이월 대기 중인(CARRIED) 건이 있으면 그 돈이 지급 파이프라인(SettlementBatchService가
+	// storeRepository 기준으로 도는 방식)에서 영영 사라진다 — 삭제 자체를 막는다.
+	boolean existsByStoreIdAndStatusIn(Long storeId, List<String> statuses);
+
 	// 스케줄러 중복 생성 방지
 	boolean existsByStoreIdAndPeriodStart(Long storeId, LocalDate periodStart);
 

@@ -14,6 +14,9 @@ public interface ListingTemplateRepository extends JpaRepository<ListingTemplate
 
 	List<ListingTemplateEntity> findByStoreId(Long storeId);
 
+	// 추가됨 (2026-09-08, 코드 감사) — 매장 삭제 시 같이 지운다(SuperAdminStoreService#delete).
+	void deleteByStoreId(Long storeId);
+
 	// ListingDraftScheduler가 매 주기마다 활성 템플릿만 훑는다.
 	List<ListingTemplateEntity> findByActiveTrue();
 }

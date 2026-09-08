@@ -3,10 +3,18 @@ package net.dsa.girigiri.service;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreRecentStatsDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
+import net.dsa.girigiri.domain.entity.SettlementEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.repository.LikeRepository;
+import net.dsa.girigiri.repository.ListingTemplateRepository;
+import net.dsa.girigiri.repository.MenuItemRepository;
 import net.dsa.girigiri.repository.ProductRepository;
+import net.dsa.girigiri.repository.ReportRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.ReviewRepository;
+import net.dsa.girigiri.repository.ReviewSummaryRepository;
+import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -27,13 +35,22 @@ import java.util.Optional;
 public class SuperAdminStoreService {
 
 	// SuperAdminMemberService.canWithdraw()와 동일한 가드 — 미완료 예약이 있으면 삭제를 막는다.
-	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = List.of("pending", "confirmed");
+	// (2026-09-08, 코드 감사) ReservationService.INCOMPLETE_STATUSES로 통일 — "ready" 누락 수정.
+	private static final List<String> INCOMPLETE_RESERVATION_STATUSES = ReservationService.INCOMPLETE_STATUSES;
 
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
 	private final ReservationRepository reservationRepository;
 	private final UserRepository userRepository;
 	private final LookupService lookupService;
+	// 추가됨 (2026-09-08, 코드 감사) — 매장 삭제 시 미지급 정산 차단 + 참조 테이블 정리용.
+	private final SettlementRepository settlementRepository;
+	private final MenuItemRepository menuItemRepository;
+	private final ListingTemplateRepository listingTemplateRepository;
+	private final LikeRepository likeRepository;
+	private final ReviewRepository reviewRepository;
+	private final ReviewSummaryRepository reviewSummaryRepository;
+	private final ReportRepository reportRepository;
 
 	// 변경됨 — 왜: "승인대기/매장목록을 따로 나누지 말고 전체 하나로, 대기 매장은 필터로 보게 해달라"는
 	// 요청 — REJECTED만 빼고 전부 한 리스트로 묶은 뒤, filter=PENDING일 때만 대기 매장으로 좁힌다.
@@ -102,20 +119,42 @@ public class SuperAdminStoreService {
 
 	@Transactional(readOnly = true)
 	public boolean canDelete(Long id) {
-		return !reservationRepository.existsByStoreIdAndStatusIn(id, INCOMPLETE_RESERVATION_STATUSES);
+		// 변경됨 (2026-09-08, 코드 감사) — 진행중 예약뿐 아니라 미지급/이월대기 정산(settlement)도
+		// 확인한다. 예전엔 이 체크가 없어서 PENDING(지급 대기)·CARRIED(이월 대기) 정산이 있는 매장도
+		// 그냥 삭제됐다 — 그 돈이 지급 파이프라인(SettlementBatchService)에서 다시는 안 보이게 되는
+		// 문제(감사에서 발견).
+		boolean hasIncompleteReservation = reservationRepository.existsByStoreIdAndStatusIn(id, INCOMPLETE_RESERVATION_STATUSES);
+		boolean hasUnsettledPayout = settlementRepository.existsByStoreIdAndStatusIn(
+				id, List.of(SettlementEntity.STATUS_PENDING, SettlementEntity.STATUS_CARRIED));
+		return !hasIncompleteReservation && !hasUnsettledPayout;
 	}
 
 	/**
 	 * FK가 연관관계로 매핑돼 있지 않아(ERD 확정 전까지 plain Long id 컬럼만 쓰는 컨벤션) 매장을 지우면
-	 * 그 매장의 ProductEntity들이 고아로 남으므로 같이 지운다. approve()가 승인 시 OWNER로 올려주는
+	 * 그 매장을 참조하는 데이터들이 고아로 남는다. approve()가 승인 시 OWNER로 올려주는
 	 * 것의 반대로, 삭제 시 소유자가 아직 OWNER면 USER로 되돌린다(다른 매장을 또 만들 수도 있으니 강제
 	 * 탈퇴는 아님).
+	 *
+	 * 변경됨 (2026-09-08, 코드 감사) — 예전엔 상품(product)만 같이 지웠다. 그 외 참조 테이블을 점검해서
+	 * 두 그룹으로 나눴다:
+	 *  - 매장 전용 부산물이라 다른 화면이 다시 조회할 일이 없는 것(menu_item/listing_template/likes/
+	 *    review/review_summary/report)은 상품과 함께 지운다.
+	 *  - 회계·이력 성격이라 보존해야 하는 것(reservation/payment/settlement — 완료건)은 그대로 둔다.
+	 *    미지급 정산은 위 canDelete()가 이미 막아서 여기까지 오지 않는다. inquiry.storeId/
+	 *    complaint.targetStoreId는 각 화면이 이미 store 조회 실패를 null-safe하게 처리하고 있어(예:
+	 *    InquiryService#getStoreName) 손대지 않는다.
 	 */
 	@Transactional
 	public void delete(Long id) {
 		StoreEntity store = lookupService.getStore(id);
 
 		productRepository.deleteAll(productRepository.findByStoreId(id));
+		menuItemRepository.deleteByStoreId(id);
+		listingTemplateRepository.deleteByStoreId(id);
+		likeRepository.deleteByStoreId(id);
+		reviewRepository.deleteByStoreId(id);
+		reviewSummaryRepository.deleteByStoreId(id);
+		reportRepository.deleteByStoreId(id);
 
 		userRepository.findById(store.getOwnerId())
 				.filter(owner -> UserEntity.ROLE_OWNER.equals(owner.getRole()))

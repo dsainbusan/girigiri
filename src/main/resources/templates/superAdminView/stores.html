@@ -15,6 +15,9 @@
   수정 + 삭제만. 수정은 기존 /superadmin/stores/{id}/edit 화면 재사용. 삭제(SuperAdminController#deleteStore,
   신규)는 withdrawMember(회원 강제 탈퇴)와 동일한 가드 — 미완료 예약이 있으면 막고(?deleteError), 통과하면
   그 매장의 상품도 같이 지운다(FK 연관관계 매핑이 없어 고아로 남는 걸 방지).
+  수정됨 (2026-09-08, 코드 감사) — 미지급/이월대기 정산(settlement PENDING/CARRIED)이 있어도 삭제를
+  막는다(그 돈이 지급 파이프라인에서 사라지는 걸 방지) — 같은 ?deleteError로 안내. 상품 외에
+  menu_item/listing_template/likes/review/review_summary/report도 같이 지운다.
   TODO(송보미): 반려(REJECTED) 액션은 아직 없음 — 필요해지면 승인 버튼 옆에 추가할 것.
 
   매장명 링크가 이제 filter를 같이 실어 보낸다 — "매장 상세의 '← 매장 목록'이 원래 보던 탭(대기 등)
@@ -46,7 +49,8 @@
   </div>
 
   <p class="form-error" th:if="${param.deleteError}">
-    미완료 예약이 있어 삭제할 수 없어요 — 픽업/취소/노쇼 처리가 끝난 뒤 다시 시도해 주세요.
+    미완료 예약이 있거나 아직 지급하지 않은 정산금이 있어 삭제할 수 없어요 —
+    픽업/취소/노쇼 처리와 정산 지급이 끝난 뒤 다시 시도해 주세요.
   </p>
 
   <form class="toolbar" method="get" th:action="@{/superadmin/stores}">
