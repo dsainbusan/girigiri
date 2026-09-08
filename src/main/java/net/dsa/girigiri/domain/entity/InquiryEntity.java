@@ -30,6 +30,13 @@ public class InquiryEntity {
 	@Column(name = "store_id")
 	private Long storeId;   // null이면 일반 문의(특정 가게 무관)
 
+	// 추가됨 (2026-09-08) — 왜: 예약 상세에서 "문의하기" 버튼으로 접수된 문의는 어떤 주문 때문인지
+	// 이 컬럼으로 연결된다. ComplaintEntity.targetReservationId와 동일한 취지 — storeId는 이 값이
+	// 있으면 예약에서 자동으로 채워진다(InquiryService.createInquiry 참고). 가게 상세/고객센터에서
+	// 올린 기존 문의는 이 값이 null.
+	@Column(name = "reservation_id")
+	private Long reservationId;
+
 	@Column(name = "title", nullable = false, length = 100)
 	private String title;
 

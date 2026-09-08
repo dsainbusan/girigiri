@@ -47,6 +47,9 @@
         </th:block>
         <span th:text="' · ' + ${#temporals.format(inquiry.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
       </div>
+      <!-- 추가됨 (2026-09-08) — "예약 상세에서 문의하기"로 접수된 문의는 관련 주문을 보여준다
+           (ComplaintEntity.targetReservationId·complaintDetail.html의 linkedReservation과 동일 취지). -->
+      <p class="form-hint" th:if="${reservationSummary != null}" th:text="'관련 주문: ' + ${reservationSummary}">관련 주문: 상품명 × 1개 · 픽업 코드 PICK-XXXX</p>
       <div class="info-row__value info-row--pre" th:text="${inquiry.content}">문의 내용</div>
       <img th:if="${inquiry.imageUrl != null and !#strings.isEmpty(inquiry.imageUrl)}" th:src="${inquiry.imageUrl}"
            alt="문의 사진" loading="lazy" onerror="this.style.display='none'"

@@ -5,11 +5,17 @@
 <div id="content" th:fragment="content" class="page">
 	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
 
-	<p class="u-sub" th:if="${storeName != null}" style="margin-bottom:var(--s-3)"
+	<!-- 추가됨 (2026-09-08) — "예약 상세에서 문의하기"로 들어온 경우, 어떤 주문 문의인지 보여준다. -->
+	<div class="card" th:if="${reservation != null}" style="margin-bottom:var(--s-3)">
+		<h3 th:text="${storeName}">가게명</h3>
+		<p class="u-sub" th:text="${reservation.productName} + ' ' + ${reservation.reservedQuantity} + '개 · 픽업 코드 ' + ${reservation.pickupCode}">상품명 1개 · 픽업 코드 PICK-XXXX</p>
+	</div>
+	<p class="u-sub" th:if="${reservation == null and storeName != null}" style="margin-bottom:var(--s-3)"
 	   th:text="${storeName} + '에 대한 문의예요.'">가게에 대한 문의예요.</p>
 
 	<form th:action="@{/user/inquiries}" method="post" enctype="multipart/form-data">
 		<input type="hidden" name="storeId" th:if="${storeId != null}" th:value="${storeId}">
+		<input type="hidden" name="reservationId" th:if="${reservationId != null}" th:value="${reservationId}">
 		<div class="field" style="margin-bottom:var(--s-3)">
 			<label class="field__label">제목</label>
 			<input type="text" name="title" class="input" required maxlength="100" placeholder="문의 제목을 입력하세요">

@@ -3,13 +3,17 @@ package net.dsa.girigiri.service;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.InquiryCommentRowDto;
 import net.dsa.girigiri.domain.dto.InquiryRowDto;
+import jakarta.persistence.EntityNotFoundException;
 import net.dsa.girigiri.domain.entity.InquiryCommentEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.repository.InquiryCommentRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
+import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.FileStorageUtil;
@@ -35,6 +39,10 @@ public class InquiryService {
 	private final StoreRepository storeRepository;
 	private final FileStorageUtil fileStorageUtil;
 	private final NotificationService notificationService;
+	// 추가됨 (2026-09-08) — "예약 상세에서 문의하기" 버튼. reservationId가 오면 그 예약의 storeId를
+	// 자동으로 채우고, 본인 예약인지도 여기서 확인한다(ComplaintService.submitFromReservation과
+	// 동일한 취지).
+	private final ReservationRepository reservationRepository;
 
 	// 강노은: 문의 사진 파일이 저장되는 하위 디렉터리 이름 (upload/inquiries/...)
 	private static final String INQUIRY_IMAGE_SUBDIR = "inquiries";
@@ -136,6 +144,17 @@ public class InquiryService {
 		return storeRepository.findById(storeId).map(StoreEntity::getStoreName).orElse(null);
 	}
 
+	/** 문의 상세에서 "관련 주문" 한 줄 표시용 — reservationId가 없거나 예약이 삭제된 적 없으니
+	 * 사실상 항상 있지만, 혹시 몰라 null-safe하게 둔다. */
+	public String getReservationSummary(Long reservationId) {
+		if (reservationId == null) {
+			return null;
+		}
+		return reservationRepository.findById(reservationId)
+				.map(r -> r.getProductName() + " × " + r.getReservedQuantity() + "개 · 픽업 코드 " + r.getPickupCode())
+				.orElse(null);
+	}
+
 	public List<InquiryCommentRowDto> getComments(Long inquiryId, Long currentUserId, String role) {
 		List<InquiryCommentEntity> comments = inquiryCommentRepository.findAll().stream()
 				.filter(c -> inquiryId.equals(c.getInquiryId()))
@@ -157,11 +176,25 @@ public class InquiryService {
 
 	// 변경됨 (강노은) — 왜: 문의에 사진 첨부 기능 추가(예: 상품 하자 사진 등). 문의는 수정 기능이 없어서
 	// (등록만 가능) 리뷰처럼 "새 파일로 교체/제거" 같은 분기 없이 등록 시 한 번만 저장하면 된다.
+	// 변경됨 (2026-09-08) — 왜: "예약 상세에서 문의하기" 버튼 추가. reservationId가 오면(가게 상세에서
+	// 온 일반 문의는 null) 그 예약의 storeId로 덮어써서 클라이언트가 storeId를 조작해 다른 가게로
+	// 문의를 붙이는 걸 막고, 본인 예약이 아니면 막는다.
 	@Transactional
-	public Long createInquiry(Long userId, Long storeId, String title, String content, MultipartFile imagePhoto) {
+	public Long createInquiry(Long userId, Long storeId, Long reservationId, String title, String content, MultipartFile imagePhoto) {
+		Long resolvedStoreId = storeId;
+		if (reservationId != null) {
+			ReservationEntity reservation = reservationRepository.findById(reservationId)
+					.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+			if (!reservation.getUserId().equals(userId)) {
+				throw new ReservationAccessDeniedException("본인 예약만 문의할 수 있어요.");
+			}
+			resolvedStoreId = reservation.getStoreId();
+		}
+
 		InquiryEntity inquiry = InquiryEntity.builder()
 				.userId(userId)
-				.storeId(storeId)
+				.storeId(resolvedStoreId)
+				.reservationId(reservationId)
 				.title(title == null ? "" : title.trim())
 				.content(content == null ? "" : content.trim())
 				.imageUrl(fileStorageUtil.store(imagePhoto, INQUIRY_IMAGE_SUBDIR))

@@ -20,6 +20,8 @@
 			<span th:if="${storeName != null}" th:text="' · ' + ${storeName}"></span>
 			<span th:text="' · ' + ${createdAtDisplay}"></span>
 		</div>
+		<!-- 추가됨 (2026-09-08) — "예약 상세에서 문의하기"로 접수된 문의는 관련 주문을 보여준다. -->
+		<p class="u-sub" th:if="${reservationSummary != null}" style="margin-top:4px" th:text="'관련 주문: ' + ${reservationSummary}">관련 주문: 상품명 × 1개 · 픽업 코드 PICK-XXXX</p>
 		<p style="margin-top:var(--s-3);font-size:14px;white-space:pre-wrap" th:text="${inquiry.content}">문의 내용</p>
 		<img th:if="${inquiry.imageUrl != null and !#strings.isEmpty(inquiry.imageUrl)}" th:src="${inquiry.imageUrl}"
 		     alt="문의 사진" loading="lazy" onerror="this.style.display='none'"

@@ -3,7 +3,10 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
+import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.service.InquiryService;
+import net.dsa.girigiri.service.LookupService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,6 +28,9 @@ import org.springframework.web.server.ResponseStatusException;
 public class InquiryController {
 
 	private final InquiryService inquiryService;
+	// 추가됨 (2026-09-08) — "예약 상세에서 문의하기" 버튼. reservationId로 들어온 경우 폼에 예약
+	// 요약을 보여주고 본인 예약인지 확인하기 위해서만 쓴다(저장 자체는 InquiryService가 다시 확인).
+	private final LookupService lookupService;
 
 	@GetMapping
 	public String list(HttpSession session, Model model) {
@@ -38,18 +44,33 @@ public class InquiryController {
 	}
 
 	@GetMapping("/new")
-	public String newForm(@RequestParam(required = false) Long storeId, HttpSession session, Model model) {
-		if (session.getAttribute("userId") == null) {
+	public String newForm(@RequestParam(required = false) Long storeId,
+	                       @RequestParam(required = false) Long reservationId,
+	                       HttpSession session, Model model) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		model.addAttribute("storeId", storeId);
-		model.addAttribute("storeName", inquiryService.getStoreName(storeId));
+
+		if (reservationId != null) {
+			ReservationEntity reservation = lookupService.getReservation(reservationId);
+			if (!reservation.getUserId().equals(userId)) {
+				throw new ReservationAccessDeniedException("본인 예약만 문의할 수 있어요.");
+			}
+			model.addAttribute("reservationId", reservationId);
+			model.addAttribute("reservation", reservation);
+			model.addAttribute("storeName", inquiryService.getStoreName(reservation.getStoreId()));
+		} else {
+			model.addAttribute("storeId", storeId);
+			model.addAttribute("storeName", inquiryService.getStoreName(storeId));
+		}
 		return "inquiryView/form";
 	}
 
 	// 변경됨 (강노은) — 왜: 문의에 사진 첨부 기능 추가(수정은 없어서 새 파일 업로드만 받으면 됨).
 	@PostMapping
 	public String create(@RequestParam(required = false) Long storeId,
+						  @RequestParam(required = false) Long reservationId,
 						  @RequestParam String title,
 						  @RequestParam String content,
 						  @RequestParam(required = false) MultipartFile imagePhoto,
@@ -58,7 +79,7 @@ public class InquiryController {
 		if (userId == null) {
 			return "redirect:/auth/loginForm";
 		}
-		Long inquiryId = inquiryService.createInquiry(userId, storeId, title, content, imagePhoto);
+		Long inquiryId = inquiryService.createInquiry(userId, storeId, reservationId, title, content, imagePhoto);
 		return "redirect:/user/inquiries/" + inquiryId;
 	}
 
@@ -82,6 +103,7 @@ public class InquiryController {
 		model.addAttribute("createdAtDisplay", createdAtDisplay);
 		model.addAttribute("authorName", inquiryService.getAuthorName(inquiry.getUserId()));
 		model.addAttribute("storeName", inquiryService.getStoreName(inquiry.getStoreId()));
+		model.addAttribute("reservationSummary", inquiryService.getReservationSummary(inquiry.getReservationId()));
 		model.addAttribute("comments", inquiryService.getComments(id, userId, role));
 		model.addAttribute("loggedIn", true);
 		model.addAttribute("canDeleteInquiry", inquiryService.canDeleteInquiry(inquiry, userId, role));
