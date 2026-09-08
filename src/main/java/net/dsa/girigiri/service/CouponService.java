@@ -1,6 +1,7 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.CouponRowDto;
 import net.dsa.girigiri.domain.entity.CouponEntity;
 import net.dsa.girigiri.domain.entity.CouponPolicyEntity;
@@ -20,6 +21,7 @@ import java.util.List;
  * 발급 경로 3가지(웰컴/매장귀책보상/프로모션)의 공통 로직 + 체크아웃 사용/취소 시 복구 로직을 담는다.
  * 캠페인 자체의 CRUD(슈퍼어드민 화면)는 SuperAdminCouponService가 따로 담당한다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouponService {
@@ -150,10 +152,16 @@ public class CouponService {
 		if (couponId == null) {
 			return;
 		}
-		couponRepository.findById(couponId).ifPresent(coupon -> {
-			coupon.setUsed(false);
-			couponRepository.save(coupon);
-		});
+		// 변경됨 (2026-09-08, 코드 감사) — 왜: ifPresent였을 때는 couponId가 있는데 실제로 그
+		// 쿠폰이 DB에 없는 경우(예: 데이터 꼬임/삭제됨) 조용히 아무 일도 안 하고 넘어가서, 복구가
+		// 안 됐다는 걸 아무도 모르고 지나갈 수 있었다. 흔한 상황은 아니지만, 최소한 로그는 남긴다.
+		couponRepository.findById(couponId).ifPresentOrElse(
+				coupon -> {
+					coupon.setUsed(false);
+					couponRepository.save(coupon);
+				},
+				() -> log.warn("> [CouponService] 복구하려는 쿠폰을 찾을 수 없어요 - couponId={}", couponId)
+		);
 	}
 
 	/** 체크아웃에서 이 쿠폰을 지금 쓸 수 있는지 검증 — 본인 소유 + 미사용 + 미만료여야 한다. */
