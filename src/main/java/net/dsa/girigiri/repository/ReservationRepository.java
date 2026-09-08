@@ -1,7 +1,11 @@
 package net.dsa.girigiri.repository;
 
+import jakarta.persistence.LockModeType;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -9,6 +13,13 @@ import java.util.Optional;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<ReservationEntity, Long> {
+
+	// 추가됨 (2026-09-08, 코드 감사) — ProductRepository.findByIdForUpdate와 동일한 패턴.
+	// 예약 취소/확정처럼 "읽고 상태 체크 후 쓰는" 흐름 전부가 이 락 없는 findById를 쓰고 있어서
+	// 더블클릭이나 스케줄러와의 동시 실행이 재고 이중복구·이중환불로 이어질 수 있었다.
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select r from ReservationEntity r where r.id = :id")
+	Optional<ReservationEntity> findByIdForUpdate(@Param("id") Long id);
 
 	// 픽업 현장에서 QR/픽업코드로 예약을 찾을 때 사용
 	Optional<ReservationEntity> findByPickupCode(String pickupCode);

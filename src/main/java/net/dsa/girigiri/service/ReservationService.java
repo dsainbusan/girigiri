@@ -38,6 +38,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -75,6 +76,13 @@ public class ReservationService {
 	public static final String TAB_PROGRESS = "progress";     // 진행중 (예약완료/픽업대기 통합)
 	public static final String TAB_PICKED = "picked";         // 픽업완료
 	public static final String TAB_CANCELLED = "cancelled";   // 노쇼·취소 통합
+
+	// 추가됨 (2026-09-08, 코드 감사) — 왜: 회원 탈퇴/매장 삭제를 막는 "미완료 예약" 기준이
+	// MypageService/SuperAdminMemberService/SuperAdminStoreService 세 곳에 각자
+	// List.of("pending", "confirmed")로 따로 선언돼 있었는데, "ready"(결제완료+매장수락, 픽업만
+	// 남은 상태 — 계정/매장이 사라지면 환불 경로가 없어지는 바로 그 상태)가 세 곳 다 빠져 있었다.
+	// 취소 가능 상태 목록(647번 줄 근처)과 동일한 기준이라 여기 하나로 모은다.
+	public static final List<String> INCOMPLETE_STATUSES = List.of("pending", "confirmed", "ready");
 
 	// 손님 취소 허용 창: 주문 후 이 시간 이내, 그리고 매장 마감 이 시간 전까지만 취소 가능 (둘 다 만족해야 함)
 	// (2026-08-24) — public으로 바꿈: 체크아웃 화면에서 "결제 전 30분 이내에만 취소 가능해요" 안내 문구를
@@ -232,7 +240,12 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity confirmPayment(Long reservationId, String paymentId) {
-		ReservationEntity reservation = reservationRepository.findById(reservationId)
+		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 바꿔서 이 예약 행을 PortOne 검증
+		// 호출이 끝날 때까지 잠근다. expireStalePendingReservations가 같은 예약을 "결제 안 하고
+		// 포기됨"으로 착각해 동시에 취소시키던 레이스(A2)를 막는 핵심 — 그 스케줄러도 같은 락을 쓰므로
+		// 이 트랜잭션이 끝날 때까지 대기했다가, 그때는 이미 상태가 pending이 아니라서 자기 조건문에서
+		// 자연히 스킵된다.
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
 		if (!"pending".equals(reservation.getStatus())) {
@@ -295,7 +308,9 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity cancelPendingReservation(Long reservationId) {
-		ReservationEntity reservation = reservationRepository.findById(reservationId)
+		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 락 (아래 "다른 탭에서 결제가 성공해버린
+		// 경우" 주석이 실제로 막히도록: 락 없이는 그 체크가 스냅샷일 뿐이었다).
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
 		if (!"pending".equals(reservation.getStatus())) {
@@ -334,11 +349,22 @@ public class ReservationService {
 	@Transactional
 	public int expireStalePendingReservations() {
 		LocalDateTime cutoff = LocalDateTime.now().minusMinutes(PENDING_EXPIRY_MINUTES);
-		List<ReservationEntity> stale = reservationRepository.findByStatusIn(List.of("pending")).stream()
+		List<Long> staleIds = reservationRepository.findByStatusIn(List.of("pending")).stream()
 				.filter(reservation -> reservation.getReservedAt() != null && reservation.getReservedAt().isBefore(cutoff))
+				.map(ReservationEntity::getId)
 				.toList();
 
-		for (ReservationEntity reservation : stale) {
+		// 변경됨 (2026-09-08, 코드 감사) — id만 먼저 뽑아두고, 항목마다 findByIdForUpdate로 다시 잠근
+		// 뒤 상태를 재확인한다. confirmPayment가 이 사이 같은 예약을 확정시켰다면(그 트랜잭션이 락을
+		// 쥐고 있는 동안엔 여기서 대기하다가, 풀린 뒤엔 이미 status가 pending이 아니게 바뀐 뒤라면)
+		// 여기서 조용히 건너뛴다 — 결제 성공한 예약을 취소해버리는 사고(A2 레이스)를 막는 핵심.
+		int expiredCount = 0;
+		for (Long id : staleIds) {
+			ReservationEntity reservation = reservationRepository.findByIdForUpdate(id).orElse(null);
+			if (reservation == null || !"pending".equals(reservation.getStatus())) {
+				continue;
+			}
+
 			stockService.restoreStock(reservation.getProductId(), reservation.getReservedQuantity());
 
 			paymentRepository.findByReservationId(reservation.getId()).ifPresent(payment -> {
@@ -349,13 +375,14 @@ public class ReservationService {
 			reservation.setStatus("cancelled");
 			reservation.setCancelledBy("SYSTEM");
 			reservation.setCancelReason("결제 시간 초과로 자동 취소됨");
+			reservationRepository.save(reservation);
 
 			// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
 			couponService.restore(reservation.getCouponId());
+			expiredCount++;
 		}
-		reservationRepository.saveAll(stale);
 
-		return stale.size();
+		return expiredCount;
 	}
 
 	/**
@@ -514,7 +541,9 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity cancelReservation(Long reservationId) {
-		ReservationEntity reservation = reservationRepository.findById(reservationId)
+		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 락. 더블클릭 등으로 같은 예약에 대한
+		// 취소 요청이 동시에 들어와도 한쪽만 통과하게 한다(재고 이중복구·PortOne 이중환불 방지).
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
 		checkCancellableState(reservation);
@@ -567,7 +596,8 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity cancelByStore(Long reservationId, String reason) {
-		ReservationEntity reservation = reservationRepository.findById(reservationId)
+		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 락 (cancelReservation과 동일한 이유).
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
 		checkCancellableState(reservation);
@@ -615,7 +645,8 @@ public class ReservationService {
 	 */
 	@Transactional
 	public ReservationEntity cancelByAdmin(Long reservationId, String reason) {
-		ReservationEntity reservation = reservationRepository.findById(reservationId)
+		// 추가됨 (2026-09-08, 코드 감사) — findByIdForUpdate로 락 (cancelReservation과 동일한 이유).
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
 
 		checkCancellableState(reservation);
@@ -813,19 +844,29 @@ public class ReservationService {
 	@Transactional
 	public int processNoShows() {
 		LocalDateTime now = LocalDateTime.now();
-		List<ReservationEntity> candidates = reservationRepository.findByStatusIn(List.of("confirmed", "ready"));
-
-		List<ReservationEntity> overdue = candidates.stream()
-				.filter(reservation -> isPastPickupDeadline(reservation, now))
+		List<Long> candidateIds = reservationRepository.findByStatusIn(List.of("confirmed", "ready")).stream()
+				.map(ReservationEntity::getId)
 				.toList();
 
-		for (ReservationEntity reservation : overdue) {
+		// 변경됨 (2026-09-08, 코드 감사) — id만 먼저 뽑고 항목마다 findByIdForUpdate로 다시 잠근 뒤
+		// 상태를 재확인한다. 다른 트랜잭션(픽업 확인/취소)이 이 사이 먼저 상태를 바꿔놨다면 여기서
+		// 조용히 건너뛴다 — 이미 픽업/취소된 예약을 노쇼로 덮어써버리는 걸 막는다.
+		List<ReservationEntity> overdue = new ArrayList<>();
+		for (Long id : candidateIds) {
+			ReservationEntity reservation = reservationRepository.findByIdForUpdate(id).orElse(null);
+			if (reservation == null
+					|| !("confirmed".equals(reservation.getStatus()) || "ready".equals(reservation.getStatus()))
+					|| !isPastPickupDeadline(reservation, now)) {
+				continue;
+			}
+
 			reservation.setStatus("noshowed");
 			// (2026-09-07, 채채 확인) — 여기서는 의도적으로 couponService.restore()를 호출하지 않는다.
 			// 손님이 안 나타난 건 본인 잘못이라, 썼던 쿠폰이 있어도 복구해주지 않기로 했다 — 다른
 			// 취소 경로(위 cancelReservation/cancelByStore/결제실패 등)와 유일하게 다른 부분이다.
+			reservationRepository.save(reservation);
+			overdue.add(reservation);
 		}
-		reservationRepository.saveAll(overdue);
 
 		// 노쇼 안내 배너 + QR 제외 버전으로, 상태가 바뀐 이 시점에 영수증도 바로 다시 만들어둔다.
 		for (ReservationEntity reservation : overdue) {
