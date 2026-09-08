@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.NotificationSettingEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -22,12 +23,10 @@ public class NotificationController {
 
 	private final NotificationService notificationService;
 
+	@LoginRequired
 	@GetMapping
 	public String list(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		model.addAttribute("notifications", notificationService.getNotifications(userId));
 		model.addAttribute("unreadCount", notificationService.getUnreadCount(userId));
 		return "alertView/list";
@@ -37,6 +36,10 @@ public class NotificationController {
 	 * 강노은: 실시간 알림(SSE) 구독. 브라우저의 EventSource가 이 연결을 열어두고 있다가,
 	 * 새 알림이 생기거나 읽음 처리될 때마다 서버가 최신 안읽음 개수를 밀어준다(NotificationService 참고).
 	 * 로그인 안 됐으면 리다이렉트가 의미 없는 응답 형식이라 401로 응답한다.
+	 *
+	 * 변경됨 (2026-09-08, 코드 감사) — 이 메서드는 @LoginRequired로 안 옮겼다: 그 인터셉터는
+	 * @RestController 여부로만 리다이렉트/401을 가르는데, 여기는 @Controller이면서도(SSE라 뷰를 안
+	 * 돌려줌) 의도적으로 401을 써야 해서 이분법에 안 맞는다 — 수동 체크를 그대로 둔다.
 	 */
 	@GetMapping("/stream")
 	public SseEmitter stream(HttpSession session) {
@@ -48,46 +51,38 @@ public class NotificationController {
 	}
 
 	/** 알림 클릭 시 진입점 — 읽음 처리 후 linkUrl로 보낸다(없으면 알림함에 그대로 머문다). */
+	@LoginRequired
 	@GetMapping("/{id}")
 	public String open(@PathVariable Long id, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String linkUrl = notificationService.markRead(userId, id);
 		return linkUrl != null && !linkUrl.isBlank() ? "redirect:" + linkUrl : "redirect:/user/alerts";
 	}
 
+	@LoginRequired
 	@PostMapping("/read-all")
 	public String readAll(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		notificationService.markAllRead(userId);
 		return "redirect:/user/alerts";
 	}
 
+	@LoginRequired
 	@GetMapping("/settings")
 	public String settings(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		NotificationSettingEntity settings = notificationService.getOrCreateSettings(userId);
 		model.addAttribute("pushEnabled", settings.isPushEnabled());
 		model.addAttribute("likeAlertEnabled", settings.isLikeAlertEnabled());
 		return "alertView/settings";
 	}
 
+	@LoginRequired
 	@PostMapping("/settings")
 	public String updateSettings(@RequestParam(required = false) Boolean pushEnabled,
 								  @RequestParam(required = false) Boolean likeAlertEnabled,
 								  HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		// 체크박스는 체크 안 하면 폼에 값 자체가 안 실려온다 — null이면 false로 간주.
 		notificationService.updateSettings(userId, Boolean.TRUE.equals(pushEnabled), Boolean.TRUE.equals(likeAlertEnabled));
 		return "redirect:/user/alerts/settings?saved";

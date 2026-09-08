@@ -50,7 +50,6 @@ public class ListingDraftScheduler {
 	// promptTime이 지난 뒤 이 시간 안에만 초안을 만든다 — 서버가 한참 꺼져 있다 켜졌을 때
 	// 지난 며칠치가 한꺼번에 쏟아지는 걸 막기 위한 상한.
 	private static final int PROMPT_WINDOW_HOURS = 6;
-	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
 	private final ListingTemplateRepository templateRepository;
 	private final ProductRepository productRepository;
@@ -78,7 +77,7 @@ public class ListingDraftScheduler {
 		}
 		LocalDateTime closeAt = closeAtCache.computeIfAbsent(p.getStoreId(), sid ->
 				storeRepository.findById(sid)
-						.map(s -> StoreHoursUtil.parse(s.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt())
+						.map(s -> StoreHoursUtil.parse(s.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt())
 						.orElse(null));
 		return closeAt != null && !closeAt.isAfter(now);
 	}
@@ -177,7 +176,7 @@ public class ListingDraftScheduler {
 			}
 			// 마감 10분 전을 넘겼으면 올릴 수 없는 초안이라 만들지 않는다 (promptTime을 마감에 너무 붙인 경우).
 			if (!StoreHoursUtil.canPublishNow(
-					StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt())) {
+					StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt())) {
 				continue;
 			}
 
@@ -225,7 +224,7 @@ public class ListingDraftScheduler {
 	}
 
 	private int calcDiscountedPrice(StoreEntity store, int originalPrice) {
-		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
+		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES);
 		int rate = DiscountRateCalculator.calculateRate(closingInfo.closeAt());
 		return DiscountRateCalculator.applyDiscount(originalPrice, rate);
 	}

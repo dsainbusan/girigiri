@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CouponRowDto;
 import net.dsa.girigiri.domain.entity.CouponCampaignEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.SuperAdminCouponService;
 import org.springframework.stereotype.Controller;
@@ -29,32 +30,25 @@ public class CouponController {
 	private final CouponService couponService;
 	private final SuperAdminCouponService superAdminCouponService;
 
+	@LoginRequired
 	@GetMapping
 	public String myCoupons(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		List<CouponRowDto> coupons = couponService.listForUser(userId);
 		model.addAttribute("coupons", coupons);
 		return "couponView/coupons";
 	}
 
+	@LoginRequired
 	@GetMapping("/claim")
 	public String claimForm(HttpSession session) {
-		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		return "couponView/claim";
 	}
 
+	@LoginRequired
 	@PostMapping("/claim")
 	public String claim(@RequestParam String code, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			CouponCampaignEntity campaign = superAdminCouponService.findByCode(code);
 			couponService.claimCampaignCoupon(userId, campaign);

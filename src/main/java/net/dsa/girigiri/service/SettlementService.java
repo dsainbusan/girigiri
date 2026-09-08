@@ -215,6 +215,10 @@ public class SettlementService {
 		};
 	}
 
+	// 검토됨 (2026-09-08, 코드 감사) — ReservationService#resolveStatusBadge와 같은 지적(라벨 갈림)을
+	// 받았는데, 여긴 정산 리포트용이라 "노쇼 (환불 없음)"처럼 돈 흐름을 같이 알려줘야 해서 손님용
+	// 마이페이지 배지와 의도적으로 다르다 — 텍스트는 그대로 두고, 상태 추가 시 두 곳 다 챙기라는
+	// 상호 참조만 남긴다.
 	private String statusLabel(ReservationEntity r) {
 		if (r == null || r.getStatus() == null) {
 			return "";

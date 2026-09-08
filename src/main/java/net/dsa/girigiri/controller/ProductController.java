@@ -6,6 +6,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class ProductController {
 
-	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
 	private final StoreRepository storeRepository;
 	private final ReviewService reviewService;
@@ -42,7 +42,7 @@ public class ProductController {
 
 		StoreHoursUtil.ClosingInfo closingInfo = store == null
 				? new StoreHoursUtil.ClosingInfo("", false, null)
-				: StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
+				: StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES);
 
 		model.addAttribute("product", product);
 		model.addAttribute("store", store);
@@ -56,28 +56,13 @@ public class ProductController {
 		return "productView/detail";
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — CategoryDisplayUtil로 위임(6곳 넘게 중복돼 있던 것 중 하나,
+	// StoreProductController 사본에만 있던 "카페/디저트"·"도시락/샐러드" 변형 인식도 같이 딸려온다).
 	private String thumbColor(String category) {
-		if (category == null) {
-			return "var(--c-line-weak)";
-		}
-		return switch (category) {
-			case "베이커리" -> "var(--c-accent-weak)";
-			case "카페" -> "var(--c-info-weak)";
-			case "반찬", "도시락" -> "var(--c-primary-weak)";
-			default -> "var(--c-line-weak)";
-		};
+		return CategoryDisplayUtil.thumbColor(category);
 	}
 
 	private String thumbEmoji(String category) {
-		if (category == null) {
-			return "🍽️";
-		}
-		return switch (category) {
-			case "베이커리" -> "🥐";
-			case "반찬" -> "🍚";
-			case "도시락" -> "🍱";
-			case "카페" -> "☕";
-			default -> "🍽️";
-		};
+		return CategoryDisplayUtil.thumbEmoji(category);
 	}
 }

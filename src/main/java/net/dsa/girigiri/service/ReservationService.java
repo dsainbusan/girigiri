@@ -38,7 +38,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -347,9 +346,11 @@ public class ReservationService {
 	 * 항목마다 독립된 트랜잭션 + try/catch로 처리해서 하나가 실패해도 나머지는 그대로 진행된다(2번 해결).
 	 */
 	public int expireStalePendingReservations() {
+		// 변경됨 (2026-09-08, 코드 감사) — findByStatusIn(pending) 전체를 끌고 온 다음 자바에서
+		// reservedAt < cutoff로 거르던 걸 DB 쿼리로 민다 — 1분마다 도는 스케줄러가 매번 pending
+		// 전체를 훑던 구조였다.
 		LocalDateTime cutoff = LocalDateTime.now().minusMinutes(PENDING_EXPIRY_MINUTES);
-		List<Long> staleIds = reservationRepository.findByStatusIn(List.of("pending")).stream()
-				.filter(reservation -> reservation.getReservedAt() != null && reservation.getReservedAt().isBefore(cutoff))
+		List<Long> staleIds = reservationRepository.findByStatusAndReservedAtBefore("pending", cutoff).stream()
 				.map(ReservationEntity::getId)
 				.toList();
 
@@ -436,12 +437,9 @@ public class ReservationService {
 		ReservationEntity reservation = reservationRepository.findByPickupCode(pickupCode)
 				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
 
-		switch (reservation.getStatus()) {
-			case "picked" -> throw new PickupNotAllowedException("이미 픽업 완료 처리된 예약이에요.");
-			case "cancelled", "noshowed" -> throw new PickupNotAllowedException("취소되었거나 노쇼 처리된 예약이라 픽업할 수 없어요.");
-			case "pending" -> throw new PickupNotAllowedException("아직 결제가 완료되지 않은 예약이에요.");
-			case "confirmed" -> throw new PickupNotAllowedException("아직 매장에서 확인(수락)하지 않은 예약이에요. 예약 확인 화면에서 먼저 수락해주세요.");
-			default -> { }   // "ready" 상태만 정상적으로 아래 로직 진행
+		String blockedMessage = blockedPickupMessage(reservation);
+		if (blockedMessage != null) {
+			throw new PickupNotAllowedException(blockedMessage);
 		}
 
 		reservation.setStatus("picked");
@@ -808,16 +806,41 @@ public class ReservationService {
 
 	/** 픽업/취소/노쇼처럼 이미 끝난 예약을 또 취소하려는 걸 막는 공통 상태 체크. */
 	private void checkCancellableState(ReservationEntity reservation) {
-		if (CANCELLABLE_STATUSES.contains(reservation.getStatus())) {
-			return;
+		String message = blockedCancelMessage(reservation);
+		if (message != null) {
+			throw new CancellationNotAllowedException(message);
 		}
-		String message = switch (reservation.getStatus()) {
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — "취소 가능 상태" 판정이 이 클래스 안(checkCancellableState)
+	// 말고도 ReservationStoreController#storeCancelLookup, SuperAdminSupportController#blockedMessageFor
+	// 에 각자 똑같은 switch로 따로 있었다(상태를 하나 추가하면 셋 중 하나만 고치고 나머지를 빠뜨리기
+	// 쉬운 구조). 취소 가능하면 null, 아니면 이유 메시지를 돌려주는 공용 판정으로 모으고 그 두
+	// 컨트롤러가 이 메서드를 부르도록 바꿨다.
+	public String blockedCancelMessage(ReservationEntity reservation) {
+		if (CANCELLABLE_STATUSES.contains(reservation.getStatus())) {
+			return null;
+		}
+		return switch (reservation.getStatus()) {
 			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
 			case "cancelled" -> "이미 취소된 예약이에요.";
 			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
 			default -> "취소할 수 없는 상태의 예약이에요. (현재 상태: " + reservation.getStatus() + ")";
 		};
-		throw new CancellationNotAllowedException(message);
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — "픽업 가능 상태" 판정도 confirmPickup(여기)과
+	// ReservationPickupController#pickupLookup 2곳에 따로 있었는데, "confirmed" 케이스 문구가
+	// 이미 미묘하게 갈라져 있었다(서비스 쪽만 "예약 확인 화면에서 먼저 수락해주세요"가 붙어있었음)
+	// — 취소 판정과 같은 패턴으로 여기 하나로 모은다. 픽업 가능(ready)하면 null, 아니면 이유 메시지.
+	public String blockedPickupMessage(ReservationEntity reservation) {
+		return switch (reservation.getStatus()) {
+			case "picked" -> "이미 픽업 완료 처리된 예약이에요.";
+			case "cancelled", "noshowed" -> "취소되었거나 노쇼 처리된 예약이라 픽업할 수 없어요.";
+			case "pending" -> "아직 결제가 완료되지 않은 예약이에요.";
+			case "confirmed" -> "아직 매장에서 확인(수락)하지 않은 예약이에요. 예약 확인 화면에서 먼저 수락해주세요.";
+			default -> null;   // "ready" 상태만 정상 진행
+		};
 	}
 
 	// 추가됨 (2026-09-08, 코드 감사) — cancelByStore/cancelByAdmin의 취소 사유 자유입력을
@@ -932,23 +955,55 @@ public class ReservationService {
 	 *
 	 * @return 이번에 노쇼 처리된 예약 개수
 	 */
-	@Transactional
+	// 변경됨 (2026-09-08, 코드 감사) — 원래는 이 메서드 전체가 하나의 @Transactional이라, 후보 예약
+	// 여러 건을 처리하는 도중 하나가 실패하면(예: receiptService.generateReceipt가 PDF 생성/업로드
+	// 오류로 예외를 던지면) 이미 노쇼 처리됐어야 할 다른 항목들까지 전부 롤백됐다 — 조용히, 로그도 없이.
+	// expireStalePendingReservations와 같은 패턴(항목별 REQUIRES_NEW + try/catch)으로 바꿔서, 하나가
+	// 실패해도 나머지는 그대로 진행되게 한다.
 	public int processNoShows() {
 		LocalDateTime now = LocalDateTime.now();
-		List<Long> candidateIds = reservationRepository.findByStatusIn(List.of("confirmed", "ready")).stream()
+		// 변경됨 (2026-09-08, 코드 감사) — findByStatusIn(confirmed, ready) 전체를 끌고 온 다음
+		// isPastPickupDeadline(자바)으로 거르던 걸 DB 쿼리로 민다. "주문일 다음날 자정이 지남"은
+		// 수학적으로 "reservedAt < 오늘 자정"과 동치라(reservedAt이 오늘이면 아직 아니고, 어제
+		// 이전이면 이미 지남) 그대로 파생 쿼리 조건으로 옮길 수 있다 — processOneNoShow 안에서
+		// findByIdForUpdate로 다시 잠그고 isPastPickupDeadline으로 한 번 더 정확히 재확인하니
+		// 여기 DB 필터는 후보를 좁히는 용도일 뿐, 최종 판단은 여전히 그 정밀한 로직이 한다.
+		LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
+		List<Long> candidateIds = reservationRepository
+				.findByStatusInAndReservedAtBefore(List.of("confirmed", "ready"), todayStart).stream()
 				.map(ReservationEntity::getId)
 				.toList();
 
-		// 변경됨 (2026-09-08, 코드 감사) — id만 먼저 뽑고 항목마다 findByIdForUpdate로 다시 잠근 뒤
-		// 상태를 재확인한다. 다른 트랜잭션(픽업 확인/취소)이 이 사이 먼저 상태를 바꿔놨다면 여기서
-		// 조용히 건너뛴다 — 이미 픽업/취소된 예약을 노쇼로 덮어써버리는 걸 막는다.
-		List<ReservationEntity> overdue = new ArrayList<>();
+		int noShowCount = 0;
 		for (Long id : candidateIds) {
-			ReservationEntity reservation = reservationRepository.findByIdForUpdate(id).orElse(null);
+			try {
+				if (processOneNoShow(id, now)) {
+					noShowCount++;
+				}
+			} catch (Exception e) {
+				log.error("> [ReservationService] 노쇼 자동 처리 중 오류 (건너뛰고 계속 진행) - reservationId={}", id, e);
+			}
+		}
+		return noShowCount;
+	}
+
+	/**
+	 * processNoShows의 항목 1건 처리 — 독립된 트랜잭션(REQUIRES_NEW)으로 상태를 "noshowed"로 바꾼다.
+	 * 다른 트랜잭션(픽업 확인/취소)이 후보 목록을 뽑은 뒤 여기 오기까지 먼저 상태를 바꿔놨을 수 있어
+	 * findByIdForUpdate로 다시 잠그고 재확인한다 — 이미 픽업/취소된 예약을 덮어쓰지 않기 위해서다.
+	 * 영수증 재생성은 노쇼 상태 전환 자체와는 별개 관심사라 상태 전환 트랜잭션이 커밋된 뒤에,
+	 * 그리고 이 메서드를 감싼 processNoShows()의 try/catch 범위 안에서 실행한다 — 영수증 생성이
+	 * 실패해도 "노쇼 처리됨"이라는 이미 커밋된 사실은 롤백되지 않는다.
+	 */
+	private boolean processOneNoShow(Long reservationId, LocalDateTime now) {
+		TransactionTemplate requiresNew = new TransactionTemplate(transactionManager);
+		requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		boolean noShowed = Boolean.TRUE.equals(requiresNew.execute(status -> {
+			ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId).orElse(null);
 			if (reservation == null
 					|| !("confirmed".equals(reservation.getStatus()) || "ready".equals(reservation.getStatus()))
 					|| !isPastPickupDeadline(reservation, now)) {
-				continue;
+				return false;
 			}
 
 			reservation.setStatus("noshowed");
@@ -956,15 +1011,14 @@ public class ReservationService {
 			// 손님이 안 나타난 건 본인 잘못이라, 썼던 쿠폰이 있어도 복구해주지 않기로 했다 — 다른
 			// 취소 경로(위 cancelReservation/cancelByStore/결제실패 등)와 유일하게 다른 부분이다.
 			reservationRepository.save(reservation);
-			overdue.add(reservation);
-		}
+			return true;
+		}));
 
-		// 노쇼 안내 배너 + QR 제외 버전으로, 상태가 바뀐 이 시점에 영수증도 바로 다시 만들어둔다.
-		for (ReservationEntity reservation : overdue) {
-			receiptService.generateReceipt(reservation.getId());
+		if (noShowed) {
+			// 노쇼 안내 배너 + QR 제외 버전으로, 상태가 바뀐 이 시점에 영수증도 바로 다시 만들어둔다.
+			receiptService.generateReceipt(reservationId);
 		}
-
-		return overdue.size();
+		return noShowed;
 	}
 
 	/**
@@ -1030,6 +1084,12 @@ public class ReservationService {
 	 * "예약완료"/"픽업대기"로 나눠서 보여줬는데, 이제 매장 수락 여부 자체가 별도 상태(ready)로
 	 * 분리돼서 시간 비교 없이 상태값 그대로 배지로 보여주면 된다.
 	 */
+	// 검토됨 (2026-09-08, 코드 감사) — SettlementService#statusLabel도 같은 예약 상태를 한글로
+	// 바꾸는 매핑이라 감사에서 "라벨이 화면마다 갈린다(예: confirmed가 여긴 '주문 확인중', 정산
+	// 쪽은 '수락 대기')"고 지적됐다. 실제로 확인해보니 대상 독자가 달라서 의도적인 차이다 —
+	// 여긴 손님이 보는 마이페이지 배지(간결한 진행상황), 정산 쪽은 매장 정산 리포트라 "노쇼
+	// (환불 없음)"처럼 돈 흐름을 같이 알려줘야 한다. 그래서 텍스트를 억지로 통일하진 않았고,
+	// 대신 상태를 하나 추가할 때 두 곳 다 챙기라는 상호 참조만 남긴다.
 	private String resolveStatusBadge(ReservationEntity reservation) {
 		return switch (reservation.getStatus()) {
 			case "pending" -> "결제 대기";       // (2026-08-21 추가) getCancellableReservations 목록에서 어색한 영문 노출 방지용

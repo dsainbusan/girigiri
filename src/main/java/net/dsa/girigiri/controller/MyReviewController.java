@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.ReviewService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,17 +16,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/user/reviews")
 @RequiredArgsConstructor
 public class MyReviewController {
-	
+
 	private final ReviewService reviewService;
-	
+
+	@LoginRequired
 	@GetMapping("/my")
 	public String my(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-		
+
 		model.addAttribute("reviews", reviewService.getMyReviews(userId));
 		
 		return "reviewView/my";

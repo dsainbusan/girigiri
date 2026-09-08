@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.ChatRequestDto;
 import net.dsa.girigiri.domain.dto.ChatResponseDto;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,13 +30,13 @@ public class ChatController {
 
 	private final ChatService chatService;
 
+	// 변경됨 (2026-09-08, 코드 감사) — 로그인 체크를 LoginRequiredInterceptor로 위임(수십 곳 반복되던
+	// 보일러플레이트 정리). 비로그인 401은 이제 인터셉터가 내려주는데, mypage.html의 챗봇 위젯은 이미
+	// res.status===401만 보고 자체 "로그인이 필요해요" 문구를 쓰지 응답 바디는 안 읽어서 그대로 동작한다.
+	@LoginRequired
 	@PostMapping("/message")
 	public ResponseEntity<ChatResponseDto> sendMessage(@RequestBody ChatRequestDto request, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return ResponseEntity.status(401).body(ChatResponseDto.failed("로그인이 필요해요."));
-		}
-
 		// 변경됨 (2026-09-01) — 왜: role은 불변 권한이라 "사장님이 유저 모드로 전환해서 보는 중"인
 		// 경우를 구분 못 한다. AuthController.toggleMode()로 viewMode가 이미 세션에 들어오고 있어서
 		// (문창호님 파트 완료), 화면 분기는 팀 컨벤션대로 viewMode 기준으로 바꿨다.

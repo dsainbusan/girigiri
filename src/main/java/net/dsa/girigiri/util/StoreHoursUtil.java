@@ -31,6 +31,13 @@ public final class StoreHoursUtil {
 	 */
 	public static final int PUBLISH_CUTOFF_MINUTES = 10;
 
+	// 추가됨 (2026-09-08, 코드 감사) — parse(operatingHours, urgentThresholdMinutes)의 두 번째 인자로
+	// "마감까지 60분 이내면 urgent"를 쓰는 곳이 9군데(ProductController·StoreDetailController·
+	// PosCatalogService·LikeService·HomeService·ProductService·SearchService·ListingDraftScheduler·
+	// RecommendationService)에 전부 로컬 상수로 따로 선언돼 있었다 — 값을 바꾸려면 9곳을 다 찾아야
+	// 하는 구조라 PickupAvailabilityUtil.DEFAULT_PREP_TIME_MINUTES와 같은 패턴으로 여기 하나로 모은다.
+	public static final long URGENT_THRESHOLD_MINUTES = 60;
+
 	private StoreHoursUtil() {
 	}
 
@@ -44,6 +51,15 @@ public final class StoreHoursUtil {
 	public static boolean canPublishNow(LocalDateTime closeAt) {
 		return closeAt == null
 				|| LocalDateTime.now().isBefore(closeAt.minusMinutes(PUBLISH_CUTOFF_MINUTES));
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — "영업중/휴업" 판정이 SuperAdminStoreController(isOpen, 2곳)와
+	// StoreService(isClosed)에 각자 다른 형태(긍정문/부정문)로 따로 쓰여 있었다. 수학적으로는 서로
+	// 반대라 실제로 값이 어긋난 건 아니었지만(De Morgan), 같은 조건이 표현만 3번 갈라져 있으면 나중에
+	// 조건 하나를 손볼 때(예: "마감 10분 전부터는 휴업으로 보이게") 하나만 고치고 나머지를 빠뜨리기
+	// 쉽다. closeAt이 null(영업시간 정보 없음)이면 영업중으로 본다.
+	public static boolean isOpen(LocalDateTime closeAt) {
+		return closeAt == null || closeAt.isAfter(LocalDateTime.now());
 	}
 
 	/**

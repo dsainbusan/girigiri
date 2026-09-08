@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 public class PosCatalogService {
 
 	private static final Set<String> PROVIDERS = Set.of("okpos", "posbank", "unionpos", "etc");
-	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
 	private final StoreRepository storeRepository;
 	private final MenuItemRepository menuItemRepository;
@@ -168,7 +167,7 @@ public class PosCatalogService {
 		m.setAppSaleEnabled(appSaleEnabled);
 		if (discountRate != null) {
 			int floor = DiscountRateCalculator.calculateRate(
-					StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt());
+					StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt());
 			if (discountRate < floor) {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 						"할인율은 자동값(" + floor + "%)보다 낮출 수 없어요. 더 깎는 건 가능해요.");
@@ -203,7 +202,7 @@ public class PosCatalogService {
 	public int generateDraftsFromStock(StoreEntity store) {
 		LocalDate today = LocalDate.now();
 		List<ProductEntity> storeProducts = productRepository.findByStoreId(store.getId());
-		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt();
 
 		// 마감 10분 전을 넘겼으면 올릴 수도 없는 초안을 만들지 않는다 (prompt 시각을 마감에 너무 붙여둔 경우).
 		if (!StoreHoursUtil.canPublishNow(closeAt)) {

@@ -96,11 +96,10 @@ public class NotificationTriggerScheduler {
 	private void scanReservationPickupSoon() {
 		LocalDateTime now = LocalDateTime.now();
 		LocalDateTime soon = now.plusMinutes(PICKUP_SOON_MINUTES);
+		// 변경됨 (2026-09-08, 코드 감사) — findByStatusIn(ready) 전체를 끌고 온 다음 pickupTime
+		// 30분 창을 자바에서 거르던 걸 DB 쿼리로 민다(1분마다 도는 스케줄러라 반복 비용이 컸다).
 		// ready = 매장이 수락해서 이제 손님이 와서 픽업하면 되는 상태(ReservationEntity.status 주석 참고).
-		for (ReservationEntity r : reservationRepository.findByStatusIn(List.of("ready"))) {
-			if (r.getPickupTime() == null || r.getPickupTime().isBefore(now) || r.getPickupTime().isAfter(soon)) {
-				continue;
-			}
+		for (ReservationEntity r : reservationRepository.findByStatusAndPickupTimeBetween("ready", now, soon)) {
 			notificationService.createNotification(r.getUserId(), NotificationEntity.TYPE_RESERVATION_PICKUP_SOON,
 					"\"" + productLabel(r) + "\" 픽업 시간이 곧 다가와요.",
 					RESERVATION_URL, "pickup_soon:" + r.getId());

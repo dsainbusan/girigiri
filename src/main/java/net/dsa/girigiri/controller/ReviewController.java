@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.ReviewService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +41,7 @@ public class ReviewController {
 	// 추가됨 (강노은) — 왜: 리뷰 등록/수정 버튼을 눌러도 처리 결과가 화면에 아무 표시 없이 그냥
 	// 새로고침되는 것처럼 보여서, "등록/수정됐다"는 걸 알려주는 1회성 안내를 넣었다. flash
 	// attribute라 리다이렉트된 화면에 한 번만 뜨고 새로고침하면 사라진다(예약 취소/수락 안내와 동일한 방식).
+	@LoginRequired
 	@PostMapping
 	public String submit(@PathVariable Long storeId,
 						  @RequestParam int rating,
@@ -50,23 +52,18 @@ public class ReviewController {
 						  HttpSession session,
 						  RedirectAttributes redirectAttributes) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		boolean isNew = reviewService.submitReview(userId, storeId, rating, content, imagePhoto, removeImage);
 		redirectAttributes.addFlashAttribute("reviewMessage", isNew ? "리뷰가 등록되었습니다." : "리뷰가 수정되었습니다.");
 		return resolveRedirect(returnTo, storeId);
 	}
 
 	/** 가게 사장님은 지울 수 없다 — 작성자 본인 / 관리자만. */
+	@LoginRequired
 	@PostMapping("/{reviewId}/delete")
 	public String delete(@PathVariable Long storeId, @PathVariable Long reviewId,
 						  @RequestParam(required = false) String returnTo,
 						  HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 		reviewService.deleteReview(userId, role, reviewId);
 		return resolveRedirect(returnTo, storeId);

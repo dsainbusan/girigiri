@@ -35,7 +35,6 @@ import java.util.List;
 public class ProductService {
 
 	private static final String IMAGE_SUBDIR = "product";
-	private static final long URGENT_THRESHOLD_MINUTES = 60;
 
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
@@ -136,7 +135,7 @@ public class ProductService {
 		}
 		// 마감 10분 전을 넘겼으면 발행 거부 (손님이 예약·픽업할 시간이 없다).
 		// 상태는 draft로 두고 스케줄러 expireStaleDrafts가 실제 마감에 정리 → 그때까진 "등록 마감"으로 카드는 보인다.
-		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt();
 		if (!StoreHoursUtil.canPublishNow(closeAt)) {
 			return false;
 		}
@@ -255,7 +254,7 @@ public class ProductService {
 	 * 값이 있으면 그 값으로 하되 자동값보다 낮으면 자동값으로 끌어올린다 (DiscountRateCalculator.effectiveRate).
 	 */
 	private int calcDiscountedPrice(StoreEntity store, int originalPrice, Integer ownerRate) {
-		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt();
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt();
 		int rate = DiscountRateCalculator.effectiveRate(ownerRate, closeAt);
 		return DiscountRateCalculator.applyDiscount(originalPrice, rate);
 	}
@@ -278,7 +277,7 @@ public class ProductService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "할인율은 90%를 넘을 수 없어요.");
 		}
 		int auto = DiscountRateCalculator.calculateRate(
-				StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES).closeAt());
+				StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt());
 		if (rate < auto) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"할인율은 마감시간 기준 자동값(" + auto + "%)보다 낮출 수 없어요. 더 깎는 건 가능해요.");

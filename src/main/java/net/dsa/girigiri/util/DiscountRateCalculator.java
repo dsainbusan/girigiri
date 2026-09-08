@@ -52,8 +52,11 @@ public final class DiscountRateCalculator {
 		return Math.min(MAX_RATE, Math.max(auto, ownerRate));
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — originalPrice * (100 - rate)가 둘 다 int라 곱셈이 int로
+	// 먼저 평가됐다(2,600만원대 이상 원가에서 오버플로 가능). "100 - rate"를 "100.0 - rate"로
+	// 바꿔서 곱셈 자체를 double로 만든다 — 계산 결과(반올림된 값)는 그대로, 오버플로만 없앤다.
 	public static int applyDiscount(int originalPrice, int rate) {
-		return (int) Math.round(originalPrice * (100 - rate) / 100.0);
+		return (int) Math.round(originalPrice * (100.0 - rate) / 100.0);
 	}
 
 	/**

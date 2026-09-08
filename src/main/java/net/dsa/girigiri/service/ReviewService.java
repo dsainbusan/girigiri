@@ -156,7 +156,11 @@ public class ReviewService {
 	 * 생성해서 캐시를 갱신한다. Gemini 호출이 실패해도(설정 안 됨/일시 오류) 화면이 깨지면 안
 	 * 되니, 그 경우 예전 캐시가 있으면 그거라도 보여주고 없으면 조용히 empty를 돌려준다.
 	 */
-	@Transactional
+	// 변경됨 (2026-09-08, 코드 감사) — @Transactional이 걸려있어서 Gemini 호출(초 단위로 걸릴 수 있는
+	// 외부 네트워크 요청)이 진행되는 동안 DB 커넥션을 계속 붙잡고 있었다. 여기는 confirmPayment처럼
+	// 락을 잡고 그 락을 유지해야 할 이유가 없다(캐시 테이블이라 store_id 유니크 제약 안에서
+	// 마지막에 쓴 값이 이기면 충분) — @Transactional을 떼서 조회(findByStoreId)·외부 호출(Gemini)·
+	// 저장(save)이 각자 짧은 트랜잭션으로 끝나게 한다.
 	public Optional<String> getReviewSummary(Long storeId) {
 		int reviewCount = getReviewCount(storeId);
 		if (reviewCount < MIN_REVIEWS_FOR_SUMMARY) {

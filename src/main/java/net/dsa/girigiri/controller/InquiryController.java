@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.exception.ReservationAccessDeniedException;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.InquiryService;
 import net.dsa.girigiri.service.LookupService;
 import org.springframework.http.HttpStatus;
@@ -32,26 +33,21 @@ public class InquiryController {
 	// 요약을 보여주고 본인 예약인지 확인하기 위해서만 쓴다(저장 자체는 InquiryService가 다시 확인).
 	private final LookupService lookupService;
 
+	@LoginRequired
 	@GetMapping
 	public String list(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 		model.addAttribute("inquiries", inquiryService.getInquiriesForUser(userId, role));
 		return "inquiryView/list";
 	}
 
+	@LoginRequired
 	@GetMapping("/new")
 	public String newForm(@RequestParam(required = false) Long storeId,
 	                       @RequestParam(required = false) Long reservationId,
 	                       HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		if (reservationId != null) {
 			ReservationEntity reservation = lookupService.getReservation(reservationId);
 			if (!reservation.getUserId().equals(userId)) {
@@ -68,6 +64,7 @@ public class InquiryController {
 	}
 
 	// 변경됨 (강노은) — 왜: 문의에 사진 첨부 기능 추가(수정은 없어서 새 파일 업로드만 받으면 됨).
+	@LoginRequired
 	@PostMapping
 	public String create(@RequestParam(required = false) Long storeId,
 						  @RequestParam(required = false) Long reservationId,
@@ -76,19 +73,14 @@ public class InquiryController {
 						  @RequestParam(required = false) MultipartFile imagePhoto,
 						  HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		Long inquiryId = inquiryService.createInquiry(userId, storeId, reservationId, title, content, imagePhoto);
 		return "redirect:/user/inquiries/" + inquiryId;
 	}
 
+	@LoginRequired
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 
 		InquiryEntity inquiry = inquiryService.getInquiry(id);
@@ -110,12 +102,10 @@ public class InquiryController {
 		return "inquiryView/detail";
 	}
 
+	@LoginRequired
 	@PostMapping("/{id}/comments")
 	public String addComment(@PathVariable Long id, @RequestParam String content, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 
 		InquiryEntity inquiry = inquiryService.getInquiry(id);
@@ -128,12 +118,10 @@ public class InquiryController {
 	}
 
 	/** 작성자 본인 / 관리자만 — 열람 권한(가게 사장님 포함)보다 좁다. 삭제하면 댓글도 같이 지운다. */
+	@LoginRequired
 	@PostMapping("/{id}/delete")
 	public String delete(@PathVariable Long id, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 		inquiryService.deleteInquiry(userId, role, id);
 		// 강노은: 원래 있던 "고객센터"(/user/support)의 "내 문의내역" 탭으로 돌려보낸다 — 이 컨트롤러의
@@ -141,12 +129,10 @@ public class InquiryController {
 		return "redirect:/user/support";
 	}
 
+	@LoginRequired
 	@PostMapping("/{id}/comments/{commentId}/delete")
 	public String deleteComment(@PathVariable Long id, @PathVariable Long commentId, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		String role = (String) session.getAttribute("role");
 		inquiryService.deleteComment(userId, role, commentId);
 		return "redirect:/user/inquiries/" + id;

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.AuthService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -94,13 +95,10 @@ public class AuthController {
 	 * 최초 소셜 로그인 직후 회원가입 완료 화면
 	 * 닉네임, 활동 지역, 소비자/사장님 이용 모드를 입력받습니다.
 	 */
+	@LoginRequired
 	@GetMapping("/signup")
 	public String signupForm(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		UserEntity user = authService.getUserForSignup(userId);
 
 		model.addAttribute("provider", user.getOauthProvider());
@@ -116,6 +114,7 @@ public class AuthController {
 	 * - 소비자 선택: profileCompleted=true, role=USER 확정 후 메인(/) 이동
 	 * - 사장님 선택: 기본 정보 저장 후 점주 입점 신청(/auth/owner-apply)으로 이동
 	 */
+	@LoginRequired
 	@PostMapping("/signup")
 	public String signup(@RequestParam String nickname,
 	                     @RequestParam(required = false) String region,
@@ -126,10 +125,6 @@ public class AuthController {
 		}
 
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		authService.completeSignup(userId, nickname, region);
 
 		// 사장님으로 시작 선택 시 점주 입점 신청 페이지로 라우팅
@@ -144,12 +139,9 @@ public class AuthController {
 	/**
 	 * 점주 입점 신청 (추가 정보 입력) 폼 화면
 	 */
+	@LoginRequired
 	@GetMapping("/owner-apply")
 	public String ownerApplyForm(HttpSession session, Model model) {
-		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		return "authView/ownerApply";
 	}
 
@@ -158,6 +150,7 @@ public class AuthController {
 	 * - 매장 정보 및 사업자 등록번호를 PENDING 상태로 저장
 	 * - 운영자(ADMIN, WBS 7.2 송보미)의 심사/승인 후 role=OWNER로 전환됨
 	 */
+	@LoginRequired
 	@PostMapping("/owner-apply")
 	public String ownerApply(@RequestParam String storeName,
 	                         @RequestParam String businessNumber,
@@ -167,10 +160,6 @@ public class AuthController {
 	                         @RequestParam(required = false) String operatingHours,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone, operatingHours)) {
 			return "redirect:/auth/owner-apply?error";
 		}

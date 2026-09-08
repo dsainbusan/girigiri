@@ -80,12 +80,9 @@ public class ReservationStoreController {
 			return PickupLookupResponseDto.notFound();
 		}
 
-		String blockedMessage = switch (reservation.getStatus()) {
-			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
-			case "cancelled" -> "이미 취소된 예약이에요.";
-			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
-			default -> null;   // "pending", "confirmed", "ready"만 정상 진행
-		};
+		// 변경됨 (2026-09-08, 코드 감사) — "취소 가능 상태" 판정을 여기 로컬 switch 대신
+		// ReservationService.blockedCancelMessage로 통일(4곳 중복 정리).
+		String blockedMessage = reservationService.blockedCancelMessage(reservation);
 		if (blockedMessage != null) {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}

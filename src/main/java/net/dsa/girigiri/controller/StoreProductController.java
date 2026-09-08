@@ -11,6 +11,7 @@ import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreProductService;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
@@ -293,29 +294,15 @@ public class StoreProductController {
 		return registeredAt.format(DATE_FMT) + " 등록";
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — CategoryDisplayUtil로 위임(6곳 넘게 중복돼 있던 것 중 하나 —
+	// 여기 사본만 "카페/디저트"·"도시락/샐러드" 변형을 인식하고 있었는데, 그 완전한 목록을
+	// CategoryDisplayUtil의 기준으로 삼았다).
 	private String categoryEmoji(String category) {
-		if (category == null) {
-			return "🍽️";
-		}
-		return switch (category) {
-			case "베이커리" -> "🥐";
-			case "반찬" -> "🍚";
-			case "도시락", "도시락/샐러드" -> "🍱";
-			case "카페", "카페/디저트" -> "☕";
-			default -> "🍽️";
-		};
+		return CategoryDisplayUtil.thumbEmoji(category);
 	}
 
 	private String categoryColor(String category) {
-		if (category == null) {
-			return "var(--c-line-weak)";
-		}
-		return switch (category) {
-			case "베이커리" -> "var(--c-accent-weak)";
-			case "카페", "카페/디저트" -> "var(--c-info-weak)";
-			case "반찬", "도시락", "도시락/샐러드" -> "var(--c-primary-weak)";
-			default -> "var(--c-line-weak)";
-		};
+		return CategoryDisplayUtil.thumbColor(category);
 	}
 
 	private int nz(Integer v) {

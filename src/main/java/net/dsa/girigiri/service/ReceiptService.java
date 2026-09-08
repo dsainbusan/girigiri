@@ -42,7 +42,13 @@ public class ReceiptService {
 	private final ReceiptRepository receiptRepository;
 	private final SupabaseStorageClient supabaseStorageClient;
 
-	@Transactional
+	// 변경됨 (2026-09-08, 코드 감사) — Supabase 업로드(외부 네트워크 요청, 몇 초 걸릴 수 있음)가
+	// @Transactional 안에 있어서 그동안 DB 커넥션을 붙잡고 있었다. 여기 조회(findById 2번)는 락이
+	// 없고, 끝에서 항상 명시적으로 save()를 호출해서 반영하기 때문에(더티체킹에 기대지 않음)
+	// @Transactional 없이도 정합성엔 문제가 없다 — 떼서 업로드하는 동안 커넥션을 안 붙잡게 한다.
+	// (confirmPayment/cancelByStore/cancelByAdmin처럼 이미 트랜잭션이 열려있는 곳에서 이 메서드를
+	// 부르면 Spring이 그 트랜잭션에 합류시키므로(REQUIRED 전파), 그 호출부들의 락 유지 시간 자체는
+	// 이 변경과 무관하다 — 그건 각자의 이유(동시성 레이스 방지)로 별도 검토가 필요해 안 건드렸다.)
 	public ReceiptEntity generateReceipt(Long reservationId) {
 		ReservationEntity reservation = reservationRepository.findById(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));

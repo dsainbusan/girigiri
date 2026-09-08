@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -55,8 +54,7 @@ public class SuperAdminStoreController {
 				continue;
 			}
 			StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
-			boolean isOpen = closingInfo.closeAt() == null || closingInfo.closeAt().isAfter(LocalDateTime.now());
-			openStatusMap.put(store.getId(), isOpen);
+			openStatusMap.put(store.getId(), StoreHoursUtil.isOpen(closingInfo.closeAt()));
 		}
 
 		model.addAttribute("stores", stores);
@@ -170,7 +168,8 @@ public class SuperAdminStoreController {
 		}
 
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
-		boolean isOpen = closingInfo.closeAt() == null || closingInfo.closeAt().isAfter(LocalDateTime.now());
+		// 변경됨 (2026-09-08, 코드 감사) — StoreHoursUtil.isOpen으로 위임(3곳 중복 중 하나).
+		boolean isOpen = StoreHoursUtil.isOpen(closingInfo.closeAt());
 
 		StoreRecentStatsDto stats = storeService.getRecentStats(id);
 		int rescueGoalPercent = store.getRescueGoalPercent() != null ? store.getRescueGoalPercent() : 70;

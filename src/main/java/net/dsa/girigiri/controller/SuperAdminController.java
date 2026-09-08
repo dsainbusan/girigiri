@@ -1,5 +1,6 @@
 package net.dsa.girigiri.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.SuperAdminDashboardStatsDto;
 import net.dsa.girigiri.service.NotificationService;
@@ -11,6 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) 대시보드/공통코드/알림 라우팅.
@@ -62,11 +66,34 @@ public class SuperAdminController {
 	}
 
 	@PostMapping("/notifications/read-all")
-	public String readAllNotifications(@RequestHeader(value = "Referer", required = false) String referer) {
+	public String readAllNotifications(@RequestHeader(value = "Referer", required = false) String referer,
+										HttpServletRequest request) {
 		Long adminId = dashboardService.findAdminIdOrNull();
 		if (adminId != null) {
 			notificationService.markAllRead(adminId);
 		}
-		return "redirect:" + (referer != null && !referer.isBlank() ? referer : "/superadmin/dashboard");
+		return "redirect:" + resolveReturnTo(referer, request);
+	}
+
+	// 추가됨 (2026-09-08, 코드 감사) — 알림 패널이 슈퍼어드민 공용 레이아웃(layout-admin)에 있어서
+	// 어느 화면에서나 이 폼이 제출될 수 있다 보니 "방금 있던 화면으로" 되돌리는 값을 Referer 헤더
+	// 그대로 썼다. ReviewController#resolveRedirect가 임의 문자열을 그대로 redirect에 안 쓰고
+	// 화이트리스트로 거르듯, 여기도 같은 호스트(OriginCheckFilter와 동일한 판정) + "/superadmin/"
+	// 경로일 때만 그 값을 쓰고, 그 외(다른 호스트, 이상한 형식, 없음)는 대시보드로 보낸다.
+	private String resolveReturnTo(String referer, HttpServletRequest request) {
+		if (referer == null || referer.isBlank()) {
+			return "/superadmin/dashboard";
+		}
+		try {
+			URI uri = new URI(referer);
+			boolean sameHost = uri.getHost() != null && uri.getHost().equalsIgnoreCase(request.getServerName());
+			boolean superAdminPath = uri.getPath() != null && uri.getPath().startsWith("/superadmin/");
+			if (sameHost && superAdminPath) {
+				return referer;
+			}
+		} catch (URISyntaxException e) {
+			// 형식이 이상하면 판단 불가 — 안전하게 대시보드로.
+		}
+		return "/superadmin/dashboard";
 	}
 }

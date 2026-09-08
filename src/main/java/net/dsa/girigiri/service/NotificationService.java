@@ -8,6 +8,7 @@ import net.dsa.girigiri.domain.entity.NotificationSettingEntity;
 import net.dsa.girigiri.repository.NotificationRepository;
 import net.dsa.girigiri.repository.NotificationSettingRepository;
 import net.dsa.girigiri.util.SseEmitterRegistry;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -137,10 +138,24 @@ public class NotificationService {
 		sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — @Transactional이 없어서 findByUserId(없음) → save()가 원자적이지
+	// 않았다. NotificationController가 이 메서드를 트랜잭션 없이(컨트롤러는 트랜잭션이 아님) 직접 호출하는
+	// 경로가 있어서, 같은 유저의 첫 알림 설정 조회 요청이 동시에 두 번 들어오면(예: 탭 두 개) 둘 다
+	// findByUserId에서 "없음"을 보고 둘 다 save()를 시도할 수 있었다. @Transactional만으로는 두 트랜잭션이
+	// 여전히 동시에 "없음"을 볼 수 있어(격리수준상) 경합 자체가 없어지진 않으므로, 유니크 제약 위반이
+	// 실제로 나면(=다른 트랜잭션이 먼저 커밋) 그걸 잡아 이미 만들어진 행을 다시 조회해서 쓰도록 한다.
+	@Transactional
 	public NotificationSettingEntity getOrCreateSettings(Long userId) {
 		return notificationSettingRepository.findByUserId(userId)
-				.orElseGet(() -> notificationSettingRepository.save(
-						NotificationSettingEntity.builder().userId(userId).build()));
+				.orElseGet(() -> createSettings(userId));
+	}
+
+	private NotificationSettingEntity createSettings(Long userId) {
+		try {
+			return notificationSettingRepository.save(NotificationSettingEntity.builder().userId(userId).build());
+		} catch (DataIntegrityViolationException e) {
+			return notificationSettingRepository.findByUserId(userId).orElseThrow(() -> e);
+		}
 	}
 
 	@Transactional

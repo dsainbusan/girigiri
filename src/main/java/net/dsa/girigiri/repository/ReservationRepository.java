@@ -84,4 +84,18 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// (HomeService#getTodayRescueCount). 예전엔 findAll()로 예약 테이블 전체 이력을 매 홈 화면
 	// 요청마다 훑었다 — 데이터가 쌓일수록 계속 느려지는 구조라 DB에서 바로 세도록 바꾼다.
 	long countByStatusAndPickedAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+	// 추가됨 (2026-09-08, 코드 감사) — ReservationService#expireStalePendingReservations가
+	// findByStatusIn(pending) 전체를 끌고 온 다음 자바에서 reservedAt < cutoff로 거르던 걸 DB로 민다
+	// (1분마다 도는 스케줄러라 pending 전체 테이블 스캔이 반복되는 구조였다).
+	List<ReservationEntity> findByStatusAndReservedAtBefore(String status, java.time.LocalDateTime cutoff);
+
+	// 추가됨 (2026-09-08, 코드 감사) — ReservationService#processNoShows도 같은 이유로 DB 필터로 민다.
+	// isPastPickupDeadline(주문일 다음날 자정 지남)은 "reservedAt < 오늘 자정"과 수학적으로 동치라
+	// 그대로 파생 쿼리로 옮길 수 있다(ReservationService 쪽 주석 참고).
+	List<ReservationEntity> findByStatusInAndReservedAtBefore(List<String> statuses, java.time.LocalDateTime cutoff);
+
+	// 추가됨 (2026-09-08, 코드 감사) — NotificationTriggerScheduler#scanReservationPickupSoon이
+	// findByStatusIn(ready) 전체를 끌고 온 다음 자바에서 pickupTime 30분 창으로 거르던 걸 DB로 민다.
+	List<ReservationEntity> findByStatusAndPickupTimeBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

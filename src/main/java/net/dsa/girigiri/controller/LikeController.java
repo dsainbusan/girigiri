@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.LikedStoreDto;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.LikeService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,13 +19,10 @@ public class LikeController {
 
 	private final LikeService likeService;
 
+	@LoginRequired
 	@GetMapping
 	public String list(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		List<LikedStoreDto> likedStores = likeService.getLikedStores(userId);
 		long onSaleCount = likedStores.stream().filter(LikedStoreDto::onSale).count();
 

@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.MypageService;
 import net.dsa.girigiri.service.StoreAccessService;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,13 +34,10 @@ public class MypageController {
 	/**
 	 * 마이페이지 메인 화면
 	 */
+	@LoginRequired
 	@GetMapping
 	public String mypage(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		mypageService.findUser(userId).ifPresent(user -> {
 			model.addAttribute("user", user);
 
@@ -58,13 +56,10 @@ public class MypageController {
 	/**
 	 * 회원정보 수정 화면
 	 */
+	@LoginRequired
 	@GetMapping("/edit")
 	public String editForm(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		mypageService.findUser(userId).ifPresent(user -> model.addAttribute("user", user));
 		storeAccessService.findMyStore(userId).ifPresent(store -> model.addAttribute("store", store));
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
@@ -75,15 +70,12 @@ public class MypageController {
 	/**
 	 * 회원정보 수정 처리
 	 */
+	@LoginRequired
 	@PostMapping("/edit")
 	public String updateProfile(@RequestParam String nickname,
 	                            @RequestParam(required = false) String region,
 	                            HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		if (!mypageService.updateProfile(userId, nickname, region)) {
 			return "redirect:/mypage/edit?error";
 		}
@@ -94,13 +86,10 @@ public class MypageController {
 	/**
 	 * 회원 탈퇴 처리. 미완료 예약이 있으면 막는다 — 사유는 MypageService.canWithdraw 참고.
 	 */
+	@LoginRequired
 	@PostMapping("/withdraw")
 	public String withdraw(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		if (!mypageService.canWithdraw(userId)) {
 			return "redirect:/mypage/edit?withdrawError";
 		}

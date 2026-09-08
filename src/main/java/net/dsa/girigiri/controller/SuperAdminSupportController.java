@@ -109,7 +109,7 @@ public class SuperAdminSupportController {
 		if (complaint.getTargetReservationId() != null) {
 			reservationService.findById(complaint.getTargetReservationId()).ifPresent(reservation -> {
 				model.addAttribute("linkedReservation", reservation);
-				model.addAttribute("linkedReservationBlockedMessage", blockedMessageFor(reservation));
+				model.addAttribute("linkedReservationBlockedMessage", reservationService.blockedCancelMessage(reservation));
 				model.addAttribute("linkedReservationStoreName", reservationService.findStoreById(reservation.getStoreId())
 						.map(store -> store.getStoreName())
 						.orElse("-"));
@@ -139,7 +139,7 @@ public class SuperAdminSupportController {
 			return PickupLookupResponseDto.notFound();
 		}
 
-		String blockedMessage = blockedMessageFor(reservation);
+		String blockedMessage = reservationService.blockedCancelMessage(reservation);
 		if (blockedMessage != null) {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}
@@ -150,17 +150,6 @@ public class SuperAdminSupportController {
 
 		return PickupLookupResponseDto.success(storeName, reservation.getProductName(),
 				reservation.getReservedQuantity(), reservation.getTotalPrice());
-	}
-
-	/** reservationLookup·complaintDetail 둘 다 쓰는 "취소 가능 상태인지" 판정 — 취소만 놓고 보면 되니
-	 * ReservationStoreController#storeCancelLookup과 동일 기준(pending/confirmed/ready만 정상). */
-	private String blockedMessageFor(ReservationEntity reservation) {
-		return switch (reservation.getStatus()) {
-			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
-			case "cancelled" -> "이미 취소된 예약이에요.";
-			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
-			default -> null;   // "pending", "confirmed", "ready"만 정상 진행
-		};
 	}
 
 	/**

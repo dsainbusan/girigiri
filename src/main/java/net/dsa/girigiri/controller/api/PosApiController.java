@@ -2,8 +2,10 @@ package net.dsa.girigiri.controller.api;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.PosMenuItemDto;
 import net.dsa.girigiri.domain.dto.PosStockDto;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.PosCatalogService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,7 @@ import java.util.Map;
  * 매장 식별은 요청 바디가 아니라 로그인 세션(session.userId → store.owner_id)으로 한다
  * (다른 매장 데이터를 건드리는 걸 막기 위해).
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/pos")
 @RequiredArgsConstructor
@@ -41,20 +44,24 @@ public class PosApiController {
 	 * 메뉴 카탈로그 수신.
 	 * 예: [ {"posSku":"BR001","name":"크루아상","originalPrice":3500}, ... ]
 	 */
+	@LoginRequired
 	@PostMapping("/catalog")
 	public ResponseEntity<Map<String, Object>> receiveCatalog(@RequestBody List<PosMenuItemDto> items, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "login_required"));
-		}
 		if (items == null || items.isEmpty()) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "empty_payload"));
 		}
+		// 추가됨 (2026-09-08, 코드 감사) — ResponseStatusException 외의 예상 못한 예외(DB 오류 등)는
+		// 이 catch를 빠져나가 GlobalExceptionHandler의 HTML 에러 페이지로 갔다 — POS 연동 쪽에서
+		// 호출하는 JSON API라 fetch가 그 HTML을 JSON으로 파싱하려다 깨졌다(ChatController와 같은 문제).
 		try {
 			int applied = posCatalogService.applyCatalog(userId, items);
 			return ResponseEntity.ok(Map.of("applied", applied));
 		} catch (ResponseStatusException e) {
 			return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", "store_not_found"));
+		} catch (Exception e) {
+			log.error("> [PosApiController] 카탈로그 수신 처리 중 오류 - userId={}", userId, e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "catalog_failed"));
 		}
 	}
 
@@ -64,12 +71,10 @@ public class PosApiController {
 	 * 마감 무렵 스케줄러가 이 재고로 "지금 이만큼 남았는데 팔래요?" 초안을 만든다.
 	 * 시연에서는 /store/pos/sim(POS 시뮬레이터)이 이 규격을 대신 태운다.
 	 */
+	@LoginRequired
 	@PostMapping("/stock")
 	public ResponseEntity<Map<String, Object>> receiveStock(@RequestBody List<PosStockDto> items, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "login_required"));
-		}
 		if (items == null || items.isEmpty()) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "empty_payload"));
 		}
@@ -78,6 +83,9 @@ public class PosApiController {
 			return ResponseEntity.ok(Map.of("applied", applied));
 		} catch (ResponseStatusException e) {
 			return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", "store_not_found"));
+		} catch (Exception e) {
+			log.error("> [PosApiController] 재고 스냅샷 처리 중 오류 - userId={}", userId, e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "stock_failed"));
 		}
 	}
 }

@@ -9,6 +9,8 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.DiscountRateCalculator;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DistanceUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,6 @@ import java.util.stream.Collectors;
 public class RecommendationService {
 
 	private static final String STATUS_ACTIVE = "active";
-	private static final long URGENT_THRESHOLD_MINUTES = 60;
 	// 픽업 완료 = 실제로 구매가 확정된 건 (ReviewService#canWriteReview와 같은 기준).
 	// 결제만 하고 아직 안 찾아간 예약(confirmed/ready)은 취소될 수도 있어서 "구매 이력"에서 뺀다.
 	private static final String STATUS_PICKED = "picked";
@@ -135,7 +136,7 @@ public class RecommendationService {
 	// DistanceUtil로 통합했다(세 서비스가 각자 베끼던 부분이라 그 부분만 공유 유틸로 뺌).
 	private StoreCardDto toCardDto(StoreEntity store, ProductEntity product, Set<Long> likedStoreIds,
 									Double userLat, Double userLng) {
-		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), URGENT_THRESHOLD_MINUTES);
+		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES);
 		String distance = DistanceUtil.label(DistanceUtil.km(userLat, userLng, store.getLatitude(), store.getLongitude()));
 
 		return StoreCardDto.builder()
@@ -156,26 +157,19 @@ public class RecommendationService {
 				.build();
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — DiscountRateCalculator로 위임(4곳 중복 중 하나). 계산식은
+	// 한 글자도 안 바꿈.
 	private int discountRate(ProductEntity product) {
-		if (product.getOriginalPrice() == null || product.getOriginalPrice() == 0 || product.getDiscountedPrice() == null) {
-			return 0;
-		}
-		return (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
+		return DiscountRateCalculator.fromPrices(product.getOriginalPrice(), product.getDiscountedPrice());
 	}
 
 	private String formatWon(Integer price) {
 		return price == null ? "0원" : String.format("%,d원", price);
 	}
 
+	// 변경됨 (2026-09-08, 코드 감사) — CategoryDisplayUtil로 위임(6곳 넘게 중복돼 있던 것 중 하나,
+	// StoreProductController 사본에만 있던 "카페/디저트"·"도시락/샐러드" 변형 인식도 같이 딸려온다).
 	private String thumbColor(String category) {
-		if (category == null) {
-			return "var(--c-line-weak)";
-		}
-		return switch (category) {
-			case "베이커리" -> "var(--c-accent-weak)";
-			case "카페" -> "var(--c-info-weak)";
-			case "반찬", "도시락" -> "var(--c-primary-weak)";
-			default -> "var(--c-line-weak)";
-		};
+		return CategoryDisplayUtil.thumbColor(category);
 	}
 }

@@ -75,14 +75,9 @@ public class ReservationPickupController {
 			return PickupLookupResponseDto.notFound();
 		}
 
-		String blockedMessage = switch (reservation.getStatus()) {
-			case "picked" -> "이미 픽업 완료 처리된 예약이에요.";
-			case "cancelled", "noshowed" -> "취소되었거나 노쇼 처리된 예약이라 픽업할 수 없어요.";
-			case "pending" -> "아직 결제가 완료되지 않은 예약이에요.";
-			// 추가됨 (2026-08-21) — 왜: 매장이 "예약 확인" 화면에서 수락하기 전에는 픽업 처리가 안 되게 막는다.
-			case "confirmed" -> "아직 매장에서 확인(수락)하지 않은 예약이에요.";
-			default -> null;   // "ready"만 정상 진행
-		};
+		// 변경됨 (2026-09-08, 코드 감사) — "픽업 가능 상태" 판정을 여기 로컬 switch 대신
+		// ReservationService.blockedPickupMessage로 통일(confirmPickup과 메시지가 갈라져 있던 것 정리).
+		String blockedMessage = reservationService.blockedPickupMessage(reservation);
 		if (blockedMessage != null) {
 			return PickupLookupResponseDto.blocked(blockedMessage);
 		}

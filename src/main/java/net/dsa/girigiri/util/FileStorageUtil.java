@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,6 +51,13 @@ public class FileStorageUtil {
 		if (file.getSize() > MAX_FILE_SIZE) {
 			throw new InvalidImageFileException("이미지 파일은 5MB 이하만 업로드할 수 있어요.");
 		}
+		// 추가됨 (2026-09-08, 코드 감사) — 위 Content-Type 체크는 클라이언트(브라우저)가 요청 헤더에
+		// 실어 보낸 값을 그대로 믿는 것이라, 확장자만 바꾸거나 헤더를 조작하면 임의 바이너리도 통과할
+		// 수 있었다 — 저장 경로(upload/**)가 그대로 공개 서빙되기 때문에 실제 위험. 파일 내용 맨 앞
+		// 바이트(매직바이트)가 실제 이미지 포맷과 일치하는지 한 번 더 확인한다.
+		if (!looksLikeAllowedImage(file)) {
+			throw new InvalidImageFileException("이미지 파일(jpg, png, webp, gif)만 업로드할 수 있어요.");
+		}
 
 		try {
 			Path targetDir = Path.of(uploadDir, subDir);
@@ -83,6 +91,36 @@ public class FileStorageUtil {
 			// 삭제 실패는 치명적이지 않다 — DB에서 참조만 없어지면 됨. 디스크에 파일이 남아도 다음 저장에 덮이지 않음(랜덤명).
 			log.warn("리뷰 사진 파일 삭제 실패: {}", webPath, e);
 		}
+	}
+
+	/**
+	 * 파일 맨 앞 12바이트(매직바이트)를 읽어 jpg/png/gif/webp 중 하나의 실제 시그니처와 일치하는지
+	 * 확인한다. Content-Type 헤더는 안 보고 파일 내용 자체만 본다.
+	 */
+	private boolean looksLikeAllowedImage(MultipartFile file) {
+		byte[] header = new byte[12];
+		int read;
+		try (InputStream in = file.getInputStream()) {
+			read = in.readNBytes(header, 0, header.length);
+		} catch (IOException e) {
+			throw new UncheckedIOException("이미지 파일을 읽는 중 오류가 발생했어요.", e);
+		}
+		if (read >= 3 && (header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) {
+			return true; // JPEG: FF D8 FF
+		}
+		if (read >= 8 && (header[0] & 0xFF) == 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G'
+				&& header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A) {
+			return true; // PNG: 89 50 4E 47 0D 0A 1A 0A
+		}
+		if (read >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F' && header[3] == '8'
+				&& (header[4] == '7' || header[4] == '9') && header[5] == 'a') {
+			return true; // GIF: "GIF87a" / "GIF89a"
+		}
+		if (read >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+				&& header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+			return true; // WEBP: "RIFF"....'WEBP'
+		}
+		return false;
 	}
 
 	private String extensionFor(String contentType) {

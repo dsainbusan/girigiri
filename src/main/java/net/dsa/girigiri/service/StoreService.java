@@ -75,7 +75,9 @@ public class StoreService {
 		int idleCount = totalQuantity - soldCount;
 
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
-		boolean isClosed = closingInfo.closeAt() != null && !closingInfo.closeAt().isAfter(LocalDateTime.now());
+		// 변경됨 (2026-09-08, 코드 감사) — StoreHoursUtil.isOpen으로 위임(3곳 중복 중 하나, 여기는
+		// 부정형(isClosed)이라 그대로 뒤집는다 — 판정 로직 자체는 한 곳에서만 관리).
+		boolean isClosed = !StoreHoursUtil.isOpen(closingInfo.closeAt());
 
 		int donutPickedPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * pickedCount / totalQuantity);
 		int donutReservedCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * (pickedCount + reservedNotPickedCount) / totalQuantity);
