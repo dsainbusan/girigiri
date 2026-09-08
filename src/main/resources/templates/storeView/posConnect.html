@@ -146,8 +146,17 @@
 		</ul>
 	</div>
 
-	<!-- 뒤로가기는 기본 동작(history.back). /store/pos는 대시보드·상품·매장수정·템플릿 등 여러 곳에서
-	     들어오니, 특정 페이지로 고정하지 않고 온 곳으로 돌아간다. -->
+	<!-- 뒤로가기 고정: 대시보드. history.back()은 저장(POST→redirect→?flag)이 히스토리에 쌓여서
+	     저장 후 뒤로가기가 같은 페이지로만 돌아가는 문제가 있다. 다른 매장 페이지(edit·products)와
+	     동일하게 대시보드로 고정한다. -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) { return; }
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
 </div>
 </body>
 </html>

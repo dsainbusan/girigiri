@@ -1,6 +1,7 @@
 package net.dsa.girigiri.util;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -46,18 +47,30 @@ public final class StoreHoursUtil {
 	 * operatingHours 형식이 다르거나 없으면 빈 라벨(closeAt=null)로 처리한다 — 예외를 던지지 않는다.
 	 */
 	public static ClosingInfo parse(String operatingHours, long urgentThresholdMinutes) {
+		return parse(operatingHours, urgentThresholdMinutes, LocalDateTime.now());
+	}
+
+	/** now를 주입받는 오버로드 — 테스트용. 자정을 넘기는 영업시간 판정 때문에 시각 의존이 커서 분리했다. */
+	static ClosingInfo parse(String operatingHours, long urgentThresholdMinutes, LocalDateTime now) {
 		if (operatingHours == null || !operatingHours.contains("~")) {
 			return new ClosingInfo("", false, null);
 		}
 		try {
-			String closePart = operatingHours.split("~")[1].trim();
-			Matcher matcher = TIME_TOKEN.matcher(closePart);
-			if (!matcher.find()) {
+			String[] parts = operatingHours.split("~");
+			LocalTime closeTime = firstTimeToken(parts[1]);
+			if (closeTime == null) {
 				return new ClosingInfo("", false, null);
 			}
-			LocalTime closeTime = LocalTime.parse(matcher.group(1), HOUR_FORMAT);
-			LocalDateTime close = LocalDateTime.now().toLocalDate().atTime(closeTime);
-			LocalDateTime now = LocalDateTime.now();
+			LocalTime openTime = parts.length > 0 ? firstTimeToken(parts[0]) : null;
+
+			// 자정을 넘기는 영업시간(예: 18:00 ~ 02:00): 마감 시각이 시작 시각보다 이르면 마감은 "다음날"이다.
+			// 단, 지금이 이미 마감 시각 이전(새벽)이면 어제 시작한 영업이 오늘 새벽에 끝나는 것이라 "오늘".
+			LocalDate closeDate = now.toLocalDate();
+			boolean crossesMidnight = openTime != null && closeTime.isBefore(openTime);
+			if (crossesMidnight && !now.toLocalTime().isBefore(closeTime)) {
+				closeDate = closeDate.plusDays(1);
+			}
+			LocalDateTime close = closeDate.atTime(closeTime);
 
 			if (!close.isAfter(now)) {
 				return new ClosingInfo("영업 종료", false, close);
@@ -72,5 +85,14 @@ public final class StoreHoursUtil {
 		} catch (Exception e) {
 			return new ClosingInfo("", false, null);
 		}
+	}
+
+	/** 문자열에서 첫 번째 "H:mm" 토큰을 LocalTime으로. 못 찾으면 null. */
+	private static LocalTime firstTimeToken(String s) {
+		if (s == null) {
+			return null;
+		}
+		Matcher matcher = TIME_TOKEN.matcher(s);
+		return matcher.find() ? LocalTime.parse(matcher.group(1), HOUR_FORMAT) : null;
 	}
 }
