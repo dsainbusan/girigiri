@@ -30,7 +30,7 @@
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
-			<span>⚙️ 자동 등록을 설정하면 매일 손 안 대도 돼요 — POS 연동하기</span>
+			<span>⚙️ POS를 연동하면 매일 자동으로 등록돼요</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 	</div>
@@ -271,6 +271,12 @@
 	     /auth/mode는 OWNER가 아니면 그냥 "/"로 보내니, USER 세션이어도 안전하게 동작한다. -->
 	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4)">
 		<button type="submit" class="btn btn--outline btn--block">유저 모드로 전환</button>
+	</form>
+
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점이 없었다. 세션 액션이라 모드 전환 바로 밑에 둔다. -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-2); margin-bottom: var(--s-4)">
+		<button type="submit" class="btn btn--outline btn--block u-mut"
+		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>
 
 	<!-- 탭 토글(현황: 오늘/최근7일, 주문·픽업: 주문/픽업) · 상단바 뒤로 버튼 숨김 · 구제율 목표 수정 -->

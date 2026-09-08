@@ -116,17 +116,22 @@
 	</form>
 
 	<!-- POS 연동 (2026-08-27 문창호) — 한 번 연동하면 거의 안 바꾸는 설정이라 대시보드가 아니라
-	     매장 설정인 이 화면에 둔다. 상태만 요약하고 실제 연동/해제/재동기화는 /store/pos 전용 화면에서. -->
-	<div class="card" style="margin-top: var(--s-6); background: var(--c-bg); border-color: var(--c-line);">
+	     매장 설정인 이 화면에 둔다. 상태만 요약하고 실제 연동/해제/재동기화는 /store/pos 전용 화면에서.
+	     미연동이면 대시보드 넛지와 톤을 맞춰 초록 틴트로 눈에 띄게, 연동됐으면 차분하게. -->
+	<div class="card" style="margin-top: var(--s-6)"
+	     th:style="${'margin-top: var(--s-6); ' + (posConnected
+	         ? 'background: var(--c-bg); border-color: var(--c-line);'
+	         : 'background: var(--c-primary-weak); border-color: var(--c-primary-border);')}">
 		<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
 			<div>
-				<p class="u-bold" style="font-size: var(--fs-sm)">POS 연동</p>
+				<p class="u-bold" style="font-size: var(--fs-sm)">⚙️ POS 연동</p>
 				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px"
-				   th:text="${posConnected ? posProviderLabel + ' 연동됨 · 메뉴 ' + posMenuCount + '개' : 'POS를 연동하면 메뉴·가격을 자동으로 불러와요'}">POS를 연동하면 메뉴·가격을 자동으로 불러와요</p>
+				   th:text="${posConnected ? posProviderLabel + ' 연동됨 · 메뉴 ' + posMenuCount + '개' : 'POS를 연동하면 매일 메뉴·가격·재고를 자동으로 불러와요'}">POS를 연동하면 매일 메뉴·가격·재고를 자동으로 불러와요</p>
 			</div>
 			<span th:if="${posConnected}" class="badge badge--success">연동됨</span>
 		</div>
-		<a th:href="@{/store/pos}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-3)"
+		<a th:href="@{/store/pos}" style="margin-top: var(--s-3)"
+		   th:class="${posConnected} ? 'btn btn--outline btn--block btn--sm' : 'btn btn--block'"
 		   th:text="${posConnected} ? 'POS 연동 관리' : 'POS 연동하기'">POS 연동하기</a>
 	</div>
 

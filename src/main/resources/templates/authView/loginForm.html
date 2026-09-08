@@ -8,6 +8,7 @@
 	- 자체 회원가입이 없고 소셜 로그인(카카오, 구글, 라인)을 통해 로그인/가입을 처리합니다.
 */-->
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/auth.css}">
 
 	<div class="u-center" style="margin: var(--s-6) 0 var(--s-8)">
 		<div style="width:72px;height:72px;margin:0 auto var(--s-4);border-radius:var(--r-xl);background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:var(--fw-black)">ギリ</div>
@@ -18,13 +19,40 @@
 
 	<p class="u-danger u-center" th:if="${param.error}" style="margin-bottom: var(--s-4)">로그인에 실패했습니다. 다시 시도해 주세요.</p>
 
-	<a th:href="@{/oauth2/authorization/kakao}" class="btn btn--block btn--kakao">카카오로 시작하기</a>
-	<a th:href="@{/oauth2/authorization/google}" class="btn btn--block btn--google" style="margin-top:var(--s-3)">구글로 시작하기</a>
-	<a th:href="@{/oauth2/authorization/line}" class="btn btn--block btn--line" style="margin-top:var(--s-3)">라인으로 시작하기</a>
-	<!-- 추가됨 (2026-08-21) — 왜: 소셜 계정 없이도 가입할 수 있는 이메일+비밀번호 옵션(4번째 선택지).
-	     변경됨 — 왜: 로그인 화면을 기본으로 크게 보여주고, 계정 없는 신규 유저는 그 화면 안의
-	     "계정이 없으신가요? 가입하기" 작은 링크로 가입 화면(emailSignup)에 가도록 순서를 바꿨다. -->
-	<a th:href="@{/auth/emailLogin}" class="btn btn--block btn--outline" style="margin-top:var(--s-3)">이메일로 시작하기</a>
+	<a th:href="@{/oauth2/authorization/kakao}" class="btn btn--block btn--kakao oauth-btn">
+		<span class="oauth-btn__ico">
+			<svg viewBox="0 0 24 24" fill="#191600" xmlns="http://www.w3.org/2000/svg"><path d="M12 3C6.48 3 2 6.55 2 10.93c0 2.83 1.9 5.31 4.76 6.72-.16.57-.9 3.11-.93 3.31 0 0-.02.15.08.21.1.06.21.02.21.02.28-.04 3.24-2.12 3.75-2.48.7.1 1.42.16 2.15.16 5.52 0 10-3.55 10-7.93S17.52 3 12 3z"/></svg>
+		</span>
+		카카오로 시작하기
+	</a>
+	<a th:href="@{/oauth2/authorization/google}" class="btn btn--block btn--google oauth-btn" style="margin-top:var(--s-3)">
+		<span class="oauth-btn__ico">
+			<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+				<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+				<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+				<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.28-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+				<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+			</svg>
+		</span>
+		구글로 시작하기
+	</a>
+	<a th:href="@{/oauth2/authorization/line}" class="btn btn--block btn--line oauth-btn" style="margin-top:var(--s-3)">
+		<span class="oauth-btn__ico">
+			<svg viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 4C6.9 4 3 7.3 3 11.4c0 3.7 3.1 6.8 7.4 7.4.3.04.6.15.7.3.06.1.06.3.04.5l-.1.7c-.04.2-.17.9.8.5 1-.4 5.3-3.1 7.2-5.4 1.3-1.4 2-2.9 2-4.5C22 7.3 17.1 4 12 4z"/></svg>
+		</span>
+		라인으로 시작하기
+	</a>
+
+	<div class="oauth-or">또는</div>
+
+	<!-- 이메일+비밀번호 — 소셜 계정 없는 유저용 대안. 소셜 버튼보다 한 톤 낮게(테두리 없는 옅은 회색)
+	     해서 구글 버튼(흰 배경 + 테두리)이랑 확실히 구분되게 한다. -->
+	<a th:href="@{/auth/emailLogin}" class="btn btn--block oauth-btn oauth-email">
+		<span class="oauth-btn__ico">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 5.5L20.5 7"/></svg>
+		</span>
+		이메일로 시작하기
+	</a>
 
 	<p class="u-mut u-center" style="font-size:var(--fs-xs);margin:var(--s-4) 0">가입 시 이용약관 및 개인정보처리방침에 동의하게 됩니다</p>
 

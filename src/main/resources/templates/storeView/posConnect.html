@@ -27,8 +27,8 @@
 		<div class="banner banner--info" style="margin-bottom: var(--s-4)">
 			<span style="font-size: 16px">🔌</span>
 			<div class="u-grow">
-				<div class="banner__title" style="color: var(--c-info)">POS를 연동하면 메뉴를 매번 입력 안 해도 돼요</div>
-				<div class="banner__desc" style="color: var(--c-text-sub)">POS에 등록된 품목·가격을 불러와서, 등록할 땐 수량만 넣으면 됩니다.</div>
+				<div class="banner__title" style="color: var(--c-info)">POS 연동하면 매번 입력 안 해도 돼요</div>
+				<div class="banner__desc" style="color: var(--c-text-sub)">품목·가격은 자동으로 채워지고, 수량만 입력하면 돼요</div>
 			</div>
 		</div>
 
@@ -146,15 +146,8 @@
 		</ul>
 	</div>
 
-	<!-- 뒤로가기: 항상 매장 정보 수정으로 -->
-	<script th:inline="none">
-	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
-		if (!back) return;
-		back.removeAttribute('data-back');
-		back.addEventListener('click', function () { location.href = '/store/edit'; });
-	})();
-	</script>
+	<!-- 뒤로가기는 기본 동작(history.back). /store/pos는 대시보드·상품·매장수정·템플릿 등 여러 곳에서
+	     들어오니, 특정 페이지로 고정하지 않고 온 곳으로 돌아간다. -->
 </div>
 </body>
 </html>
