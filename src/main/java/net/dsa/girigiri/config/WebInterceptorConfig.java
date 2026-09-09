@@ -24,7 +24,7 @@ public class WebInterceptorConfig implements WebMvcConfigurer {
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(viewModeSyncInterceptor)
-				.addPathPatterns("/store/**");
+				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/");
 		registry.addInterceptor(loginRequiredInterceptor)
 				.addPathPatterns("/**");
 	}

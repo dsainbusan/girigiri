@@ -26,9 +26,18 @@ public class ViewModeSyncInterceptor implements HandlerInterceptor {
 		if (session == null) {
 			return true;
 		}
-		if (UserEntity.ROLE_OWNER.equals(session.getAttribute("role"))
-				&& !"OWNER_MODE".equals(session.getAttribute("viewMode"))) {
-			session.setAttribute("viewMode", "OWNER_MODE");
+		if (UserEntity.ROLE_OWNER.equals(session.getAttribute("role"))) {
+			String uri = request.getRequestURI();
+			if (uri.startsWith("/store") || uri.startsWith("/reservation/store")
+					|| uri.startsWith("/reservation/incoming") || uri.startsWith("/reservation/pickup")) {
+				if (!"OWNER_MODE".equals(session.getAttribute("viewMode"))) {
+					session.setAttribute("viewMode", "OWNER_MODE");
+				}
+			} else if (uri.startsWith("/mypage") || uri.startsWith("/user") || "/".equals(uri)) {
+				if (!"USER_MODE".equals(session.getAttribute("viewMode"))) {
+					session.setAttribute("viewMode", "USER_MODE");
+				}
+			}
 		}
 		return true;
 	}

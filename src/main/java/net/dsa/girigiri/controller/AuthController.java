@@ -80,15 +80,23 @@ public class AuthController {
 	 * role 체크로 막아서 모드가 안 바뀐다 — 권한 승격이 아니라 화면 전환일 뿐이라 role은 절대 안 건드린다.
 	 */
 	@PostMapping("/mode")
-	public String toggleMode(HttpSession session) {
+	public String toggleMode(@RequestParam(required = false) String target, HttpSession session) {
 		if (!UserEntity.ROLE_OWNER.equals(session.getAttribute("role"))) {
 			return "redirect:/";
 		}
 
-		boolean isOwnerMode = "OWNER_MODE".equals(session.getAttribute("viewMode"));
-		session.setAttribute("viewMode", isOwnerMode ? "USER_MODE" : "OWNER_MODE");
+		boolean switchToOwner;
+		if ("owner".equalsIgnoreCase(target)) {
+			switchToOwner = true;
+		} else if ("user".equalsIgnoreCase(target)) {
+			switchToOwner = false;
+		} else {
+			boolean isOwnerMode = "OWNER_MODE".equals(session.getAttribute("viewMode"));
+			switchToOwner = !isOwnerMode;
+		}
 
-		return "redirect:" + (isOwnerMode ? "/" : "/store/dashboard");
+		session.setAttribute("viewMode", switchToOwner ? "OWNER_MODE" : "USER_MODE");
+		return "redirect:" + (switchToOwner ? "/store/dashboard" : "/");
 	}
 
 	/**

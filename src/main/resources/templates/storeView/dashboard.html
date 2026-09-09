@@ -36,40 +36,51 @@
 	</div>
 
 	<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-4)">
-		<span class="u-sub" style="font-size: var(--fs-sm)" th:text="${todayLabel}">8월 30일 토요일</span>
-		<span class="u-row" style="gap: var(--s-3)">
-			<a th:href="@{/store/products}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">오늘의 구제</a>
-			<a th:href="@{/store/edit}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">매장 정보 수정</a>
-		</span>
+		<span class="u-sub" style="font-size: var(--fs-sm); font-weight: var(--fw-bold);" th:text="${todayLabel}">8월 30일 토요일</span>
+		<span class="pill" th:classappend="${!isClosed} ? ' pill--done' : ''"
+		      th:text="${!isClosed ? '🟢 영업중' : '영업 마감'}">영업중</span>
 	</div>
 
-	<!-- 핵심 지표 2x2 — 항상 보임. "지금 장사 어때?"의 한눈 요약. -->
+	<!-- 핵심 지표 2x2 — 4대 주요 업무 바로가기 액션 카드 -->
 	<div class="stat-grid">
-		<div class="stat-card">
-			<span class="stat-card__label">오늘 매출</span>
+		<a th:href="@{/store/sales-report}" class="stat-card" title="매출 리포트 보기">
+			<div class="stat-card__head">
+				<span class="stat-card__label">오늘 매출</span>
+				<span class="stat-card__go">›</span>
+			</div>
 			<span class="stat-card__value" th:text="${todaySales}">286,400원</span>
 			<span class="stat-card__delta" th:classappend="' ' + ${salesDeltaClass}" th:text="${salesDelta}">▲ 어제 대비 +18%</span>
-		</div>
-		<div class="stat-card">
-			<span class="stat-card__label">판매 / 등록</span>
-			<span class="stat-card__value" th:text="${soldCount} + ' / ' + ${totalQuantity} + '개'">18 / 24개</span>
-			<span class="stat-card__delta u-accent" th:text="${sellingNowCount} + '개 판매중 (' + ${registeredCount} + '종)'">6개 판매중 (3종)</span>
-		</div>
-		<div class="stat-card">
-			<span class="stat-card__label">픽업 예약</span>
-			<span class="stat-card__value" th:text="${reservationCount} + '건'">5건</span>
-			<span class="stat-card__delta u-mut" th:text="'대기 ' + ${reservationWaiting} + ' · 완료 ' + ${reservationDone} + ' · 취소 ' + ${reservationCancelled}">대기 2 · 완료 3 · 취소 1</span>
-		</div>
-		<div class="stat-card">
-			<span class="stat-card__label">폐기 절감(구제율)</span>
-			<span class="stat-card__value" th:text="${rescueRate} + '%'">75%</span>
-			<div class="u-row" style="gap: var(--s-1); align-items: center;">
-				<span class="stat-card__delta u-primary" id="rescue-goal-text" th:text="${rescueGoal}">목표 70% 달성</span>
-				<button type="button" id="rescue-goal-edit-btn" class="rescue-goal-edit-btn"
-				        th:attr="data-rescue-rate=${rescueRate},data-goal-percent=${rescueGoalPercent}"
-				        title="구제율 목표 수정">✏️</button>
+		</a>
+		<a th:href="@{/store/products}" class="stat-card" title="오늘의 구제 등록/관리">
+			<div class="stat-card__head">
+				<span class="stat-card__label">오늘의 구제</span>
+				<span class="stat-card__go">›</span>
 			</div>
-		</div>
+			<span class="stat-card__value" th:text="${soldCount} + ' / ' + ${totalQuantity} + '개'">18 / 24개</span>
+			<span class="stat-card__delta u-accent" th:text="${idleCount} + '개 판매중 (' + ${sellingNowCount} + '종)'">7개 판매중 (2종)</span>
+		</a>
+		<a th:href="@{/reservation/incoming}" class="stat-card" title="예약 확인 및 픽업">
+			<div class="stat-card__head">
+				<span class="stat-card__label">픽업 예약</span>
+				<span class="stat-card__go">›</span>
+			</div>
+			<span class="stat-card__value" th:text="${reservationWaiting} + '건'">5건</span>
+			<span class="stat-card__delta u-mut"
+			      th:text="${reservationCancelled > 0} ? ('대기 ' + ${reservationWaiting} + ' · 완료 ' + ${reservationDone} + ' · 취소 ' + ${reservationCancelled}) : ('대기 ' + ${reservationWaiting} + ' · 완료 ' + ${reservationDone})">대기 2 · 완료 3</span>
+		</a>
+		<a th:href="@{/store/edit}" class="stat-card" title="매장 정보 및 영업시간 수정">
+			<div class="stat-card__head">
+				<span class="stat-card__label">매장 정보 관리</span>
+				<span class="stat-card__go">›</span>
+			</div>
+			<div class="stat-card__value" style="font-size: var(--fs-md); font-weight: var(--fw-black); margin-top: 4px; line-height: 1.25;">
+				<span style="white-space: nowrap;" th:text="${operatingHoursMain} ?: ${operatingHours}">09:00 ~ 21:00</span>
+				<span th:if="${operatingHoursSub != null}"
+				      style="display: block; font-size: 11px; font-weight: var(--fw-bold); color: var(--c-text-mut); margin-top: 2px; white-space: nowrap;"
+				      th:text="${operatingHoursSub}">(마감 세일 20:00~)</span>
+			</div>
+			<span class="stat-card__delta u-primary" style="margin-top: 2px;">영업시간 · 정보 수정 ›</span>
+		</a>
 	</div>
 
 	<!-- 정산 예정액 — "돈 받는 것"이 제일 중요해서 토글 뒤에 숨기지 않고 지표 그리드 바로 밑에 노출.
@@ -82,27 +93,24 @@
 		<span class="settlement-cta__go">정산 내역 보기 ›</span>
 	</a>
 
-	<!-- ============ 주문 · 픽업 (하기) — [주문] ↔ [픽업] 토글 ============ -->
-	<!-- 현황(보기)보다 위 — 들어온 예약 수락·QR 픽업은 손님이 기다리는 시간 민감 작업이라 먼저 처리해야 한다. -->
-	<div class="card" style="margin-top: var(--s-4)">
-		<div class="stat-toggle-tabs">
-			<button type="button" class="stat-toggle-tab is-active" data-target="panel-order">주문</button>
-			<button type="button" class="stat-toggle-tab" data-target="panel-pickup">픽업</button>
+	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
+	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
+		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
+			<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);">주문 · 픽업 바로가기</span>
+			<a th:href="@{/reservation/settings}" class="u-sub" style="font-size: var(--fs-xs);">⚙️ 주문 마감 설정</a>
 		</div>
-
-		<div id="panel-order" class="stat-panel">
-			<div class="u-row" style="gap: var(--s-2)">
-				<a th:href="@{/reservation/incoming}" class="btn btn--outline btn--block">들어온 예약 확인</a>
-				<a th:href="@{/reservation/settings}" class="btn btn--outline btn--block">주문 마감 설정</a>
-			</div>
-			<a th:href="@{/reservation/completed}" class="btn btn--outline btn--block" style="margin-top: var(--s-2)">완료된 거래 내역</a>
+		<div class="u-row" style="gap: var(--s-2)">
+			<a th:href="@{/reservation/incoming}" class="btn btn--primary btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
+				<span>🔔 새 예약 확인</span>
+				<span th:if="${incomingReservationCount > 0}" class="badge" style="background: var(--c-accent); color: #fff; margin-left: 4px;" th:text="${incomingReservationCount}">2</span>
+			</a>
+			<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
+				<span>📷 QR 픽업 확인</span>
+			</a>
 		</div>
-
-		<div id="panel-pickup" class="stat-panel is-hidden">
-			<div class="u-row" style="gap: var(--s-2)">
-				<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block">QR 픽업 확인</a>
-				<a th:href="@{/reservation/store-cancel}" class="btn btn--outline btn--block">매장 취소</a>
-			</div>
+		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-2); font-size: var(--fs-xs);">
+			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역 ›</a>
+			<a th:href="@{/reservation/store-cancel}" class="u-sub u-danger">매장 취소 ›</a>
 		</div>
 	</div>
 
@@ -122,7 +130,14 @@
 						<p class="u-bold">오늘 판매 현황</p>
 						<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</p>
 					</div>
-					<span class="pill" th:text="${closingCountdownLabel}">마감까지 1시간 56분</span>
+					<div class="u-row" style="gap: var(--s-1); align-items: center;">
+						<span class="pill" th:text="${closingCountdownLabel}">마감까지 1시간 56분</span>
+						<span class="pill" th:classappend="${rescueRate >= rescueGoalPercent} ? ' pill--done' : ''"
+						      id="rescue-goal-text" th:text="${rescueGoal}">목표 70% 달성</span>
+						<button type="button" id="rescue-goal-edit-btn" class="rescue-goal-edit-btn"
+						        th:attr="data-rescue-rate=${rescueRate},data-goal-percent=${rescueGoalPercent}"
+						        title="구제율 목표 수정">✏️</button>
+					</div>
 				</div>
 
 				<div class="today-view">
@@ -265,16 +280,8 @@
 		</div>
 	</div>
 
-	<!-- 추가됨 (2026-08-21) — 왜: 헤더의 모드 전환 토글(common/header.html)은 session.role=='OWNER'일 때만
-	     보이는데, owner-apply로 매장만 등록하고 role은 아직 USER인 테스트 계정에선 안 보였다. role 승인
-	     로직은 별도 담당 영역이라 롤백된 상태라, 이 화면 안에는 role 조건 없이 항상 버튼을 하나 더 둔다.
-	     /auth/mode는 OWNER가 아니면 그냥 "/"로 보내니, USER 세션이어도 안전하게 동작한다. -->
-	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4)">
-		<button type="submit" class="btn btn--outline btn--block">유저 모드로 전환</button>
-	</form>
-
-	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점이 없었다. 세션 액션이라 모드 전환 바로 밑에 둔다. -->
-	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-2); margin-bottom: var(--s-4)">
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
 		<button type="submit" class="btn btn--outline btn--block u-mut"
 		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>

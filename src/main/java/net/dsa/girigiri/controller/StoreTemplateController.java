@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.domain.dto.TemplateRowDto;
 import net.dsa.girigiri.domain.entity.ListingTemplateEntity;
 import net.dsa.girigiri.domain.entity.MenuItemEntity;
@@ -29,6 +30,7 @@ import java.util.Set;
 @Controller
 @RequestMapping("/store/templates")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class StoreTemplateController {
 
 	private final ListingTemplateService templateService;
@@ -37,9 +39,6 @@ public class StoreTemplateController {
 	@GetMapping
 	public String list(HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			List<TemplateRowDto> rows = templateService.listForOwner(ownerId).stream()
 					.map(this::toRow)
@@ -99,9 +98,6 @@ public class StoreTemplateController {
 	@GetMapping("/new")
 	public String createForm(@RequestParam(required = false) Long menuItemId, HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 
 		ListingTemplateEntity prefill = null;
 		if (menuItemId != null) {
@@ -129,9 +125,6 @@ public class StoreTemplateController {
 	                     @RequestParam(required = false) MultipartFile image,
 	                     HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			templateService.create(ownerId, name, originalPrice, defaultQuantity, weekdays, promptTime, description, image);
 		} catch (ResponseStatusException e) {
@@ -143,9 +136,6 @@ public class StoreTemplateController {
 	@GetMapping("/{id}/edit")
 	public String editForm(@PathVariable Long id, HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		ListingTemplateEntity template = templateService.getOwned(ownerId, id);
 		model.addAttribute("mode", "edit");
 		model.addAttribute("template", template);
@@ -163,9 +153,6 @@ public class StoreTemplateController {
 	                     @RequestParam(required = false) MultipartFile image,
 	                     HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			templateService.update(ownerId, id, name, originalPrice, defaultQuantity, weekdays, promptTime, description, image);
 		} catch (ResponseStatusException e) {
@@ -177,9 +164,6 @@ public class StoreTemplateController {
 	@PostMapping("/{id}/toggle")
 	public String toggle(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		templateService.toggleActive(ownerId, id);
 		return "redirect:/store/templates";
 	}
@@ -187,9 +171,6 @@ public class StoreTemplateController {
 	@PostMapping("/{id}/delete")
 	public String delete(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		templateService.delete(ownerId, id);
 		return "redirect:/store/templates";
 	}

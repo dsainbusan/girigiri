@@ -55,24 +55,27 @@ public class StoreService {
 		List<ProductEntity> todayProducts = fetchTodayProducts(store.getId(), todayStart, todayEnd);
 
 		int registeredCount = todayProducts.size();
-		int soldCount = todayProducts.stream()
-				.mapToInt(p -> p.getQuantity() - p.getRemainingQuantity())
-				.sum();
 		int sellingNowCount = (int) todayProducts.stream().filter(p -> "active".equals(p.getStatus())).count();
 		int expiredCount = (int) todayProducts.stream().filter(p -> "expired".equals(p.getStatus())).count();
 
 		int totalQuantity = todayProducts.stream().mapToInt(ProductEntity::getQuantity).sum();
-		int rescueRate = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
+		int idleCount = todayProducts.stream().mapToInt(ProductEntity::getRemainingQuantity).sum();
 
 		List<Long> todayProductIds = todayProducts.stream().map(ProductEntity::getId).toList();
 		List<ReservationEntity> todayProductReservations =
-				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds);
+				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds).stream()
+						.filter(r -> r.getReservedAt() != null && !r.getReservedAt().isBefore(todayStart) && r.getReservedAt().isBefore(todayEnd))
+						.toList();
 		int pickedCount = todayProductReservations.stream()
 				.filter(r -> "picked".equals(r.getStatus()))
 				.mapToInt(ReservationEntity::getReservedQuantity)
 				.sum();
-		int reservedNotPickedCount = soldCount - pickedCount;
-		int idleCount = totalQuantity - soldCount;
+		int reservedNotPickedCount = todayProductReservations.stream()
+				.filter(r -> "confirmed".equals(r.getStatus()) || "ready".equals(r.getStatus()))
+				.mapToInt(ReservationEntity::getReservedQuantity)
+				.sum();
+		int soldCount = pickedCount + reservedNotPickedCount;
+		int rescueRate = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * soldCount / totalQuantity);
 
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), 60);
 		// 변경됨 (2026-09-08, 코드 감사) — StoreHoursUtil.isOpen으로 위임(3곳 중복 중 하나, 여기는
@@ -85,13 +88,24 @@ public class StoreService {
 
 		List<ReservationEntity> todayReservations =
 				reservationRepository.findByStoreIdAndPickupTimeBetween(store.getId(), todayStart, todayEnd);
-		int reservationCount = todayReservations.size();
-		int reservationWaiting = (int) todayReservations.stream().filter(r -> "confirmed".equals(r.getStatus())).count();
-		int reservationDone = (int) todayReservations.stream().filter(r -> "picked".equals(r.getStatus())).count();
-		int reservationCancelled = (int) todayReservations.stream().filter(r -> "cancelled".equals(r.getStatus())).count();
-
-		long todaySales = todayReservations.stream()
+		List<ReservationEntity> validTodayReservations = todayReservations.stream()
 				.filter(r -> !"cancelled".equals(r.getStatus()) && !"pending".equals(r.getStatus()))
+				.toList();
+
+		int reservationWaiting = (int) validTodayReservations.stream()
+				.filter(r -> "confirmed".equals(r.getStatus()) || "ready".equals(r.getStatus()))
+				.count();
+		int reservationDone = (int) validTodayReservations.stream()
+				.filter(r -> "picked".equals(r.getStatus()))
+				.count();
+		int reservationCancelled = (int) todayReservations.stream()
+				.filter(r -> "cancelled".equals(r.getStatus()))
+				.count();
+		// 대시보드의 '픽업 예약' 카드는 점주가 지금 처리해야 하는 '대기 건수'를 메인 숫자로 표시한다.
+		// 모든 예약을 수령 완료(picked) 또는 취소(cancelled)하여 대기 중인 예약이 없으면 0건으로 표시된다.
+		int reservationCount = reservationWaiting;
+
+		long todaySales = validTodayReservations.stream()
 				.mapToLong(ReservationEntity::getTotalPrice)
 				.sum();
 

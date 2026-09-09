@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.domain.dto.ProductFormDto;
 import net.dsa.girigiri.domain.dto.StockItemDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
@@ -44,6 +45,7 @@ import java.util.List;
 @Controller
 @RequestMapping("/store/products")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class StoreProductController {
 
 	private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
@@ -57,9 +59,6 @@ public class StoreProductController {
 	@GetMapping
 	public String list(HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		StoreEntity store = storeAccessService.findMyStore(ownerId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
@@ -102,9 +101,6 @@ public class StoreProductController {
 	@GetMapping("/new")
 	public String createForm(@RequestParam(required = false) Long menuItemId, HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 
 		ProductFormDto form = ProductFormDto.empty();
 		if (menuItemId != null) {
@@ -126,9 +122,6 @@ public class StoreProductController {
 	                     @RequestParam(required = false) MultipartFile image,
 	                     HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			productService.create(ownerId, form, image);
 		} catch (ResponseStatusException e) {
@@ -141,9 +134,6 @@ public class StoreProductController {
 	@GetMapping("/{id}/edit")
 	public String editForm(@PathVariable Long id, HttpSession session, Model model) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		ProductEntity product = productService.getOwnedProduct(ownerId, id);
 
 		ProductFormDto form = new ProductFormDto();
@@ -181,9 +171,6 @@ public class StoreProductController {
 	                     @RequestParam(defaultValue = "false") boolean publishAfter,
 	                     HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		boolean publishedOk = true;
 		try {
 			productService.update(ownerId, id, form, image, removeImage);

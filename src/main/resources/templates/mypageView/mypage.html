@@ -94,16 +94,6 @@
 		</a>
 	</div>
 
-	<!-- 4. 사장님(점주) 관리자 모드 바로가기 (승인된 점주인 경우 노출) -->
-	<div th:if="${store != null and store.approvalStatus == 'APPROVED'}" class="card" style="margin-top: var(--s-3); background: var(--c-primary-weak); border-color: var(--c-primary-border);">
-		<div class="u-row" style="justify-content: space-between;">
-			<div>
-				<p class="u-bold" th:text="${store.storeName}">내 매장</p>
-				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px;">점주 모드로 이동하여 재고 및 매장을 관리하세요.</p>
-			</div>
-			<a th:href="@{/store/dashboard}" class="btn btn--sm">점주 모드</a>
-		</div>
-	</div>
 
 	<!-- 5. 로그아웃 버튼 -->
 	<div style="margin-top: var(--s-5); margin-bottom: var(--s-4);">

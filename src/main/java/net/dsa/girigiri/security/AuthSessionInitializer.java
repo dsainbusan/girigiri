@@ -16,7 +16,8 @@ public final class AuthSessionInitializer {
 	public static String initSessionAndGetTargetUrl(HttpSession session, UserEntity user) {
 		session.setAttribute("userId", user.getId());
 		session.setAttribute("role", user.getRole());
-		session.setAttribute("viewMode", UserEntity.ROLE_OWNER.equals(user.getRole()) ? "OWNER_MODE" : "USER_MODE");
+		// 로그인 시 기본 도착지가 유저 홈("/")이므로 초기 viewMode는 USER_MODE로 설정한다.
+		session.setAttribute("viewMode", "USER_MODE");
 
 		// 추가됨 (2026-09-08) — 왜: role=ADMIN으로 로그인해도 profileCompleted 기준으로만 목적지를
 		// 정해서 항상 유저 홈("/")으로 떨어졌다(사용자 리포트로 발견) — 운영자 계정은 애초에 셀프

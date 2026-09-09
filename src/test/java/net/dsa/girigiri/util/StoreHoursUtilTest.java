@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,9 +44,13 @@ class StoreHoursUtilTest {
 	}
 
 	@Test
-	void 자정_넘김_매장은_영업중일_때_canPublishNow가_true() {
+	void 자정_넘김_저녁엔_아직_영업중이라_영업_종료가_아니다() {
+		// 예전엔 closeAt이 "오늘 02:00"(과거)로 잡혀 종일 "영업 종료" + canPublishNow가 영원히 false였다.
+		// 이제 closeAt이 "내일 02:00"(미래)라 영업중으로 뜬다. (canPublishNow는 실제 벽시계 now를 쓰므로
+		// 여기선 검증하지 않는다 — parse가 미래 시각을 돌려주는지만 본다.)
 		var info = parse("18:00 ~ 02:00", LocalDateTime.of(2026, 9, 8, 20, 0));
-		assertTrue(StoreHoursUtil.canPublishNow(info.closeAt()));   // 예전엔 영원히 false였음
+		assertNotEquals("영업 종료", info.label());
+		assertTrue(info.closeAt().isAfter(LocalDateTime.of(2026, 9, 8, 20, 0)));
 	}
 
 	@Test

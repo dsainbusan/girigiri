@@ -67,9 +67,9 @@ public class WebSecurityConfig {
 			// provider 콜백(/login/oauth2/code/**) 경로. 인증 전 단계라 permitAll 없이는 로그인 자체가 불가능해서 추가.
 			, "/oauth2/**"
 			, "/login/oauth2/**"
-			// TODO(송보미): 아래 두 경로는 디자인 통일성 확인용 데모 화면이라 임시로 공개.
-			//   실 데이터/권한 연동 시 role 기준 접근 제어로 교체할 것.
-			, "/store/**"
+			// "/store/**"는 여기 있었다 — 점주 화면(대시보드/상품관리 등)은 로그인된 사용자만 접근해야 하므로
+			// 공개 목록에서 제외(anyRequest().authenticated() 적용). 단, 점주 승인 플로우를 고려하여
+			// hasRole("OWNER")는 아직 걸지 않고 인증 여부(.authenticated())만 적용한다.
 			, "/product/**"
 			, "/user/products/**"   // 강노은: 상품 상세 화면. 로그인 붙으면 위 두 줄과 함께 정리할 것.
 			, "/user/search"        // 강노은: 검색·필터 결과 화면.

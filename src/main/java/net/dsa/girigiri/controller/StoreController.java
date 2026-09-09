@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreDashboardStatsDto;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 @Controller
 @RequestMapping("/store")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 는 Spring Security상 permitAll이라, 로그인 강제는 이 인터셉터가 담당한다 (2026-09-09 문창호)
 public class StoreController {
 
 	private final StoreAccessService storeAccessService;
@@ -50,12 +52,27 @@ public class StoreController {
 	@GetMapping("/dashboard")
 	public String dashboard(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		model.addAttribute("storeName", store != null ? store.getStoreName() : "매장 정보 없음");
+		String rawHours = (store != null && store.getOperatingHours() != null && !store.getOperatingHours().isBlank())
+				? store.getOperatingHours() : "영업시간 미설정";
+		model.addAttribute("operatingHours", rawHours);
+
+		String mainHours = rawHours;
+		String subHours = null;
+		if (rawHours.contains("(")) {
+			int parenIndex = rawHours.indexOf('(');
+			mainHours = rawHours.substring(0, parenIndex).trim();
+			java.time.LocalTime saleTime = net.dsa.girigiri.util.StoreHoursUtil.parseSaleStartTime(rawHours);
+			if (saleTime != null) {
+				subHours = "(마감 세일 " + saleTime.format(DateTimeFormatter.ofPattern("HH:mm")) + "~)";
+			} else {
+				subHours = rawHours.substring(parenIndex).trim().replace(" : ", " ");
+			}
+		}
+		model.addAttribute("operatingHoursMain", mainHours);
+		model.addAttribute("operatingHoursSub", subHours);
+
 		model.addAttribute("todayLabel", LocalDate.now().format(
 				DateTimeFormatter.ofPattern("M월 d일 EEEE", java.util.Locale.KOREAN)));
 
@@ -139,10 +156,6 @@ public class StoreController {
 	@GetMapping("/edit")
 	public String editForm(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
@@ -184,10 +197,6 @@ public class StoreController {
 	                         @RequestParam(required = false) String accountHolder,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
-
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";

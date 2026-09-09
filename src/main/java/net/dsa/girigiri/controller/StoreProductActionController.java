@@ -2,6 +2,7 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.ProductService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 @RequestMapping("/store/products")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class StoreProductActionController {
 
 	private final ProductService productService;
@@ -25,9 +27,6 @@ public class StoreProductActionController {
 	@PostMapping("/{id}/publish")
 	public String publish(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		boolean ok = productService.publishDraft(ownerId, id);
 		return ok ? "redirect:/store/products" : "redirect:/store/products?tooLate";
 	}
@@ -35,9 +34,6 @@ public class StoreProductActionController {
 	@PostMapping("/{id}/discard")
 	public String discard(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		productService.discardDraft(ownerId, id);
 		return "redirect:/store/products";
 	}
@@ -45,9 +41,6 @@ public class StoreProductActionController {
 	@PostMapping("/{id}/soldout")
 	public String soldOut(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		productService.markSoldOut(ownerId, id);
 		return "redirect:/store/products";
 	}
@@ -55,9 +48,6 @@ public class StoreProductActionController {
 	@PostMapping("/{id}/resume")
 	public String resume(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		productService.resumeSelling(ownerId, id);
 		return "redirect:/store/products";
 	}
@@ -65,9 +55,6 @@ public class StoreProductActionController {
 	@PostMapping("/{id}/delete")
 	public String delete(@PathVariable Long id, HttpSession session) {
 		Long ownerId = (Long) session.getAttribute("userId");
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		productService.delete(ownerId, id);
 		return "redirect:/store/products";
 	}

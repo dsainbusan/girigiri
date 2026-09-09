@@ -45,6 +45,42 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------- 2x2 핵심 지표 액션 카드 (클릭 가능 링크) ---------- */
+a.stat-card {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+a.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08);
+  border-color: var(--c-primary-border);
+}
+.stat-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-card__go {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+  background: var(--c-bg);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+a.stat-card:hover .stat-card__go {
+  background: var(--c-primary-weak);
+  color: var(--c-primary);
+  transform: translateX(1px);
+}
+
 /* ---------- 상태 배지 (마감까지 N분 / 구제율 N%) ---------- */
 .pill { flex: none; font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 5px 11px; border-radius: var(--r-pill); background: var(--c-bg); color: var(--c-text-sub); border: 1px solid var(--c-line); }
 .pill--done { background: var(--c-primary-weak); color: var(--c-primary); border-color: var(--c-primary-border); }

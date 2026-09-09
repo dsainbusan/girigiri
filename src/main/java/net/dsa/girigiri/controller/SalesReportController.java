@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.SalesReportService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.util.SalesReportExcelGenerator;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 @Controller
 @RequestMapping("/store")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class SalesReportController {
 
 	private final StoreAccessService storeAccessService;

@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.PosCatalogService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 @Controller
 @RequestMapping("/store/pos")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class StorePosController {
 
 	private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("M/d HH:mm");
@@ -39,9 +41,6 @@ public class StorePosController {
 	@GetMapping
 	public String connectScreen(HttpSession session, Model model) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		StoreEntity store;
 		try {
 			store = posCatalogService.requireStore(ownerId);
@@ -63,9 +62,6 @@ public class StorePosController {
 	                      @RequestParam(required = false) String storeCode,
 	                      HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			posCatalogService.connect(ownerId, provider, storeCode);
 		} catch (ResponseStatusException e) {
@@ -77,9 +73,6 @@ public class StorePosController {
 	@PostMapping("/resync")
 	public String resync(HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		posCatalogService.resync(ownerId);
 		return "redirect:/store/pos?synced";
 	}
@@ -87,9 +80,6 @@ public class StorePosController {
 	@PostMapping("/disconnect")
 	public String disconnect(HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		posCatalogService.disconnect(ownerId);
 		return "redirect:/store/pos";
 	}
@@ -105,9 +95,6 @@ public class StorePosController {
 	                           @RequestParam(required = false) String appSaleQuantity,
 	                           HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		Integer rate = parseNullableInt(discountRate);
 		Integer qty = parseNullableInt(appSaleQuantity);
 		if ((discountRate != null && !discountRate.isBlank() && rate == null)
@@ -127,9 +114,6 @@ public class StorePosController {
 	@PostMapping("/prompt-time")
 	public String promptTime(@RequestParam(required = false) String promptTime, HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		try {
 			posCatalogService.updateDraftPromptTime(ownerId, promptTime);
 		} catch (Exception e) {
@@ -143,9 +127,6 @@ public class StorePosController {
 	@GetMapping("/sim")
 	public String simulator(HttpSession session, Model model) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		StoreEntity store;
 		try {
 			store = posCatalogService.requireStore(ownerId);
@@ -165,9 +146,6 @@ public class StorePosController {
 	@PostMapping("/sim/prompt")
 	public String simPrompt(HttpSession session) {
 		Long ownerId = ownerId(session);
-		if (ownerId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		int created = posCatalogService.generateDraftsFromStock(posCatalogService.requireStore(ownerId));
 		return "redirect:/store/products" + (created > 0 ? "?drafted=" + created : "?drafted=0");
 	}

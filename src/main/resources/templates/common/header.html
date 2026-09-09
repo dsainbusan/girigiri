@@ -14,9 +14,14 @@
     안 건드리고 여기서 바로 세션을 읽는다(Thymeleaf+Spring이 제공하는 ${session.xxx} 암시 객체).
     OWNER 계정에만 노출 — USER는 전환할 "점주 모드" 자체가 없다.
   */-->
-  <form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post">
-    <button type="submit" class="topbar__action"
-            th:text="${session.viewMode == 'OWNER_MODE'} ? '유저 모드로' : '사장님 모드로'">모드 전환</button>
+  <form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" class="topbar__mode-form">
+    <input type="hidden" name="target" th:value="${dark} ? 'user' : 'owner'" />
+    <button type="submit" class="topbar__mode-btn"
+            th:title="${dark} ? '손님(유저) 모드로 화면 전환' : '점주 모드로 화면 전환'">
+      <span class="topbar__mode-icon" aria-hidden="true"
+            th:text="${dark} ? '👤' : '🏪'">👤</span>
+      <span th:text="${dark} ? '유저 모드로' : '점주 모드로'">모드 전환</span>
+    </button>
   </form>
 </header>
 

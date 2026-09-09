@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,7 @@ import java.time.LocalDate;
 @Controller
 @RequestMapping("/store")
 @RequiredArgsConstructor
+@LoginRequired   // /store/** 로그인 강제는 LoginRequiredInterceptor가 담당 (2026-09-09 문창호)
 public class StoreReportController {
 
 	private final StoreAccessService storeAccessService;
@@ -46,9 +48,6 @@ public class StoreReportController {
 	@GetMapping("/settlement")
 	public String settlementPage(HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
@@ -71,9 +70,6 @@ public class StoreReportController {
 	                               @RequestParam(required = false) String to,
 	                               HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (userId == null) {
-			return "redirect:/auth/loginForm";
-		}
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
 		if (store == null) {
 			return "redirect:/auth/owner-apply";
