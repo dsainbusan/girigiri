@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--/*
+  회원 예약 내역 (조회 + 취소). /superadmin/members/{id}/reservations 로 접속 — 회원 상세의
+  "예약 내역" 버튼에서 진입. SuperAdminMemberController#memberReservations가 담아주는 ${member},
+  ${reservations}(ReservationUserOrderItemDto 목록, ReservationService.getOrdersForUser)를 그린다.
+
+  매장 쪽 "주문 내역"(storeOrders.html)의 반대 방향 — 여기는 매장 대신 유저 기준으로, 어느 매장에서
+  뭘 주문했는지 보여준다. 다른 점: 취소 가능한(pending/confirmed/ready) 건에는 "취소" 버튼이 있다 —
+  누른 값은 confirm()으로 한 번 더 확인 후 ReservationService#cancelByAdmin으로 처리된다(신고 처리
+  화면과 동일한 서비스 메서드 재사용, 환불·쿠폰복구까지 같이 됨). 취소 사유는 테이블 행 안에 입력칸을
+  넣으면 표가 너무 복잡해져서 뺐다 — cancelByAdmin의 기본 사유("운영자 처리로 취소됨")로 남는다.
+
+  추가됨 (2026-09-09) — "카드로 결제했는지, 언제 결제/픽업했는지 자세히 보고 싶다"는 요청으로 행 클릭 시
+  reservationDetail.html(예약 상세)로 이동한다. stores.html과 동일한 .row-clickable + data-href 패턴 —
+  "취소" 버튼(<form>)만은 클릭해도 행 이동으로 안 새게, 클릭 지점이 a/button/input/form 안이면
+  가로채지 않도록 가드를 그대로 재사용했다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('회원 관리', ~{:: #content}, 'members', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/members/{id}(id=${member.id})}">&larr; 회원 상세</a>
+
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${member.nickname} + '님의 예약 내역'">닉네임님의 예약 내역</h2>
+  </div>
+
+  <p class="result-count">예약 <b th:text="${totalCount}">0</b>건 조회되었습니다.</p>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:20%">
+        <col style="width:20%">
+        <col style="width:8%">
+        <col style="width:12%">
+        <col style="width:10%">
+        <col style="width:14%">
+        <col style="width:16%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>상품</th>
+          <th>수량</th>
+          <th>금액</th>
+          <th>상태</th>
+          <th>주문 일시</th>
+          <th>관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(reservations)}">
+          <td colspan="7" class="table-empty">예약 내역이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="r : ${reservations}"
+            th:attr="data-href=@{/superadmin/reservations/{id}(id=${r.reservationId}, from='member')}">
+          <td class="cell-name">
+            <a th:href="@{/superadmin/stores/{id}(id=${r.storeId})}" th:text="${r.storeName}">매장명</a>
+          </td>
+          <td th:text="${r.productName}">상품명</td>
+          <td th:text="${r.quantity}">1</td>
+          <td th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')} + '원'">0원</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${r.statusVariant == 'waiting'}" th:text="${r.statusLabel}">결제 대기</span>
+            <span class="badge badge--success" th:if="${r.statusVariant == 'ready' or r.statusVariant == 'done'}" th:text="${r.statusLabel}">픽업 가능</span>
+            <span class="badge badge--danger" th:if="${r.statusVariant == 'cancelled'}" th:text="${r.statusLabel}">취소</span>
+            <span class="badge badge--warning" th:if="${r.statusVariant == 'noshow'}" th:text="${r.statusLabel}">노쇼</span>
+          </td>
+          <td th:text="${r.reservedAtDisplay}">09월 09일 12:00</td>
+          <td class="action-row">
+            <form th:if="${r.cancellable}"
+                  th:action="@{/superadmin/members/{id}/reservations/{rid}/cancel(id=${member.id}, rid=${r.reservationId})}"
+                  method="post" onsubmit="return confirm('이 예약을 취소하고 환불할까요? 되돌릴 수 없어요.')">
+              <button class="chip-btn chip-btn--danger" type="submit">취소</button>
+            </form>
+            <span th:unless="${r.cancellable}" th:text="${r.cancelInfo} ?: '-'">-</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
+
+</div>
+</body>
+</html>

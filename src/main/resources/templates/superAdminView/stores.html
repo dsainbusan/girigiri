@@ -119,7 +119,8 @@
           <td>
             <span class="badge badge--danger" th:if="${store.status == 'SUSPENDED'}">정지됨</span>
             <span class="badge badge--neutral" th:if="${store.status != 'SUSPENDED' and store.approvalStatus == 'PENDING'}">대기</span>
-            <span class="badge badge--success" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and openStatusMap[store.id]}">영업중</span>
+            <!-- 변경됨 (2026-09-09) — storeDetail.html과 같은 이유로 badge--open(초록)으로 통일. -->
+            <span class="badge badge--open" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and openStatusMap[store.id]}">영업중</span>
             <span class="badge badge--danger" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and !openStatusMap[store.id]}">휴업</span>
           </td>
           <td class="action-row">

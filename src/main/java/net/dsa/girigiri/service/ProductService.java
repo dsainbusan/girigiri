@@ -2,12 +2,14 @@ package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.ProductFormDto;
+import net.dsa.girigiri.domain.dto.StockItemDto;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.FileStorageUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
@@ -19,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -35,6 +38,8 @@ import java.util.List;
 public class ProductService {
 
 	private static final String IMAGE_SUBDIR = "product";
+	private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("M/d");
 
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
@@ -49,6 +54,18 @@ public class ProductService {
 	/** 수정 화면에 채워 넣을 값 조회 (소유권 검증 포함). */
 	public ProductEntity getOwnedProduct(Long ownerId, Long productId) {
 		return requireOwnedProduct(requireStore(ownerId), productId);
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 슈퍼어드민 "매장 재고 현황" 화면용. 점주 재고 목록(listForOwner)과 달리
+	 * storeId로 직접 조회한다(운영자는 그 매장의 owner가 아니므로). "오늘의 구제" 초안(draft)과
+	 * 폐기(skipped)는 점주 워크플로 중간 산물이라 운영자 조회에선 제외하고, 실제 등록된 재고만 보여준다.
+	 */
+	public List<StockItemDto> listStockForStore(Long storeId, String category) {
+		return productRepository.findByStoreIdOrderByRegisteredAtDesc(storeId).stream()
+				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
+				.map(p -> toStockItem(p, category))
+				.toList();
 	}
 
 	@Transactional
@@ -294,6 +311,62 @@ public class ProductService {
 	private boolean stockAlreadyRestoredAtCancel(ReservationEntity reservation) {
 		return "cancelled".equals(reservation.getStatus())
 				&& ("USER".equals(reservation.getCancelledBy()) || "SYSTEM".equals(reservation.getCancelledBy()));
+	}
+
+	// 추가됨 (2026-09-09) — StoreProductController에 있던 재고 카드 DTO 매핑을 여기로 옮겼다(레이어
+	// 규칙 — 화면용 값 계산은 서비스가 담당). 점주 재고 목록과 슈퍼어드민 재고 현황 둘 다 이 메서드로
+	// 같은 카드 모양을 만든다.
+	public StockItemDto toStockItem(ProductEntity p, String category) {
+		int discountRate = DiscountRateCalculator.fromPrices(p.getOriginalPrice(), p.getDiscountedPrice());
+
+		boolean hasStock = p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0;
+		String statusLabel;
+		String statusVariant;
+		if ("expired".equals(p.getStatus())) {
+			statusLabel = "마감";
+			statusVariant = "closed";
+		} else if ("sold".equals(p.getStatus()) || !hasStock) {
+			statusLabel = "품절";
+			statusVariant = "soldout";
+		} else {
+			statusLabel = "판매중";
+			statusVariant = "selling";
+		}
+
+		String source = p.getMenuItemId() != null ? "pos"
+				: p.getTemplateId() != null ? "template"
+				: "manual";
+
+		return new StockItemDto(
+				p.getId(),
+				p.getName(),
+				p.getImageUrl(),
+				CategoryDisplayUtil.thumbEmoji(category),
+				CategoryDisplayUtil.thumbColor(category),
+				statusLabel,
+				statusVariant,
+				"sold".equals(p.getStatus()),   // manualSoldOut — 사장님이 직접 품절 처리한 것
+				discountRate,
+				nz(p.getOriginalPrice()),
+				nz(p.getDiscountedPrice()),
+				nz(p.getRemainingQuantity()),
+				nz(p.getQuantity()),
+				registeredLabel(p.getRegisteredAt()),
+				source);
+	}
+
+	private String registeredLabel(LocalDateTime registeredAt) {
+		if (registeredAt == null) {
+			return "";
+		}
+		if (registeredAt.toLocalDate().equals(LocalDate.now())) {
+			return "오늘 " + registeredAt.format(TIME_FMT) + " 등록";
+		}
+		return registeredAt.format(DATE_FMT) + " 등록";
+	}
+
+	private int nz(Integer v) {
+		return v == null ? 0 : v;
 	}
 
 	private void validate(ProductFormDto form) {

@@ -1,9 +1,13 @@
 package net.dsa.girigiri.controller;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.ReservationOrderItemDto;
+import net.dsa.girigiri.domain.dto.StockItemDto;
 import net.dsa.girigiri.domain.dto.StoreRecentStatsDto;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.service.LookupService;
+import net.dsa.girigiri.service.ProductService;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.SuperAdminStoreService;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +41,8 @@ public class SuperAdminStoreController {
 
 	private final SuperAdminStoreService storeService;
 	private final LookupService lookupService;
+	private final ProductService productService;
+	private final ReservationService reservationService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -182,6 +188,43 @@ public class SuperAdminStoreController {
 		model.addAttribute("soldCount7d", stats.soldCount7d());
 		model.addAttribute("totalQuantity7d", stats.totalQuantity7d());
 		return "superAdminView/storeDetail";
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 매장 상세 화면에서 "재고 현황" 링크로 들어오는, 그 매장의 상품(재고) 목록을
+	 * 조회 전용으로 보여주는 화면. 점주용 /store/products와 달리 CRUD·상태 전환 버튼은 전혀 없다 —
+	 * 운영자가 "이 매장이 지금 뭘 얼마에 몇 개 파는지" 확인만 하는 용도. 카드 매핑은 ProductService의
+	 * toStockItem/listStockForStore를 그대로 재사용해서 점주 화면과 완전히 같은 기준(상태 라벨,
+	 * 할인율, 출처)으로 보여준다.
+	 */
+	@GetMapping("/stores/{id}/inventory")
+	public String storeInventory(@PathVariable Long id, Model model) {
+		StoreEntity store = lookupService.getStore(id);
+		List<StockItemDto> items = productService.listStockForStore(id, store.getCategory());
+
+		model.addAttribute("store", store);
+		model.addAttribute("items", items);
+		model.addAttribute("totalCount", items.size());
+		model.addAttribute("sellingCount", items.stream().filter(i -> "selling".equals(i.statusVariant())).count());
+		model.addAttribute("soldOutCount", items.stream().filter(i -> "soldout".equals(i.statusVariant())).count());
+		return "superAdminView/storeInventory";
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 매장 상세 화면에서 "주문 내역" 링크로 들어오는, 그 매장과 유저 사이의
+	 * 예약(주문) 목록을 조회 전용으로 보여주는 화면. 점주/손님용 화면들과 달리 상태별로 나누지 않고
+	 * 대기·확정·픽업가능·픽업완료·취소·노쇼를 전부 한 목록에서, 구매자가 누군지까지 보여준다
+	 * (ReservationService#getOrdersForStore 참고).
+	 */
+	@GetMapping("/stores/{id}/orders")
+	public String storeOrders(@PathVariable Long id, Model model) {
+		StoreEntity store = lookupService.getStore(id);
+		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(id);
+
+		model.addAttribute("store", store);
+		model.addAttribute("orders", orders);
+		model.addAttribute("totalCount", orders.size());
+		return "superAdminView/storeOrders";
 	}
 
 	/**

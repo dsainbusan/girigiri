@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--/*
+  전체 주문 내역 (조회 전용). /superadmin/orders 로 접속 — "전체 오더를 볼 수 있는 페이지"
+  요청으로 신설(2026-09-09). storeOrders.html("매장 주문 내역", 한 매장 기준)·memberReservations.html
+  ("회원 예약 내역", 한 회원 기준)과 달리 특정 매장·회원으로 좁히지 않은 플랫폼 전체 예약을 최신순으로
+  보여준다. SuperAdminReservationController#orders가 담아주는 ${orders}(ReservationAllOrderRowDto
+  목록, ReservationService#getAllOrders — 이미 status/q로 거르고 최신순 정렬까지 끝낸 걸 컨트롤러가
+  PaginationUtil로 10건씩 자름)를 그린다.
+
+  상태 탭(전체/결제대기/진행중/픽업완료/취소·노쇼)은 마이페이지 탭과 같은 상태 그룹 기준이지만
+  "결제대기"를 진행중과 분리해서 하나 더 둔다 — 운영자는 아직 결제도 안 된 pending 건수를 따로 보고
+  싶어할 수 있어서(손님용 마이페이지는 그 구분이 의미 없어서 안 씀). 검색(q)은 매장명·주문자 닉네임
+  포함 검색 — members.html의 .search 패턴과 동일. 페이지네이션도 reports.html과 동일한 .pagination
+  패턴(page 쿼리파라미터, status/q를 유지한 채 페이지만 넘어감).
+
+  행 클릭 시 stores.html과 동일한 .row-clickable + data-href로 예약 상세(reservationDetail.html)로
+  이동 — ?from=orders를 같이 실어 보내서 "← 목록"이 이 화면으로 정확히 돌아오게 한다.
+
+  변경됨 (2026-09-09) — "플랫폼 지표 카드를 거쳐야만 들어갈 수 있는 게 불편하다"는 피드백으로
+  gnb에 "주문 관리" 항목을 새로 추가했다. members.html/stores.html처럼 gnb로 바로 들어오는
+  화면이 된 이상 "← 대시보드" 되돌아가기 링크는 그 화면들과 마찬가지로 필요 없어서 뺐다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('전체 주문 내역', ~{:: #content}, 'orders', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <div class="tabs">
+    <a class="tab" th:classappend="${status == null} ? ' is-active'" th:href="@{/superadmin/orders(q=${q})}">전체</a>
+    <a class="tab" th:classappend="${status == 'pending'} ? ' is-active'" th:href="@{/superadmin/orders(q=${q}, status='pending')}">결제대기</a>
+    <a class="tab" th:classappend="${status == 'progress'} ? ' is-active'" th:href="@{/superadmin/orders(q=${q}, status='progress')}">진행중</a>
+    <a class="tab" th:classappend="${status == 'picked'} ? ' is-active'" th:href="@{/superadmin/orders(q=${q}, status='picked')}">픽업완료</a>
+    <a class="tab" th:classappend="${status == 'cancelled'} ? ' is-active'" th:href="@{/superadmin/orders(q=${q}, status='cancelled')}">취소·노쇼</a>
+  </div>
+
+  <form class="toolbar" method="get" th:action="@{/superadmin/orders}">
+    <div class="search">
+      <input class="field" type="search" name="q" placeholder="매장명 · 주문자 닉네임 검색" th:value="${q}">
+      <button class="search__submit" type="submit" aria-label="검색"><svg class="icon"><use href="#i-search"/></svg></button>
+    </div>
+    <input type="hidden" name="status" th:value="${status}">
+    <a class="link-action" th:if="${not #strings.isEmpty(q)}" th:href="@{/superadmin/orders(status=${status})}">초기화</a>
+  </form>
+
+  <p class="result-count">주문 <b th:text="${totalCount}">0</b>건 조회되었습니다.</p>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:16%"><col style="width:14%"><col style="width:18%"><col style="width:8%">
+        <col style="width:12%"><col style="width:10%"><col style="width:12%"><col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>주문자</th>
+          <th>상품</th>
+          <th>수량</th>
+          <th>금액</th>
+          <th>상태</th>
+          <th>주문 일시</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(orders)}">
+          <td colspan="8" class="table-empty">조건에 맞는 주문이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="order : ${orders}"
+            th:attr="data-href=@{/superadmin/reservations/{id}(id=${order.reservationId}, from='orders')}">
+          <td class="cell-name" th:text="${order.storeName}">매장명</td>
+          <td th:text="${order.buyerName}">닉네임</td>
+          <td th:text="${order.productName}">상품명</td>
+          <td th:text="${order.quantity}">1</td>
+          <td th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA')} + '원'">0원</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${order.statusVariant == 'waiting'}" th:text="${order.statusLabel}">결제 대기</span>
+            <span class="badge badge--success" th:if="${order.statusVariant == 'ready' or order.statusVariant == 'done'}" th:text="${order.statusLabel}">픽업 가능</span>
+            <span class="badge badge--danger" th:if="${order.statusVariant == 'cancelled'}" th:text="${order.statusLabel}">취소</span>
+            <span class="badge badge--warning" th:if="${order.statusVariant == 'noshow'}" th:text="${order.statusLabel}">노쇼</span>
+          </td>
+          <td th:text="${order.reservedAtDisplay}">09월 09일 12:00</td>
+          <td th:text="${order.cancelInfo} ?: '-'">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination" th:if="${totalPages > 1}">
+    <a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/superadmin/orders(status=${status}, q=${q}, page=${page - 1})}">&lsaquo;</a>
+    <a th:each="p : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+       th:text="${p + 1}" th:href="@{/superadmin/orders(status=${status}, q=${q}, page=${p})}"></a>
+    <a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/orders(status=${status}, q=${q}, page=${page + 1})}">&rsaquo;</a>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
+
+</div>
+</body>
+</html>

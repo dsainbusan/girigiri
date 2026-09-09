@@ -3,15 +3,29 @@
   슈퍼어드민 통계 대시보드. /superadmin/dashboard 로 접속.
   TODO(송보미): "오늘 플랫폼 지표" 카드는 데모 데이터 → Repository 연동(회원수/거래량/구제량/매출
   실집계)으로 교체.
-  "최근 처리 대기"는 개별 예시 1건씩 보여주던 걸 "N건 대기 중" 요약으로 바꿨다 — 입점 신청/1:1 문의/
-  신고 접수 전부 SuperAdminController#dashboard가 계산한 실제 대기 건수(pendingStoreCount는 기존
-  advice 재사용, pendingInquiryCount는 reports()와 동일한 계산 로직, pendingComplaintCount는
-  ComplaintEntity 도입 후 새로 추가 — 이제 셋 다 실데이터라 "데모" 표시를 뗐다).
+  "최근 처리 대기"는 개별 예시 1건씩 보여주던 걸 "N건 대기 중" 요약으로 바꿨다 — 입점 신청/매장 문의/
+  유저 문의/신고 접수 전부 SuperAdminController#dashboard가 계산한 실제 대기 건수(pendingStoreCount는
+  기존 advice 재사용, pendingStoreInquiryCount·pendingUserInquiryCount는 reports()와 동일한 계산
+  로직, pendingComplaintCount는 ComplaintEntity 도입 후 새로 추가 — 전부 실데이터라 "데모" 표시를 뗐다).
+
+  변경됨 (2026-09-09) — "1:1 문의"·"신고 접수" 카드가 둘 다 /superadmin/reports로만 가서 같은 화면에
+  떨어진다는(신고 접수 탭 고정) 지적 — 원래 "1:1 문의" 하나는 매장 문의+유저 문의를 합친 카운트라서
+  애초에 tab 하나로 보낼 수가 없었다. reports.html의 세 탭(report/store/user) 구분 그대로 카드도
+  둘로 쪼개서 "매장 문의"는 tab=store로, "유저 문의"는 tab=user로 각자 보낸다
+  (SuperAdminDashboardStatsDto 참고).
 
   대시보드에 달력·그래프도 넣어달라는 요청으로 두 위젯을 추가했다 — 그래프는 storeView/dashboard.html의
   판매/폐기 막대그래프와 같은 순수 CSS 방식(막대 높이 %를 컨트롤러가 미리 계산), 달력은 이번 달 42칸
   고정 격자에 가입자가 있는 날만 점으로 표시한다. 매출·거래량 등은 아직 위 TODO대로 데모라 히스토리가
   없어서, 확실히 실데이터인 "신규 가입" 하나로 두 위젯을 채웠다(허수 그래프를 만들지 않으려는 판단).
+
+  변경됨 (2026-09-09) — "오늘 플랫폼 지표" 카드를 눌러 관련 화면으로 가게 해달라는 요청. "전체 회원수"는
+  /superadmin/members로 바로 연결한다. 거래량·구제량·매출은 처음엔 이 셋만 따로 보여주는 화면이 없어서
+  임시로 /superadmin/stores로 보냈는데, "페이지를 새로 만들어서 연결해달라"는 요청으로 stats.html
+  (플랫폼 통계 — 매장별 거래량/구제량/매출 표)을 새로 만들고 세 카드 다 그리로 보낸다.
+
+  추가됨 (2026-09-09) — "전체 오더를 볼 수 있는 페이지" 요청으로 orders.html(전체 주문 내역, 특정
+  매장·회원으로 안 좁힌 플랫폼 전체 예약 목록)을 신설하고, "최근 처리 대기" 위에 진입 링크를 뒀다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('통계 대시보드', ~{:: #content}, 'dashboard', '슈퍼어드민')}">
@@ -20,27 +34,29 @@
 
   <h2 class="subhead">오늘 플랫폼 지표</h2>
   <div class="stat-grid">
-    <div class="stat-card">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/members}">
       <span class="stat-card__label">전체 회원수</span>
       <span class="stat-card__value">12,480</span>
       <span class="stat-card__delta stat-card__delta--up">+124 오늘</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">거래량</span>
       <span class="stat-card__value">3,210건</span>
       <span class="stat-card__delta stat-card__delta--up">+8.2%</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">구제량</span>
       <span class="stat-card__value">1,987개</span>
       <span class="stat-card__delta">CO2 412kg 절감</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">매출</span>
       <span class="stat-card__value">₩8,420,000</span>
       <span class="stat-card__delta stat-card__delta--down">-2.1%</span>
-    </div>
+    </a>
   </div>
+
+  <a class="link-action mb-16" th:href="@{/superadmin/orders}">전체 주문 내역 보기 &rsaquo;</a>
 
   <h2 class="subhead">최근 처리 대기</h2>
 
@@ -57,19 +73,31 @@
   </div>
 
   <div class="info-list mb-16">
-    <a class="info-row" th:href="@{/superadmin/reports}">
+    <a class="info-row" th:href="@{/superadmin/reports(tab='store')}">
       <div class="info-row__body">
-        <div class="info-row__title">1:1 문의</div>
-        <div class="info-row__sub" th:text="${pendingInquiryCount} + '건 대기 중'">0건 대기 중</div>
+        <div class="info-row__title">매장 문의</div>
+        <div class="info-row__sub" th:text="${pendingStoreInquiryCount} + '건 대기 중'">0건 대기 중</div>
       </div>
-      <span class="badge" th:classappend="${pendingInquiryCount > 0} ? 'badge--neutral' : 'badge--success'"
-            th:text="${pendingInquiryCount} + '건'">0건</span>
+      <span class="badge" th:classappend="${pendingStoreInquiryCount > 0} ? 'badge--neutral' : 'badge--success'"
+            th:text="${pendingStoreInquiryCount} + '건'">0건</span>
+      <span class="info-row__arrow">&rsaquo;</span>
+    </a>
+  </div>
+
+  <div class="info-list mb-16">
+    <a class="info-row" th:href="@{/superadmin/reports(tab='user')}">
+      <div class="info-row__body">
+        <div class="info-row__title">유저 문의</div>
+        <div class="info-row__sub" th:text="${pendingUserInquiryCount} + '건 대기 중'">0건 대기 중</div>
+      </div>
+      <span class="badge" th:classappend="${pendingUserInquiryCount > 0} ? 'badge--neutral' : 'badge--success'"
+            th:text="${pendingUserInquiryCount} + '건'">0건</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>
   </div>
 
   <div class="info-list">
-    <a class="info-row" th:href="@{/superadmin/reports}">
+    <a class="info-row" th:href="@{/superadmin/reports(tab='report')}">
       <div class="info-row__body">
         <div class="info-row__title">신고 접수</div>
         <div class="info-row__sub" th:text="${pendingComplaintCount} + '건 대기 중'">0건 대기 중</div>

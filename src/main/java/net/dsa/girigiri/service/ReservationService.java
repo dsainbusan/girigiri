@@ -3,15 +3,20 @@ package net.dsa.girigiri.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CancellableReservationDto;
+import net.dsa.girigiri.domain.dto.ReservationAllOrderRowDto;
 import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
+import net.dsa.girigiri.domain.dto.ReservationDetailDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
+import net.dsa.girigiri.domain.dto.ReservationOrderItemDto;
+import net.dsa.girigiri.domain.dto.ReservationUserOrderItemDto;
 import net.dsa.girigiri.domain.entity.PayStatus;
 import net.dsa.girigiri.domain.entity.PaymentCancelEntity;
 import net.dsa.girigiri.domain.entity.PaymentEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.domain.dto.StoreCancelStatsDto;
 import net.dsa.girigiri.domain.entity.CouponEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
@@ -24,6 +29,7 @@ import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PortOneClient;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +44,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 예약 생성 흐름을 담당하는 서비스.
@@ -113,6 +122,8 @@ public class ReservationService {
 	private final NotificationService notificationService;
 	// 문창호 (2026-09-07) — 픽업 완료 시 매출 리포트(Supabase)에 즉시 반영. best-effort, 실패해도 픽업엔 영향 없음.
 	private final SalesSyncService salesSyncService;
+	// 추가됨 (2026-09-09) — 슈퍼어드민 "매장 주문 내역"(getOrdersForStore)에서 구매자 닉네임 조회용.
+	private final UserRepository userRepository;
 
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
@@ -495,6 +506,217 @@ public class ReservationService {
 	public List<ReservationIncomingItemDto> getReadyReservations(Long storeId) {
 		List<ReservationEntity> ready = reservationRepository.findByStoreIdAndStatusOrderByReservedAtAsc(storeId, "ready");
 		return ready.stream().map(this::toIncomingItemDto).toList();
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 슈퍼어드민 "매장 주문 내역" 화면용. 점주/손님용 화면들과 달리 상태로
+	 * 목록을 나누지 않고, 그 매장의 예약을 상태 상관없이(대기/확정/픽업가능/픽업완료/취소/노쇼)
+	 * 전부 최신 주문순으로 보여준다 — 운영자가 "유저와 매장 사이에 무슨 주문이 오갔는지" 확인하는 용도.
+	 * 상태 라벨은 resolveStatusBadge를 그대로 재사용한다(코드 감사에서 "상태 라벨이 화면마다 갈린다"는
+	 * 지적을 받은 적이 있어서, 네 번째 매핑을 새로 만들지 않고 손님용 마이페이지 배지와 같은 걸 쓴다).
+	 */
+	public List<ReservationOrderItemDto> getOrdersForStore(Long storeId) {
+		return reservationRepository.findByStoreId(storeId).stream()
+				.sorted(Comparator.comparing(ReservationEntity::getReservedAt,
+						Comparator.nullsLast(Comparator.reverseOrder())))
+				.map(this::toOrderItemDto)
+				.toList();
+	}
+
+	private ReservationOrderItemDto toOrderItemDto(ReservationEntity r) {
+		String buyerName = userRepository.findById(r.getUserId())
+				.map(UserEntity::getNickname)
+				.filter(n -> n != null && !n.isBlank())
+				.orElse("알 수 없음");
+
+		return new ReservationOrderItemDto(
+				r.getId(),
+				buyerName,
+				r.getProductName(),
+				r.getReservedQuantity() == null ? 0 : r.getReservedQuantity(),
+				r.getTotalPrice() == null ? 0 : r.getTotalPrice(),
+				r.getPickupCode(),
+				resolveStatusBadge(r),
+				orderStatusVariant(r),
+				r.getReservedAt() != null ? r.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+				orderCancelInfo(r)
+		);
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 슈퍼어드민 "회원 상세 → 예약 내역" 화면용. getOrdersForStore(매장 기준)의
+	 * 반대 방향 — 이 유저가 어느 매장에서 뭘 주문했는지 최신순으로 보여준다. cancelInfo/statusVariant
+	 * 계산은 getOrdersForStore와 같은 헬퍼(orderCancelInfo/orderStatusVariant)를 재사용한다.
+	 */
+	public List<ReservationUserOrderItemDto> getOrdersForUser(Long userId) {
+		return reservationRepository.findByUserIdOrderByReservedAtDesc(userId).stream()
+				.map(this::toUserOrderItemDto)
+				.toList();
+	}
+
+	private ReservationUserOrderItemDto toUserOrderItemDto(ReservationEntity r) {
+		String storeName = storeRepository.findById(r.getStoreId())
+				.map(StoreEntity::getStoreName)
+				.orElse("알 수 없음");
+
+		return new ReservationUserOrderItemDto(
+				r.getId(),
+				r.getStoreId(),
+				storeName,
+				r.getProductName(),
+				r.getReservedQuantity() == null ? 0 : r.getReservedQuantity(),
+				r.getTotalPrice() == null ? 0 : r.getTotalPrice(),
+				resolveStatusBadge(r),
+				orderStatusVariant(r),
+				r.getReservedAt() != null ? r.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+				orderCancelInfo(r),
+				blockedCancelMessage(r) == null
+		);
+	}
+
+	// "전체 주문 내역" 화면의 상태 탭 → DB status 값 매핑. 마이페이지 탭(TAB_PROGRESS 등)과 그룹 기준은
+	// 같지만, 여긴 "결제대기"를 진행중과 분리해서 하나 더 보여준다 — 운영자는 "아직 결제도 안 된 pending
+	// 예약이 몇 건인지"까지 구분해서 보고 싶어할 수 있어서(마이페이지는 손님 화면이라 그 구분이 의미 없음).
+	private static final Map<String, List<String>> ALL_ORDERS_STATUS_FILTER = Map.of(
+			"pending", List.of("pending"),
+			"progress", List.of("confirmed", "ready"),
+			"picked", List.of("picked"),
+			"cancelled", List.of("cancelled", "noshowed")
+	);
+
+	/**
+	 * 추가됨 (2026-09-09) — 슈퍼어드민 "전체 주문 내역"(/superadmin/orders) 화면용. getOrdersForStore/
+	 * getOrdersForUser와 달리 매장·회원 어느 한쪽으로 좁히지 않고 플랫폼 전체 예약을 최신순으로 보여준다.
+	 * statusTab(pending/progress/picked/cancelled, null이면 전체)과 q(매장명·주문자 닉네임 포함 검색)로
+	 * 걸러서 컨트롤러에 넘기면, 페이지 자르기(PaginationUtil)는 컨트롤러가 한다 — reports.html의
+	 * SuperAdminSupportController와 동일한 역할 분담.
+	 */
+	public List<ReservationAllOrderRowDto> getAllOrders(String statusTab, String q) {
+		// Map.of(...)는 불변 맵이라 get(null)조차 NPE를 던진다(null 키를 아예 허용 안 함) — "전체" 탭은
+		// status 파라미터 자체가 없어 statusTab이 null로 들어오는 게 정상 경로라 먼저 null 체크한다.
+		List<String> statuses = statusTab != null ? ALL_ORDERS_STATUS_FILTER.get(statusTab) : null;
+		List<ReservationEntity> reservations = statuses != null
+				? reservationRepository.findByStatusIn(statuses)
+				: reservationRepository.findAll();
+
+		Map<Long, String> storeNames = storeRepository.findAll().stream()
+				.collect(Collectors.toMap(StoreEntity::getId, StoreEntity::getStoreName, (a, b) -> a));
+		Map<Long, String> buyerNames = userRepository.findAll().stream()
+				.collect(Collectors.toMap(UserEntity::getId, UserEntity::getNickname, (a, b) -> a));
+
+		String needle = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
+
+		return reservations.stream()
+				.sorted(Comparator.comparing(ReservationEntity::getReservedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+				.map(r -> {
+					String storeName = storeNames.getOrDefault(r.getStoreId(), "알 수 없음");
+					String buyerName = buyerNames.getOrDefault(r.getUserId(), "알 수 없음");
+					return new ReservationAllOrderRowDto(
+							r.getId(), r.getStoreId(), storeName, buyerName, r.getProductName(),
+							r.getReservedQuantity() == null ? 0 : r.getReservedQuantity(),
+							r.getTotalPrice() == null ? 0 : r.getTotalPrice(),
+							resolveStatusBadge(r), orderStatusVariant(r),
+							r.getReservedAt() != null ? r.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+							orderCancelInfo(r));
+				})
+				.filter(row -> needle.isBlank()
+						|| row.storeName().toLowerCase(Locale.ROOT).contains(needle)
+						|| row.buyerName().toLowerCase(Locale.ROOT).contains(needle))
+				.toList();
+	}
+
+	// getOrdersForStore/getOrdersForUser가 공유하는 취소 정보 계산 — 취소/노쇼가 아니면 null.
+	private String orderCancelInfo(ReservationEntity r) {
+		if ("cancelled".equals(r.getStatus())) {
+			String who = switch (r.getCancelledBy() == null ? "" : r.getCancelledBy()) {
+				case "USER" -> "손님 취소";
+				case "STORE" -> "매장 취소";
+				case "ADMIN" -> "운영자 취소";
+				default -> "취소";
+			};
+			return who + (r.getCancelReason() != null && !r.getCancelReason().isBlank() ? " · " + r.getCancelReason() : "");
+		}
+		if ("noshowed".equals(r.getStatus())) {
+			return "노쇼 처리됨";
+		}
+		return null;
+	}
+
+	// getOrdersForStore/getOrdersForUser가 공유하는 배지 색상 매핑.
+	// 변경됨 (2026-09-09) — "취소"와 "노쇼"가 둘 다 "stopped"라 화면에서 같은 빨간 배지로 보여
+	// 구분이 안 된다는 피드백 — cancelled(빨강)/noshow(주황)로 갈랐다.
+	private String orderStatusVariant(ReservationEntity r) {
+		return switch (r.getStatus() == null ? "" : r.getStatus()) {
+			case "ready" -> "ready";
+			case "picked" -> "done";
+			case "cancelled" -> "cancelled";
+			case "noshowed" -> "noshow";
+			default -> "waiting";   // pending, confirmed
+		};
+	}
+
+	private static final DateTimeFormatter DETAIL_DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+	/**
+	 * 추가됨 (2026-09-09) — 슈퍼어드민 "매장 주문 내역"/"회원 예약 내역" 표에서 한 건을 클릭하면 보이는
+	 * 예약 상세. "무슨 카드로, 언제 결제했는지, 픽업은 언제 했는지 자세히 보고 싶다"는 요청으로 추가 —
+	 * 목록용 DTO(ReservationOrderItemDto/ReservationUserOrderItemDto)와 달리 PaymentEntity까지
+	 * 조인해서 결제수단/결제상태/결제시각을 같이 보여준다.
+	 */
+	public ReservationDetailDto getReservationDetail(ReservationEntity r) {
+		String storeName = storeRepository.findById(r.getStoreId())
+				.map(StoreEntity::getStoreName)
+				.orElse("알 수 없음");
+		UserEntity buyer = userRepository.findById(r.getUserId()).orElse(null);
+		PaymentEntity payment = paymentRepository.findByReservationId(r.getId()).orElse(null);
+
+		return new ReservationDetailDto(
+				r.getId(),
+				r.getStoreId(),
+				storeName,
+				r.getUserId(),
+				buyer != null ? buyer.getNickname() : "알 수 없음",
+				buyer != null ? buyer.getEmail() : null,
+				r.getProductName(),
+				r.getReservedQuantity() == null ? 0 : r.getReservedQuantity(),
+				r.getTotalPrice() == null ? 0 : r.getTotalPrice(),
+				r.getPickupCode(),
+				resolveStatusBadge(r),
+				orderStatusVariant(r),
+				r.getReservedAt() != null ? r.getReservedAt().format(DETAIL_DISPLAY_FORMAT) : "-",
+				r.getAcceptedAt() != null ? r.getAcceptedAt().format(DETAIL_DISPLAY_FORMAT) : "-",
+				r.getPickupTime() != null ? r.getPickupTime().format(DETAIL_DISPLAY_FORMAT) : "-",
+				r.getPickedAt() != null ? r.getPickedAt().format(DETAIL_DISPLAY_FORMAT) : "-",
+				orderCancelInfo(r),
+				payMethodLabel(payment == null ? null : payment.getPayMethod()),
+				payment != null ? paymentStatusLabel(payment.getPayStatus()) : "결제 기록 없음",
+				payment != null && payment.getPaidAt() != null ? payment.getPaidAt().format(DETAIL_DISPLAY_FORMAT) : "-",
+				payment != null ? payment.getAmount() : null
+		);
+	}
+
+	// PortOne 응답의 method.type 원문(PG/버전에 따라 "card"/"CARD"/"PaymentMethodCard;CARD" 등으로
+	// 들쭉날쭉 들어올 수 있어 정확한 문자열 매칭 대신 포함 여부로 느슨하게 판별한다.
+	private String payMethodLabel(String rawPayMethod) {
+		if (rawPayMethod == null || rawPayMethod.isBlank()) {
+			return "-";
+		}
+		String v = rawPayMethod.toLowerCase(Locale.ROOT);
+		if (v.contains("kakao")) return "카카오페이";
+		if (v.contains("naver")) return "네이버페이";
+		if (v.contains("card")) return "카드";
+		if (v.contains("trans")) return "계좌이체";
+		if (v.contains("vbank")) return "가상계좌";
+		return rawPayMethod;
+	}
+
+	private String paymentStatusLabel(PayStatus payStatus) {
+		return switch (payStatus) {
+			case READY -> "결제 대기";
+			case PAID -> "결제 완료";
+			case FAILED -> "결제 실패";
+			case CANCELLED -> "취소/환불됨";
+		};
 	}
 
 	// 완료 내역 화면 — 날짜별 그룹 헤더 / 그룹 내 시각 표시용

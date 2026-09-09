@@ -32,7 +32,8 @@ import java.util.Map;
 		SuperAdminStoreController.class,
 		SuperAdminNoticeController.class,
 		SuperAdminSupportController.class,
-		SuperAdminCouponController.class
+		SuperAdminCouponController.class,
+		SuperAdminReservationController.class
 })
 @RequiredArgsConstructor
 public class SuperAdminNotificationAdvice {

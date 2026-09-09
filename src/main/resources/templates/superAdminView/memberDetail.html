@@ -47,27 +47,38 @@
 
   <a class="link-action mb-16" th:href="@{/superadmin/members(q=${q}, filter=${filter}, page=${page})}">&larr; 회원 목록</a>
 
-  <div class="form-narrow">
+  <!-- 변경됨 (2026-09-09) — detail-header를 .form-narrow(520px) 밖으로 빼서 .container 전체 폭을
+       쓰게 했다 — 닉네임이 길어지면(예: "알뜰소비자김태훈") 배지+버튼 4개까지 있는 이 줄이 520px 안에
+       못 들어가 버튼 줄이 아래로 밀려버리는 문제(피드백: "이 줄은 가로로 길어도 괜찮다, 아래 기본
+       정보부터의 세로 폭만 지키면 된다"). -->
   <div class="detail-header">
     <h2 class="detail-header__title" th:text="${member.nickname}">닉네임</h2>
     <span class="badge badge--neutral" th:text="${member.role == 'USER'} ? '유저' : (${member.role == 'OWNER'} ? '매장 점주' : '어드민')">유저</span>
     <span class="badge" th:classappend="${member.status == 'SUSPENDED'} ? 'badge--danger' : 'badge--success'"
           th:text="${member.status == 'SUSPENDED'} ? '이용정지' : '이용중'">이용중</span>
 
-    <a class="btn btn--outline-neutral btn--sm ml-auto" th:href="@{/superadmin/members/{id}/edit(id=${member.id})}"><svg class="icon"><use href="#i-pencil"/></svg>수정</a>
-    <th:block th:if="${member.status == 'SUSPENDED'}">
-      <form th:action="@{/superadmin/members/{id}/unsuspend(id=${member.id})}" method="post">
-        <button class="btn btn--outline btn--sm" type="submit">이용 재개</button>
+    <!--/* 추가됨 (2026-09-09) — "이 유저가 뭘 예약했는지, 필요하면 바로 취소까지" 요청으로 추가.
+         버튼이 최대 4개(예약 내역/수정/이용재개/강제탈퇴, 또는 예약 내역/수정/이용정지)까지 늘 수 있어
+         .detail-header__actions로 묶어서 좁은 화면에서 자연스럽게 줄바꿈되게 했다(storeDetail.html과
+         동일한 간격 이슈 대응). */-->
+    <div class="detail-header__actions">
+      <a class="btn btn--outline-neutral btn--sm" th:href="@{/superadmin/members/{id}/reservations(id=${member.id})}"><svg class="icon"><use href="#i-list"/></svg>예약 내역</a>
+      <a class="btn btn--outline-neutral btn--sm" th:href="@{/superadmin/members/{id}/edit(id=${member.id})}"><svg class="icon"><use href="#i-pencil"/></svg>수정</a>
+      <th:block th:if="${member.status == 'SUSPENDED'}">
+        <form th:action="@{/superadmin/members/{id}/unsuspend(id=${member.id})}" method="post">
+          <button class="btn btn--outline btn--sm" type="submit">이용 재개</button>
+        </form>
+        <form th:action="@{/superadmin/members/{id}/withdraw(id=${member.id})}" method="post">
+          <button class="btn btn--outline-danger btn--sm" type="submit">강제 탈퇴</button>
+        </form>
+      </th:block>
+      <form th:unless="${member.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${member.id})}" method="post">
+        <button class="btn btn--outline-danger btn--sm" type="submit">이용 정지</button>
       </form>
-      <form th:action="@{/superadmin/members/{id}/withdraw(id=${member.id})}" method="post">
-        <button class="btn btn--outline-danger btn--sm" type="submit">강제 탈퇴</button>
-      </form>
-    </th:block>
-    <form th:unless="${member.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${member.id})}" method="post">
-      <button class="btn btn--outline-danger btn--sm" type="submit">이용 정지</button>
-    </form>
+    </div>
   </div>
 
+  <div class="form-narrow">
   <h3 class="subhead">기본 정보</h3>
   <div class="info-list">
     <div class="info-row">

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--/*
+  매장 재고 현황 (조회 전용). /superadmin/stores/{id}/inventory 로 접속 — 매장 상세의 "재고 현황"
+  버튼에서 진입. SuperAdminStoreController#storeInventory가 담아주는 ${store}, ${items}
+  (StockItemDto 목록, ProductService.listStockForStore — 점주 재고 목록(storeView/products.html)과
+  같은 매핑을 재사용)를 그린다.
+
+  점주 화면과 다른 점: CRUD·발행/품절/판매재개/삭제 버튼이 전혀 없다 — 운영자가 "이 매장이 지금
+  뭘 얼마에 몇 개 파는지"만 확인하는 용도라 조회 전용 표 하나로 충분하다고 판단했다. "오늘의 구제"
+  초안(draft)·보류(skipped)는 점주 워크플로 중간 산물이라 제외하고 실제 등록된 재고만 보여준다
+  (ProductService.listStockForStore 참고).
+
+  CSS 경계 규칙(girigiri-dev 스킬) 지켜서 layout-admin.css의 .data-table/.badge*만 쓴다 —
+  storeView/products.html의 카드형 UI(tokens.css/components.css)는 그대로 안 가져왔다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('매장 재고 현황', ~{:: #content}, 'stores', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/stores/{id}(id=${store.id})}">&larr; 매장 상세</a>
+
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${store.storeName} + ' 재고 현황'">매장명 재고 현황</h2>
+  </div>
+
+  <p class="result-count">상품 <b th:text="${totalCount}">0</b>개 (판매중 <b th:text="${sellingCount}">0</b> · 품절 <b th:text="${soldOutCount}">0</b>)</p>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:30%">
+        <col style="width:12%">
+        <col style="width:12%">
+        <col style="width:9%">
+        <col style="width:12%">
+        <col style="width:10%">
+        <col style="width:15%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>상품</th>
+          <th>원가</th>
+          <th>할인가</th>
+          <th>할인율</th>
+          <th>재고(남음/전체)</th>
+          <th>상태</th>
+          <th>등록 · 출처</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(items)}">
+          <td colspan="7" class="table-empty">등록된 상품이 없습니다.</td>
+        </tr>
+        <tr th:each="item : ${items}">
+          <td class="cell-name">
+            <span class="stock-thumb-emoji" th:if="${item.imageUrl == null}" th:text="${item.thumbEmoji}">🍽️</span>
+            <span th:text="${item.name}">상품명</span>
+          </td>
+          <td th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">0원</td>
+          <td th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">0원</td>
+          <td th:text="'-' + ${item.discountRate} + '%'">-0%</td>
+          <td th:text="${item.remainingQuantity} + ' / ' + ${item.quantity}">0 / 0</td>
+          <td>
+            <span class="badge badge--success" th:if="${item.statusVariant == 'selling'}">판매중</span>
+            <span class="badge badge--danger" th:if="${item.statusVariant == 'soldout'}">품절</span>
+            <span class="badge badge--neutral" th:if="${item.statusVariant == 'closed'}">마감</span>
+          </td>
+          <td th:text="${item.registeredLabel} + ' · ' + (${item.source == 'pos'} ? 'POS 재고' : (${item.source == 'template'} ? '템플릿' : '직접'))">오늘 09:00 등록 · 직접</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

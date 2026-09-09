@@ -47,6 +47,10 @@
   <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M7.5 10 12 14.5 16.5 10M4.5 19.5h15"/></symbol>
   <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4.5 16z"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 6.5h15M9.5 6.5V4.2h5v2.3M7 6.5l.9 13.3h8.2L17 6.5"/></symbol>
+  <!-- 추가됨 (2026-09-09) — 매장 재고 현황 화면 링크용. -->
+  <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/></symbol>
+  <!-- 추가됨 (2026-09-09) — 매장 주문 내역 화면 링크용. -->
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 6.5h10.5M9 12h10.5M9 17.5h10.5"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/></symbol>
 </svg>
 
 <!-- 상단 유틸 바 -->
@@ -89,6 +93,10 @@
              th:href="@{/superadmin/members}">회원 관리</a></li>
       <li><a class="gnb__link" th:classappend="${active=='stores'} ? ' is-active'"
              th:href="@{/superadmin/stores}">매장 관리</a></li>
+      <!-- 추가됨 (2026-09-09) — "전체 오더를 볼 수 있는 페이지"를 플랫폼 통계 카드를 거쳐야만
+           들어갈 수 있는 게 불편하다는 피드백 — 다른 항목들과 동일하게 gnb에 바로 노출한다. -->
+      <li><a class="gnb__link" th:classappend="${active=='orders'} ? ' is-active'"
+             th:href="@{/superadmin/orders}">주문 관리</a></li>
       <li><a class="gnb__link" th:classappend="${active=='reports'} ? ' is-active'"
              th:href="@{/superadmin/reports}">신고 · 문의</a></li>
       <li><a class="gnb__link" th:classappend="${active=='notices'} ? ' is-active'"

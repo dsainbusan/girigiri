@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!--/*
+  예약 상세 (조회 전용). /superadmin/reservations/{id} 로 접속 — storeOrders.html("매장 주문 내역")
+  ·memberReservations.html("회원 예약 내역") 표에서 행 클릭 시 진입(.row-clickable + data-href,
+  stores.html과 동일 패턴). SuperAdminReservationController#reservationDetail이 담아주는
+  ${r}(ReservationDetailDto, ReservationService#getReservationDetail)를 그린다.
+
+  "고객이 무슨 카드로, 언제 결제했는지, 픽업은 언제 했는지 자세히 보고 싶다"는 요청으로 추가 —
+  목록 표(주문/예약 내역)엔 없던 결제수단·결제상태·결제시각·매장 수락시각·실제 픽업시각까지
+  PaymentEntity를 조인해서 보여준다.
+
+  "← 목록"은 어디서 들어왔는지(?from=store|member|orders)에 따라 매장의 "주문 내역"·회원의 "예약
+  내역"·"전체 주문 내역"(orders.html, 2026-09-09 추가) 중 하나로 간다 — storeDetail.html/
+  memberDetail.html의 "← 매장 목록"/"← 회원 목록"과 같은 이유로 history.back() 대신 URL로 왕복
+  (컨트롤러가 from 값을 검증해 모델에 얹어줌).
+
+  변경됨 (2026-09-09) — "진행 시각"을 .info-row 세로 목록에서 배달앱 진행상황 바 같은 가로 스텝
+  형태로 바꿔달라는 요청(참고 이미지: 지도 배달앱의 "주문완료→조리중→배달중→..." 가로 바). 4단계
+  고정(예약 신청/매장 수락/픽업 예정/실제 픽업) — 예약 신청은 항상 있어 늘 is-done. 취소·노쇼는
+  진행이 실제로 끝까지 안 갔다는 걸 보여주려고 마지막 칸만 빨간 is-cancelled로 바꿔 끊어 보여준다
+  (매장 수락 여부는 acceptedAtDisplay로 판단 — cancelByAdmin 등 취소 처리는 accepted_at을 지우지
+  않아서, 취소 전에 매장이 수락했었는지가 그대로 남아있다). .stepper*는 layout-admin.css 참고.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('예약 상세', ~{:: #content}, ${from == 'member'} ? 'members' : (${from == 'orders'} ? 'orders' : 'stores'), '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:if="${from == 'member'}"
+     th:href="@{/superadmin/members/{id}/reservations(id=${r.buyerId})}">&larr; 예약 내역</a>
+  <a class="link-action mb-16" th:if="${from == 'orders'}"
+     th:href="@{/superadmin/orders}">&larr; 전체 주문 내역</a>
+  <a class="link-action mb-16" th:if="${from == 'store'}"
+     th:href="@{/superadmin/stores/{id}/orders(id=${r.storeId})}">&larr; 주문 내역</a>
+
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${r.productName} + ' 예약'">상품명 예약</h2>
+    <span class="badge badge--neutral" th:if="${r.statusVariant == 'waiting'}" th:text="${r.statusLabel}">결제 대기</span>
+    <span class="badge badge--success" th:if="${r.statusVariant == 'ready' or r.statusVariant == 'done'}" th:text="${r.statusLabel}">픽업 가능</span>
+    <span class="badge badge--danger" th:if="${r.statusVariant == 'cancelled'}" th:text="${r.statusLabel}">취소</span>
+    <span class="badge badge--warning" th:if="${r.statusVariant == 'noshow'}" th:text="${r.statusLabel}">노쇼</span>
+  </div>
+
+  <div class="form-narrow">
+  <h3 class="subhead">주문 정보</h3>
+  <div class="info-list">
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">상품</div>
+        <div class="info-row__value" th:text="${r.productName}">상품명</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">수량 · 금액</div>
+        <div class="info-row__value" th:text="${r.quantity} + '개 · ' + ${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')} + '원'">1개 · 0원</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">픽업 코드</div>
+        <div class="info-row__value" th:text="${r.pickupCode} ?: '-'">-</div>
+      </div>
+    </div>
+    <div class="info-row" th:if="${r.cancelInfo != null}">
+      <div class="info-row__body">
+        <div class="info-row__label">취소 · 노쇼 사유</div>
+        <div class="info-row__value" th:text="${r.cancelInfo}">-</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subhead mt-24">매장 · 회원</h3>
+  <div class="info-list">
+    <a class="info-row" th:href="@{/superadmin/stores/{id}(id=${r.storeId})}">
+      <div class="info-row__body">
+        <div class="info-row__label">매장</div>
+        <div class="info-row__value" th:text="${r.storeName}">매장명</div>
+      </div>
+      <span class="info-row__arrow">&rsaquo;</span>
+    </a>
+    <a class="info-row" th:href="@{/superadmin/members/{id}(id=${r.buyerId})}">
+      <div class="info-row__body">
+        <div class="info-row__label">주문 회원</div>
+        <div class="info-row__value" th:text="${r.buyerName} + (${r.buyerEmail != null} ? ' · ' + ${r.buyerEmail} : '')">닉네임</div>
+      </div>
+      <span class="info-row__arrow">&rsaquo;</span>
+    </a>
+  </div>
+
+  <h3 class="subhead mt-24">진행 시각</h3>
+  <div class="stepper-card">
+    <div class="stepper">
+      <div class="stepper__step is-done">
+        <div class="stepper__line"></div>
+        <div class="stepper__dot"></div>
+        <div class="stepper__label">예약 신청</div>
+        <div class="stepper__time" th:text="${r.reservedAtDisplay}">-</div>
+      </div>
+      <div class="stepper__step"
+           th:classappend="${r.statusVariant == 'ready' or r.statusVariant == 'done' or r.acceptedAtDisplay != '-'} ? 'is-done' : (${r.statusVariant == 'waiting'} ? 'is-current' : '')">
+        <div class="stepper__line"></div>
+        <div class="stepper__dot"></div>
+        <div class="stepper__label">매장 수락</div>
+        <div class="stepper__time" th:text="${r.acceptedAtDisplay}">-</div>
+      </div>
+      <div class="stepper__step"
+           th:classappend="${r.statusVariant == 'done'} ? 'is-done' : (${r.statusVariant == 'ready'} ? 'is-current' : '')">
+        <div class="stepper__line"></div>
+        <div class="stepper__dot"></div>
+        <div class="stepper__label">픽업 예정</div>
+        <div class="stepper__time" th:text="${r.pickupTimeDisplay}">-</div>
+      </div>
+      <div class="stepper__step"
+           th:classappend="${r.statusVariant == 'done'} ? 'is-done' : ((${r.statusVariant == 'cancelled' or r.statusVariant == 'noshow'}) ? 'is-cancelled' : '')">
+        <div class="stepper__line"></div>
+        <div class="stepper__dot"></div>
+        <div class="stepper__label"
+             th:text="${r.statusVariant == 'cancelled' or r.statusVariant == 'noshow'} ? ${r.statusLabel} : '픽업 완료'">픽업 완료</div>
+        <div class="stepper__time" th:text="${r.pickedAtDisplay}">-</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subhead mt-24">결제 정보</h3>
+  <div class="info-list">
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">결제 수단</div>
+        <div class="info-row__value" th:text="${r.payMethodLabel}">-</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">결제 상태</div>
+        <div class="info-row__value" th:text="${r.paymentStatusLabel}">-</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">결제 시각</div>
+        <div class="info-row__value" th:text="${r.paidAtDisplay}">-</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-row__body">
+        <div class="info-row__label">결제 금액</div>
+        <div class="info-row__value" th:text="${r.paymentAmount != null} ? ${#numbers.formatInteger(r.paymentAmount, 0, 'COMMA')} + '원' : '-'">-</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</div>
+</body>
+</html>

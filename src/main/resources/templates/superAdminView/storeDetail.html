@@ -33,17 +33,33 @@
 
   <a class="link-action mb-16" th:href="@{/superadmin/stores(filter=${filter})}">&larr; 매장 목록</a>
 
-  <div class="form-narrow">
+  <!-- 변경됨 (2026-09-09) — detail-header를 .form-narrow(520px) 밖으로 빼서 .container 전체 폭을
+       쓰게 했다 — 매장명이 길어지면 배지 2개+버튼 3개까지 있는 이 줄이 520px 안에 못 들어가 버튼
+       줄이 아래로 밀려버리는 문제(피드백: "이 줄은 가로로 길어도 괜찮다, 아래 기본 정보부터의
+       세로 폭만 지키면 된다" — memberDetail.html과 동일 이유). -->
   <div class="detail-header">
     <h2 class="detail-header__title" th:text="${store.storeName}">매장명</h2>
     <span class="badge" th:classappend="${store.approvalStatus == 'APPROVED'} ? 'badge--success' : (${store.approvalStatus == 'REJECTED'} ? 'badge--danger' : 'badge--neutral')"
           th:text="${store.approvalStatus == 'APPROVED'} ? '승인됨' : (${store.approvalStatus == 'REJECTED'} ? '반려됨' : (${store.approvalStatus == 'PENDING'} ? '대기중' : '상태 미확인'))">승인됨</span>
-    <span class="badge badge--success" th:if="${isOpen}">영업중</span>
+    <!-- 변경됨 (2026-09-09) — "승인됨"(위 배지, badge--success/파랑)과 색이 같아서 구분이 안 된다는
+         피드백으로 badge--open(초록)으로 뺐다. -->
+    <span class="badge badge--open" th:if="${isOpen}">영업중</span>
     <span class="badge badge--danger" th:unless="${isOpen}">휴업</span>
-    <a class="btn btn--outline-neutral btn--sm ml-auto"
-       th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}"><svg class="icon"><use href="#i-pencil"/></svg>정보 수정</a>
+    <!--/* 추가됨 (2026-09-09) — "재고 현황"·"주문 내역"으로 그 매장이 지금 뭘 얼마에 몇 개 파는지,
+         유저와 사이에 어떤 주문이 오갔는지 조회 전용으로 볼 수 있는 화면 2개. 버튼 3개(재고 현황/
+         주문 내역/정보 수정)를 .detail-header__actions로 묶어서 한 그룹으로 오른쪽 끝에 정렬하고,
+         좁은 화면에서 제목·배지 줄과 안 겹치면 자연스럽게 아래 줄로 내려가게 했다(간격 피드백). */-->
+    <div class="detail-header__actions">
+      <a class="btn btn--outline-neutral btn--sm"
+         th:href="@{/superadmin/stores/{id}/inventory(id=${store.id})}"><svg class="icon"><use href="#i-box"/></svg>재고 현황</a>
+      <a class="btn btn--outline-neutral btn--sm"
+         th:href="@{/superadmin/stores/{id}/orders(id=${store.id})}"><svg class="icon"><use href="#i-list"/></svg>주문 내역</a>
+      <a class="btn btn--outline-neutral btn--sm"
+         th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}"><svg class="icon"><use href="#i-pencil"/></svg>정보 수정</a>
+    </div>
   </div>
 
+  <div class="form-narrow">
   <h3 class="subhead">기본 정보</h3>
   <div class="info-list">
     <div class="info-row">

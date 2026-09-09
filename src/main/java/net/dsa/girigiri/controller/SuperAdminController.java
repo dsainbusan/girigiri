@@ -2,9 +2,14 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.PlatformStatsDto;
+import net.dsa.girigiri.domain.dto.StoreStatsRowDto;
 import net.dsa.girigiri.domain.dto.SuperAdminDashboardStatsDto;
 import net.dsa.girigiri.service.NotificationService;
 import net.dsa.girigiri.service.SuperAdminDashboardService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,9 +17,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) 대시보드/공통코드/알림 라우팅.
@@ -37,13 +44,58 @@ public class SuperAdminController {
 	public String dashboard(Model model) {
 		SuperAdminDashboardStatsDto stats = dashboardService.getDashboardStats();
 
-		model.addAttribute("pendingInquiryCount", stats.pendingInquiryCount());
+		model.addAttribute("pendingStoreInquiryCount", stats.pendingStoreInquiryCount());
+		model.addAttribute("pendingUserInquiryCount", stats.pendingUserInquiryCount());
 		model.addAttribute("pendingComplaintCount", stats.pendingComplaintCount());
 		model.addAttribute("weeklySignupBars", stats.weeklySignupBars());
 		model.addAttribute("calendarDays", stats.calendarDays());
 		model.addAttribute("calendarMonthLabel", stats.calendarMonthLabel());
 
 		return "superAdminView/dashboard";
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 대시보드 "거래량/구제량/매출" 카드를 눌렀을 때 가는 화면. 그동안 이 셋을
+	 * 따로 보여주는 화면이 없어서 임시로 매장 관리로 보내고 있었는데, 실제 페이지를 만들어달라는
+	 * 요청으로 신설했다. period(오늘/7일/30일/전체)는 유효하지 않으면 서비스가 "all"로 취급한다.
+	 */
+	@GetMapping("/stats")
+	public String stats(@RequestParam(required = false) String period, Model model) {
+		model.addAttribute("stats", dashboardService.getPlatformStats(period));
+		return "superAdminView/stats";
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 플랫폼 통계 화면의 매장별 표를 CSV로 내려받기. exportStores/exportMembers와
+	 * 동일 패턴(BOM 붙여서 엑셀에서 한글 안 깨지게). 지금 보고 있던 기간 필터를 그대로 반영한다.
+	 */
+	@GetMapping("/stats/export")
+	public ResponseEntity<byte[]> exportStats(@RequestParam(required = false) String period) {
+		PlatformStatsDto stats = dashboardService.getPlatformStats(period);
+
+		StringBuilder csv = new StringBuilder("﻿");
+		csv.append("매장명,거래량,구제량,매출,결제 완료 주문 수,취소율(%),노쇼율(%)\n");
+		for (StoreStatsRowDto row : stats.storeRows()) {
+			csv.append(csvField(row.storeName())).append(',')
+					.append(row.transactionCount()).append(',')
+					.append(row.rescuedQuantity()).append(',')
+					.append(row.revenue()).append(',')
+					.append(row.totalOrderCount()).append(',')
+					.append(row.cancelRatePercent()).append(',')
+					.append(row.noshowRatePercent())
+					.append('\n');
+		}
+
+		String filename = "platform-stats-" + stats.period() + ".csv";
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+				.contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+				.body(csv.toString().getBytes(StandardCharsets.UTF_8));
+	}
+
+	private String csvField(String value) {
+		String safe = value == null ? "" : value.replace("\"", "\"\"");
+		return "\"" + safe + "\"";
 	}
 
 	@GetMapping("/codes")

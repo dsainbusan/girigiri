@@ -33,6 +33,10 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 마이페이지 예약 목록(진행중/픽업완료/노쇼·취소 탭)에서 사용. 최근 예약이 위로 오게 정렬.
 	List<ReservationEntity> findByUserIdAndStatusInOrderByReservedAtDesc(Long userId, List<String> statuses);
 
+	// 추가됨 (2026-09-09) — 슈퍼어드민 "회원 상세 → 예약 내역"용. 마이페이지와 달리 상태로 안 거르고
+	// (탭 없이) 전부 최신순으로 한 번에 보여준다.
+	List<ReservationEntity> findByUserIdOrderByReservedAtDesc(Long userId);
+
 	// 매장 신뢰도(취소율) 계산용: 그 매장의 전체 예약 수 / 그중 특정 주체(USER, STORE)가 취소한 수
 	long countByStoreId(Long storeId);
 
@@ -98,4 +102,9 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 추가됨 (2026-09-08, 코드 감사) — NotificationTriggerScheduler#scanReservationPickupSoon이
 	// findByStatusIn(ready) 전체를 끌고 온 다음 자바에서 pickupTime 30분 창으로 거르던 걸 DB로 민다.
 	List<ReservationEntity> findByStatusAndPickupTimeBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+	// 추가됨 (2026-09-09) — 슈퍼어드민 "플랫폼 통계"(/superadmin/stats)의 기간 필터(오늘/7일/30일)용.
+	// 예약이 실제로 접수된 시점(reservedAt) 기준으로 기간을 자른다 — "이 기간에 들어온 주문 중 몇 %가
+	// 취소/노쇼됐는지"까지 같이 보여주려면 픽업완료(picked)만이 아니라 그 기간의 주문 전체가 필요하다.
+	List<ReservationEntity> findByReservedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

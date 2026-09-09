@@ -1,8 +1,10 @@
 package net.dsa.girigiri.controller;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.ReservationUserOrderItemDto;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.service.LookupService;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.SuperAdminMemberService;
 import net.dsa.girigiri.util.PaginationUtil;
@@ -38,6 +40,7 @@ public class SuperAdminMemberController {
 	private final SuperAdminMemberService memberService;
 	private final LookupService lookupService;
 	private final StoreAccessService storeAccessService;
+	private final ReservationService reservationService;
 
 	@GetMapping("/members")
 	public String members(@RequestParam(required = false) String q,
@@ -153,6 +156,36 @@ public class SuperAdminMemberController {
 		model.addAttribute("memberActivity", memberService.getMemberActivity(id));
 
 		return "superAdminView/memberDetail";
+	}
+
+	/**
+	 * 추가됨 (2026-09-09) — 회원 상세에서 "이 유저가 예약한 게 뭔지" 보고 싶다는 요청. 매장 쪽
+	 * "주문 내역"(SuperAdminStoreController#storeOrders)의 반대 방향 — 여기는 매장 대신 유저를
+	 * 기준으로, 어느 매장에서 뭘 주문했는지 최신순으로 보여준다. 취소 가능한(pending/confirmed/ready)
+	 * 건에만 취소 버튼이 뜬다(ReservationUserOrderItemDto#cancellable).
+	 */
+	@GetMapping("/members/{id}/reservations")
+	public String memberReservations(@PathVariable Long id, Model model) {
+		UserEntity user = lookupService.getUser(id);
+		List<ReservationUserOrderItemDto> reservations = reservationService.getOrdersForUser(id);
+
+		model.addAttribute("member", user);
+		model.addAttribute("reservations", reservations);
+		model.addAttribute("totalCount", reservations.size());
+		return "superAdminView/memberReservations";
+	}
+
+	/**
+	 * 신고 처리 화면(SuperAdminSupportController#cancelReservation)과 같은 서비스 메서드
+	 * (ReservationService#cancelByAdmin)를 그대로 재사용 — 환불(PortOne)·쿠폰 복구까지 같이 처리된다.
+	 * 취소 불가 상태(이미 픽업·취소·노쇼)에서 시도하면 CancellationNotAllowedException이
+	 * GlobalExceptionHandler를 거쳐 알림창으로 안내된다.
+	 */
+	@PostMapping("/members/{id}/reservations/{reservationId}/cancel")
+	public String memberReservationCancel(@PathVariable Long id, @PathVariable Long reservationId,
+	                                       @RequestParam(required = false) String reason) {
+		reservationService.cancelByAdmin(reservationId, reason);
+		return "redirect:/superadmin/members/" + id + "/reservations";
 	}
 
 	/**

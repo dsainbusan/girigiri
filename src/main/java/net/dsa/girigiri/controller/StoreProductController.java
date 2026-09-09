@@ -12,7 +12,6 @@ import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreProductService;
-import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
@@ -26,8 +25,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -49,7 +46,6 @@ import java.util.List;
 public class StoreProductController {
 
 	private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
-	private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("M/d");
 
 	private final ProductService productService;
 	private final StoreAccessService storeAccessService;
@@ -70,11 +66,11 @@ public class StoreProductController {
 		// "오늘의 구제" 초안(status='draft')은 상단 "발행 대기" 섹션에 따로. 'skipped'(오늘 안 함)는 아예 숨김.
 		List<StockItemDto> drafts = all.stream()
 				.filter(p -> "draft".equals(p.getStatus()))
-				.map(p -> toStockItem(p, category))
+				.map(p -> productService.toStockItem(p, category))
 				.toList();
 		List<StockItemDto> items = all.stream()
 				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
-				.map(p -> toStockItem(p, category))
+				.map(p -> productService.toStockItem(p, category))
 				.toList();
 
 		model.addAttribute("drafts", drafts);
@@ -149,7 +145,7 @@ public class StoreProductController {
 		if (ownStore != null && product.getOriginalPrice() != null && product.getOriginalPrice() > 0
 				&& product.getDiscountedPrice() != null) {
 			int rate = (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
-			int autoRate = net.dsa.girigiri.util.DiscountRateCalculator.calculateRate(
+			int autoRate = DiscountRateCalculator.calculateRate(
 					StoreHoursUtil.parse(ownStore.getOperatingHours(), 60).closeAt());
 			if (rate > autoRate) {
 				form.setDiscountRate(String.valueOf(rate));
@@ -187,68 +183,6 @@ public class StoreProductController {
 	// ---------------------------------------------------------------------
 	// 발행/보류/품절/판매재개/삭제 액션은 StoreProductActionController로 옮겼다
 	// (2026-09-08, 코드 감사 — 이 파일이 자체 300줄 분리 기준을 넘겨서 분리).
-
-	private StockItemDto toStockItem(ProductEntity p, String category) {
-		int discountRate = DiscountRateCalculator.fromPrices(p.getOriginalPrice(), p.getDiscountedPrice());
-
-		boolean hasStock = p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0;
-		String statusLabel;
-		String statusVariant;
-		if ("expired".equals(p.getStatus())) {
-			statusLabel = "마감";
-			statusVariant = "closed";
-		} else if ("sold".equals(p.getStatus()) || !hasStock) {
-			statusLabel = "품절";
-			statusVariant = "soldout";
-		} else {
-			statusLabel = "판매중";
-			statusVariant = "selling";
-		}
-
-		String source = p.getMenuItemId() != null ? "pos"
-				: p.getTemplateId() != null ? "template"
-				: "manual";
-
-		return new StockItemDto(
-				p.getId(),
-				p.getName(),
-				p.getImageUrl(),
-				categoryEmoji(category),
-				categoryColor(category),
-				statusLabel,
-				statusVariant,
-				"sold".equals(p.getStatus()),   // manualSoldOut — 사장님이 직접 품절 처리한 것
-				discountRate,
-				nz(p.getOriginalPrice()),
-				nz(p.getDiscountedPrice()),
-				nz(p.getRemainingQuantity()),
-				nz(p.getQuantity()),
-				registeredLabel(p.getRegisteredAt()),
-				source);
-	}
-
-	private String registeredLabel(LocalDateTime registeredAt) {
-		if (registeredAt == null) {
-			return "";
-		}
-		if (registeredAt.toLocalDate().equals(LocalDate.now())) {
-			return "오늘 " + registeredAt.format(TIME_FMT) + " 등록";
-		}
-		return registeredAt.format(DATE_FMT) + " 등록";
-	}
-
-	// 변경됨 (2026-09-08, 코드 감사) — CategoryDisplayUtil로 위임(6곳 넘게 중복돼 있던 것 중 하나 —
-	// 여기 사본만 "카페/디저트"·"도시락/샐러드" 변형을 인식하고 있었는데, 그 완전한 목록을
-	// CategoryDisplayUtil의 기준으로 삼았다).
-	private String categoryEmoji(String category) {
-		return CategoryDisplayUtil.thumbEmoji(category);
-	}
-
-	private String categoryColor(String category) {
-		return CategoryDisplayUtil.thumbColor(category);
-	}
-
-	private int nz(Integer v) {
-		return v == null ? 0 : v;
-	}
+	// 재고 카드 DTO 매핑(toStockItem 등)은 ProductService로 옮겼다 (2026-09-09, 레이어 규칙 —
+	// 슈퍼어드민 "매장 재고 현황" 화면도 같은 매핑을 재사용하기 위해).
 }

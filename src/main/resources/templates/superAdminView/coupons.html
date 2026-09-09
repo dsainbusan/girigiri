@@ -20,7 +20,6 @@
       몇 %를 줄지는 이 화면에서 슈퍼어드민이 정해요.
     </p>
     <p class="form-error" th:if="${param.error != null and param.error[0] == 'policy'}">할인율은 1~90 사이 숫자로 입력해 주세요.</p>
-    <p class="text-muted text-muted--sm" th:if="${param.saved}">저장되었습니다.</p>
     <form th:action="@{/superadmin/coupons/policy}" method="post" class="form-narrow">
       <div class="field-group">
         <label class="field-group__label" for="welcomeDiscountRate">웰컴 쿠폰 할인율(%) <span class="req">*</span></label>
@@ -32,7 +31,10 @@
         <input class="field" type="number" id="compensationDiscountRate" name="compensationDiscountRate" min="1" max="90" required
                th:value="${policy.compensationDiscountRate}">
       </div>
-      <button type="submit" class="btn btn--primary btn--sm">정책 저장</button>
+      <!-- 변경됨 (2026-09-09) — "정책저장 버튼위로 간격이 있어야할 거 같다"는 피드백으로 mt-24 추가.
+           "저장되었습니다"도 폼 위 어정쩡한 자리 대신 버튼 바로 아래, 방금 누른 액션 옆으로 옮겼다. -->
+      <button type="submit" class="btn btn--primary btn--sm mt-24">정책 저장</button>
+      <p class="form-success" th:if="${param.saved}">저장되었습니다.</p>
     </form>
   </section>
 

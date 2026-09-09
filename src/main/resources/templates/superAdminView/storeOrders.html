@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!--/*
+  매장 주문 내역 (조회 전용). /superadmin/stores/{id}/orders 로 접속 — 매장 상세의 "주문 내역"
+  버튼에서 진입. SuperAdminStoreController#storeOrders가 담아주는 ${store}, ${orders}
+  (ReservationOrderItemDto 목록, ReservationService.getOrdersForStore)를 그린다.
+
+  점주/손님용 예약 화면들과 다른 점: 상태별로 목록을 나누지 않는다 — 대기·확정·픽업가능·픽업완료·
+  취소·노쇼를 전부 한 표에서(최신 주문순), 구매자가 누군지까지 보여준다. 운영자가 "이 매장과 유저
+  사이에 무슨 주문이 오갔는지" 확인하는 용도라 CRUD·취소 처리 버튼은 없다(그건 신고 처리 화면
+  superAdminView/complaintDetail.html의 몫).
+
+  추가됨 (2026-09-09) — "카드로 결제했는지, 언제 결제/픽업했는지 자세히 보고 싶다"는 요청으로 행 클릭 시
+  reservationDetail.html(예약 상세)로 이동한다. stores.html과 동일한 .row-clickable + data-href 패턴
+  (전용 "상세" 버튼 없이 행 아무 데나 클릭 — 이 표엔 클릭을 가로챌 버튼/폼이 없어서 간단히 적용 가능).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('매장 주문 내역', ~{:: #content}, 'stores', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/stores/{id}(id=${store.id})}">&larr; 매장 상세</a>
+
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${store.storeName} + ' 주문 내역'">매장명 주문 내역</h2>
+  </div>
+
+  <p class="result-count">주문 <b th:text="${totalCount}">0</b>건 조회되었습니다.</p>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:12%">
+        <col style="width:24%">
+        <col style="width:8%">
+        <col style="width:12%">
+        <col style="width:12%">
+        <col style="width:14%">
+        <col style="width:18%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>주문자</th>
+          <th>상품</th>
+          <th>수량</th>
+          <th>금액</th>
+          <th>상태</th>
+          <th>주문 일시</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(orders)}">
+          <td colspan="7" class="table-empty">주문 내역이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="order : ${orders}"
+            th:attr="data-href=@{/superadmin/reservations/{id}(id=${order.reservationId}, from='store')}">
+          <td class="cell-name" th:text="${order.buyerName}">닉네임</td>
+          <td th:text="${order.productName}">상품명</td>
+          <td th:text="${order.quantity}">1</td>
+          <td th:text="${#numbers.formatInteger(order.totalPrice, 0, 'COMMA')} + '원'">0원</td>
+          <td>
+            <span class="badge badge--neutral" th:if="${order.statusVariant == 'waiting'}" th:text="${order.statusLabel}">결제 대기</span>
+            <span class="badge badge--success" th:if="${order.statusVariant == 'ready' or order.statusVariant == 'done'}" th:text="${order.statusLabel}">픽업 가능</span>
+            <span class="badge badge--danger" th:if="${order.statusVariant == 'cancelled'}" th:text="${order.statusLabel}">취소</span>
+            <span class="badge badge--warning" th:if="${order.statusVariant == 'noshow'}" th:text="${order.statusLabel}">노쇼</span>
+          </td>
+          <td th:text="${order.reservedAtDisplay}">09월 09일 12:00</td>
+          <td th:text="${order.cancelInfo} ?: '-'">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
+
+</div>
+</body>
+</html>

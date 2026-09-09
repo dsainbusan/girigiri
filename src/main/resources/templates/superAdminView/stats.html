@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!--/*
+  플랫폼 통계 (조회 전용). /superadmin/stats 로 접속 — dashboard.html "오늘 플랫폼 지표"의 거래량/
+  구제량/매출 카드에서 진입한다. SuperAdminController#stats가 담아주는 ${stats}(PlatformStatsDto,
+  SuperAdminDashboardService#getPlatformStats)를 그린다.
+
+  대시보드 카드 3개(거래량/구제량/매출)는 아직 데모 숫자라 처음엔 임시로 매장 관리(/superadmin/stores)로
+  보냈는데, "페이지를 새로 만들어서 연결해달라"는 요청으로 이 화면을 만들었다. 요약 카드·매장별 표는
+  전부 결제까지 간 주문(pending 제외)을 기간 필터(reservedAt 기준)로 자른 다음, 그중 픽업 완료
+  (status="picked")분만 거래량/구제량/매출로 집계한다. 구제량 → CO2 절감량 환산은 StoreService
+  (마이페이지 절약 대시보드)와 동일한 계수(개당 0.5kg)를 그대로 써서 화면마다 다른 숫자가 안 나오게 했다.
+
+  추가됨 (2026-09-09, 기능 추천 받아서 4개 한 번에 반영) —
+  1) 기간 필터: 오늘/7일/30일/전체 탭(reports.html의 ?tab= 패턴과 동일하게 ?period=로).
+  2) 일별 추이 그래프: dashboard.html의 "최근 7일 신규 가입" 막대그래프와 완전히 같은 마크업/CSS
+     (.admin-bar-chart) — 기간 선택과 무관하게 항상 최근 14일 픽업완료 추이를 보여준다.
+  3) CSV 다운로드: stores.html의 "매장 목록 다운로드"와 동일한 link-action 패턴, 지금 보고 있는
+     기간 필터를 그대로 반영해서 내려받는다.
+  4) 매장별 취소율/노쇼율 컬럼: 표본이 적을 때 오해 안 하게 "(결제 완료 주문 N건 중)" 문구를 같이 보여준다.
+
+  전체 요약 카드 아래엔 매장별 표를 매출 내림차순으로 붙였다 — "거래량이 몇 건인지"만 보고 끝나지
+  않고 "어느 매장이 잘 파는지"까지 바로 드릴다운할 수 있게. stores.html과 같은 .row-clickable +
+  data-href 패턴으로 행을 클릭하면 그 매장 상세로 간다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('플랫폼 통계', ~{:: #content}, 'dashboard', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/dashboard}">&larr; 대시보드</a>
+
+  <div class="tabs">
+    <a class="tab" th:classappend="${stats.period == 'today'} ? ' is-active'" th:href="@{/superadmin/stats(period='today')}">오늘</a>
+    <a class="tab" th:classappend="${stats.period == '7d'} ? ' is-active'" th:href="@{/superadmin/stats(period='7d')}">최근 7일</a>
+    <a class="tab" th:classappend="${stats.period == '30d'} ? ' is-active'" th:href="@{/superadmin/stats(period='30d')}">최근 30일</a>
+    <a class="tab" th:classappend="${stats.period == 'all'} ? ' is-active'" th:href="@{/superadmin/stats(period='all')}">전체</a>
+  </div>
+
+  <div class="toolbar">
+    <p class="result-count result-count--inline" th:text="${stats.periodLabel} + ' 기준'">전체 기준</p>
+    <div class="toolbar__spacer"></div>
+    <a class="link-action" th:href="@{/superadmin/stats/export(period=${stats.period})}"><svg class="icon"><use href="#i-download"/></svg>CSV 다운로드</a>
+  </div>
+
+  <div class="stat-grid stat-grid--3">
+    <div class="stat-card">
+      <span class="stat-card__label">거래량 (픽업 완료 기준)</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.totalTransactionCount, 0, 'COMMA')} + '건'">0건</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">구제량</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.totalRescuedQuantity, 0, 'COMMA')} + '개'">0개</span>
+      <span class="stat-card__delta" th:text="'CO2 ' + ${#numbers.formatDecimal(stats.totalCo2Kg, 1, 1)} + 'kg 절감'">CO2 0kg 절감</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">매출</span>
+      <span class="stat-card__value" th:text="'₩' + ${#numbers.formatInteger(stats.totalRevenue, 0, 'COMMA')}">₩0</span>
+    </div>
+  </div>
+
+  <h3 class="subhead mt-24">최근 14일 거래 추이 <span class="text-muted text-muted--sm">(픽업 완료 기준, 기간 필터와 무관)</span></h3>
+  <div class="admin-bar-chart">
+    <div class="admin-bar-chart__col" th:each="d : ${stats.dailyTransactionBars}">
+      <div class="admin-bar-chart__value" th:text="${d.count > 0} ? ${d.count} : ''">0</div>
+      <div class="admin-bar-chart__track">
+        <div class="admin-bar-chart__bar" th:style="'height:' + ${d.heightPercent} + '%'"></div>
+      </div>
+      <div class="admin-bar-chart__label" th:classappend="${d.isToday} ? ' is-today'" th:text="${d.dateLabel}">8/25</div>
+    </div>
+  </div>
+
+  <h3 class="subhead mt-24">매장별 현황</h3>
+  <div class="toolbar">
+    <p class="result-count result-count--inline">매장 <b th:text="${stats.storeRows.size()}">0</b>곳 · 매출 높은 순</p>
+    <div class="toolbar__spacer"></div>
+    <a class="link-action" th:href="@{/superadmin/orders}">전체 주문 내역 보기 &rsaquo;</a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col><col style="width:12%"><col style="width:12%"><col style="width:15%"><col style="width:14%"><col style="width:14%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>거래량</th>
+          <th>구제량</th>
+          <th>매출</th>
+          <th>취소율</th>
+          <th>노쇼율</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(stats.storeRows)}">
+          <td colspan="6" class="table-empty">이 기간에 결제까지 간 주문이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="row : ${stats.storeRows}"
+            th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
+          <td class="cell-name" th:text="${row.storeName}">매장명</td>
+          <td th:text="${row.transactionCount} + '건'">0건</td>
+          <td th:text="${row.rescuedQuantity} + '개'">0개</td>
+          <td th:text="'₩' + ${#numbers.formatInteger(row.revenue, 0, 'COMMA')}">₩0</td>
+          <td th:text="${row.cancelRatePercent} + '% (' + ${row.totalOrderCount} + '건 중)'">0%</td>
+          <td th:text="${row.noshowRatePercent} + '% (' + ${row.totalOrderCount} + '건 중)'">0%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script th:inline="none">
+    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, form')) return;
+        window.location.href = row.dataset.href;
+      });
+    });
+  </script>
+
+</div>
+</body>
+</html>
