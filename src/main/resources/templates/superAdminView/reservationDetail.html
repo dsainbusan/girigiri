@@ -16,10 +16,17 @@
 
   변경됨 (2026-09-09) — "진행 시각"을 .info-row 세로 목록에서 배달앱 진행상황 바 같은 가로 스텝
   형태로 바꿔달라는 요청(참고 이미지: 지도 배달앱의 "주문완료→조리중→배달중→..." 가로 바). 4단계
-  고정(예약 신청/매장 수락/픽업 예정/실제 픽업) — 예약 신청은 항상 있어 늘 is-done. 취소·노쇼는
-  진행이 실제로 끝까지 안 갔다는 걸 보여주려고 마지막 칸만 빨간 is-cancelled로 바꿔 끊어 보여준다
+  고정(예약 신청/매장 수락/픽업 예정/실제 픽업) — 예약 신청은 항상 있어 늘 is-done.
   (매장 수락 여부는 acceptedAtDisplay로 판단 — cancelByAdmin 등 취소 처리는 accepted_at을 지우지
   않아서, 취소 전에 매장이 수락했었는지가 그대로 남아있다). .stepper*는 layout-admin.css 참고.
+
+  변경됨 (2026-09-09) — 취소·노쇼일 때 "마지막 칸(취소/노쇼 노드)만 빨갛다"고 처음 만들었는데,
+  "진행이 멈춘 지점부터 끝까지 다 빨간 게 맞지 않냐"는 지적으로 바꿨다. 이제 마지막으로 실제
+  일어난 단계(매장 수락까지 갔으면 거기까지 파랑) 다음부터는 전부 is-cancelled(빨강)다 — 예를 들어
+  매장 수락 후 노쇼면 "매장 수락(파랑) → 픽업 예정(빨강) → 노쇼(빨강)", 수락 전 취소면
+  "예약 신청(파랑) → 매장 수락(빨강) → 픽업 예정(빨강) → 취소(빨강)"로 이어진다. 연결선
+  (.stepper__line)은 각 칸 자기 자신의 클래스를 따라 색이 정해지므로, 중간 칸을 is-cancelled로
+  바꾸기만 하면 그 칸으로 들어오는 선도 자동으로 빨개진다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('예약 상세', ~{:: #content}, ${from == 'member'} ? 'members' : (${from == 'orders'} ? 'orders' : 'stores'), '슈퍼어드민')}">
@@ -98,14 +105,14 @@
         <div class="stepper__time" th:text="${r.reservedAtDisplay}">-</div>
       </div>
       <div class="stepper__step"
-           th:classappend="${r.statusVariant == 'ready' or r.statusVariant == 'done' or r.acceptedAtDisplay != '-'} ? 'is-done' : (${r.statusVariant == 'waiting'} ? 'is-current' : '')">
+           th:classappend="${r.statusVariant == 'ready' or r.statusVariant == 'done' or r.acceptedAtDisplay != '-'} ? 'is-done' : (${r.statusVariant == 'waiting'} ? 'is-current' : ((${r.statusVariant == 'cancelled' or r.statusVariant == 'noshow'}) ? 'is-cancelled' : ''))">
         <div class="stepper__line"></div>
         <div class="stepper__dot"></div>
         <div class="stepper__label">매장 수락</div>
         <div class="stepper__time" th:text="${r.acceptedAtDisplay}">-</div>
       </div>
       <div class="stepper__step"
-           th:classappend="${r.statusVariant == 'done'} ? 'is-done' : (${r.statusVariant == 'ready'} ? 'is-current' : '')">
+           th:classappend="${r.statusVariant == 'done'} ? 'is-done' : (${r.statusVariant == 'ready'} ? 'is-current' : ((${r.statusVariant == 'cancelled' or r.statusVariant == 'noshow'}) ? 'is-cancelled' : ''))">
         <div class="stepper__line"></div>
         <div class="stepper__dot"></div>
         <div class="stepper__label">픽업 예정</div>
