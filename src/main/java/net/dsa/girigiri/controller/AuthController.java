@@ -1,13 +1,22 @@
 package net.dsa.girigiri.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.security.AuthSessionInitializer;
+import net.dsa.girigiri.security.EmailUserPrincipal;
 import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.AuthService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +35,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthController {
 
 	private final AuthService authService;
+
+	// 가입 직후 자동 로그인 시 SecurityContext를 세션에 저장하는 용도(다음 요청 /auth/signup이 인증되게).
+	// formLogin이 내부적으로 쓰는 것과 같은 저장소 — 상태가 없어 인스턴스 하나를 공유해도 된다.
+	private static final SecurityContextRepository SECURITY_CONTEXT_REPOSITORY = new HttpSessionSecurityContextRepository();
 
 	// 추가됨 — 왜: 회원가입 완료 화면의 "GPS로 활동 지역 채우기" 버튼이 카카오 지오코더(좌표→주소)를
 	// 쓴다 — storeView/edit.html·SuperAdminController와 같은 설정 키 재사용.
@@ -46,21 +59,44 @@ public class AuthController {
 	}
 
 	/**
-	 * 이메일 회원가입 처리 — 계정만 만들고 자동 로그인은 시키지 않는다(로그인 페이지로 보내서
-	 * 방금 입력한 비밀번호로 직접 로그인하게 함 — Spring Security 수동 인증 코드 없이 단순하게 처리).
+	 * 이메일 회원가입 처리 — 계정을 만든 뒤 그 계정으로 바로 자동 로그인시키고 부가정보 입력
+	 * 화면(/auth/signup)으로 보낸다. 소셜 로그인의 최초 흐름과 동일하게 맞춘 것
+	 * (변경 2026-09-10 — 예전엔 로그인 화면으로 보내 사용자가 한 번 더 로그인하게 했다).
+	 * 최종 가입 완료(profileCompleted=true)는 /auth/signup 제출 시 이뤄진다.
 	 */
 	@PostMapping("/emailSignup")
 	public String emailSignup(@RequestParam String email,
 	                          @RequestParam String password,
-	                          @RequestParam String passwordConfirm) {
-		AuthService.EmailSignupResult result = authService.emailSignup(email, password, passwordConfirm);
-		return switch (result) {
+	                          @RequestParam String passwordConfirm,
+	                          HttpServletRequest request,
+	                          HttpServletResponse response) {
+		AuthService.EmailSignupOutcome outcome = authService.emailSignup(email, password, passwordConfirm);
+		return switch (outcome.status()) {
 			case INVALID_EMAIL -> "redirect:/auth/emailSignup?error=email";
 			case INVALID_PASSWORD -> "redirect:/auth/emailSignup?error=password";
 			case PASSWORD_MISMATCH -> "redirect:/auth/emailSignup?error=mismatch";
 			case DUPLICATE -> "redirect:/auth/emailSignup?error=duplicate";
-			case SUCCESS -> "redirect:/auth/emailLogin?justSignedUp";
+			case SUCCESS -> "redirect:" + autoLoginAfterSignup(outcome.user(), request, response);
 		};
+	}
+
+	/**
+	 * 가입 직후 자동 로그인 — 비밀번호는 방금 검증·저장했으므로 AuthenticationManager를 다시
+	 * 돌리지 않고 인증된 토큰을 바로 만든다. SecurityContext를 세션에 저장해야 다음 요청
+	 * (/auth/signup, 인증 필요)이 통과한다. 세션의 userId/role/viewMode는 소셜 로그인과 같은
+	 * 공용 로직(AuthSessionInitializer)으로 채우고, 그게 알려주는 목적지(최초 가입이므로 /auth/signup)를 돌려준다.
+	 */
+	private String autoLoginAfterSignup(UserEntity user, HttpServletRequest request, HttpServletResponse response) {
+		EmailUserPrincipal principal = new EmailUserPrincipal(user);
+		UsernamePasswordAuthenticationToken authentication =
+				UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities());
+
+		SecurityContext context = SecurityContextHolder.createEmptyContext();
+		context.setAuthentication(authentication);
+		SecurityContextHolder.setContext(context);
+		SECURITY_CONTEXT_REPOSITORY.saveContext(context, request, response);
+
+		return AuthSessionInitializer.initSessionAndGetTargetUrl(request.getSession(true), user);
 	}
 
 	/**

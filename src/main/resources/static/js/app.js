@@ -119,6 +119,30 @@
     }, delay);
   });
 
+  // 문창호: 판매/폐기 막대그래프 상세 — 모바일에선 title 툴팁이 안 떠서, 막대(.bar-chart__col)를
+  // 탭하면 그래프 위 안내줄(.bar-chart__hint)에 그날 수치(data-tip)를 보여준다. 같은 막대를 다시
+  // 탭하거나 그래프 바깥을 누르면 원래 안내문(data-hint-default)으로 돌아간다.
+  // 대시보드 "최근 7일"과 매출 리포트 두 곳에서 같은 마크업을 쓴다.
+  document.addEventListener("click", function (e) {
+    var tapped = e.target.closest(".bar-chart__col[data-tip]");
+    document.querySelectorAll(".bar-chart-wrap").forEach(function (wrap) {
+      var hint = wrap.querySelector(".bar-chart__hint");
+      if (!hint) return;
+      var pick = tapped && wrap.contains(tapped) && !tapped.classList.contains("is-selected")
+        ? tapped : null;
+      wrap.querySelectorAll(".bar-chart__col").forEach(function (c) { c.classList.remove("is-selected"); });
+      wrap.classList.toggle("has-selection", !!pick);
+      if (pick) {
+        pick.classList.add("is-selected");
+        hint.textContent = pick.getAttribute("data-tip");
+        hint.classList.add("is-active");
+      } else {
+        hint.textContent = hint.getAttribute("data-hint-default") || "";
+        hint.classList.remove("is-active");
+      }
+    });
+  });
+
   // 강노은: 리뷰 사진 dropzone — 클릭 선택 + 드래그 앤 드롭 둘 다 지원.
   // storeView/detail.html(새 리뷰 작성 · 내 리뷰 수정)과 reviewView/my.html(내 리뷰 관리 인라인
   // 수정)에서 [data-photo-dropzone] 하나씩을 이 함수로 초기화한다. 상태는 2가지:

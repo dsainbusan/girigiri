@@ -65,9 +65,10 @@ public class StoreController {
 			mainHours = rawHours.substring(0, parenIndex).trim();
 			java.time.LocalTime saleTime = net.dsa.girigiri.util.StoreHoursUtil.parseSaleStartTime(rawHours);
 			if (saleTime != null) {
-				subHours = "(마감 세일 " + saleTime.format(DateTimeFormatter.ofPattern("HH:mm")) + "~)";
+				subHours = "마감 세일 " + saleTime.format(DateTimeFormatter.ofPattern("HH:mm")) + "~";
 			} else {
-				subHours = rawHours.substring(parenIndex).trim().replace(" : ", " ");
+				// 괄호 안 설명만 뽑아서 부제로 (대시보드 카드에선 괄호 없이 한 줄로 보여준다)
+				subHours = rawHours.substring(parenIndex + 1).replace(")", "").trim().replace(" : ", " ");
 			}
 		}
 		model.addAttribute("operatingHoursMain", mainHours);

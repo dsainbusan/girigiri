@@ -73,13 +73,8 @@
 				<span class="stat-card__label">매장 정보 관리</span>
 				<span class="stat-card__go">›</span>
 			</div>
-			<div class="stat-card__value" style="font-size: var(--fs-md); font-weight: var(--fw-black); margin-top: 4px; line-height: 1.25;">
-				<span style="white-space: nowrap;" th:text="${operatingHoursMain} ?: ${operatingHours}">09:00 ~ 21:00</span>
-				<span th:if="${operatingHoursSub != null}"
-				      style="display: block; font-size: 11px; font-weight: var(--fw-bold); color: var(--c-text-mut); margin-top: 2px; white-space: nowrap;"
-				      th:text="${operatingHoursSub}">(마감 세일 20:00~)</span>
-			</div>
-			<span class="stat-card__delta u-primary" style="margin-top: 2px;">영업시간 · 정보 수정 ›</span>
+			<span class="stat-card__value stat-card__value--hours" th:text="${operatingHoursMain} ?: ${operatingHours}">09:00 ~ 21:00</span>
+			<span class="stat-card__delta u-mut" th:text="${operatingHoursSub} ?: '영업시간 · 위치 · 카테고리'">마감 세일 20:00~</span>
 		</a>
 	</div>
 
@@ -241,16 +236,21 @@
 					<span style="color: var(--c-danger); margin-left: 6px">● 폐기</span>
 				</span>
 			</div>
-			<div class="bar-chart">
-				<div class="bar-chart__col" th:each="d : ${weeklySalesBars}"
-				     th:title="${(d.isToday ? '오늘' : d.dateLabel) + ' | 판매 ' + d.soldCount + '개 · 폐기 ' + d.wasteCount + '개'}">
-					<div class="bar-chart__value" th:text="${d.soldCount > 0 ? d.soldCount : (d.wasteCount > 0 ? 0 : '')}">5</div>
-					<div class="bar-chart__track">
-						<div class="bar-chart__seg bar-chart__seg--waste" th:style="'height:' + ${d.wasteHeightPercent} + '%'"></div>
-						<div class="bar-chart__seg bar-chart__seg--sold" th:style="'height:' + ${d.soldHeightPercent} + '%'"></div>
+			<div class="bar-chart-wrap">
+				<p class="bar-chart__hint" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
+				<div class="bar-chart">
+					<div class="bar-chart__col" th:each="d : ${weeklySalesBars}"
+					     th:title="${(d.isToday ? '오늘' : d.dateLabel) + ' | 판매 ' + d.soldCount + '개 · 폐기 ' + d.wasteCount + '개'}"
+					     th:data-tip="${(d.isToday ? '오늘' : d.dateLabel) + ' · 판매 ' + d.soldCount + '개 · 폐기 ' + d.wasteCount + '개'}">
+						<div class="bar-chart__track">
+							<div class="bar-chart__fill" th:style="'height:' + ${d.soldHeightPercent + d.wasteHeightPercent} + '%'">
+								<div class="bar-chart__seg bar-chart__seg--waste" th:style="'flex-grow:' + ${d.wasteHeightPercent}"></div>
+								<div class="bar-chart__seg bar-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}"></div>
+							</div>
+						</div>
+						<div class="bar-chart__label" th:classappend="${d.isToday} ? ' is-today'"
+						     th:text="${d.isToday ? '오늘' : d.dateLabel}">08/20</div>
 					</div>
-					<div class="bar-chart__label" th:classappend="${d.isToday} ? ' is-today'"
-					     th:text="${d.isToday ? '오늘' : d.dateLabel}">08/20</div>
 				</div>
 			</div>
 			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-3); text-align: center"

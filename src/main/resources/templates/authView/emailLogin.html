@@ -10,7 +10,6 @@
 */-->
 <div id="content" th:fragment="content" class="page">
 
-	<p class="u-primary u-center" th:if="${param.justSignedUp != null}" style="margin-bottom: var(--s-4)">가입이 완료됐어요. 로그인해 주세요.</p>
 	<p class="u-danger" th:if="${param.error != null}" style="margin-bottom: var(--s-4)">이메일 또는 비밀번호가 올바르지 않아요.</p>
 
 	<form th:action="@{/auth/emailLogin}" method="post">
@@ -24,12 +23,56 @@
 			<input class="input" type="password" id="password" name="password" placeholder="비밀번호" required>
 		</div>
 
-		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">로그인</button>
+		<label for="rememberEmail"
+		       style="display: flex; align-items: center; gap: var(--s-2); margin-top: var(--s-4); font-size: var(--fs-sm); color: var(--c-text-sub); cursor: pointer;">
+			<input type="checkbox" id="rememberEmail" style="accent-color: var(--c-primary); width: 15px; height: 15px;">
+			이메일 기억하기
+		</label>
+
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-5)">로그인</button>
 	</form>
 
 	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
 		계정이 없으신가요? <a th:href="@{/auth/emailSignup}" class="u-primary" style="font-weight: var(--fw-bold)">가입하기</a>
 	</p>
+
+	<!--/*
+		"이메일 기억하기" — 순수 클라이언트. 체크 시 이 브라우저 localStorage에 이메일만 저장하고
+		다음 방문 때 자동으로 채운다. 비밀번호는 저장하지 않는다(로그인 상태 유지와 무관).
+		담당: 문창호 (WBS 2.1)
+	*/-->
+	<script th:inline="none">
+		(function () {
+			var KEY = "girigiri.rememberedEmail";
+			var email = document.getElementById("email");
+			var check = document.getElementById("rememberEmail");
+			if (!email || !check) { return; }
+			var form = email.closest("form");
+
+			try {
+				var saved = localStorage.getItem(KEY);
+				if (saved) {
+					email.value = saved;
+					check.checked = true;
+					var pw = document.getElementById("password");
+					if (pw) { pw.focus(); }
+				}
+			} catch (e) { /* localStorage 차단 환경 — 무시 */ }
+
+			if (form) {
+				form.addEventListener("submit", function () {
+					try {
+						if (check.checked && email.value.trim()) {
+							localStorage.setItem(KEY, email.value.trim());
+						} else {
+							localStorage.removeItem(KEY);
+						}
+					} catch (e) { /* 무시 */ }
+				});
+			}
+		})();
+	</script>
+
 
 </div>
 </body>

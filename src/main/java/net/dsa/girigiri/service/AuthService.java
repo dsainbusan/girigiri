@@ -27,28 +27,38 @@ public class AuthService {
 
 	public enum EmailSignupResult { SUCCESS, INVALID_EMAIL, INVALID_PASSWORD, PASSWORD_MISMATCH, DUPLICATE }
 
+	/** 가입 결과 + 성공 시 생성된 계정(컨트롤러가 이 계정으로 자동 로그인시킴). 실패면 user는 null. */
+	public record EmailSignupOutcome(EmailSignupResult status, UserEntity user) {
+		static EmailSignupOutcome fail(EmailSignupResult status) {
+			return new EmailSignupOutcome(status, null);
+		}
+	}
+
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
 	private final PasswordEncoder passwordEncoder;
 
 	/**
-	 * 이메일 회원가입 처리 — 계정만 만들고 자동 로그인은 시키지 않는다(로그인 페이지로 보내서
-	 * 방금 입력한 비밀번호로 직접 로그인하게 함 — Spring Security 수동 인증 코드 없이 단순하게 처리).
+	 * 이메일 회원가입 처리 — 계정을 만들고 생성된 계정을 돌려준다. 컨트롤러가 이 계정으로 곧바로
+	 * 자동 로그인시킨 뒤 부가정보 입력(/auth/signup)으로 보낸다.
+	 * 변경됨 (2026-09-10) — 왜: 예전엔 계정만 만들고 로그인 화면으로 보내서 사용자가 방금 정한
+	 * 비밀번호로 한 번 더 로그인하게 했다. 소셜 로그인의 최초 흐름(로그인 → 바로 /auth/signup)과
+	 * 어긋나서, 이메일도 "가입 → 자동 로그인 → 부가정보 입력 → 최종 가입 완료"로 통일한다.
 	 */
 	@Transactional
-	public EmailSignupResult emailSignup(String email, String password, String passwordConfirm) {
+	public EmailSignupOutcome emailSignup(String email, String password, String passwordConfirm) {
 		String trimmedEmail = email == null ? "" : email.trim();
 		if (!EMAIL_PATTERN.matcher(trimmedEmail).matches()) {
-			return EmailSignupResult.INVALID_EMAIL;
+			return EmailSignupOutcome.fail(EmailSignupResult.INVALID_EMAIL);
 		}
 		if (password == null || password.length() < 8) {
-			return EmailSignupResult.INVALID_PASSWORD;
+			return EmailSignupOutcome.fail(EmailSignupResult.INVALID_PASSWORD);
 		}
 		if (!password.equals(passwordConfirm)) {
-			return EmailSignupResult.PASSWORD_MISMATCH;
+			return EmailSignupOutcome.fail(EmailSignupResult.PASSWORD_MISMATCH);
 		}
 		if (userRepository.findByOauthProviderAndOauthId("email", trimmedEmail).isPresent()) {
-			return EmailSignupResult.DUPLICATE;
+			return EmailSignupOutcome.fail(EmailSignupResult.DUPLICATE);
 		}
 
 		UserEntity user = UserEntity.builder()
@@ -60,7 +70,7 @@ public class AuthService {
 				.build();
 		userRepository.save(user);
 
-		return EmailSignupResult.SUCCESS;
+		return new EmailSignupOutcome(EmailSignupResult.SUCCESS, user);
 	}
 
 	@Transactional(readOnly = true)

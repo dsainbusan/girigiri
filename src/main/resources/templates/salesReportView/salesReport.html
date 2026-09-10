@@ -96,14 +96,20 @@
 						<span style="color: var(--c-danger); margin-left: 6px">● 폐기</span>
 					</span>
 				</div>
-				<div class="bar-chart">
-					<div class="bar-chart__col" th:each="d : ${report.days}"
-					     th:title="${d.label + ' · 판매 ' + d.soldQty + ' / 폐기 ' + d.wastedQty + ' · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}">
-						<div class="bar-chart__track">
-							<div class="bar-chart__seg bar-chart__seg--waste" th:style="'height:' + ${d.wastedHeightPercent} + '%'"></div>
-							<div class="bar-chart__seg bar-chart__seg--sold" th:style="'height:' + ${d.soldHeightPercent} + '%'"></div>
+				<div class="bar-chart-wrap">
+					<p class="bar-chart__hint" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
+					<div class="bar-chart">
+						<div class="bar-chart__col" th:each="d : ${report.days}"
+						     th:title="${d.label + ' · 판매 ' + d.soldQty + ' / 폐기 ' + d.wastedQty + ' · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}"
+						     th:data-tip="${d.label + ' · 판매 ' + d.soldQty + '개 · 폐기 ' + d.wastedQty + '개 · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}">
+							<div class="bar-chart__track">
+								<div class="bar-chart__fill" th:style="'height:' + ${d.soldHeightPercent + d.wastedHeightPercent} + '%'">
+									<div class="bar-chart__seg bar-chart__seg--waste" th:style="'flex-grow:' + ${d.wastedHeightPercent}"></div>
+									<div class="bar-chart__seg bar-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}"></div>
+								</div>
+							</div>
+							<div class="bar-chart__label" th:text="${d.showLabel} ? ${d.label} : ''">1</div>
 						</div>
-						<div class="bar-chart__label" th:text="${d.showLabel} ? ${d.label} : ''">1</div>
 					</div>
 				</div>
 			</div>
