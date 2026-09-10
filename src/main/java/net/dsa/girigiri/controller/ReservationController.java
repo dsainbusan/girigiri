@@ -13,7 +13,6 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.ReservationAccessDeniedException;
-import net.dsa.girigiri.service.ComplaintService;
 import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
@@ -35,21 +34,19 @@ import java.util.List;
 /**
  * 예약 확인 -> 예약 생성 -> 완료 화면(QR/영수증)까지 담당하는 컨트롤러.
  * ReservationService(이미 만들어서 테스트해둔 부품)를 실제 화면 버튼과 연결하는 역할만 한다.
- *
+ * <p>
  * 2026-09-03 — 686줄까지 커져서 도메인별로 분리했다. 이 클래스는 손님의 "예약 생성 흐름"(체크아웃 →
  * 결제 준비/확인 → 완료 화면 → 취소)만 남고, 점주용 화면(들어온 예약/매장 취소/픽업 설정)은
  * ReservationStoreController로, 현장 픽업 처리·영수증은 ReservationPickupController로 옮겼다.
- * @RequestMapping("/reservation")은 세 클래스 모두 그대로 유지해서 URL은 하나도 안 바뀐다.
- *
- * 주의: 로그인이 아직 없어서, 지금은 임시로 sample-data.sql의 user id=1을 "로그인한 사용자"로
- *      취급한다 (resolveCurrentUserId() 참고). 나중에 로그인/세션이 만들어지면 이 메서드 안쪽만
- *      세션에서 실제 userId를 꺼내오도록 바꾸면 되고, 그 아래 로직(체크아웃/완료 화면)은 안 바뀐다.
- *
- * 주의2 (2026-08-21 변경): "당일 판매·당일 픽업" 컨셉에 맞춰, 픽업 시간을 손님이 직접 고르지 않고
- *      "현재시간 + 매장 준비시간"으로 자동 계산한다(PickupAvailabilityUtil). 매장의 마지막
- *      픽업시간을 넘겼으면 주문 자체를 막는다. 이 검증은 여기 컨트롤러 레벨에서만 하고
- *      ReservationService.prepareReservation 자체는 그대로 둔다 — 테스트에서 시간대와 무관하게
- *      결정적으로 동작해야 하는데, 서비스 안에 넣으면 실행 시각에 따라 테스트가 흔들릴 수 있어서다.
+ * 2026-09-10 (코드 감사 LOW 대응, 재분리) — 다시 348줄까지 자라서 "신고하기"(무관한 별개 기능)를
+ * ReservationReportController로 뺐다. DEFAULT_PREP_TIME_MINUTES 로컬 상수도 PickupAvailabilityUtil
+ * 공용값으로 통일(값은 그대로 20분). @RequestMapping은 관련 클래스 모두 유지, URL은 안 바뀐다.
+ * <p>
+ * 주의 (2026-08-21 변경): "당일 판매·당일 픽업" 컨셉에 맞춰, 픽업 시간을 손님이 직접 고르지 않고
+ * "현재시간 + 매장 준비시간"으로 자동 계산한다(PickupAvailabilityUtil). 매장의 마지막
+ * 픽업시간을 넘겼으면 주문 자체를 막는다. 이 검증은 여기 컨트롤러 레벨에서만 하고
+ * ReservationService.prepareReservation 자체는 그대로 둔다 — 테스트에서 시간대와 무관하게
+ * 결정적으로 동작해야 하는데, 서비스 안에 넣으면 실행 시각에 따라 테스트가 흔들릴 수 있어서다.
  */
 @Controller
 @RequestMapping("/reservation")
@@ -57,9 +54,6 @@ import java.util.List;
 public class ReservationController {
 
 	private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("MM월 dd일 HH:mm");
-
-	// 매장이 아직 prepTimeMinutes를 설정 안 했을 때 쓰는 기본 준비시간 (StoreEntity 기본값과 동일하게 맞춤)
-	private static final int DEFAULT_PREP_TIME_MINUTES = 20;
 
 	private final ReservationService reservationService;
 	private final LookupService lookupService;
@@ -69,20 +63,12 @@ public class ReservationController {
 	// CouponService를 직접 호출하므로(레이어 규칙: 비즈니스 로직은 서비스에), 여기 컨트롤러는 화면에
 	// 보여줄 목록을 조회하는 것뿐이다.
 	private final CouponService couponService;
-	// 추가됨 (2026-09-08) — "예약 상세에서 신고하기" 버튼. 신고 처리(슈퍼어드민)와는 별개로,
-	// 신고 접수(손님)만 담당하는 서비스라 이름을 다르게 뒀다(ComplaintService 상단 주석 참고).
-	private final ComplaintService complaintService;
 
-	// 변경됨 (2026-09-01) — 왜: 문창호님의 로그인/세션 작업(OAuth2LoginSuccessHandler +
-	// AuthSessionInitializer)이 이미 끝나서 세션에 실제 로그인한 사용자의 userId가 들어있다.
-	// 더 이상 고정 사용자(1L)를 쓸 이유가 없어서 ChatController/MypageController와 동일하게
-	// 세션에서 꺼내오도록 교체했다. /reservation/**을 WebSecurityConfig의 공개 목록에서 뺐기
-	// 때문에, 여기까지 도달했다면 이미 로그인된 상태라 null일 일은 없다.
-	//
-	// 2026-09-03 — package-private static으로 바꿨다. ReservationPickupController#receipt도
-	// 동일한 로직이 필요한데, 컨트롤러 3개로 쪼개면서 헬퍼를 그대로 복사하지 않기로 해서
-	// (레이어 규칙 정리 세션 합의) 여기 하나만 두고 그쪽에서 ReservationController.resolveCurrentUserId(session)
-	// 형태로 그대로 호출한다.
+	// 변경됨 (2026-09-01) — 문창호님의 로그인/세션 작업이 끝나서 세션의 실제 userId를 쓴다(고정
+	// 사용자 1L 아님). /reservation/**이 WebSecurityConfig 공개 목록에서 빠져있어 여기 도달했다면
+	// 이미 로그인 상태라 null일 일은 없다. 2026-09-03 — package-private static으로 바꿔서, 같은
+	// 로직이 필요한 ReservationPickupController/ReservationReportController도 헬퍼를 복사하지
+	// 않고 ReservationController.resolveCurrentUserId(session)로 그대로 호출한다.
 	static Long resolveCurrentUserId(HttpSession session) {
 		return (Long) session.getAttribute("userId");
 	}
@@ -94,14 +80,14 @@ public class ReservationController {
 	 */
 	@GetMapping("/checkout")
 	public String checkout(@RequestParam Long productId,
-							@RequestParam(defaultValue = "1") int quantity,
-							HttpSession session,
-							Model model) {
+						   @RequestParam(defaultValue = "1") int quantity,
+						   HttpSession session,
+						   Model model) {
 		ProductEntity product = lookupService.getProduct(productId);
 		StoreEntity store = lookupService.getStore(product.getStoreId());
 
 		LocalDateTime now = LocalDateTime.now();
-		int prepTimeMinutes = store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : DEFAULT_PREP_TIME_MINUTES;
+		int prepTimeMinutes = store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : PickupAvailabilityUtil.DEFAULT_PREP_TIME_MINUTES;
 		boolean canOrder = PickupAvailabilityUtil.canOrderNow(now, store.getLastPickupTime(), prepTimeMinutes);
 		LocalDateTime earliestPickupTime = PickupAvailabilityUtil.earliestPickupTime(now, prepTimeMinutes);
 
@@ -150,12 +136,10 @@ public class ReservationController {
 	 * "예약 확정하기" 팝업에서 "확인했어요"를 누르면 결제창을 띄우기 직전에 호출되는 API(AJAX).
 	 * 재고 차감 + 예약을 pending으로 저장 + PortOne에 넘길 paymentId 발급까지 여기서 처리하고,
 	 * 그 값을 프론트로 돌려주면 프론트가 PortOne.requestPayment()를 호출한다.
-	 *
 	 * (2026-08-21에 있던 pickup 시간 재계산 로직은 그대로 유지 — 체크아웃 화면을 열어본 뒤 시간이
-	 *  좀 지나 실제 제출하는 사이에 마감시간을 넘겨버렸을 수도 있어서, 진짜로 예약을 만들기
-	 *  직전에 다시 확인한다.)
-	 */
-	/**
+	 * 좀 지나 실제 제출하는 사이에 마감시간을 넘겨버렸을 수도 있어서, 진짜로 예약을 만들기 직전에
+	 * 다시 확인한다.)
+	 * <p>
 	 * 변경됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동) — couponId를 선택했으면 같이 넘겨서
 	 * ReservationService.prepareReservation이 검증 + 할인 계산 + 사용 처리까지 하게 한다. 쿠폰이
 	 * 이미 쓴 거거나 기한이 지났으면 ResponseStatusException이 올라오는데, 이 API는 AJAX라 그대로
@@ -166,14 +150,14 @@ public class ReservationController {
 	@PostMapping("/prepare")
 	@ResponseBody
 	public ReservationPrepareResponseDto prepare(@RequestParam Long productId,
-												  @RequestParam(defaultValue = "1") int quantity,
-												  @RequestParam(required = false) Long couponId,
-												  HttpSession session) {
+												 @RequestParam(defaultValue = "1") int quantity,
+												 @RequestParam(required = false) Long couponId,
+												 HttpSession session) {
 		ProductEntity product = lookupService.getProduct(productId);
 		StoreEntity store = lookupService.getStore(product.getStoreId());
 
 		LocalDateTime now = LocalDateTime.now();
-		int prepTimeMinutes = store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : DEFAULT_PREP_TIME_MINUTES;
+		int prepTimeMinutes = store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : PickupAvailabilityUtil.DEFAULT_PREP_TIME_MINUTES;
 
 		if (!PickupAvailabilityUtil.canOrderNow(now, store.getLastPickupTime(), prepTimeMinutes)) {
 			throw new OrderNotAllowedException("죄송해요, 오늘 주문 가능한 시간이 지났어요. 내일 다시 확인해주세요.");
@@ -199,7 +183,7 @@ public class ReservationController {
 	 * 결제창(PortOne 브라우저 SDK)이 끝난 뒤, 프론트가 이 API로 paymentId를 넘기면 서버가 PortOne에
 	 * 직접 재조회해서 진짜 결제가 됐는지 확인한다(ReservationService.confirmPayment). 검증에 성공하면
 	 * 예약 완료 화면 주소를 돌려주고, 프론트는 그 주소로 이동만 하면 된다.
-	 *
+	 * <p>
 	 * AJAX 호출이라 실패 시에도 에러 페이지로 안 넘기고, 항상 200 + success:false로 응답해서
 	 * 프론트가 같은 화면에서 실패 메시지를 보여줄 수 있게 한다.
 	 */
@@ -222,7 +206,7 @@ public class ReservationController {
 	 * 결제창(PortOne)이 실패했거나 손님이 그냥 닫아버렸을 때, checkout.html의 startPayment()가 바로
 	 * 호출하는 API. pending 예약을 즉시 취소하고 재고를 바로 복구한다
 	 * (ReservationService.cancelPendingReservation 참고).
-	 *
+	 * <p>
 	 * 추가됨 (2026-08-24) — 왜: 이 호출이 없으면 pending 예약은 최대 PENDING_EXPIRY_MINUTES(15분) +
 	 * 스케줄러 주기(5분)만큼 지나야 재고가 풀렸다 — "결제 안 했는데 남은 수량이 그대로/안 늘어난다"는
 	 * 피드백을 받고 추가했다. 프론트 fetch가 실패해도(네트워크 문제 등) 화면 자체는 막지 않도록
@@ -237,7 +221,7 @@ public class ReservationController {
 
 	/**
 	 * 예약 완료 화면: QR 코드 + 픽업 코드 + 영수증 링크를 보여준다.
-	 *
+	 * <p>
 	 * 변경됨 (2026-09-01) — 왜: 로그인은 확인하지만 이 예약이 진짜 로그인한 내 예약인지는 확인 안 해서,
 	 * URL의 id만 바꾸면 남의 예약 완료 화면(픽업 코드/QR 포함)을 볼 수 있었다. resolveCurrentUserId와
 	 * 비교해서 본인 예약이 아니면 막는다 (cancel/qrImage/receipt도 동일하게 적용).
@@ -262,8 +246,7 @@ public class ReservationController {
 	}
 
 	/**
-	 * 완료 화면의 <img> 태그가 실제로 부르는 QR 이미지 바이트.
-	 * 변경됨 (2026-09-01) — 본인 예약이 아니면 QR도 못 보게 막는다 (complete 참고).
+	 * 완료 화면의 <img> 태그가 실제로 부르는 QR 이미지 바이트. 본인 예약이 아니면 막는다(complete 참고).
 	 */
 	@GetMapping("/{id}/qr-image")
 	@ResponseBody
@@ -280,10 +263,12 @@ public class ReservationController {
 		}
 	}
 
-	/** 마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소 3탭. */
+	/**
+	 * 마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소 3탭.
+	 */
 	@GetMapping("/my")
 	public String myReservations(@RequestParam(defaultValue = ReservationService.TAB_PROGRESS) String tab,
-								  HttpSession session, Model model) {
+								 HttpSession session, Model model) {
 		List<ReservationListItemDto> reservations =
 				reservationService.getMyReservations(resolveCurrentUserId(session), tab);
 
@@ -310,39 +295,5 @@ public class ReservationController {
 		reservationService.cancelReservation(id);
 		redirectAttributes.addFlashAttribute("cancelledMessage", "예약이 취소됐어요. 결제하신 금액은 환불됩니다.");
 		return "redirect:/reservation/my?tab=cancelled";
-	}
-
-	/**
-	 * "신고하기" 버튼 — 내 예약 목록(myReservations.html)의 각 예약 카드에서 접수한다.
-	 * 2026-09-08 신설 — 지금까지 슈퍼어드민이 신고를 "처리"하는 화면만 있고 손님이 신고를 "접수"하는
-	 * 화면이 없었다(신고 데이터는 시드로만 넣었음). ComplaintService.submitFromReservation이 신고
-	 * 대상(매장)과 연결된 예약을 자동으로 채워서, 신고 상세 화면에서 운영자가 픽업 코드를 다시
-	 * 검색할 필요 없이 바로 그 예약을 취소할 수 있게 한다.
-	 */
-	@GetMapping("/{id}/report")
-	public String reportForm(@PathVariable Long id, HttpSession session, Model model) {
-		ReservationEntity reservation = lookupService.getReservation(id);
-		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
-			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
-		}
-
-		model.addAttribute("reservation", reservation);
-		return "reservationView/report";
-	}
-
-	@PostMapping("/{id}/report")
-	public String submitReport(@PathVariable Long id,
-	                            @RequestParam String reason,
-	                            @RequestParam String content,
-	                            HttpSession session,
-	                            RedirectAttributes redirectAttributes) {
-		ReservationEntity reservation = lookupService.getReservation(id);
-		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
-			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
-		}
-
-		complaintService.submitFromReservation(reservation, reason, content);
-		redirectAttributes.addFlashAttribute("reportedMessage", "신고가 접수됐어요. 운영자가 확인 후 처리할게요.");
-		return "redirect:/reservation/my";
 	}
 }

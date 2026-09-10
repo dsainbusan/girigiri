@@ -7,6 +7,7 @@ import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.util.OperatingHoursUtil;
+import net.dsa.girigiri.util.PickupAvailabilityUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,9 +27,6 @@ import java.time.LocalTime;
 @RequestMapping("/reservation")
 @RequiredArgsConstructor
 public class ReservationSettingsController {
-
-	// 매장이 아직 prepTimeMinutes를 설정 안 했을 때 쓰는 기본 준비시간 (StoreEntity 기본값과 동일하게 맞춤)
-	private static final int DEFAULT_PREP_TIME_MINUTES = 20;
 
 	private final ReservationService reservationService;
 	private final LookupService lookupService;
@@ -75,7 +73,7 @@ public class ReservationSettingsController {
 
 		model.addAttribute("storeName", store.getStoreName());
 		model.addAttribute("prepTimeMinutes",
-				store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : DEFAULT_PREP_TIME_MINUTES);
+				store.getPrepTimeMinutes() != null ? store.getPrepTimeMinutes() : PickupAvailabilityUtil.DEFAULT_PREP_TIME_MINUTES);
 		model.addAttribute("lastPickupTime", store.getLastPickupTime() != null ? store.getLastPickupTime().toString() : "");
 		model.addAttribute("operatingHours", store.getOperatingHours());
 		model.addAttribute("closingTimeDisplay", closingTime != null ? closingTime.toString() : null);
@@ -90,10 +88,10 @@ public class ReservationSettingsController {
 	 */
 	@PostMapping("/settings")
 	public String saveSettings(@RequestParam int prepTimeMinutes,
-								@RequestParam(required = false) String lastPickupTime,
-								@RequestParam(defaultValue = "manual") String pickupTimeMode,
-								HttpSession session,
-								RedirectAttributes redirectAttributes) {
+							   @RequestParam(required = false) String lastPickupTime,
+							   @RequestParam(defaultValue = "manual") String pickupTimeMode,
+							   HttpSession session,
+							   RedirectAttributes redirectAttributes) {
 		StoreEntity store = lookupService.getStore(resolveCurrentStoreId(session));
 
 		reservationService.updatePickupSettings(store, prepTimeMinutes, lastPickupTime, pickupTimeMode);
