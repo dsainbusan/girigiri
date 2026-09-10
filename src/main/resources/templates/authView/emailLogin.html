@@ -11,6 +11,7 @@
 <div id="content" th:fragment="content" class="page">
 
 	<p class="u-danger" th:if="${param.error != null}" style="margin-bottom: var(--s-4)">이메일 또는 비밀번호가 올바르지 않아요.</p>
+	<p class="u-primary u-center" th:if="${param.reset != null}" style="margin-bottom: var(--s-4)">비밀번호가 변경됐어요. 새 비밀번호로 로그인해 주세요.</p>
 
 	<form th:action="@{/auth/emailLogin}" method="post">
 		<div class="field">
@@ -32,7 +33,13 @@
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-5)">로그인</button>
 	</form>
 
-	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
+	<div class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
+		<a th:href="@{/auth/find-email}" class="u-mut">이메일 찾기</a>
+		<span style="color: var(--c-line); margin: 0 var(--s-2)">|</span>
+		<a th:href="@{/auth/reset-password}" class="u-mut">비밀번호 재설정</a>
+	</div>
+
+	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-3)">
 		계정이 없으신가요? <a th:href="@{/auth/emailSignup}" class="u-primary" style="font-weight: var(--fw-bold)">가입하기</a>
 	</p>
 

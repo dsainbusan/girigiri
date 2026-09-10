@@ -62,6 +62,10 @@ public class WebSecurityConfig {
 			, "/images/**"
 			, "/upload/**"   // 업로드된 이미지(리뷰/문의/상품 사진). 로그아웃 상태의 홈·검색 화면에서도 떠야 해서 공개.
 			, "/auth/loginForm"
+			, "/auth/withdraw-complete"   // 탈퇴 직후엔 세션이 없는 상태로 들어온다(MypageController#withdraw).
+			, "/auth/find-email"          // 이메일(아이디) 찾기 — 로그인 못 하는 사용자가 쓰는 화면.
+			, "/auth/reset-password"      // 비밀번호 재설정 — 위와 동일. /reset-password/verify 포함.
+			, "/auth/reset-password/**"
 			, "/error/**"
 			// 추가됨 — 왜: 로그인 전 사용자가 접근하는 소셜 로그인 인가 요청(/oauth2/authorization/**)과
 			// provider 콜백(/login/oauth2/code/**) 경로. 인증 전 단계라 permitAll 없이는 로그인 자체가 불가능해서 추가.

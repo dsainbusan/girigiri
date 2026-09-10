@@ -2,6 +2,7 @@ package net.dsa.girigiri.config;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.security.LoginRequiredInterceptor;
+import net.dsa.girigiri.security.ProfileCompletionInterceptor;
 import net.dsa.girigiri.security.ViewModeSyncInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -20,6 +21,7 @@ public class WebInterceptorConfig implements WebMvcConfigurer {
 
 	private final ViewModeSyncInterceptor viewModeSyncInterceptor;
 	private final LoginRequiredInterceptor loginRequiredInterceptor;
+	private final ProfileCompletionInterceptor profileCompletionInterceptor;
 
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
@@ -27,5 +29,10 @@ public class WebInterceptorConfig implements WebMvcConfigurer {
 				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/");
 		registry.addInterceptor(loginRequiredInterceptor)
 				.addPathPatterns("/**");
+		// 부가정보 미입력 사용자 가드 — 정적 리소스·인증 콜백은 제외(제외 안 하면 signup 화면 CSS까지 리다이렉트됨).
+		registry.addInterceptor(profileCompletionInterceptor)
+				.addPathPatterns("/**")
+				.excludePathPatterns("/css/**", "/js/**", "/images/**", "/upload/**",
+						"/error", "/error/**", "/favicon.ico", "/oauth2/**", "/login/**");
 	}
 }

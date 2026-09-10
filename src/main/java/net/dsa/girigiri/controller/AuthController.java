@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.security.AuthAttemptLimiter;
 import net.dsa.girigiri.security.AuthSessionInitializer;
 import net.dsa.girigiri.security.EmailUserPrincipal;
 import net.dsa.girigiri.security.LoginRequired;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AuthController {
 
 	private final AuthService authService;
+	private final AuthAttemptLimiter authAttemptLimiter;
 
 	// 가입 직후 자동 로그인 시 SecurityContext를 세션에 저장하는 용도(다음 요청 /auth/signup이 인증되게).
 	// formLogin이 내부적으로 쓰는 것과 같은 저장소 — 상태가 없어 인스턴스 하나를 공유해도 된다.
@@ -146,8 +148,9 @@ public class AuthController {
 		UserEntity user = authService.getUserForSignup(userId);
 
 		model.addAttribute("provider", user.getOauthProvider());
-		model.addAttribute("maskedEmail", maskEmail(user.getEmail()));
+		model.addAttribute("maskedEmail", AuthService.maskEmail(user.getEmail()));
 		model.addAttribute("nickname", user.getNickname());
+		model.addAttribute("phone", user.getPhone());
 		model.addAttribute("region", user.getRegion());
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
 		return "authView/signup";
@@ -161,23 +164,74 @@ public class AuthController {
 	@LoginRequired
 	@PostMapping("/signup")
 	public String signup(@RequestParam String nickname,
+	                     @RequestParam(required = false) String phone,
 	                     @RequestParam(required = false) String region,
 	                     @RequestParam(defaultValue = "USER") String userType,
+	                     @RequestParam(defaultValue = "false") boolean termsAgreed,
+	                     @RequestParam(defaultValue = "false") boolean privacyAgreed,
+	                     @RequestParam(defaultValue = "false") boolean marketingAgreed,
 	                     HttpSession session) {
+		// 필수 약관(이용약관·개인정보 수집이용) 미동의 — 화면 JS로도 막지만 서버에서도 재검증한다.
+		if (!termsAgreed || !privacyAgreed) {
+			return "redirect:/auth/signup?error=agree";
+		}
 		if (!authService.isValidNickname(nickname)) {
 			return "redirect:/auth/signup?error";
 		}
+		if (!authService.isValidPhone(phone)) {
+			return "redirect:/auth/signup?error=phone";
+		}
+		if (authService.isPhoneTaken(phone)) {
+			return "redirect:/auth/signup?error=phonedup";
+		}
 
 		Long userId = (Long) session.getAttribute("userId");
-		authService.completeSignup(userId, nickname, region);
+		authService.completeSignup(userId, nickname, phone, region, marketingAgreed);
+		session.setAttribute("profileCompleted", true);   // ProfileCompletionInterceptor 통과용
 
-		// 사장님으로 시작 선택 시 점주 입점 신청 페이지로 라우팅
+		// 사장님으로 시작 선택 시 점주 입점 신청 페이지로 (거기서 매장 정보 입력 → owner-apply-complete로 마무리).
 		if ("OWNER".equalsIgnoreCase(userType)) {
 			return "redirect:/auth/owner-apply";
 		}
+		// 소비자로 시작 선택 시 "가입 완료" 안내 화면으로.
+		return "redirect:/auth/signup-complete";
+	}
 
-		// 소비자로 시작 선택 시 바로 홈 화면으로 이동
+	/**
+	 * 가입 취소 — 부가정보 입력을 마치지 않고 나갈 때(상단 뒤로가기·"나가기" 링크).
+	 * 방금 만든 미완성 계정을 삭제하고(AuthService.cancelIncompleteSignup) 세션을 정리한 뒤 홈으로.
+	 * 소셜 첫 로그인은 로그인 시점에 계정이 생겨서, 그냥 나가면 "약관 동의도 안 한 계정"이 남는다.
+	 */
+	@PostMapping("/signup/cancel")
+	public String cancelSignup(HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId != null) {
+			authService.cancelIncompleteSignup(userId);
+		}
+		session.invalidate();
 		return "redirect:/";
+	}
+
+	/**
+	 * 가입 완료 안내 화면 (소비자). 버튼을 눌러야 홈으로 나간다.
+	 */
+	@LoginRequired
+	@GetMapping("/signup-complete")
+	public String signupComplete(HttpSession session, Model model) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId != null) {
+			model.addAttribute("nickname", authService.getUserForSignup(userId).getNickname());
+		}
+		return "authView/signupComplete";
+	}
+
+	/**
+	 * 회원 탈퇴 완료 안내 화면. 탈퇴 시 세션이 사라지므로 로그인 없이 접근 가능해야 한다
+	 * (WebSecurityConfig PUBLIC_URLS에 등록). MypageController#withdraw가 여기로 리다이렉트한다.
+	 */
+	@GetMapping("/withdraw-complete")
+	public String withdrawComplete() {
+		return "authView/withdrawComplete";
 	}
 
 	/**
@@ -224,13 +278,84 @@ public class AuthController {
 		return "authView/ownerApplyComplete";
 	}
 
-	private static String maskEmail(String email) {
-		if (email == null || !email.contains("@")) {
-			return null;
+	// ---- 이메일(아이디) 찾기 — 휴대폰 번호로 조회 ----
+
+	@GetMapping("/find-email")
+	public String findEmailForm() {
+		return "authView/findEmail";
+	}
+
+	@PostMapping("/find-email")
+	public String findEmail(@RequestParam String phone, HttpServletRequest request, Model model) {
+		if (!authAttemptLimiter.tryAcquire("find-email:" + request.getRemoteAddr())) {
+			model.addAttribute("rateLimited", true);
+			return "authView/findEmail";
 		}
-		String[] parts = email.split("@", 2);
-		String local = parts[0];
-		String masked = local.length() <= 4 ? local : local.substring(0, 4);
-		return masked + "***@" + parts[1];
+		if (!authService.isValidPhone(phone)) {
+			model.addAttribute("formatError", true);
+			return "authView/findEmail";
+		}
+		model.addAttribute("result", authService.findEmailByPhone(phone));
+		return "authView/findEmail";
+	}
+
+	// ---- 비밀번호 재설정 — 이메일 + 휴대폰 일치 시 바로 새 비번 설정 ----
+	// 세션에 pwResetUserId를 잠깐 담아 "본인 확인됨" 상태를 이어간다(10분 유효).
+
+	private static final long PW_RESET_TTL_MS = 10 * 60 * 1000L;
+
+	@GetMapping("/reset-password")
+	public String resetPasswordForm(HttpSession session) {
+		clearPwReset(session);
+		return "authView/resetPassword";
+	}
+
+	@PostMapping("/reset-password/verify")
+	public String resetPasswordVerify(@RequestParam String email, @RequestParam String phone,
+	                                  HttpServletRequest request, HttpSession session, Model model) {
+		if (!authAttemptLimiter.tryAcquire("reset-pw:" + request.getRemoteAddr())) {
+			model.addAttribute("rateLimited", true);
+			return "authView/resetPassword";
+		}
+		var userId = authService.verifyForPasswordReset(email, phone);
+		if (userId.isEmpty()) {
+			log.warn("비밀번호 재설정 본인확인 실패 email={} ip={}", email, request.getRemoteAddr());
+			model.addAttribute("verifyError", true);
+			model.addAttribute("email", email);
+			return "authView/resetPassword";
+		}
+		session.setAttribute("pwResetUserId", userId.get());
+		session.setAttribute("pwResetAt", System.currentTimeMillis());
+		model.addAttribute("verified", true);
+		return "authView/resetPassword";
+	}
+
+	@PostMapping("/reset-password")
+	public String resetPassword(@RequestParam String newPassword, @RequestParam String newPasswordConfirm,
+	                            HttpSession session, Model model) {
+		Long userId = (Long) session.getAttribute("pwResetUserId");
+		Long verifiedAt = (Long) session.getAttribute("pwResetAt");
+		if (userId == null || verifiedAt == null || System.currentTimeMillis() - verifiedAt > PW_RESET_TTL_MS) {
+			clearPwReset(session);
+			return "redirect:/auth/reset-password?expired";
+		}
+		if (!newPassword.equals(newPasswordConfirm)) {
+			model.addAttribute("verified", true);
+			model.addAttribute("mismatch", true);
+			return "authView/resetPassword";
+		}
+		if (!authService.resetPassword(userId, newPassword)) {
+			model.addAttribute("verified", true);
+			model.addAttribute("tooShort", true);
+			return "authView/resetPassword";
+		}
+		clearPwReset(session);
+		log.info("비밀번호 재설정 완료 userId={}", userId);
+		return "redirect:/auth/emailLogin?reset";
+	}
+
+	private static void clearPwReset(HttpSession session) {
+		session.removeAttribute("pwResetUserId");
+		session.removeAttribute("pwResetAt");
 	}
 }

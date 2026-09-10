@@ -15,7 +15,12 @@ import java.time.LocalDateTime;
 // 여러 건을 찾아 IncorrectResultSizeDataAccessException을 던져서 영구히 로그인 불가가 된다.
 // 이메일 로그인도 oauth_provider="email"/oauth_id=이메일 규칙을 쓰므로(EmailUserDetailsService)
 // 이 제약 하나로 소셜·이메일 계정 중복 가입을 전부 막는다. 반영 전 DB에 중복 데이터 없는 것 확인함.
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(name = "uk_users_oauth", columnNames = {"oauth_provider", "oauth_id"}))
+// uk_users_phone (2026-09-10) — 왜: 휴대폰으로 "이메일 찾기"·"비밀번호 재설정"을 하려면 번호 1개당
+// 계정 1개여야 조회가 명확하다. 미인증 번호지만 중복 가입은 막는다. NULL은 여러 개 허용(기존 회원).
+@Table(name = "users", uniqueConstraints = {
+		@UniqueConstraint(name = "uk_users_oauth", columnNames = {"oauth_provider", "oauth_id"}),
+		@UniqueConstraint(name = "uk_users_phone", columnNames = {"phone"})
+})
 @Getter
 @Setter
 @Builder
@@ -70,6 +75,12 @@ public class UserEntity {
 	@Column(name = "email", length = 100)
 	private String email;
 
+	// 추가됨 (2026-09-10) — 왜: 회원가입 완료 화면에서 휴대폰 번호를 받는다. 본인확인(실명인증) API는
+	// 사업자 계약이 필요해 붙이지 않았다 — 즉 이 값은 "인증된 번호"가 아니라 사용자가 입력한 값 그대로다.
+	// 용도: (1) 향후 이메일/비밀번호 찾기 본인확인, (2) 노쇼 시 매장이 연락. "010-1234-5678" 형식으로 저장.
+	@Column(name = "phone", length = 20)
+	private String phone;
+
 	// 추가됨 (2026-08-21) — 왜: 회원가입 완료 화면에서 "주로 이용할 동네"를 입력받기 위해 신설.
 	// 카카오맵 좌표 연동 전이라 위경도(latitude/longitude)와 별개로 자유 텍스트로만 받는다.
 	@Column(name = "region", length = 100)
@@ -86,6 +97,25 @@ public class UserEntity {
 
 	@Column(name = "longitude")
 	private Double longitude;
+
+	// 추가됨 (2026-09-10) — 왜: 회원가입 완료 화면(authView/signup)에 약관 동의 단계를 넣으면서 신설.
+	// 이용약관·개인정보 수집이용은 필수(체크 안 하면 가입 불가)라 가입 완료 시 항상 true지만,
+	// "언제 무엇에 동의했는지"는 기록으로 남겨야 해서 컬럼으로 저장한다. 마케팅 수신은 선택이라
+	// false로도 가입되고, 이후 알림 설정에서 on/off 하려면 이 값이 있어야 한다.
+	@Builder.Default
+	@Column(name = "terms_agreed", nullable = false)
+	private boolean termsAgreed = false;
+
+	@Builder.Default
+	@Column(name = "privacy_agreed", nullable = false)
+	private boolean privacyAgreed = false;
+
+	@Builder.Default
+	@Column(name = "marketing_agreed", nullable = false)
+	private boolean marketingAgreed = false;
+
+	@Column(name = "agreed_at")
+	private LocalDateTime agreedAt;
 
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)

@@ -15,8 +15,9 @@
 			<span style="font-size: 22px;">👤</span>
 			<div>
 				<div class="u-row" style="gap: var(--s-2);">
-					<span class="u-bold" style="font-size: var(--fs-sm);">연동 계정</span>
-					<span class="badge badge--info" style="font-size: 10px;"
+					<span class="u-bold" style="font-size: var(--fs-sm);"
+					      th:text="${user?.oauthProvider == 'email' ? '이메일 계정' : '연동 계정'}">연동 계정</span>
+					<span th:unless="${user?.oauthProvider == 'email'}" class="badge badge--info" style="font-size: 10px;"
 					      th:text="${user?.oauthProvider == 'kakao' ? '카카오' : (user?.oauthProvider == 'google' ? '구글' : '라인')}">카카오</span>
 				</div>
 				<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 2px;"
@@ -25,23 +26,31 @@
 		</div>
 	</div>
 
-	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">닉네임은 2~10자로 입력해 주세요.</p>
+	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)"
+	   th:text="${param.error[0] == 'phone' ? '휴대폰 번호 형식을 확인해 주세요.'
+	           : (param.error[0] == 'phonedup' ? '다른 계정이 이미 사용 중인 휴대폰 번호예요.'
+	           : '닉네임은 2~10자로 입력해 주세요.')}">닉네임은 2~10자로 입력해 주세요.</p>
 	<p class="u-danger" th:if="${param.withdrawError}" style="margin-bottom: var(--s-4)">진행 중인 예약(픽업 대기)이 있어 탈퇴할 수 없어요. 예약을 픽업하거나 취소한 뒤 다시 시도해 주세요.</p>
+	<p class="u-primary u-center" th:if="${param.pwChanged}" style="margin-bottom: var(--s-4)">비밀번호가 변경됐어요.</p>
 
+	<!-- ── 기본 정보 ── -->
+	<p class="section-title">기본 정보</p>
 	<form th:action="@{/mypage/edit}" method="post">
-		<!-- 닉네임 입력 -->
 		<div class="field">
 			<label class="field__label" for="nickname">닉네임</label>
 			<input class="input" type="text" id="nickname" name="nickname"
 			       th:value="${user?.nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
 		</div>
 
-		<!-- 활동 지역 입력 -->
-		<!--/* 추가됨 — 왜: authView/signup.html과 동일하게 GPS로 현재 위치 기준 "시 동"을 자동으로
-		     채우는 버튼(카카오 지오코더 coord2Address 재사용). 값은 그대로 편집 가능.
-		     "상태 배지들 색깔만 다르고 통일해, 이모지 넣지 마" 피드백 — signup.html과 동일하게 버튼의
-		     📍 이모지를 빼고, 결과 안내(#gpsRegionStatus)를 .badge 배지(색만 다름, 이모지 없음)로
-		     바꿨다. */-->
+		<!-- 휴대폰 번호 (선택) — 이메일/비밀번호 찾기·노쇼 연락용. 비우면 미등록으로 저장. -->
+		<div class="field" style="margin-top: var(--s-4);">
+			<label class="field__label" for="phone">휴대폰 번호</label>
+			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+			       th:value="${user?.phone}" placeholder="010-1234-5678" maxlength="13"
+			       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}">
+		</div>
+
+		<!-- 활동 지역 — GPS로 "시 동" 자동 채움(카카오 지오코더 coord2Address). 값은 그대로 편집 가능. -->
 		<div class="field" style="margin-top: var(--s-4);">
 			<label class="field__label" for="region">활동 지역</label>
 			<div class="u-row" style="gap: var(--s-2); align-items: stretch">
@@ -52,59 +61,91 @@
 			<span id="gpsRegionStatus" class="badge" style="display:none;margin-top:6px"></span>
 		</div>
 
-		<!-- 점주(사장님) 입점 신청 / 상태 섹션 -->
-		<div class="card" style="margin-top: var(--s-5); background: var(--c-bg); border-color: var(--c-line);">
-			<!-- Case 1: 아직 입점 신청을 하지 않은 일반 소비자 -->
-			<div th:if="${store == null}">
-				<div class="u-row" style="gap: var(--s-2);">
-					<span style="font-size: 20px;">🏪</span>
-					<h3 style="font-size: var(--fs-md);">사장님이신가요?</h3>
-				</div>
-				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
-					매장을 등록하고 마감 세일 음식을 판매해 보세요.<br>
-					신청 후 운영자 승인이 완료되면 점주 모드를 이용하실 수 있습니다.
-				</p>
-				<!-- 기존 ownerApply.html 재활용 링크 -->
-				<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
-					점주 입점 신청하기 &rsaquo;
-				</a>
-			</div>
-
-			<!-- Case 2: 입점 신청 완료 후 심사 진행 중인 경우 -->
-			<div th:if="${store != null and store.approvalStatus == 'PENDING'}">
-				<div class="u-row" style="gap: var(--s-2);">
-					<span style="font-size: 20px;">⏳</span>
-					<h3 style="font-size: var(--fs-md); color: var(--c-info);">점주 입점 심사 진행 중</h3>
-				</div>
-				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
-					<strong th:text="${store.storeName}">매장명</strong> 입점 신청서가 접수되었습니다.<br>
-					승인까지 최대 2~3일(영업일 기준)이 소요됩니다.
-				</p>
-				<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
-					신청 정보 수정하기 &rsaquo;
-				</a>
-			</div>
-
-			<!-- Case 3: 점주 승인이 완료된 경우 -->
-			<div th:if="${store != null and store.approvalStatus == 'APPROVED'}">
-				<div class="u-row" style="gap: var(--s-2);">
-					<span style="font-size: 20px;">✅</span>
-					<h3 style="font-size: var(--fs-md); color: var(--c-primary);">점주 승인 완료</h3>
-				</div>
-				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;">
-					등록 매장: <strong th:text="${store.storeName}">매장명</strong>
-				</p>
-			</div>
-		</div>
-
-		<!-- 수정 완료 저장 버튼 -->
-		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6);">
-			수정 완료
-		</button>
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-5);">수정 완료</button>
 	</form>
 
+	<!-- ── 비밀번호 (이메일 계정만 — 소셜 계정은 비밀번호가 없음) ── -->
+	<div th:if="${user?.oauthProvider == 'email'}">
+		<p class="section-title">비밀번호</p>
+		<button type="button" id="pw-open-btn" class="btn btn--block btn--outline btn--sm"
+		        data-toggle-target="pw-panel" th:hidden="${param.pwError != null}">비밀번호 변경</button>
+
+		<!--/* pwError가 있으면 펼친 상태로 렌더(에러 보고 바로 다시 입력하게). app.js의 data-toggle-target/
+		     data-close-panel 공통 패턴 사용. */-->
+		<div id="pw-panel" data-reopen-btn="pw-open-btn" th:hidden="${param.pwError == null}">
+			<p class="u-danger" th:if="${param.pwError}" style="margin-bottom: var(--s-3)"
+			   th:text="${param.pwError[0] == 'current' ? '현재 비밀번호가 올바르지 않아요.'
+			           : (param.pwError[0] == 'mismatch' ? '새 비밀번호가 서로 일치하지 않아요.'
+			           : '새 비밀번호는 8자 이상이어야 해요.')}">비밀번호를 확인해 주세요.</p>
+			<form th:action="@{/mypage/password}" method="post"
+			      onsubmit="return document.getElementById('newPassword').value === document.getElementById('newPasswordConfirm').value || (alert('새 비밀번호가 일치하지 않아요.'), false);">
+				<div class="field">
+					<label class="field__label" for="currentPassword">현재 비밀번호</label>
+					<input class="input" type="password" id="currentPassword" name="currentPassword" required>
+				</div>
+				<div class="field" style="margin-top: var(--s-3);">
+					<label class="field__label" for="newPassword">새 비밀번호</label>
+					<input class="input" type="password" id="newPassword" name="newPassword" placeholder="8자 이상" minlength="8" required>
+				</div>
+				<div class="field" style="margin-top: var(--s-3);">
+					<label class="field__label" for="newPasswordConfirm">새 비밀번호 확인</label>
+					<input class="input" type="password" id="newPasswordConfirm" name="newPasswordConfirm" placeholder="한 번 더 입력" minlength="8" required>
+				</div>
+				<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-4);">
+					<button type="submit" class="btn btn--sm" style="flex: 1;">변경</button>
+					<button type="button" class="btn btn--outline btn--sm" data-close-panel style="flex: none;">취소</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- ── 매장 ── -->
+	<p class="section-title">매장</p>
+	<div class="card" style="background: var(--c-bg); border-color: var(--c-line);">
+		<!-- Case 1: 아직 입점 신청을 하지 않은 일반 소비자 -->
+		<div th:if="${store == null}">
+			<div class="u-row" style="gap: var(--s-2);">
+				<span style="font-size: 20px;">🏪</span>
+				<h3 style="font-size: var(--fs-md);">사장님이신가요?</h3>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
+				매장을 등록하고 마감 세일 음식을 판매해 보세요.<br>
+				신청 후 운영자 승인이 완료되면 점주 모드를 이용하실 수 있습니다.
+			</p>
+			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+				점주 입점 신청하기 &rsaquo;
+			</a>
+		</div>
+
+		<!-- Case 2: 입점 신청 완료 후 심사 진행 중인 경우 -->
+		<div th:if="${store != null and store.approvalStatus == 'PENDING'}">
+			<div class="u-row" style="gap: var(--s-2);">
+				<span style="font-size: 20px;">⏳</span>
+				<h3 style="font-size: var(--fs-md); color: var(--c-info);">점주 입점 심사 진행 중</h3>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
+				<strong th:text="${store.storeName}">매장명</strong> 입점 신청서가 접수되었습니다.<br>
+				승인까지 최대 2~3일(영업일 기준)이 소요됩니다.
+			</p>
+			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+				신청 정보 수정하기 &rsaquo;
+			</a>
+		</div>
+
+		<!-- Case 3: 점주 승인이 완료된 경우 -->
+		<div th:if="${store != null and store.approvalStatus == 'APPROVED'}">
+			<div class="u-row" style="gap: var(--s-2);">
+				<span style="font-size: 20px;">✅</span>
+				<h3 style="font-size: var(--fs-md); color: var(--c-primary);">점주 승인 완료</h3>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;">
+				등록 매장: <strong th:text="${store.storeName}">매장명</strong>
+			</p>
+		</div>
+	</div>
+
 	<!-- 회원 탈퇴 -->
-	<div style="margin-top: var(--s-6); text-align: center;">
+	<div style="margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--c-line-weak); text-align: center;">
 		<form th:action="@{/mypage/withdraw}" method="post"
 		      onsubmit="return confirm('정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다.');">
 			<button type="submit" class="u-danger"
@@ -154,6 +195,18 @@
 				});
 			});
 		});
+	</script>
+
+	<script th:inline="none">
+		(function () {
+			var p = document.getElementById('phone');
+			if (!p) { return; }
+			p.addEventListener('input', function () {
+				var d = p.value.replace(/\D/g, '').slice(0, 11);
+				p.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)
+					: d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d;
+			});
+		})();
 	</script>
 
 </div>

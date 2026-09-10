@@ -68,19 +68,42 @@ public class MypageController {
 	}
 
 	/**
-	 * 회원정보 수정 처리
+	 * 회원정보 수정 처리 (닉네임·활동지역·휴대폰)
 	 */
 	@LoginRequired
 	@PostMapping("/edit")
 	public String updateProfile(@RequestParam String nickname,
+	                            @RequestParam(required = false) String phone,
 	                            @RequestParam(required = false) String region,
 	                            HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (!mypageService.updateProfile(userId, nickname, region)) {
-			return "redirect:/mypage/edit?error";
-		}
+		return switch (mypageService.updateProfile(userId, nickname, phone, region)) {
+			case SUCCESS -> "redirect:/mypage";
+			case INVALID_NICKNAME -> "redirect:/mypage/edit?error";
+			case INVALID_PHONE -> "redirect:/mypage/edit?error=phone";
+			case PHONE_TAKEN -> "redirect:/mypage/edit?error=phonedup";
+		};
+	}
 
-		return "redirect:/mypage";
+	/**
+	 * 비밀번호 변경 (이메일 계정만). 새 비밀번호 확인 불일치는 화면 JS로도 막지만 서버에서도 본다.
+	 */
+	@LoginRequired
+	@PostMapping("/password")
+	public String changePassword(@RequestParam String currentPassword,
+	                             @RequestParam String newPassword,
+	                             @RequestParam String newPasswordConfirm,
+	                             HttpSession session) {
+		if (!newPassword.equals(newPasswordConfirm)) {
+			return "redirect:/mypage/edit?pwError=mismatch";
+		}
+		Long userId = (Long) session.getAttribute("userId");
+		return switch (mypageService.changePassword(userId, currentPassword, newPassword)) {
+			case SUCCESS -> "redirect:/mypage/edit?pwChanged";
+			case WRONG_CURRENT -> "redirect:/mypage/edit?pwError=current";
+			case TOO_SHORT -> "redirect:/mypage/edit?pwError=short";
+			case NOT_EMAIL_ACCOUNT -> "redirect:/mypage/edit";
+		};
 	}
 
 	/**
@@ -97,6 +120,7 @@ public class MypageController {
 		mypageService.withdraw(userId);
 		session.invalidate();
 
-		return "redirect:/";
+		// 탈퇴 완료 안내 화면으로 (세션이 없어졌으므로 PUBLIC_URLS에 등록된 경로).
+		return "redirect:/auth/withdraw-complete";
 	}
 }

@@ -5,11 +5,13 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.PhoneUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
 /**
@@ -83,19 +85,110 @@ public class AuthService {
 		return trimmedNickname.length() >= 2 && trimmedNickname.length() <= 10;
 	}
 
+	/** 입력값에서 숫자만 뽑아 휴대폰 형식을 검사한다 (util 위임). */
+	public boolean isValidPhone(String phone) {
+		return PhoneUtil.isValid(phone);
+	}
+
+	/** "01012345678" → "010-1234-5678". 저장·표시는 이 형식으로 통일 (util 위임). */
+	public static String formatPhone(String phone) {
+		return PhoneUtil.format(phone);
+	}
+
 	/**
 	 * 회원가입 정보 저장 및 역할(소비자/사장님) 분기 처리 중 저장 부분.
 	 * - 소비자 선택: profileCompleted=true, role=USER 확정 (분기 자체는 컨트롤러가 userType으로 처리)
+	 * - 약관: 이 메서드가 호출되는 시점 = 필수 약관(이용약관·개인정보) 동의를 이미 통과한 상태라
+	 *   terms/privacy는 true로 확정하고, 마케팅 수신만 화면에서 받은 값을 그대로 저장한다.
 	 */
 	@Transactional
-	public void completeSignup(Long userId, String nickname, String region) {
+	public void completeSignup(Long userId, String nickname, String phone, String region, boolean marketingAgreed) {
 		String trimmedNickname = nickname == null ? "" : nickname.trim();
 		UserEntity user = findUserOrThrow(userId);
 		user.setNickname(trimmedNickname);
+		user.setPhone(formatPhone(phone));
 		user.setRegion(region == null || region.isBlank() ? null : region.trim());
 		user.setProfileCompleted(true);
 		user.setRole(UserEntity.ROLE_USER); // 승인 전까지는 기본 USER 권한 유지
+
+		user.setTermsAgreed(true);
+		user.setPrivacyAgreed(true);
+		user.setMarketingAgreed(marketingAgreed);
+		user.setAgreedAt(LocalDateTime.now());
+
 		userRepository.save(user);
+	}
+
+	/** 다른 계정이 이미 이 번호로 가입했는지 (가입 완료 단계에서 컨트롤러가 미리 확인 — 최종 방어는 DB 유니크 제약). */
+	@Transactional(readOnly = true)
+	public boolean isPhoneTaken(String phone) {
+		return userRepository.existsByPhone(formatPhone(phone));
+	}
+
+	/**
+	 * 부가정보 입력을 마치지 않고 가입을 취소 — 방금 만든 계정을 삭제한다.
+	 * 소셜 첫 로그인은 로그인 시점에 계정 행이 생기는데(SocialUserProvisioningService), 아직 약관 동의
+	 * 전이라 계정을 남길 이유가 없고 브랜드 뉴라 딸린 데이터도 없다.
+	 * 안전장치: profile_completed=false + role=USER 일 때만 지운다.
+	 */
+	@Transactional
+	public boolean cancelIncompleteSignup(Long userId) {
+		return userRepository.findById(userId)
+				.filter(u -> !u.isProfileCompleted() && UserEntity.ROLE_USER.equals(u.getRole()))
+				.map(u -> {
+					userRepository.deleteById(u.getId());
+					return true;
+				})
+				.orElse(false);
+	}
+
+	// ---- 이메일(아이디) 찾기 ----
+
+	/** found=false면 그 번호로 가입한 계정 없음. provider가 "email"이 아니면 소셜 계정(그쪽으로 로그인 안내). */
+	public record FindEmailResult(boolean found, String maskedEmail, String provider) {}
+
+	/** 휴대폰 번호로 가입 계정을 찾아 마스킹된 이메일·가입수단을 돌려준다. (SMS 인증 없는 조회 — rate limit은 컨트롤러) */
+	@Transactional(readOnly = true)
+	public FindEmailResult findEmailByPhone(String phone) {
+		return userRepository.findByPhone(formatPhone(phone))
+				.map(u -> new FindEmailResult(true, maskEmail(u.getEmail()), u.getOauthProvider()))
+				.orElse(new FindEmailResult(false, null, null));
+	}
+
+	// ---- 비밀번호 재설정 (이메일 + 휴대폰 일치 시 바로 새 비번 설정) ----
+	// 주의: SMS 인증이 없어 "이메일+휴대폰을 아는 사람"이면 재설정할 수 있다(보안상 약함). rate limit + 로깅으로 완화.
+
+	/** 이메일 계정이고 등록된 휴대폰이 일치하면 userId를 돌려준다. 소셜 계정이거나 불일치면 empty. */
+	@Transactional(readOnly = true)
+	public java.util.Optional<Long> verifyForPasswordReset(String email, String phone) {
+		String e = email == null ? "" : email.trim();
+		String p = formatPhone(phone);
+		return userRepository.findByOauthProviderAndOauthId("email", e)
+				.filter(u -> u.getPhone() != null && u.getPhone().equals(p))
+				.map(UserEntity::getId);
+	}
+
+	/** 새 비밀번호 저장. 8자 미만이면 false. */
+	@Transactional
+	public boolean resetPassword(Long userId, String newPassword) {
+		if (newPassword == null || newPassword.length() < 8) {
+			return false;
+		}
+		UserEntity user = findUserOrThrow(userId);
+		user.setPassword(passwordEncoder.encode(newPassword));
+		userRepository.save(user);
+		return true;
+	}
+
+	/** 이메일 로컬파트 앞 4자만 남기고 마스킹. null·형식 이상이면 null. */
+	public static String maskEmail(String email) {
+		if (email == null || !email.contains("@")) {
+			return null;
+		}
+		String[] parts = email.split("@", 2);
+		String local = parts[0];
+		String masked = local.length() <= 4 ? local : local.substring(0, 4);
+		return masked + "***@" + parts[1];
 	}
 
 	public boolean isOwnerApplyValid(String storeName, String businessNumber, String category,

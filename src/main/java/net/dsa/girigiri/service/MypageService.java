@@ -5,6 +5,8 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.PhoneUtil;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,11 @@ public class MypageService {
 	private final UserRepository userRepository;
 	private final ReservationRepository reservationRepository;
 	private final StoreAccessService storeAccessService;
+	private final PasswordEncoder passwordEncoder;
+
+	public enum ProfileUpdateResult { SUCCESS, INVALID_NICKNAME, INVALID_PHONE, PHONE_TAKEN }
+
+	public enum PasswordChangeResult { SUCCESS, NOT_EMAIL_ACCOUNT, WRONG_CURRENT, TOO_SHORT }
 
 	@Transactional(readOnly = true)
 	public Optional<UserEntity> findUser(Long userId) {
@@ -50,21 +57,59 @@ public class MypageService {
 	}
 
 	/**
-	 * 회원정보 수정 처리. 닉네임 검증 실패 시 false를 돌려주고, 컨트롤러가 리다이렉트를 결정한다.
+	 * 회원정보 수정 처리 (닉네임·활동지역·휴대폰). 검증 결과를 enum으로 돌려주고 컨트롤러가 리다이렉트를 정한다.
+	 * 휴대폰은 비우면 null(미입력)로 두고, 값이 있으면 형식 검사 + 다른 계정이 쓰는 번호인지 확인한다
+	 * (uk_users_phone 유니크 제약과 맞춤).
 	 */
 	@Transactional
-	public boolean updateProfile(Long userId, String nickname, String region) {
+	public ProfileUpdateResult updateProfile(Long userId, String nickname, String phone, String region) {
 		String trimmedNickname = nickname == null ? "" : nickname.trim();
 		if (trimmedNickname.length() < 2 || trimmedNickname.length() > 10) {
-			return false;
+			return ProfileUpdateResult.INVALID_NICKNAME;
+		}
+
+		String normalizedPhone = null;
+		if (phone != null && !phone.isBlank()) {
+			if (!PhoneUtil.isValid(phone)) {
+				return ProfileUpdateResult.INVALID_PHONE;
+			}
+			normalizedPhone = PhoneUtil.format(phone);
+			boolean takenByOther = userRepository.findByPhone(normalizedPhone)
+					.filter(other -> !other.getId().equals(userId))
+					.isPresent();
+			if (takenByOther) {
+				return ProfileUpdateResult.PHONE_TAKEN;
+			}
 		}
 
 		UserEntity user = userRepository.findById(userId).orElseThrow();
 		user.setNickname(trimmedNickname);
+		user.setPhone(normalizedPhone);
 		user.setRegion(region == null || region.isBlank() ? null : region.trim());
 		userRepository.save(user);
 
-		return true;
+		return ProfileUpdateResult.SUCCESS;
+	}
+
+	/**
+	 * 비밀번호 변경 — 이메일 계정만. 현재 비밀번호가 맞아야 하고 새 비밀번호는 8자 이상.
+	 * 소셜 계정(kakao/google/line)은 비밀번호가 없어 대상이 아니다.
+	 */
+	@Transactional
+	public PasswordChangeResult changePassword(Long userId, String currentPassword, String newPassword) {
+		UserEntity user = userRepository.findById(userId).orElseThrow();
+		if (!"email".equals(user.getOauthProvider()) || user.getPassword() == null) {
+			return PasswordChangeResult.NOT_EMAIL_ACCOUNT;
+		}
+		if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+			return PasswordChangeResult.WRONG_CURRENT;
+		}
+		if (newPassword == null || newPassword.length() < 8) {
+			return PasswordChangeResult.TOO_SHORT;
+		}
+		user.setPassword(passwordEncoder.encode(newPassword));
+		userRepository.save(user);
+		return PasswordChangeResult.SUCCESS;
 	}
 
 	/**
