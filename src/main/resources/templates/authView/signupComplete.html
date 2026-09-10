@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('가입 완료', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	회원가입 완료 안내 화면 (소비자)
+	담당: 문창호 (WBS 2.1 인증)
+	- /auth/signup 제출 후(자동 로그인 상태) 여기로 온다. 버튼을 눌러야 홈으로 나간다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<div class="u-center" style="margin: var(--s-8) 0 var(--s-6);">
+		<div style="width: 76px; height: 76px; margin: 0 auto var(--s-4); border-radius: 50%; background: var(--c-primary-weak); color: var(--c-primary); display: flex; align-items: center; justify-content: center; font-size: 38px;">
+			🎉
+		</div>
+		<h1 class="u-primary">가입이 완료됐어요!</h1>
+		<p class="u-bold" style="margin-top: var(--s-2); font-size: var(--fs-md);">
+			<span th:if="${nickname}" th:text="${nickname} + '님, '">회원님, </span>기리기리에 오신 걸 환영합니다.
+		</p>
+		<p class="u-sub" style="margin-top: var(--s-2); font-size: var(--fs-sm);">
+			내 주변 마감세일을 확인하고 합리적인 가격에 장을 봐요.
+		</p>
+	</div>
+
+	<div style="margin-top: var(--s-8);">
+		<a th:href="@{/}" class="btn btn--block">기리기리 시작하기</a>
+		<a th:href="@{/mypage}" class="btn btn--block btn--outline" style="margin-top: var(--s-3);">마이페이지 보기</a>
+	</div>
+
+	<!--/* 완료 화면이라 뒤로가기가 회원가입 폼으로 가면 안 된다 — 홈으로 고정(dashboard.html과 동일 방식). */-->
+	<script th:inline="none">
+		(function () {
+			var back = document.querySelector('.topbar__back[data-back]');
+			if (!back) { return; }
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/'; });
+		})();
+	</script>
+
+</div>
+</body>
+</html>

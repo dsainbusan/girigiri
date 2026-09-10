@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('이메일 찾기', ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	이메일(아이디) 찾기 화면
+	담당: 문창호 (WBS 2.1 인증)
+	- 가입 시 등록한 휴대폰 번호로 계정을 찾아 마스킹된 이메일을 보여준다. SMS 인증은 없다(미인증 조회).
+	- IP당 시간당 5회 제한(AuthAttemptLimiter).
+*/-->
+<div id="content" th:fragment="content" class="page">
+
+	<h1 style="font-size: var(--fs-xl)">이메일 찾기</h1>
+	<p class="u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-2)">
+		가입할 때 등록한 휴대폰 번호를 입력하면 가입된 이메일을 알려드려요.
+	</p>
+
+	<!-- 결과: 계정 찾음 (이메일 계정) -->
+	<div th:if="${result != null and result.found and result.provider == 'email'}"
+	     class="banner" style="margin-top: var(--s-5)">
+		<span style="font-size:16px">📧</span>
+		<div class="u-grow">
+			<p class="banner__title">가입된 이메일</p>
+			<p class="banner__desc" style="font-size: var(--fs-sm)" th:text="${result.maskedEmail}">ab***@gmail.com</p>
+		</div>
+	</div>
+	<a th:if="${result != null and result.found and result.provider == 'email'}"
+	   th:href="@{/auth/emailLogin}" class="btn btn--block" style="margin-top: var(--s-4)">로그인하러 가기</a>
+
+	<!-- 결과: 계정 찾음 (소셜 계정) -->
+	<div th:if="${result != null and result.found and result.provider != 'email'}"
+	     class="banner banner--info" style="margin-top: var(--s-5)">
+		<span style="font-size:16px">🔗</span>
+		<div class="u-grow">
+			<p class="banner__title"
+			   th:text="(${result.provider == 'kakao'} ? '카카오' : (${result.provider == 'google'} ? '구글' : '라인')) + ' 계정으로 가입하셨어요'">
+				소셜 계정으로 가입하셨어요</p>
+			<p class="banner__desc" style="font-size: var(--fs-xs)">해당 소셜 로그인 버튼으로 로그인해 주세요.</p>
+		</div>
+	</div>
+	<a th:if="${result != null and result.found and result.provider != 'email'}"
+	   th:href="@{/auth/loginForm}" class="btn btn--block" style="margin-top: var(--s-4)">로그인 화면으로</a>
+
+	<!-- 결과: 계정 없음 -->
+	<p th:if="${result != null and not result.found}" class="u-danger" style="margin-top: var(--s-5)">
+		입력하신 번호로 가입된 계정이 없어요. 번호를 다시 확인하거나, 새로 가입해 주세요.
+	</p>
+
+	<!-- 입력 폼 (결과가 없을 때만) -->
+	<form th:unless="${result != null and result.found}" th:action="@{/auth/find-email}" method="post" style="margin-top: var(--s-5)">
+		<p class="u-danger" th:if="${rateLimited}" style="margin-bottom: var(--s-3)">시도 횟수가 많아요. 잠시 후 다시 시도해 주세요.</p>
+		<p class="u-danger" th:if="${formatError}" style="margin-bottom: var(--s-3)">휴대폰 번호 형식을 확인해 주세요.</p>
+
+		<div class="field">
+			<label class="field__label" for="phone">휴대폰 번호</label>
+			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+			       placeholder="010-1234-5678" maxlength="13" required>
+		</div>
+		<button type="submit" class="btn btn--block" style="margin-top: var(--s-5)">이메일 찾기</button>
+	</form>
+
+	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
+		비밀번호가 기억나지 않나요? <a th:href="@{/auth/reset-password}" class="u-primary" style="font-weight: var(--fw-bold)">비밀번호 재설정</a>
+	</p>
+
+	<script th:inline="none">
+		(function () {
+			var p = document.getElementById('phone');
+			if (!p) { return; }
+			p.addEventListener('input', function () {
+				var d = p.value.replace(/\D/g, '').slice(0, 11);
+				p.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)
+					: d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d;
+			});
+		})();
+	</script>
+
+</div>
+</body>
+</html>
