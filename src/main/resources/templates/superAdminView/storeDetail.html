@@ -126,6 +126,22 @@
     </div>
   </div>
 
+  <!--/* 매장 신뢰도 (2026-09-14 추가, 담당: 송채현) — 위 "최근 7일 판매율(구제율)"과 같은 자리에,
+       그 매장이 결제완료 주문을 가게 사정으로 얼마나 자주 취소하는지 보여준다. 새 계산 로직이 아니라
+       ReservationService.getStoreCancelStats(원래 있던 매장 취소율 계산)를 그대로 재사용한다. 이
+       점수로 매장을 막거나 하는 로직은 아직 없다 — 운영자가 참고만 하는 용도. */-->
+  <h3 class="subhead mt-24">매장 신뢰도</h3>
+  <div class="stat-grid stat-grid--2">
+    <div class="stat-card">
+      <span class="stat-card__label">취소율 (전체 예약 기준)</span>
+      <span class="stat-card__value" th:text="${storeReliability.totalReservationCount() > 0} ? ${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%' : '이력 없음'">0%</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">매장취소 / 전체 예약</span>
+      <span class="stat-card__value" th:text="${storeReliability.storeCancelledCount()} + ' / ' + ${storeReliability.totalReservationCount()}">0 / 0</span>
+    </div>
+  </div>
+
   <!--/* 정산 페이지가 아직 없어 자리만 — TODO(송보미) 위 주석 참고. 검색창은 아직 비기능(정적) UI다. */-->
   <h3 class="subhead mt-24">정산 내역</h3>
   <div class="search search--block mb-12">

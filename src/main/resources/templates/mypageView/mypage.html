@@ -48,6 +48,24 @@
 		</a>
 	</div>
 
+	<!-- 2-1. 내 매장 신뢰도 카드 (2026-09-14 추가, 담당: 송채현) — 사장님 계정(매장 보유)한테만 보임.
+	     ReservationService.getStoreCancelStats(원래 있던 매장 취소율 계산)를 그대로 재사용한다.
+	     지금은 보여주기만 하고 이 점수로 뭘 막거나 하지 않는다. -->
+	<a th:if="${store != null and storeReliability != null}" th:href="@{/store/dashboard}" class="card" style="display: flex; align-items: center; justify-content: space-between; padding: var(--s-4); border-radius: var(--r-xl); margin-top: var(--s-3); text-decoration: none; color: inherit;">
+		<div>
+			<div style="font-size: var(--fs-xs); color: var(--c-text-mut); font-weight: var(--fw-medium);">내 매장 신뢰도</div>
+			<div style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-top: 2px;" th:if="${storeReliability.totalReservationCount() > 0}">
+				취소율 <span th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+				<span style="font-size: var(--fs-xs); color: var(--c-text-mut); font-weight: var(--fw-medium);"
+				      th:text="'(전체 ' + ${storeReliability.totalReservationCount()} + '건 중 매장취소 ' + ${storeReliability.storeCancelledCount()} + '건)'">(전체 0건 중 매장취소 0건)</span>
+			</div>
+			<div style="font-size: var(--fs-sm); color: var(--c-text-mut); margin-top: 2px;" th:if="${storeReliability.totalReservationCount() == 0}">
+				아직 취소 이력 없음
+			</div>
+		</div>
+		<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
+	</a>
+
 	<!-- 3. 메뉴 리스트 카드 -->
 	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
 		<!-- 예약 내역 — /reservation/my (진행중/픽업완료/노쇼·취소 탭, 영수증 PDF 보기 포함). 링크 누락돼 있던 걸 연결. -->

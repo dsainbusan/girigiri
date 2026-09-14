@@ -6,6 +6,7 @@ import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.LookupService;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.service.StoreDetailService;
 import net.dsa.girigiri.util.CategoryDisplayUtil;
@@ -32,6 +33,7 @@ public class StoreDetailController {
 	private final ReviewService reviewService;
 	private final LookupService lookupService;
 	private final StoreDetailService storeDetailService;
+	private final ReservationService reservationService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
@@ -65,6 +67,10 @@ public class StoreDetailController {
 		model.addAttribute("liked", likeService.isLiked(userId, id));
 		model.addAttribute("thumbColor", thumbColor(store.getCategory()));
 		model.addAttribute("thumbEmoji", thumbEmoji(store.getCategory()));
+		// 추가됨 (2026-09-14, 매장 신뢰도 점수 기능, 담당: 송채현) — 손님이 주문하기 전에 "이 가게가
+		// 결제 완료된 주문을 가게 사정으로 얼마나 자주 취소하는지" 참고할 수 있게 보여준다. 새 계산
+		// 로직이 아니라 원래 있던 ReservationService.getStoreCancelStats(매장 취소율) 그대로 재사용.
+		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(id));
 		return "storeView/detail";
 	}
 

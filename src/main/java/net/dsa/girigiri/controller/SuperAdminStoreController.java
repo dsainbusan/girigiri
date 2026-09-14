@@ -187,6 +187,9 @@ public class SuperAdminStoreController {
 		model.addAttribute("registeredCount7d", stats.registeredCount7d());
 		model.addAttribute("soldCount7d", stats.soldCount7d());
 		model.addAttribute("totalQuantity7d", stats.totalQuantity7d());
+		// 추가됨 (2026-09-14, 매장 신뢰도 점수 기능, 담당: 송채현) — 운영자가 매장 상세에서 그 매장의
+		// 신뢰도(취소율)를 확인할 수 있게. 원래 있던 ReservationService.getStoreCancelStats 그대로 재사용.
+		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(id));
 		return "superAdminView/storeDetail";
 	}
 

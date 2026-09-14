@@ -31,6 +31,18 @@
 			<span class="u-mut" style="font-size:var(--fs-sm)" th:text="'(' + ${reviewCount} + ')'">(128)</span>
 		</div>
 
+		<!-- 매장 신뢰도 (2026-09-14 추가) — 손님이 주문 전에 "이 가게가 결제된 주문을 가게 사정으로
+		     얼마나 자주 취소하는지" 참고할 수 있게. 취소 이력 자체가 없는(결제완료 주문이 아직 없는)
+		     매장은 "0%"로 보이면 오히려 좋아 보이는 착시가 생겨서 따로 문구로 구분한다. -->
+		<div class="u-row" style="gap:6px;margin-top:var(--s-2)">
+			<span class="u-sub" style="font-size:var(--fs-sm)" th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
+				매장 신뢰도 · 취소율 <b th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</b>
+			</span>
+			<span class="u-sub" style="font-size:var(--fs-sm)" th:if="${storeReliability != null and storeReliability.totalReservationCount() == 0}">
+				매장 신뢰도 · 아직 취소 이력 없음
+			</span>
+		</div>
+
 		<div class="tabs" data-tabs style="margin-top:var(--s-4)">
 			<button type="button" class="tab" th:classappend="${defaultTab == 'info'} ? ' is-active'" data-tab="info">정보</button>
 			<button type="button" class="tab" th:classappend="${defaultTab == 'product'} ? ' is-active'" data-tab="product">

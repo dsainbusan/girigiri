@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.MypageService;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -26,6 +27,7 @@ public class MypageController {
 
 	private final MypageService mypageService;
 	private final StoreAccessService storeAccessService;
+	private final ReservationService reservationService;
 
 	// 추가됨 — 왜: 회원정보 수정 화면의 "GPS로 활동 지역 채우기" 버튼용(카카오 지오코더 좌표→주소).
 	@Value("${kakao.map.js-key}")
@@ -48,7 +50,13 @@ public class MypageController {
 			model.addAttribute("monthlySavings", "42,300");
 		});
 
-		storeAccessService.findMyStore(userId).ifPresent(store -> model.addAttribute("store", store));
+		// 추가됨 (2026-09-14, 매장 신뢰도 점수 기능, 담당: 송채현) — 사장님 본인 마이페이지에서 본인
+		// 매장의 신뢰도(취소율) 점수를 볼 수 있게. ReservationService.getStoreCancelStats는 원래
+		// "매장 취소율" 계산용으로 이미 있던 로직을 그대로 재사용한다(새 계산 로직 아님).
+		storeAccessService.findMyStore(userId).ifPresent(store -> {
+			model.addAttribute("store", store);
+			model.addAttribute("storeReliability", reservationService.getStoreCancelStats(store.getId()));
+		});
 
 		return "mypageView/mypage";
 	}
