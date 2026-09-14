@@ -45,7 +45,7 @@
 		<div>
 			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
 			<div style="font-size: 24px; font-weight: var(--fw-black); margin-top: 2px;">
-				<span th:text="${monthlySavings} ?: '0'">42,300</span><span>원</span>
+				<span th:text="${#numbers.formatInteger(monthlySavings ?: 0, 0, 'COMMA')}">0</span><span>원</span>
 			</div>
 		</div>
 		<a th:href="@{/user/ledger}" style="background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">

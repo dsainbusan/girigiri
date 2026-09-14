@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('가계부', ~{:: #content}, 'ledger', false, '', null)}">
+<body>
+<!--/*
+	절약 가계부 (WBS 6.0, 문창호)
+	- 히어로 카드(이번 달 절약·등급·목표·6개월 추이)는 항상 보이고, 나머지(내역/분석/목표설정/뱃지)는
+	  탭으로 나눠서 한 스크롤에 정보가 몰리지 않게 한다. 탭은 최대 4개로 유지 — 랭킹은 별도 탭 대신
+	  "뱃지" 탭 안에 미니 요약(상위 3명 + 내 순위)으로 넣고, 전체 순위는 뱃지 도감처럼 모달로 뺐다.
+	- 데이터는 LedgerService.build()/buildRanking() 두 곳에서 나온다(화면·CSV·PDF 숫자는 build() 하나로 일치).
+	- 변경(2026-09-12) — 피드백 반영: 내보내기를 작은 아이콘 2개에서 라벨 있는 버튼으로,
+	  등급(뱃지)을 탭 안에 숨기지 않고 히어로 카드 상단에 바로 보이게, 전월 대비를 %만이 아니라
+	  금액도 같이 보여주게, 절약 0원인 내역은 "절약 없음"으로 눈에 덜 띄게 처리.
+	- 추가(2026-09-12) — 뱃지는 한 번 획득하면 조건이 다시 거짓이 돼도 영구 유지되도록 변경
+	  (user_badge 테이블, LedgerService.build 참고). 이번 달 절약액 기준 랭킹 추가(탭 5개는 많다는
+	  피드백으로 "뱃지" 탭에 미니 요약 + 전체보기 모달로 합침).
+	- 변경(2026-09-12) — 탭 이름 "구제·뱃지" → "뱃지": 구제/CO2 통계는 RESCUE_*/ECO_* 뱃지의 근거
+	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=2)}">
+
+	<!-- 방금 이 build() 호출에서 새로 해금된 뱃지가 있으면 축하 토스트. "정적 계산형"이라 실시간(그
+	     순간)은 아니고 가계부를 다시 열었을 때 뜨는 것 — 진짜 즉시 알림은 픽업 완료 시점에 걸어야 해서
+	     예약 도메인(송채현)·알림 인프라(강노은)까지 건드려야 한다, 지금은 이 정도로 충분하다고 판단. -->
+	<div id="new-badge-toast" class="ledger-badge-toast" th:if="${!#lists.isEmpty(data.newlyUnlockedBadges)}" role="status">
+		<div class="ledger-badge-toast__header">
+			<span class="ledger-badge-toast__title">🎉 새 뱃지 획득!</span>
+			<button type="button" id="close-badge-toast-btn" class="ledger-badge-toast__close" aria-label="닫기">✕</button>
+		</div>
+		<div class="ledger-badge-toast__list">
+			<div th:each="b : ${data.newlyUnlockedBadges}" class="ledger-badge-toast__item">
+				<span class="ledger-badge-toast__icon" th:text="${b.icon}">🌱</span>
+				<div class="ledger-badge-toast__info">
+					<span class="ledger-badge-toast__name" th:text="${b.name}">구제 첫걸음</span>
+					<span class="ledger-badge-toast__desc" th:text="${b.description}">마감 직전 음식을 처음으로 구제했어요!</span>
+				</div>
+			</div>
+		</div>
+		<span class="ledger-badge-toast__hint">눌러서 뱃지 도감 보기 ›</span>
+	</div>
+
+	<!-- ===== 히어로 카드 (항상 보임) ===== -->
+	<div class="ledger-hero">
+		<div class="ledger-hero__top">
+			<span class="ledger-hero__label">이번 달 절약</span>
+			<!--/* 눌러서 "뱃지" 탭으로 이동(아래 hero-goal-btn과 같은 패턴) — 대표 뱃지가 없을 때
+			     특히 "그럼 어디서 설정하지?"로 바로 이어지게. */-->
+			<span id="hero-badge-chip" th:if="${data.representativeBadge != null}" class="ledger-tier-chip is-rep"
+			      role="button" tabindex="0"
+			      th:title="'내 대표 뱃지: ' + ${data.representativeBadge.name} + ' · 눌러서 뱃지 도감 보기'"
+			      th:text="${data.representativeBadge.icon} + ' ' + ${data.representativeBadge.name}">🦸 골목길 구조대</span>
+			<span id="hero-badge-chip" th:if="${data.representativeBadge == null}" class="ledger-tier-chip is-empty"
+			      role="button" tabindex="0" title="눌러서 뱃지 도감 보기">대표 뱃지 미설정</span>
+		</div>
+
+		<!--/* 세션당 한 번만 0원에서 스르륵 카운트업(아래 스크립트) — 다시 들어올 때마다 매번 세면
+		     피곤하다는 피드백으로, 로그인 세션 첫 진입 때만 재생하고 그 다음엔 바로 숫자만 보여준다.
+		     클릭하면 "내역" 탭으로 이동 + 이번 달 항목만 필터링(전체보기 토글 제공, 아래 스크립트). */-->
+		<div id="hero-amount-btn" class="ledger-hero__amount" role="button" tabindex="0" title="눌러서 이번 달 내역 보기">
+			<span id="hero-amount-value" th:data-amount="${data.thisMonthSaved}"
+			      th:text="${#numbers.formatInteger(data.thisMonthSaved, 0, 'COMMA')} + '원'">42,300원</span>
+		</div>
+		<div class="ledger-hero__delta"
+		     th:if="${data.deltaPercent != null}"
+		     th:classappend="${data.deltaAmount >= 0} ? ' is-up' : ' is-down'">
+			<span th:text="${data.deltaAmount >= 0} ? '▲' : '▼'">▲</span>
+			<span th:text="${#numbers.formatInteger(T(java.lang.Math).abs(data.deltaAmount), 0, 'COMMA')} + '원'">2,000원</span>
+			<span th:text="'(' + (${data.deltaPercent >= 0} ? '+' : '') + ${data.deltaPercent} + '%)'">(+122%)</span>
+			<span class="ledger-hero__delta-sub">지난달 대비</span>
+		</div>
+		<p th:if="${data.deltaPercent == null}" class="ledger-hero__delta-sub" style="margin: 4px 0 0">지난달 구제 내역이 없어 비교할 수 없어요</p>
+
+		<!--/* 두 통계 박스도 클릭 가능 — 누적 절약은 "내역"(전체) 탭으로, 절약률은 "분석"(카테고리별)
+		     탭으로 이동한다(아래 스크립트, jumpToHistoryTab/jumpToCategoryTab). */-->
+		<div class="ledger-hero__row">
+			<div id="hero-total-btn" class="ledger-hero__stat" role="button" tabindex="0" title="눌러서 전체 내역 보기">
+				<span class="ledger-hero__stat-label">누적 절약</span>
+				<span class="ledger-hero__stat-value" th:text="${#numbers.formatInteger(data.totalSaved, 0, 'COMMA')} + '원'">184,200원</span>
+			</div>
+			<div id="hero-rate-btn" class="ledger-hero__stat" role="button" tabindex="0" title="눌러서 카테고리별 분석 보기">
+				<span class="ledger-hero__stat-label">
+					절약률
+					<button type="button" id="rescue-rate-info-btn" class="ledger-info-btn" aria-label="절약률 설명 보기">ⓘ</button>
+				</span>
+				<span class="ledger-hero__stat-value" th:text="${data.rescueRatePercent} + '%'">38%</span>
+			</div>
+		</div>
+		<p id="rescue-rate-info-text" class="ledger-info-text is-hidden">절약률 = 누적 절약액 ÷ 누적 정상가 합. 지금까지 산 것들을 정상가로 다 샀을 때 대비 평균 몇 % 할인받았는지예요.</p>
+
+		<!--/* 목표 줄 전체를 클릭 가능하게 — 누르면 "목표" 탭으로 이동 + 입력창 포커스(아래 스크립트).
+		     탭까지 안 가도 여기서 바로 고칠 수 있다는 걸 알리려고 매번 "설정하기 ›" 힌트를 붙인다.
+		     <button>은 안(HTML5 콘텐츠 모델상 button엔 div를 못 넣음)이라 role="button"인 div로. */-->
+		<!--/* 게이지 색은 3단계: 0~79% 기본 초록, 80~99% 주황(is-near, "거의 다 왔다"), 100%+ 골드(is-achieved).
+		     goalPercent는 게이지 폭 계산 때문에 100으로 캡돼 있어서, 초과 달성분(goalOverPercent)을
+		     따로 더해서 "목표보다 23% 더 아꼈어요!"처럼 진짜 퍼센트를 보여준다(2026-09-14 추가). */-->
+		<div id="hero-goal-btn" class="ledger-hero__goal" role="button" tabindex="0"
+		     th:classappend="${data.goalPercent >= 100} ? ' is-achieved' : ''">
+			<div class="u-row" style="justify-content: space-between">
+				<span class="ledger-hero__goal-label"
+				      th:text="${data.goalAmount == null} ? '이번 달 절약 목표 미설정'
+				              : (${data.goalOverPercent > 0} ? ('🎉 목표보다 ' + ${data.goalOverPercent} + '% 더 아꼈어요!')
+				                : (${data.goalPercent >= 100} ? '🎉 이번 달 목표 달성!' : ('목표 ' + ${#numbers.formatInteger(data.goalAmount, 0, 'COMMA')} + '원')))">목표 100,000원</span>
+				<span class="ledger-hero__goal-percent"
+				      th:text="${data.goalAmount == null} ? '설정하기 ›' : ((${data.goalPercent} + ${data.goalOverPercent}) + '% ›')">42% ›</span>
+			</div>
+			<div class="progress" style="margin-top: 6px">
+				<div id="hero-goal-bar" class="progress__bar"
+				     th:classappend="${data.goalPercent >= 100} ? ' is-achieved' : (${data.goalPercent >= 80} ? ' is-near' : '')"
+				     th:data-target-percent="${data.goalPercent}"
+				     th:style="'width:' + ${data.goalPercent} + '%'"></div>
+			</div>
+		</div>
+
+		<div class="ledger-bar-chart">
+			<div class="ledger-bar-chart__col" th:each="m : ${data.monthly}"
+			     th:classappend="${m.isCurrent} ? ' is-current' : ''"
+			     th:data-month-key="${m.monthKey}"
+			     th:data-month-label="${m.label}"
+			     th:data-saved="${m.saved}"
+			     role="button" tabindex="0"
+			     th:title="${m.label} + ' 절약: ' + ${#numbers.formatInteger(m.saved, 0, 'COMMA')} + '원'">
+				<div class="ledger-bar-chart__tooltip"
+				     th:text="${m.label} + ' ' + ${m.saved > 0 ? (#numbers.formatInteger(m.saved, 0, 'COMMA') + '원') : '0원'}">9월 42,300원</div>
+				<div class="ledger-bar-chart__track">
+					<div class="ledger-bar-chart__fill" th:style="'height:' + ${m.heightPercent} + '%'"></div>
+				</div>
+				<span class="ledger-bar-chart__label">
+					<span th:text="${m.label}">9월</span>
+					<span th:if="${m.isCurrent}" class="ledger-bar-chart__current-dot" title="이번 달"></span>
+				</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- ===== 환경 기여도 배너 (항상 보임) ===== -->
+	<!--/* 이 서비스의 핵심 차별점 중 하나가 "환경 기여도 시각화"라서, 뱃지 탭 안에 숨겨두지 않고
+	     히어로 카드 바로 아래에서 클릭 없이 항상 보이게 한다(2026-09-12, 피드백 반영).
+	     CO2 kg 숫자만으로는 안 와닿아서, "나무 OO그루 효과"로 환산해 옆에 같이 보여준다 —
+	     ECO_20KG 뱃지("소나무 한 그루")와 같은 환산 기준(Co2EstimateUtil.treeEquivalent). */-->
+	<div class="ledger-eco-banner">
+		🌍 이번 달 <strong th:text="${data.thisMonthRescuedCount}">12</strong>개 구제
+		· CO2 <strong th:text="${#numbers.formatDecimal(data.thisMonthCo2Kg, 1, 1)}">5.2</strong>kg 절감
+		<span th:if="${data.thisMonthCo2Kg > 0}" class="ledger-eco-banner__tree"
+		      th:text="'(나무 ' + ${#numbers.formatDecimal(T(net.dsa.girigiri.util.Co2EstimateUtil).treeEquivalent(data.thisMonthCo2Kg), 1, 1)} + '그루 효과)'">(나무 0.3그루 효과)</span>
+	</div>
+
+	<!-- ===== 내보내기 (라벨 있는 버튼) ===== -->
+	<div class="ledger-export-row">
+		<a th:href="@{/user/ledger/pdf}" target="_blank" class="btn btn--outline btn--sm ledger-export-btn">📄 PDF로 보기</a>
+		<a th:href="@{/user/ledger/csv}" class="btn btn--outline btn--sm ledger-export-btn">📑 CSV로 저장</a>
+	</div>
+
+	<!-- ===== 탭 전환 ===== -->
+	<div class="seg-tabs">
+		<button type="button" class="seg-tab is-active" data-target="panel-history">내역</button>
+		<button type="button" class="seg-tab" data-target="panel-category">분석</button>
+		<button type="button" class="seg-tab" data-target="panel-goal">목표</button>
+		<button type="button" class="seg-tab" data-target="panel-badge">뱃지</button>
+	</div>
+
+	<!-- 탭: 내역 -->
+	<div id="panel-history" class="seg-panel">
+		<!-- 기간 및 연도·월 선택 컨트롤 바 -->
+		<div class="ledger-history-filter-wrap" th:if="${!#lists.isEmpty(data.history)}">
+			<div class="ledger-history-controls">
+				<div class="ledger-history-chips">
+					<button type="button" class="ledger-history-chip is-active" data-filter="all">전체</button>
+					<button type="button" class="ledger-history-chip" data-filter="this-month">이번 달</button>
+					<button type="button" class="ledger-history-chip" data-filter="last-month">지난달</button>
+				</div>
+				<div class="ledger-history-select-wrap">
+					<select id="history-year-select" class="ledger-date-select" aria-label="연도 선택">
+						<option value="2026" selected>2026년</option>
+						<option value="2025">2025년</option>
+						<option value="2024">2024년</option>
+					</select>
+					<select id="history-month-select" class="ledger-date-select" aria-label="월 선택">
+						<option value="all" selected>전체 월</option>
+						<option value="01">1월</option>
+						<option value="02">2월</option>
+						<option value="03">3월</option>
+						<option value="04">4월</option>
+						<option value="05">5월</option>
+						<option value="06">6월</option>
+						<option value="07">7월</option>
+						<option value="08">8월</option>
+						<option value="09">9월</option>
+						<option value="10">10월</option>
+						<option value="11">11월</option>
+						<option value="12">12월</option>
+					</select>
+				</div>
+			</div>
+		</div>
+
+		<!-- 목록 상태 헤더 (기간 및 건수 표시) -->
+		<div class="ledger-history-header" th:if="${!#lists.isEmpty(data.history)}">
+			<span id="history-summary-title" class="ledger-history-header__title">전체 내역</span>
+			<span class="ledger-history-header__count"><strong id="history-visible-count" th:text="${#lists.size(data.history)}">12</strong>건</span>
+		</div>
+
+		<p id="history-month-empty" class="ledger-empty is-hidden">선택한 기간에 구제 내역이 없어요.</p>
+		<p th:if="${#lists.isEmpty(data.history)}" class="ledger-empty">아직 구제 내역이 없어요. 마감세일 상품을 찾아보세요!</p>
+
+		<!-- 구매·절약 내역 카드 리스트 -->
+		<div class="ledger-history-list">
+			<div th:each="h : ${data.history}" class="ledger-history-card" th:data-date-label="${h.dateLabel}">
+				<div class="ledger-history-card__header">
+					<span class="ledger-history-card__store" th:text="${h.storeName}">기리기리 베이커리</span>
+					<span class="ledger-history-card__date" th:text="${h.dateLabel}">2026.09.10</span>
+				</div>
+				<div class="ledger-history-card__body">
+					<span class="ledger-history-card__product" th:text="${h.productName}">식빵 마감세트</span>
+					<span class="ledger-history-card__qty" th:text="${h.quantity} + '개'">1개</span>
+				</div>
+				<div class="ledger-history-card__footer">
+					<div class="ledger-history-card__prices">
+						<span class="ledger-history-card__paid"
+						      th:text="${#numbers.formatInteger(h.paidTotal, 0, 'COMMA')} + '원 결제'">4,000원 결제</span>
+						<span th:if="${h.saved > 0}" class="ledger-history-card__original">
+							<s th:text="'정가 ' + ${#numbers.formatInteger(h.originalTotal, 0, 'COMMA')} + '원'">정가 7,000원</s>
+							<span class="ledger-history-card__rate" th:text="'(' + ${h.discountPercent} + '% 할인)'">(43% 할인)</span>
+						</span>
+						<span th:if="${h.saved == 0}" class="ledger-history-card__original is-muted">정가 구매</span>
+					</div>
+					<div th:if="${h.saved > 0}" class="ledger-history-card__badge">
+						<span class="ledger-history-card__saved-chip"
+						      th:text="'+' + ${#numbers.formatInteger(h.saved, 0, 'COMMA')} + '원 절약'">+3,000원 절약</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 탭: 분석 -->
+	<div id="panel-category" class="seg-panel is-hidden">
+		<p th:if="${#lists.isEmpty(data.categories)}" class="ledger-empty">분석할 내역이 아직 없어요.</p>
+		<div th:each="c : ${data.categories}" class="ledger-cat-row">
+			<div class="u-row" style="justify-content: space-between; align-items: baseline">
+				<span class="u-bold" th:text="${c.category}">베이커리</span>
+				<span class="ledger-cat-row__saved" th:text="'절약 ' + ${#numbers.formatInteger(c.saved, 0, 'COMMA')} + '원 (' + ${c.percent} + '%)'">절약 6,000원 (58%)</span>
+			</div>
+			<div class="progress" style="margin-top: 4px">
+				<div class="progress__bar" th:style="'width:' + ${c.percent} + '%'"></div>
+			</div>
+			<span class="u-sub" style="font-size: var(--fs-xs)" th:text="'소비 ' + ${#numbers.formatInteger(c.spent, 0, 'COMMA')} + '원'">소비 12,000원</span>
+		</div>
+	</div>
+
+	<!-- 탭: 목표 -->
+	<div id="panel-goal" class="seg-panel is-hidden">
+		<p class="u-sub" style="font-size: var(--fs-sm)">목표 금액을 정해두면 위 게이지로 진행률을 볼 수 있어요. 비워두고 저장하면 목표가 해제됩니다.</p>
+		<!-- 서버가 ?error=goalTooLow로 리다이렉트했을 때만 JS로 보여준다(LedgerController.updateGoal 참고) —
+		     최소 금액(1만원) 미만은 목표 달성 뱃지(GOAL_HIT)를 사실상 거저 따게 만들어서 서버에서 막는다. -->
+		<p id="goal-too-low-msg" class="ledger-goal-error is-hidden">⚠️ 목표 금액은 최소 10,000원 이상으로 설정해주세요.</p>
+		<form th:action="@{/user/ledger/goal}" method="post" style="margin-top: var(--s-3)">
+			<!-- 프리셋 — 타이핑 없이 탭 한 번으로. 직접 입력과 값이 같으면 자동으로 활성 표시(아래 스크립트). -->
+			<div class="ledger-goal-presets">
+				<button type="button" class="ledger-goal-preset" data-amount="10000">1만원</button>
+				<button type="button" class="ledger-goal-preset" data-amount="30000">3만원</button>
+				<button type="button" class="ledger-goal-preset" data-amount="50000">5만원</button>
+				<button type="button" class="ledger-goal-preset" data-amount="100000">10만원</button>
+			</div>
+			<div class="field" style="margin-top: var(--s-3)">
+				<label class="field__label" for="goalAmount">직접 입력(원)</label>
+				<input class="input" type="number" id="goalAmount" name="goalAmount" min="10000" step="1000"
+				       th:value="${data.goalAmount}" placeholder="예: 70000">
+			</div>
+			<button type="submit" class="btn btn--block" style="margin-top: var(--s-4)">목표 저장</button>
+		</form>
+	</div>
+
+	<!-- 탭: 뱃지 (스크롤 없이 1스크린에 쏙 들어오는 콤팩트 요약) -->
+	<div id="panel-badge" class="seg-panel is-hidden">
+		<div class="ledger-badge-hero">
+			<!-- 대표 뱃지 영역 -->
+			<div class="ledger-badge-hero__header">
+				<div style="width: 100%;">
+					<span class="ledger-badge-hero__tag">내 대표 뱃지</span>
+					<div class="ledger-badge-hero__main" th:if="${data.representativeBadge != null}">
+						<span class="ledger-badge-hero__rep-icon" th:text="${data.representativeBadge.icon}">🦸</span>
+						<div class="ledger-badge-hero__rep-info">
+							<span class="ledger-badge-hero__rep-title" th:text="${data.representativeBadge.name}">골목길 구조대</span>
+							<span class="ledger-badge-hero__rep-desc" th:text="${data.representativeBadge.description}">동네 가게의 잔반 제로를 돕는 든든한 이웃</span>
+						</div>
+						<form th:action="@{/user/ledger/badge/representative}" method="post" style="margin-left: auto;">
+							<input type="hidden" name="badgeCode" value="">
+							<button type="submit" class="btn btn--outline ledger-unset-badge-btn" title="대표 뱃지 해제">해제</button>
+						</form>
+					</div>
+					<div class="ledger-badge-hero__main is-empty" th:if="${data.representativeBadge == null}">
+						<span class="ledger-badge-hero__rep-icon">🎖️</span>
+						<div class="ledger-badge-hero__rep-info">
+							<span class="ledger-badge-hero__rep-title">설정된 대표 뱃지 없음</span>
+							<span class="ledger-badge-hero__rep-desc">아직 설정된 대표 뱃지가 없어요. 도감에서 뱃지를 선택해보세요!</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 구제한 음식/CO2 절감 실적은 히어로 카드 아래 "환경 기여도 배너"로 옮겼다(2026-09-12) —
+			     탭 안에 숨기지 않고 항상 보이는 게 이 서비스의 환경 기여도 차별점에 더 맞아서. -->
+
+			<!-- 뱃지 도감 / 이번 달 랭킹 — 구조가 비슷한 두 블록을 세로로 나열하는 대신, 작은 내부
+			     토글로 하나씩만 보여준다. 바깥 .seg-tabs와 같은 클래스를 그대로 써서 이미 있는
+			     탭 전환 스크립트(그룹 단위로 동작)를 그대로 재사용한다. */-->
+			<div class="seg-tabs seg-tabs--sub">
+				<button type="button" class="seg-tab is-active" data-target="panel-badge-collection">🏅 뱃지 도감</button>
+				<button type="button" class="seg-tab" data-target="panel-badge-ranking">🏆 이번 달 랭킹</button>
+			</div>
+
+			<div id="panel-badge-collection" class="seg-panel">
+				<!-- 수집 진행률 바 -->
+				<div class="ledger-badge-collection-bar">
+					<div class="u-row" style="justify-content: space-between; font-size: var(--fs-xs);">
+						<span class="u-bold" style="color: var(--c-text-sub);">
+							도감 수집 현황 (<span th:text="${data.unlockedBadgeCount}">4</span>/<span th:text="${data.totalBadgeCount}">14</span>)
+						</span>
+						<span class="u-bold" style="color: var(--c-primary);"
+						      th:text="${data.totalBadgeCount > 0 ? (data.unlockedBadgeCount * 100 / data.totalBadgeCount) : 0} + '% 달성'">
+							28% 달성
+						</span>
+					</div>
+					<div class="progress" style="margin-top: 6px;">
+						<div class="progress__bar"
+						     th:style="'width:' + ${data.totalBadgeCount > 0 ? (data.unlockedBadgeCount * 100 / data.totalBadgeCount) : 0} + '%'"></div>
+					</div>
+
+					<!-- 획득한 뱃지 미니 아이콘 프리뷰 행 — 아이콘이 늘어나서 박스를 넘어가면 잘려 보이지
+					     않게(줄어들거나 삐져나오지 않고) 페이드로 자연스럽게 감추고, 카테고리 필터와
+					     같은 방식으로 좌우 화살표를 눌러서 볼 수 있게 한다. -->
+					<div class="ledger-badge-preview-row" th:if="${data.unlockedBadgeCount > 0}">
+						<span class="ledger-badge-preview-label">획득 완료</span>
+						<div class="ledger-badge-preview-scroll-wrap">
+							<div id="badge-preview-icons" class="ledger-badge-preview-icons">
+								<span th:each="b : ${data.badges}" th:if="${b.unlocked}"
+								      class="ledger-badge-preview-icon"
+								      th:classappend="${b.isRepresentative} ? ' is-rep' : ''"
+								      th:title="${b.name}" th:text="${b.icon}">🌱</span>
+							</div>
+							<div id="badge-preview-fade-left" class="ledger-badge-preview-fade ledger-badge-preview-fade--left is-hidden"></div>
+							<button type="button" id="badge-preview-prev" class="ledger-badge-preview-prev is-hidden" aria-label="맨 처음으로">‹</button>
+							<div id="badge-preview-fade" class="ledger-badge-preview-fade is-hidden"></div>
+							<button type="button" id="badge-preview-next" class="ledger-badge-preview-next is-hidden" aria-label="더 보기">›</button>
+						</div>
+					</div>
+					<div class="ledger-badge-preview-row" th:if="${data.unlockedBadgeCount == 0}">
+						<span class="ledger-badge-preview-empty">아직 획득한 뱃지가 없어요. 마감할인 음식을 구제하고 첫 뱃지를 모아보세요!</span>
+					</div>
+				</div>
+
+				<!-- 도감 전체보기 버튼 (클릭 시 모달 팝업 오픈) -->
+				<button type="button" id="open-badge-modal-btn" class="btn btn--block btn--outline ledger-open-modal-btn" style="margin-top: var(--s-4);">
+					📖 뱃지 도감 전체보기 (<span th:text="${data.totalBadgeCount}">14</span>개) ›
+				</button>
+			</div>
+
+			<div id="panel-badge-ranking" class="seg-panel is-hidden">
+				<p th:if="${#lists.isEmpty(ranking.topRanks)}" class="ledger-empty" style="padding: var(--s-3) 0;">
+					이번 달 랭킹 데이터가 아직 없어요. 마감세일 상품을 구제하고 도전해보세요!
+				</p>
+				<div th:if="${!#lists.isEmpty(ranking.topRanks)}">
+					<div th:each="row : ${ranking.topRanks}" th:if="${row.rank <= 3}" class="ledger-rank-row"
+					     th:classappend="${ranking.myRank != null and row.userId == ranking.myRank.userId} ? ' is-me' : ''">
+						<span class="ledger-rank-row__rank is-medal"
+						      th:text="${row.rank == 1} ? '🥇' : (${row.rank == 2} ? '🥈' : '🥉')">1</span>
+						<span class="ledger-rank-row__nickname" th:text="${row.nickname}">알뜰이</span>
+						<span class="ledger-rank-row__amount" th:text="${#numbers.formatInteger(row.savedAmount, 0, 'COMMA')} + '원'">42,000원</span>
+					</div>
+
+					<!-- 내 순위가 상위 3위 밖이면 별도 카드로 표시 -->
+					<div th:if="${ranking.myRank != null and ranking.myRank.rank > 3}" class="ledger-rank-my-card">
+						<span class="ledger-rank-my-card__label">내 순위</span>
+						<span class="ledger-rank-my-card__rank" th:text="${ranking.myRank.rank} + '위'">23위</span>
+						<span class="ledger-rank-my-card__amount" th:text="${#numbers.formatInteger(ranking.myRank.savedAmount, 0, 'COMMA')} + '원'">12,000원</span>
+						<span class="ledger-rank-my-card__total" th:text="'전체 ' + ${ranking.totalParticipants} + '명 중'">전체 87명 중</span>
+					</div>
+					<p th:if="${ranking.myRank == null}" class="ledger-rank-empty-me">
+						아직 이번 달 구제 기록이 없어서 순위가 없어요. 구제하고 이름을 올려보세요!
+					</p>
+
+					<button type="button" id="open-ranking-modal-btn" class="btn btn--block btn--outline ledger-open-modal-btn" style="margin-top: var(--s-3);">
+						🏆 전체 랭킹 보기 (<span th:text="${ranking.totalParticipants}">12</span>명) ›
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ===== 뱃지 도감 전체보기 모달 팝업 (바텀시트) ===== -->
+	<div id="badge-modal" class="ledger-modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="badge-modal-title">
+		<div class="ledger-modal-sheet">
+			<!-- 모달 헤더 -->
+			<div class="ledger-modal-header">
+				<div>
+					<h3 id="badge-modal-title" class="ledger-modal-title">뱃지 도감 컬렉션</h3>
+					<p class="ledger-modal-subtitle">
+						수집한 뱃지 <strong th:text="${data.unlockedBadgeCount}">4</strong> / <span th:text="${data.totalBadgeCount}">14</span>개
+					</p>
+				</div>
+				<button type="button" id="close-badge-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+			</div>
+
+			<!-- 카테고리 필터 탭 -->
+			<!-- 카테고리가 늘어나서 필터가 한 화면에 다 안 들어올 때, 마지막 버튼이 모달 끝에 딱 붙어
+			     "잘린" 것처럼 보이지 않게 양쪽에 페이드 + 스크롤 버튼을 둔다(더 볼 게 있을 때만 표시).
+			     왼쪽 버튼은 눌렀을 때 한 칸씩이 아니라 맨 처음(전체)으로 바로 돌아간다. -->
+			<div class="ledger-badge-filters-wrap" style="margin-top: var(--s-3);">
+				<div id="badge-filters" class="ledger-badge-filters">
+					<button type="button" class="ledger-badge-filter is-active" data-cat="all">전체 (<span th:text="${data.totalBadgeCount}">14</span>)</button>
+					<button type="button" class="ledger-badge-filter" data-cat="구제">🌱 구제</button>
+					<button type="button" class="ledger-badge-filter" data-cat="절약">💰 절약</button>
+					<button type="button" class="ledger-badge-filter" data-cat="환경">🌍 환경</button>
+					<button type="button" class="ledger-badge-filter" data-cat="취향·탐험">🥐 취향·탐험</button>
+					<button type="button" class="ledger-badge-filter" data-cat="랭킹">🏆 랭킹</button>
+				</div>
+				<div id="badge-filters-fade-left" class="ledger-badge-filters-fade ledger-badge-filters-fade--left is-hidden"></div>
+				<button type="button" id="badge-filters-prev" class="ledger-badge-filters-prev is-hidden" aria-label="맨 처음으로">‹</button>
+				<div id="badge-filters-fade" class="ledger-badge-filters-fade is-hidden"></div>
+				<button type="button" id="badge-filters-next" class="ledger-badge-filters-next is-hidden" aria-label="카테고리 더 보기">›</button>
+			</div>
+
+			<!-- 모달 스크롤 바디 (14종 뱃지 카드 그리드) -->
+			<div class="ledger-modal-body">
+				<div class="ledger-badge-grid">
+					<div th:each="b : ${data.badges}"
+					     class="ledger-badge-card"
+					     th:classappend="${b.unlocked ? 'is-unlocked' + (b.isRepresentative ? ' is-rep' : '') : 'is-locked'}"
+					     th:data-category="${b.category}">
+
+						<div class="ledger-badge-card__top">
+							<span class="ledger-badge-card__icon" th:text="${b.icon}">🌱</span>
+							<span th:if="${b.isRepresentative}" class="ledger-badge-card__tag is-rep">★ 대표</span>
+							<span th:if="${b.unlocked and !b.isRepresentative}" class="ledger-badge-card__tag is-unlocked">획득</span>
+							<span th:if="${!b.unlocked}" class="ledger-badge-card__tag is-locked">🔒 잠김</span>
+						</div>
+
+						<div class="ledger-badge-card__body">
+							<div class="ledger-badge-card__name" th:text="${b.name}">골목길 구조대</div>
+							<div class="ledger-badge-card__cond" th:text="${b.conditionLabel}">누적 5개 구제</div>
+							<div class="ledger-badge-card__desc" th:text="${b.description}">동네 가게의 잔반 제로를 돕는 든든한 이웃</div>
+						</div>
+
+						<!-- 액션 및 진행률 -->
+						<div class="ledger-badge-card__footer">
+							<!-- 미달성 시 진행률 표시 -->
+							<div th:if="${!b.unlocked}" class="ledger-badge-progress">
+								<div class="progress progress--xs">
+									<div class="progress__bar" th:style="'width:' + ${b.progressPercent} + '%'"></div>
+								</div>
+								<span class="ledger-badge-progress__text" th:text="${b.progressText}">2 / 5개</span>
+							</div>
+
+							<!-- 달성 완료 시 대표 뱃지 설정 버튼 / 착용 중 표시 -->
+							<div th:if="${b.unlocked}" class="ledger-badge-action">
+								<span th:if="${b.earnedDateLabel != null}" class="ledger-badge-earned-date" th:text="${b.earnedDateLabel}">2026.09.12 달성</span>
+								<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep">✓ 착용 중</span>
+								<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" style="width: 100%;">
+									<input type="hidden" name="badgeCode" th:value="${b.code}">
+									<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ===== 전체 랭킹 모달 팝업 (바텀시트, 뱃지 도감 모달과 같은 방식) ===== -->
+	<div id="ranking-modal" class="ledger-modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="ranking-modal-title">
+		<div class="ledger-modal-sheet">
+			<div class="ledger-modal-header">
+				<div>
+					<h3 id="ranking-modal-title" class="ledger-modal-title">이번 달 절약 랭킹</h3>
+					<p class="ledger-modal-subtitle">
+						전체 <strong th:text="${ranking.totalParticipants}">12</strong>명 중 · 매달 1일에 새로 시작해요
+					</p>
+				</div>
+				<button type="button" id="close-ranking-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+			</div>
+			<div class="ledger-modal-body">
+				<div th:each="row : ${ranking.topRanks}" class="ledger-rank-row"
+				     th:classappend="${ranking.myRank != null and row.userId == ranking.myRank.userId} ? ' is-me' : ''">
+					<span class="ledger-rank-row__rank" th:classappend="${row.rank <= 3} ? ' is-medal' : ''"
+					      th:text="${row.rank == 1} ? '🥇' : (${row.rank == 2} ? '🥈' : (${row.rank == 3} ? '🥉' : ${row.rank}))">1</span>
+					<span class="ledger-rank-row__nickname" th:text="${row.nickname}">알뜰이</span>
+					<span class="ledger-rank-row__amount" th:text="${#numbers.formatInteger(row.savedAmount, 0, 'COMMA')} + '원'">42,000원</span>
+				</div>
+				<div th:if="${ranking.myRank != null and !ranking.myRankInTop}" class="ledger-rank-my-card">
+					<span class="ledger-rank-my-card__label">내 순위</span>
+					<span class="ledger-rank-my-card__rank" th:text="${ranking.myRank.rank} + '위'">23위</span>
+					<span class="ledger-rank-my-card__amount" th:text="${#numbers.formatInteger(ranking.myRank.savedAmount, 0, 'COMMA')} + '원'">12,000원</span>
+					<span class="ledger-rank-my-card__total" th:text="'전체 ' + ${ranking.totalParticipants} + '명 중'">전체 87명 중</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!--/* 탭 전환 및 뱃지/랭킹 모달·필터 스크립트 */-->
+	<script th:inline="none">
+		(function () {
+			// 이번 달 절약액 카운트업 + 목표 게이지 채우기 — 로그인 세션 안에서 가계부를 "처음" 열 때만
+			// 재생한다. 매번 재생하면(뒤로가기로 왔다갔다할 때마다) 피곤하다는 피드백으로, sessionStorage
+			// 플래그로 한 번만 보여주고 그 다음부터는 바로 최종 값을 보여준다.
+			var ANIMATE_ONCE_KEY = 'ledgerAnimatedOnce';
+			var shouldAnimate = false;
+			try { shouldAnimate = !sessionStorage.getItem(ANIMATE_ONCE_KEY); } catch (e) { /* 시크릿 모드 등 */ }
+			if (shouldAnimate) {
+				try { sessionStorage.setItem(ANIMATE_ONCE_KEY, '1'); } catch (e) { /* no-op */ }
+			}
+
+			var heroAmountEl = document.getElementById('hero-amount-value');
+			if (heroAmountEl) {
+				var targetAmount = parseInt(heroAmountEl.getAttribute('data-amount'), 10) || 0;
+				if (shouldAnimate && targetAmount > 0) {
+					var start = null;
+					var duration = 500;
+					function stepAmount(timestamp) {
+						if (start === null) { start = timestamp; }
+						var progress = Math.min(1, (timestamp - start) / duration);
+						var current = Math.round(targetAmount * progress);
+						heroAmountEl.textContent = current.toLocaleString('ko-KR') + '원';
+						if (progress < 1) { requestAnimationFrame(stepAmount); }
+					}
+					requestAnimationFrame(stepAmount);
+				}
+				// shouldAnimate가 false거나 목표가 0원이면 서버가 렌더한 최종 값을 그대로 둔다.
+			}
+
+			var heroGoalBar = document.getElementById('hero-goal-bar');
+			if (heroGoalBar && shouldAnimate) {
+				var targetPercent = parseInt(heroGoalBar.getAttribute('data-target-percent'), 10) || 0;
+				heroGoalBar.style.width = '0%';
+				void heroGoalBar.offsetWidth; // 강제 리플로우 — 이게 없으면 0%->목표% 변경이 한 프레임에 합쳐져서 트랜지션이 안 보인다.
+				heroGoalBar.style.width = targetPercent + '%';
+			}
+
+			document.querySelectorAll('.seg-tabs').forEach(function (group) {
+				var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
+				var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('data-target')); });
+				tabs.forEach(function (tab, i) {
+					tab.addEventListener('click', function () {
+						tabs.forEach(function (t) { t.classList.remove('is-active'); });
+						panels.forEach(function (p) { if (p) { p.classList.add('is-hidden'); } });
+						tab.classList.add('is-active');
+						if (panels[i]) { panels[i].classList.remove('is-hidden'); }
+					});
+				});
+			});
+
+			var params = new URLSearchParams(location.search);
+			var targetTab = params.get('tab');
+			if (targetTab === 'goal') {
+				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
+				if (goalTab) { goalTab.click(); }
+			} else if (targetTab === 'badge') {
+				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
+				if (badgeTab) { badgeTab.click(); }
+			}
+
+			// 목표를 최소 금액(1만원) 미만으로 저장하려다 서버에서 막힌 경우 안내 문구 표시.
+			if (params.get('error') === 'goalTooLow') {
+				var goalTooLowMsg = document.getElementById('goal-too-low-msg');
+				if (goalTooLowMsg) { goalTooLowMsg.classList.remove('is-hidden'); }
+			}
+
+			// 히어로 카드의 목표 줄(div[role=button]) — 눌러서 바로 "목표" 탭으로 이동 + 입력창 포커스.
+			var heroGoalBtn = document.getElementById('hero-goal-btn');
+			var goalInput = document.getElementById('goalAmount');
+			function jumpToGoalTab() {
+				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
+				if (goalTab) { goalTab.click(); }
+				if (goalInput) {
+					goalInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					goalInput.focus();
+				}
+			}
+			if (heroGoalBtn) {
+				heroGoalBtn.addEventListener('click', jumpToGoalTab);
+				heroGoalBtn.addEventListener('keydown', function (e) {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						jumpToGoalTab();
+					}
+				});
+			}
+
+			// 히어로 카드의 대표 뱃지 칩 — 눌러서 "뱃지" 탭으로 이동 + 그 위치로 스크롤.
+			var heroBadgeChip = document.getElementById('hero-badge-chip');
+			function jumpToBadgeTab() {
+				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
+				if (badgeTab) { badgeTab.click(); }
+				var badgePanel = document.getElementById('panel-badge');
+				if (badgePanel) { badgePanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+			}
+			if (heroBadgeChip) {
+				heroBadgeChip.addEventListener('click', jumpToBadgeTab);
+				heroBadgeChip.addEventListener('keydown', function (e) {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						jumpToBadgeTab();
+					}
+				});
+			}
+
+			// 히어로 카드의 이번 달 절약/누적 절약/절약률 — 각각 관련 탭으로 바로 이동.
+			function jumpToHistoryTab() {
+				var tab = document.querySelector('.seg-tab[data-target="panel-history"]');
+				if (tab) { tab.click(); }
+				var panel = document.getElementById('panel-history');
+				if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+			}
+			function jumpToCategoryTab() {
+				var tab = document.querySelector('.seg-tab[data-target="panel-category"]');
+				if (tab) { tab.click(); }
+				var panel = document.getElementById('panel-category');
+				if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+			}
+			function bindClickAndKeydown(el, handler) {
+				if (!el) { return; }
+				el.addEventListener('click', handler);
+				el.addEventListener('keydown', function (e) {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						handler();
+					}
+				});
+			}
+
+			// 월별 내역 필터링 (전체 / 이번 달 / 지난달 칩 + 연도·월 분리 선택 + 그래프 막대 클릭 공용)
+			var historyCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-card'));
+			var historyChips = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-chip'));
+			var yearSelect = document.getElementById('history-year-select');
+			var monthSelect = document.getElementById('history-month-select');
+			var summaryTitle = document.getElementById('history-summary-title');
+			var visibleCountEl = document.getElementById('history-visible-count');
+			var historyMonthEmpty = document.getElementById('history-month-empty');
+
+			var now = new Date();
+			var curYear = String(now.getFullYear());
+			var curMonth = String(now.getMonth() + 1).padStart(2, '0');
+			var thisMonthPrefix = curYear + '.' + curMonth;
+
+			var lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+			var lastYear = String(lastMonthDate.getFullYear());
+			var lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+			var lastMonthPrefix = lastYear + '.' + lastMonth;
+
+			function filterHistory(filterMode, customLabel) {
+				// 칩 활성화 상태 업데이트
+				historyChips.forEach(function (chip) {
+					chip.classList.toggle('is-active', chip.getAttribute('data-filter') === filterMode);
+				});
+
+				var targetPrefix = '';
+				var labelText = '전체 내역';
+
+				if (filterMode === 'all') {
+					if (yearSelect) { yearSelect.value = curYear; }
+					if (monthSelect) { monthSelect.value = 'all'; }
+					historyCards.forEach(function (card) { card.style.display = ''; });
+					if (summaryTitle) { summaryTitle.textContent = '전체 내역'; }
+					if (visibleCountEl) { visibleCountEl.textContent = historyCards.length; }
+					if (historyMonthEmpty) { historyMonthEmpty.classList.add('is-hidden'); }
+					return;
+				}
+
+				if (filterMode === 'this-month') {
+					targetPrefix = thisMonthPrefix;
+					if (yearSelect) { yearSelect.value = curYear; }
+					if (monthSelect) { monthSelect.value = curMonth; }
+					labelText = curYear + '년 ' + parseInt(curMonth, 10) + '월 내역 (이번 달)';
+				} else if (filterMode === 'last-month') {
+					targetPrefix = lastMonthPrefix;
+					if (yearSelect) { yearSelect.value = lastYear; }
+					if (monthSelect) { monthSelect.value = lastMonth; }
+					labelText = lastYear + '년 ' + parseInt(lastMonth, 10) + '월 내역 (지난달)';
+				} else if (filterMode === 'date-select') {
+					var y = yearSelect ? yearSelect.value : curYear;
+					var m = monthSelect ? monthSelect.value : 'all';
+					if (m === 'all') {
+						targetPrefix = y + '.';
+						labelText = y + '년 전체 내역';
+					} else {
+						targetPrefix = y + '.' + m;
+						labelText = y + '년 ' + parseInt(m, 10) + '월 내역';
+					}
+
+					// 선택한 연도/월이 이번 달 또는 지난달과 같으면 칩 활성화
+					if (targetPrefix === thisMonthPrefix) {
+						var tmChip = document.querySelector('.ledger-history-chip[data-filter="this-month"]');
+						if (tmChip) tmChip.classList.add('is-active');
+					} else if (targetPrefix === lastMonthPrefix) {
+						var lmChip = document.querySelector('.ledger-history-chip[data-filter="last-month"]');
+						if (lmChip) lmChip.classList.add('is-active');
+					}
+				} else {
+					// e.g. 그래프 막대 클릭 시 넘어오는 값 "2026.09"
+					targetPrefix = filterMode;
+					var parts = filterMode.split('.');
+					if (parts.length >= 2) {
+						if (yearSelect) { yearSelect.value = parts[0]; }
+						if (monthSelect) { monthSelect.value = parts[1]; }
+					}
+					labelText = customLabel || (targetPrefix.replace('.', '년 ') + '월 내역');
+				}
+
+				var visibleCount = 0;
+				historyCards.forEach(function (card) {
+					var isMatch = (card.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
+					card.style.display = isMatch ? '' : 'none';
+					if (isMatch) { visibleCount++; }
+				});
+
+				if (summaryTitle) { summaryTitle.textContent = labelText; }
+				if (visibleCountEl) { visibleCountEl.textContent = visibleCount; }
+				if (historyMonthEmpty) {
+					historyMonthEmpty.classList.toggle('is-hidden', visibleCount > 0);
+				}
+			}
+
+			// 칩 클릭 이벤트
+			historyChips.forEach(function (chip) {
+				chip.addEventListener('click', function () {
+					var filter = chip.getAttribute('data-filter');
+					filterHistory(filter);
+				});
+			});
+
+			// 연도 / 월 셀렉트 박스 변경 이벤트
+			if (yearSelect) {
+				yearSelect.addEventListener('change', function () {
+					filterHistory('date-select');
+				});
+			}
+			if (monthSelect) {
+				monthSelect.addEventListener('change', function () {
+					filterHistory('date-select');
+				});
+			}
+
+			// 그래프 막대 클릭 시 -> 내역 탭으로 이동 + 해당 월 필터링
+			document.querySelectorAll('.ledger-bar-chart__col').forEach(function (col) {
+				bindClickAndKeydown(col, function () {
+					var monthKey = col.getAttribute('data-month-key');
+					var monthLabel = col.getAttribute('data-month-label');
+					jumpToHistoryTab();
+					filterHistory(monthKey, monthKey.replace('.', '년 ') + '월 내역');
+				});
+			});
+
+			// 히어로 카드 클릭 바인딩
+			bindClickAndKeydown(document.getElementById('hero-amount-btn'), function () {
+				jumpToHistoryTab();
+				filterHistory('this-month', '이번 달');
+			});
+			bindClickAndKeydown(document.getElementById('hero-total-btn'), function () {
+				filterHistory('all', '전체');
+				jumpToHistoryTab();
+			});
+			bindClickAndKeydown(document.getElementById('hero-rate-btn'), jumpToCategoryTab);
+
+			// 절약률 (?) 설명 — stopPropagation으로 부모(hero-rate-btn)의 탭 이동 클릭이 같이 안 걸리게 막는다.
+			var rescueRateInfoBtn = document.getElementById('rescue-rate-info-btn');
+			var rescueRateInfoText = document.getElementById('rescue-rate-info-text');
+			if (rescueRateInfoBtn && rescueRateInfoText) {
+				rescueRateInfoBtn.addEventListener('click', function (e) {
+					e.stopPropagation();
+					rescueRateInfoText.classList.toggle('is-hidden');
+				});
+			}
+
+			// 새 뱃지 획득 토스트 — 눌러서 뱃지 도감으로, 닫기 버튼, 8초 뒤 자동으로 사라짐.
+			var badgeToast = document.getElementById('new-badge-toast');
+			if (badgeToast) {
+				var closeToastBtn = document.getElementById('close-badge-toast-btn');
+				var autoHideTimer = setTimeout(function () { badgeToast.classList.add('is-hidden'); }, 8000);
+				badgeToast.addEventListener('click', function (e) {
+					if (e.target === closeToastBtn) { return; }
+					jumpToBadgeTab();
+				});
+				if (closeToastBtn) {
+					closeToastBtn.addEventListener('click', function (e) {
+						e.stopPropagation();
+						clearTimeout(autoHideTimer);
+						badgeToast.classList.add('is-hidden');
+					});
+				}
+			}
+
+			// 목표 금액 프리셋
+			var presetButtons = Array.prototype.slice.call(document.querySelectorAll('.ledger-goal-preset'));
+			function markActivePreset() {
+				presetButtons.forEach(function (b) {
+					b.classList.toggle('is-active', goalInput && b.getAttribute('data-amount') === goalInput.value);
+				});
+			}
+			presetButtons.forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					if (!goalInput) { return; }
+					goalInput.value = btn.getAttribute('data-amount');
+					markActivePreset();
+				});
+			});
+			if (goalInput) {
+				markActivePreset();
+				goalInput.addEventListener('input', markActivePreset);
+			}
+
+			// 바텀시트 모달 공통 열기/닫기 (뱃지 도감 모달 + 랭킹 모달, 둘 다 같은 동작)
+			function setupModal(modalId, openBtnId, closeBtnId) {
+				var modal = document.getElementById(modalId);
+				var openBtn = document.getElementById(openBtnId);
+				var closeBtn = document.getElementById(closeBtnId);
+				if (!modal) { return; }
+
+				function open() {
+					modal.classList.remove('is-hidden');
+					document.body.style.overflow = 'hidden';
+				}
+				function close() {
+					modal.classList.add('is-hidden');
+					document.body.style.overflow = '';
+				}
+
+				if (openBtn) { openBtn.addEventListener('click', open); }
+				if (closeBtn) { closeBtn.addEventListener('click', close); }
+				modal.addEventListener('click', function (e) {
+					if (e.target === modal) { close(); }
+				});
+				document.addEventListener('keydown', function (e) {
+					if (e.key === 'Escape' && !modal.classList.contains('is-hidden')) { close(); }
+				});
+			}
+
+			setupModal('badge-modal', 'open-badge-modal-btn', 'close-badge-modal-btn');
+			setupModal('ranking-modal', 'open-ranking-modal-btn', 'close-ranking-modal-btn');
+
+			// 뱃지 카테고리 필터링
+			var filterBtns = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-filter'));
+			var badgeCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-card'));
+			filterBtns.forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var cat = btn.getAttribute('data-cat');
+					filterBtns.forEach(function (b) { b.classList.remove('is-active'); });
+					btn.classList.add('is-active');
+					badgeCards.forEach(function (card) {
+						if (cat === 'all' || card.getAttribute('data-category') === cat) {
+							card.style.display = '';
+						} else {
+							card.style.display = 'none';
+						}
+					});
+					btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+				});
+			});
+
+			// 가로로 넘치는 줄(카테고리 필터, 획득한 뱃지 프리뷰 아이콘) 공용 — 넘칠 때만 좌우 페이드 +
+			// 화살표를 보여준다. 오른쪽("›")은 한 칸씩 더, 왼쪽("‹")은 맨 처음으로 바로 돌아간다.
+			function setupHorizontalScrollHint(scrollElId, fadeRightId, nextBtnId, fadeLeftId, prevBtnId) {
+				var scrollEl = document.getElementById(scrollElId);
+				if (!scrollEl) { return null; }
+				var fadeRight = document.getElementById(fadeRightId);
+				var nextBtn = document.getElementById(nextBtnId);
+				var fadeLeft = document.getElementById(fadeLeftId);
+				var prevBtn = document.getElementById(prevBtnId);
+				function update() {
+					var hasMoreToRight = scrollEl.scrollWidth - scrollEl.clientWidth - scrollEl.scrollLeft > 4;
+					var hasMoreToLeft = scrollEl.scrollLeft > 4;
+					if (fadeRight) { fadeRight.classList.toggle('is-hidden', !hasMoreToRight); }
+					if (nextBtn) { nextBtn.classList.toggle('is-hidden', !hasMoreToRight); }
+					if (fadeLeft) { fadeLeft.classList.toggle('is-hidden', !hasMoreToLeft); }
+					if (prevBtn) { prevBtn.classList.toggle('is-hidden', !hasMoreToLeft); }
+				}
+				update();
+				scrollEl.addEventListener('scroll', update);
+				window.addEventListener('resize', update);
+				if (nextBtn) { nextBtn.addEventListener('click', function () { scrollEl.scrollBy({ left: 140, behavior: 'smooth' }); }); }
+				if (prevBtn) { prevBtn.addEventListener('click', function () { scrollEl.scrollTo({ left: 0, behavior: 'smooth' }); }); }
+				return update;
+			}
+
+			var updateFiltersScrollHint = setupHorizontalScrollHint(
+					'badge-filters', 'badge-filters-fade', 'badge-filters-next', 'badge-filters-fade-left', 'badge-filters-prev');
+			setupHorizontalScrollHint(
+					'badge-preview-icons', 'badge-preview-fade', 'badge-preview-next', 'badge-preview-fade-left', 'badge-preview-prev');
+
+			// 모달이 열릴 때(display:none -> 보임)도 필터 줄 폭이 다시 계산되도록 오픈 시점에 한 번 더 확인.
+			var openBadgeModalBtn = document.getElementById('open-badge-modal-btn');
+			if (openBadgeModalBtn && updateFiltersScrollHint) {
+				openBadgeModalBtn.addEventListener('click', function () {
+					setTimeout(updateFiltersScrollHint, 50);
+				});
+			}
+		})();
+	</script>
+
+</div>
+</body>
+</html>

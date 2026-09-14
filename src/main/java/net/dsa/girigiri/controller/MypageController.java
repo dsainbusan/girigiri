@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.service.LedgerService;
 import net.dsa.girigiri.service.MypageService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
@@ -28,6 +29,7 @@ public class MypageController {
 	private final MypageService mypageService;
 	private final StoreAccessService storeAccessService;
 	private final ReservationService reservationService;
+	private final LedgerService ledgerService;
 
 	// 추가됨 — 왜: 회원정보 수정 화면의 "GPS로 활동 지역 채우기" 버튼용(카카오 지오코더 좌표→주소).
 	@Value("${kakao.map.js-key}")
@@ -46,8 +48,8 @@ public class MypageController {
 			// 가입/절약 시작일 계산 (절약 N일째)
 			model.addAttribute("daysJoined", mypageService.calculateDaysJoined(user));
 
-			// TODO(문창호): WBS 6.1 절약 집계 로직 완성 시 실데이터로 교체 (현재는 기획 목업용 기본 절약액)
-			model.addAttribute("monthlySavings", "42,300");
+			// 이번 달 실제 절약액 (WBS 6.0 LedgerService 연동)
+			model.addAttribute("monthlySavings", ledgerService.build(userId).thisMonthSaved());
 		});
 
 		// 추가됨 (2026-09-14, 매장 신뢰도 점수 기능, 담당: 송채현) — 사장님 본인 마이페이지에서 본인

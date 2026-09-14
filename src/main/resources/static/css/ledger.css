@@ -1,0 +1,762 @@
+/* =====================================================================
+   ledger.css — 마이페이지 절약 가계부 전용 스타일 (WBS 6.0, 문창호)
+   ---------------------------------------------------------------------
+   히어로 카드(항상 보임) + 세그먼트 탭 4개(내역/분석/목표/뱃지, 한 번에 하나만 보임)로 구성해서
+   한 스크롤에 정보가 몰리지 않게 한다. 랭킹은 "뱃지" 탭 안의 하위 토글로 들어가 있다.
+   색은 전부 tokens.css의 --c-... 변수만 쓴다.
+   ===================================================================== */
+
+/* ---------- 새 뱃지 획득 토스트 (page 최상단, 히어로 카드 위) ---------- */
+.ledger-badge-toast {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  border-radius: var(--r-lg);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-3);
+  cursor: pointer;
+  animation: ledgerToastSlideIn .3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.ledger-badge-toast.is-hidden { opacity: 0; transform: translateY(-8px); pointer-events: none; height: 0; margin: 0; padding: 0; overflow: hidden; border-width: 0; }
+@keyframes ledgerToastSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.ledger-badge-toast__header { display: flex; align-items: center; justify-content: space-between; }
+.ledger-badge-toast__title { font-size: var(--fs-sm); font-weight: var(--fw-black); color: #92400e; }
+.ledger-badge-toast__close {
+  background: none; border: none; color: #92400e; font-size: 14px; font-weight: var(--fw-bold);
+  cursor: pointer; padding: 2px 4px; line-height: 1;
+}
+.ledger-badge-toast__list { display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-2); }
+.ledger-badge-toast__item { display: flex; align-items: center; gap: var(--s-2); }
+.ledger-badge-toast__icon {
+  font-size: 22px; line-height: 1; flex-shrink: 0; width: 36px; height: 36px; overflow: hidden;
+  border-radius: 50%; background: var(--c-surface); border: 2px solid #f59e0b;
+  display: flex; align-items: center; justify-content: center;
+}
+.ledger-badge-toast__info { display: flex; flex-direction: column; min-width: 0; }
+.ledger-badge-toast__name { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: #78350f; }
+.ledger-badge-toast__desc { font-size: 11px; color: #92400e; opacity: .85; }
+.ledger-badge-toast__hint { display: block; margin-top: var(--s-2); font-size: 11px; font-weight: var(--fw-bold); color: #92400e; text-align: right; }
+
+/* ---------- 히어로 카드 ---------- */
+.ledger-hero {
+  background: var(--c-primary-weak);
+  border: 1px solid var(--c-primary-border);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+}
+.ledger-hero__top {
+  display: flex; align-items: center; gap: var(--s-2);
+}
+.ledger-hero__label { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary-strong); }
+/* 등급(뱃지) — 탭 안에 숨기지 말고 히어로 카드에서 바로 보이게. 눌러서 "뱃지" 탭으로 이동. */
+.ledger-tier-chip {
+  margin-left: auto; font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  color: var(--c-primary-strong); background: var(--c-surface);
+  padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid var(--c-primary-border);
+  cursor: pointer; transition: box-shadow .15s ease, transform .15s ease;
+}
+/* 호버 때 배경을 흐리게(opacity)하면 카드 배경이랑 섞여 경계가 흐려진다 — 대신 살짝 뜨는 그림자로. */
+.ledger-tier-chip:hover { box-shadow: 0 3px 8px rgba(0,0,0,.12); transform: translateY(-1px); }
+.ledger-tier-chip:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+.ledger-tier-chip.is-rep {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border-color: #f59e0b;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.2);
+}
+.ledger-tier-chip.is-empty {
+  color: var(--c-text-mut);
+  background: var(--c-bg);
+  border-color: var(--c-line);
+  font-weight: var(--fw-medium);
+}
+/* 눌러서 "내역" 탭(이번 달 필터)으로 이동. 호버 때 흰 카드처럼 살짝 떠 보이게 —
+   opacity로 흐리게 하면 카드 배경(연두색)이랑 섞여서 경계가 애매해지니 배경+그림자로. */
+.ledger-hero__amount { display: flex; align-items: baseline; gap: var(--s-2); margin-top: 6px; flex-wrap: wrap;
+  cursor: pointer; border-radius: var(--r-md); padding: 4px 8px; margin-left: -8px; margin-right: -8px;
+  transition: background .15s ease, box-shadow .15s ease; }
+.ledger-hero__amount:hover { background: var(--c-surface); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.ledger-hero__amount:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+.ledger-hero__amount > span:first-child {
+  font-size: 32px; font-weight: var(--fw-black); color: var(--c-primary-strong); letter-spacing: -.02em;
+}
+/* 전월 대비 — 금액을 크게, %는 옆에 보조로. "0원인데 ▼100%"처럼 헷갈리는 표시를 막는다. */
+.ledger-hero__delta {
+  display: flex; align-items: baseline; gap: 4px; margin-top: 2px;
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-mut);
+}
+.ledger-hero__delta.is-up { color: var(--c-primary); }
+.ledger-hero__delta.is-down { color: var(--c-danger); }
+.ledger-hero__delta-sub { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-mut); margin-left: 2px; }
+
+.ledger-hero__row { display: flex; gap: var(--s-3); margin-top: var(--s-4); }
+/* 눌러서 각각 "내역"(누적)/"분석"(절약률) 탭으로 이동. 흰 배경은 항상 유지하고(카드 배경인
+   연두색이랑 섞이지 않게), 호버 때는 테두리+그림자로 살짝 뜨는 느낌만 준다. */
+.ledger-hero__stat {
+  flex: 1; background: var(--c-surface); border-radius: var(--r-md);
+  border: 1px solid transparent;
+  padding: var(--s-3); display: flex; flex-direction: column; gap: 2px;
+  cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.ledger-hero__stat:hover {
+  border-color: var(--c-primary-border);
+  box-shadow: 0 3px 10px rgba(0,0,0,.08);
+  transform: translateY(-1px);
+}
+.ledger-hero__stat:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.ledger-hero__stat-label { font-size: var(--fs-xs); color: var(--c-text-mut); display: flex; align-items: center; gap: 3px; }
+.ledger-hero__stat-value { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+
+.ledger-info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--c-text-mut);
+  background: none; color: var(--c-text-mut); font-size: 9px; line-height: 1; padding: 0; cursor: pointer;
+}
+.ledger-info-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+.ledger-info-text {
+  margin-top: var(--s-2); padding: 8px 10px; background: var(--c-bg); border-radius: var(--r-sm);
+  font-size: 11px; color: var(--c-text-sub); line-height: 1.4;
+}
+.ledger-info-text.is-hidden { display: none; }
+
+/* 목표 줄 — 눌러서 "목표" 탭으로 바로 가는 div[role=button]. 클릭 가능해 보이게 살짝 여백 확장 + 호버.
+   반투명 흰색(rgba)만 얹으면 카드 배경(연두색)이랑 섞여 흐릿해 보이니, 다른 히어로 요소들과 통일되게
+   불투명 흰 배경 + 그림자로 또렷하게 뜨는 느낌을 준다. */
+.ledger-hero__goal {
+  display: block; width: 100%; margin-top: var(--s-4);
+  padding: var(--s-2); margin-left: calc(var(--s-2) * -1); margin-right: calc(var(--s-2) * -1);
+  text-align: left; cursor: pointer; border-radius: var(--r-md);
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.ledger-hero__goal:hover { background: var(--c-surface); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.ledger-hero__goal:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.ledger-hero__goal-label { font-size: var(--fs-xs); color: var(--c-text-sub); }
+.ledger-hero__goal-percent { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary); }
+/* 게이지가 세션 첫 진입 때 0%에서 목표%까지 스르륵 채워지도록(아래 스크립트가 폭을 두 번 바꾼다) —
+   공용 .progress__bar엔 트랜지션이 없어서 이 페이지 것만 여기 따로 건다. */
+#hero-goal-bar { transition: width .6s ease; }
+/* 목표 게이지 3단계 색 — 0~79% 기본 초록(공용 .progress__bar 그대로), 80~99% 주황(is-near,
+   "거의 다 왔다" 긴장감), 100%+ 골드(is-achieved, 달성!). */
+.progress__bar.is-near { background: #f97316; }
+/* 목표 달성 — 골드 톤으로 눈에 띄게. */
+.ledger-hero__goal.is-achieved .ledger-hero__goal-label { color: #b45309; font-weight: var(--fw-bold); }
+.progress__bar.is-achieved { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+.ledger-goal-error {
+  margin-top: var(--s-3); padding: 10px var(--s-3);
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--r-md);
+  color: var(--c-danger); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+}
+.ledger-goal-error.is-hidden { display: none; }
+
+/* 목표 프리셋 칩 */
+.ledger-goal-presets { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.ledger-goal-preset {
+  flex: 1; min-width: 64px; padding: 8px 0; border-radius: var(--r-md);
+  border: 1px solid var(--c-line); background: var(--c-surface);
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-sub); cursor: pointer;
+  transition: all .15s ease;
+}
+.ledger-goal-preset:hover { border-color: var(--c-primary-border); }
+.ledger-goal-preset.is-active { background: var(--c-primary-weak); border-color: var(--c-primary); color: var(--c-primary-strong); }
+
+/* 최근 6개월 미니 막대 그래프 (호버/터치 툴팁 + 이번달 하이라이트 + 클릭 필터링) */
+.ledger-bar-chart {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--s-1); height: 64px; margin-top: var(--s-4); position: relative;
+}
+.ledger-bar-chart__col {
+  flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;
+  position: relative; cursor: pointer; border-radius: var(--r-sm);
+  transition: transform .15s ease;
+}
+.ledger-bar-chart__col:hover { transform: translateY(-2px); }
+.ledger-bar-chart__col:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
+/* 툴팁: 막대 위를 가리지 않고 호버 시 막대 위로 깔끔하게 뜨는 다크 툴팁 */
+.ledger-bar-chart__tooltip {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(4px);
+  font-size: 10px; font-weight: var(--fw-bold); padding: 3px 6px; margin-bottom: 6px;
+  border-radius: var(--r-sm); background: #1f2937; color: #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,.2);
+  white-space: nowrap; pointer-events: none; opacity: 0;
+  transition: opacity .15s ease, transform .15s ease; z-index: 10;
+}
+.ledger-bar-chart__tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border-width: 3px; border-style: solid; border-color: #1f2937 transparent transparent transparent;
+}
+.ledger-bar-chart__col:hover .ledger-bar-chart__tooltip,
+.ledger-bar-chart__col:focus-visible .ledger-bar-chart__tooltip {
+  opacity: 1; transform: translateX(-50%) translateY(0);
+}
+
+.ledger-bar-chart__track {
+  flex: 1; width: 14px; display: flex; flex-direction: column; justify-content: flex-end;
+  background: var(--c-surface); border-radius: var(--r-sm); overflow: hidden;
+  border: 1px solid transparent;
+}
+.ledger-bar-chart__col.is-current .ledger-bar-chart__track {
+  border-color: var(--c-primary-border); background: #f0fdf4;
+}
+.ledger-bar-chart__fill {
+  width: 100%; min-height: 2px; background: var(--c-primary); border-radius: var(--r-sm);
+  transition: height .4s ease, background-color .15s ease;
+}
+.ledger-bar-chart__col.is-current .ledger-bar-chart__fill {
+  background: linear-gradient(180deg, #16a34a, #15803d);
+}
+.ledger-bar-chart__col:hover .ledger-bar-chart__fill {
+  background: var(--c-primary-strong);
+}
+.ledger-bar-chart__label {
+  font-size: 10px; color: var(--c-text-mut); margin-top: 5px;
+  display: flex; align-items: center; gap: 2px;
+}
+.ledger-bar-chart__col.is-current .ledger-bar-chart__label {
+  color: var(--c-primary-strong); font-weight: var(--fw-black);
+}
+.ledger-bar-chart__current-dot {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--c-primary); display: inline-block;
+}
+
+/* ---------- 내보내기 (라벨 있는 버튼 2개 — 이전엔 작은 아이콘이라 눈에 안 띄었다) ---------- */
+/* ---------- 환경 기여도 배너 (히어로 카드 바로 아래, 항상 보임) ---------- */
+.ledger-eco-banner {
+  margin-top: var(--s-3); padding: 10px var(--s-4); text-align: center;
+  background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--r-md);
+  font-size: var(--fs-sm); color: #065f46;
+}
+.ledger-eco-banner strong { font-weight: var(--fw-black); }
+.ledger-eco-banner__tree { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
+
+.ledger-export-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
+.ledger-export-btn { flex: 1; text-align: center; text-decoration: none; }
+
+/* ---------- 세그먼트 탭 (내역/분석/목표/뱃지) ---------- */
+.seg-tabs {
+  display: flex; background: var(--c-bg); padding: 3px; border-radius: var(--r-md);
+  margin: var(--s-4) 0 var(--s-3); gap: 3px;
+}
+.seg-tab {
+  flex: 1; border: none; background: none; padding: 7px 0;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-mut);
+  border-radius: var(--r-sm); cursor: pointer; transition: all .15s ease; text-align: center;
+}
+.seg-tab:hover { color: var(--c-text); }
+.seg-tab.is-active { background: var(--c-surface); color: var(--c-primary); box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.seg-panel.is-hidden { display: none; }
+.seg-panel { animation: ledgerFadeIn .2s ease-in-out; }
+@keyframes ledgerFadeIn { from { opacity: .5; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 탭 안에서 또 나뉘는 하위 토글(예: "뱃지" 탭 안의 뱃지 도감/랭킹 전환). 같은 .seg-tabs
+   메커니즘을 그대로 재사용하되, 화면 최상단 주 탭과 헷갈리지 않게 더 작고 옅은 톤으로. */
+.seg-tabs--sub {
+  background: var(--c-bg);
+  padding: 2px;
+  margin: var(--s-4) 0 var(--s-3);
+}
+.seg-tabs--sub .seg-tab { padding: 6px 0; font-size: 12px; }
+
+.ledger-empty { padding: var(--s-6) 0; text-align: center; color: var(--c-text-mut); font-size: var(--fs-sm); }
+.ledger-empty.is-hidden { display: none; }
+
+/* ---------- 탭: 내역 ---------- */
+/* 기간 빠른 선택 칩 + 연도·월 직접 선택 셀렉트 */
+.ledger-history-filter-wrap {
+  margin-bottom: var(--s-3);
+}
+.ledger-history-controls {
+  display: flex; gap: var(--s-2); align-items: center; justify-content: space-between;
+}
+.ledger-history-chips { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.ledger-history-chip {
+  flex: 1; border: 1px solid var(--c-line); background: var(--c-surface); border-radius: var(--r-pill);
+  padding: 6px 0; font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  color: var(--c-text-sub); cursor: pointer; transition: all .15s ease;
+  display: inline-flex; align-items: center; justify-content: center; text-align: center;
+}
+.ledger-history-chip:hover { border-color: var(--c-primary-border); color: var(--c-primary); }
+.ledger-history-chip.is-active {
+  background: var(--c-primary-strong); color: #fff; border-color: var(--c-primary-strong);
+  box-shadow: 0 1px 4px rgba(21,128,61,.2);
+}
+
+.ledger-history-select-wrap {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ledger-date-select {
+  padding: 6px 20px 6px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s ease, color .15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+.ledger-date-select:focus,
+.ledger-date-select:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary-strong);
+}
+
+/* 목록 헤더 (필터링된 상태와 건수 표시) */
+.ledger-history-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: var(--s-3); padding: 0 2px;
+}
+.ledger-history-header__title {
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);
+}
+.ledger-history-header__count {
+  font-size: var(--fs-xs); color: var(--c-text-mut);
+}
+.ledger-history-header__count strong {
+  color: var(--c-primary-strong); font-weight: var(--fw-bold);
+}
+
+/* 구매·절약 내역 카드 */
+.ledger-history-list { display: flex; flex-direction: column; gap: var(--s-2); }
+.ledger-history-card {
+  background: var(--c-surface); border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-md); padding: var(--s-3) var(--s-4);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ledger-history-card:hover {
+  border-color: var(--c-primary-border); box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.ledger-history-card__header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+}
+.ledger-history-card__store {
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text);
+}
+.ledger-history-card__date { font-size: 10px; color: var(--c-text-mut); }
+.ledger-history-card__body {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); margin-bottom: 8px;
+}
+.ledger-history-card__product {
+  font-size: var(--fs-xs); color: var(--c-text-sub); font-weight: var(--fw-medium);
+}
+.ledger-history-card__qty { font-size: 11px; color: var(--c-text-mut); }
+.ledger-history-card__footer {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding-top: 6px; border-top: 1px dashed var(--c-line-weak);
+}
+.ledger-history-card__prices { display: flex; flex-direction: column; gap: 1px; }
+.ledger-history-card__paid {
+  font-size: var(--fs-sm); font-weight: var(--fw-black); color: var(--c-text);
+}
+.ledger-history-card__original { font-size: 10px; color: var(--c-text-mut); }
+.ledger-history-card__original.is-muted { color: var(--c-text-mut); font-weight: var(--fw-medium); }
+.ledger-history-card__rate {
+  color: var(--c-danger); font-weight: var(--fw-bold); margin-left: 2px;
+}
+.ledger-history-card__badge { flex-shrink: 0; }
+.ledger-history-card__saved-chip {
+  font-size: 11px; font-weight: var(--fw-black); color: var(--c-primary-strong);
+  background: var(--c-primary-weak); padding: 3px 8px; border-radius: var(--r-pill);
+  border: 1px solid var(--c-primary-border); display: inline-block;
+}
+
+/* ---------- 탭: 분석 ---------- */
+.ledger-cat-row { padding: var(--s-3) 0; border-bottom: 1px solid var(--c-line-weak); }
+.ledger-cat-row:last-child { border-bottom: none; }
+.ledger-cat-row__saved { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary); }
+
+/* ---------- 탭: 뱃지 ---------- */
+.ledger-badge-hero {
+  background: var(--c-surface); border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-lg); padding: var(--s-4);
+}
+.ledger-badge-hero__header { display: flex; align-items: flex-start; justify-content: space-between; }
+.ledger-badge-hero__tag {
+  display: inline-block; font-size: 11px; font-weight: var(--fw-bold);
+  color: var(--c-primary-strong); background: var(--c-primary-weak);
+  padding: 2px 8px; border-radius: var(--r-pill); margin-bottom: 6px;
+}
+.ledger-badge-hero__main {
+  display: flex; align-items: center; gap: var(--s-3); margin-top: 2px;
+}
+.ledger-badge-hero__rep-icon {
+  font-size: 24px; line-height: 1; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 50%; overflow: hidden;
+  background: #fef3c7; border: 2px solid #f59e0b;
+}
+.ledger-badge-hero__main.is-empty .ledger-badge-hero__rep-icon {
+  background: var(--c-bg); border-color: var(--c-line);
+}
+.ledger-badge-hero__rep-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ledger-badge-hero__rep-title { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+.ledger-badge-hero__rep-desc { font-size: var(--fs-xs); color: var(--c-text-sub); }
+/* 공용 .btn은 기본 패딩(15px)이 커서 대표 뱃지 옆의 작은 "해제" 버튼엔 안 맞는다 — 여기만 축소. */
+.ledger-unset-badge-btn { padding: 6px 10px; font-size: 11px; border-radius: var(--r-sm); flex-shrink: 0; }
+
+.ledger-badge-collection-bar {
+  margin-top: var(--s-4); padding-top: var(--s-3);
+  border-top: 1px dashed var(--c-line-weak);
+}
+
+/* 획득한 뱃지 미니 아이콘 프리뷰 */
+.ledger-badge-preview-row {
+  margin-top: var(--s-3); display: flex; align-items: center; gap: var(--s-2);
+  padding: 8px 12px; background: var(--c-bg); border-radius: var(--r-md);
+}
+.ledger-badge-preview-label {
+  font-size: 11px; font-weight: var(--fw-bold); color: var(--c-text-sub); white-space: nowrap;
+}
+/* 아이콘이 늘어나서 이 줄을 넘어가면, 좁아지거나 카드 밖으로 삐져나오지 않고 그 안에서
+   가로 스크롤되게 한다(래퍼는 flex 자식이라 min-width:0이 없으면 안 줄어들어서 오히려 줄 전체가
+   넘쳐버릴 수 있다 — 반드시 필요). 네이티브 스크롤바는 숨기고 페이드+화살표로만 안내한다. */
+.ledger-badge-preview-scroll-wrap {
+  position: relative; flex: 1; min-width: 0;
+}
+.ledger-badge-preview-icons {
+  display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 20px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.ledger-badge-preview-icons::-webkit-scrollbar { display: none; }
+.ledger-badge-preview-fade {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 24px;
+  background: linear-gradient(to right, rgba(255,255,255,0), var(--c-bg));
+  pointer-events: none; transition: opacity .15s ease;
+}
+.ledger-badge-preview-fade.is-hidden { opacity: 0; }
+.ledger-badge-preview-fade--left {
+  right: auto; left: 0;
+  background: linear-gradient(to left, rgba(255,255,255,0), var(--c-bg));
+}
+.ledger-badge-preview-next, .ledger-badge-preview-prev {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--c-primary-strong); color: #fff; border: none;
+  font-size: 11px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15); transition: opacity .15s ease;
+}
+.ledger-badge-preview-next { right: 0; }
+.ledger-badge-preview-prev { left: 0; }
+.ledger-badge-preview-next.is-hidden, .ledger-badge-preview-prev.is-hidden { opacity: 0; pointer-events: none; }
+/* width/height를 padding으로만 정하면 이모지마다 실제 렌더 너비가 달라서(예: 🦸는 유독 넓게 그려짐)
+   원이 아니라 타원처럼 찌그러지고, 캐릭터가 테두리 밖으로 삐져나와 보인다. 정사각형 크기를
+   고정하고 overflow:hidden으로 안쪽에 딱 맞게 자른다. */
+.ledger-badge-preview-icon {
+  width: 32px; height: 32px; font-size: 16px; line-height: 1; border-radius: 50%;
+  background: var(--c-surface); border: 1px solid var(--c-line);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; overflow: hidden;
+}
+.ledger-badge-preview-icon.is-rep {
+  border-color: #f59e0b; background: #fffbeb; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+.ledger-badge-preview-empty {
+  font-size: 11px; color: var(--c-text-mut); line-height: 1.4;
+}
+
+.ledger-open-modal-btn {
+  font-size: var(--fs-sm); font-weight: var(--fw-bold);
+  color: var(--c-primary-strong); border-color: var(--c-primary-border);
+  background: var(--c-primary-weak); padding: 12px;
+  border-radius: var(--r-md); transition: all .15s ease;
+}
+.ledger-open-modal-btn:hover {
+  background: var(--c-surface); border-color: var(--c-primary);
+}
+
+/* 뱃지 도감 섹션 */
+.ledger-badge-section-header {
+  margin-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2);
+}
+.ledger-badge-section-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text); }
+
+/* 필터 줄 바깥 래퍼 — 오른쪽 페이드/스크롤 버튼을 절대 위치로 겹쳐 올리기 위한 기준점.
+   카테고리가 늘어나 필터 목록이 넘칠 때, 마지막 버튼이 모달 끝에 딱 붙어 잘려 보이지 않게
+   오른쪽에 여유 패딩을 두고, "더 있다"는 걸 페이드+화살표 버튼으로 알려준다. */
+.ledger-badge-filters-wrap { position: relative; }
+.ledger-badge-filters {
+  display: flex;
+  gap: var(--s-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 28px 8px 28px;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ledger-badge-filters::-webkit-scrollbar {
+  display: none;
+}
+.ledger-badge-filters-fade {
+  position: absolute; top: 0; right: 0; bottom: 8px; width: 36px;
+  background: linear-gradient(to right, rgba(255,255,255,0), var(--c-surface));
+  pointer-events: none; transition: opacity .15s ease;
+}
+.ledger-badge-filters-fade.is-hidden { opacity: 0; }
+.ledger-badge-filters-fade--left {
+  right: auto; left: 0;
+  background: linear-gradient(to left, rgba(255,255,255,0), var(--c-surface));
+}
+.ledger-badge-filters-next, .ledger-badge-filters-prev {
+  position: absolute; top: 0;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--c-primary-strong); color: #fff; border: none;
+  font-size: 13px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15); transition: opacity .15s ease;
+}
+.ledger-badge-filters-next { right: 0; }
+.ledger-badge-filters-prev { left: 0; }
+.ledger-badge-filters-next.is-hidden, .ledger-badge-filters-prev.is-hidden { opacity: 0; pointer-events: none; }
+.ledger-badge-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 14px;
+  height: 34px;
+  line-height: 34px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: all .15s ease;
+}
+.ledger-badge-filter:hover { border-color: var(--c-primary-border); }
+.ledger-badge-filter.is-active {
+  background: var(--c-primary-strong);
+  border-color: var(--c-primary-strong);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(21, 128, 61, 0.25);
+}
+
+/* 뱃지 그리드 & 카드 */
+.ledger-badge-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+@media (min-width: 480px) {
+  .ledger-badge-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.ledger-badge-card {
+  background: var(--c-surface); border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-md); padding: var(--s-3);
+  display: flex; flex-direction: column; gap: var(--s-2);
+  position: relative; transition: all .2s ease;
+}
+.ledger-badge-card.is-unlocked {
+  border-color: var(--c-line); box-shadow: 0 1px 4px rgba(0,0,0,.03);
+}
+.ledger-badge-card.is-unlocked:hover {
+  transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+.ledger-badge-card.is-unlocked.is-rep {
+  border: 2px solid #f59e0b; background: linear-gradient(180deg, #fffbeb 0%, var(--c-surface) 60%);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+.ledger-badge-card.is-locked {
+  background: var(--c-bg); opacity: 0.85; border-style: dashed;
+}
+
+.ledger-badge-card__top {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ledger-badge-card__icon {
+  font-size: 30px; line-height: 1; display: inline-block;
+  transition: transform .2s ease;
+}
+.ledger-badge-card.is-locked .ledger-badge-card__icon {
+  filter: grayscale(100%); opacity: 0.45;
+}
+.ledger-badge-card.is-unlocked:hover .ledger-badge-card__icon {
+  transform: scale(1.1);
+}
+
+.ledger-badge-card__tag {
+  font-size: 10px; font-weight: var(--fw-bold); padding: 2px 6px;
+  border-radius: var(--r-pill);
+}
+.ledger-badge-card__tag.is-rep {
+  background: #f59e0b; color: #fff;
+}
+.ledger-badge-card__tag.is-unlocked {
+  background: var(--c-primary-weak); color: var(--c-primary-strong);
+}
+.ledger-badge-card__tag.is-locked {
+  background: var(--c-line); color: var(--c-text-mut);
+}
+
+.ledger-badge-card__body {
+  display: flex; flex-direction: column; gap: 2px; flex: 1;
+}
+.ledger-badge-card__name {
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text);
+  line-height: 1.2;
+}
+.ledger-badge-card.is-locked .ledger-badge-card__name {
+  color: var(--c-text-mut);
+}
+.ledger-badge-card__cond {
+  font-size: 10px; color: var(--c-primary); font-weight: var(--fw-medium);
+  margin-top: 1px;
+}
+.ledger-badge-card.is-locked .ledger-badge-card__cond {
+  color: var(--c-text-mut);
+}
+.ledger-badge-card__desc {
+  font-size: 11px; color: var(--c-text-sub); line-height: 1.3;
+  margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.ledger-badge-card.is-locked .ledger-badge-card__desc {
+  color: var(--c-text-mut);
+}
+
+.ledger-badge-card__footer {
+  margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--c-line-weak);
+}
+
+.ledger-badge-progress {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.progress--xs {
+  height: 4px; border-radius: var(--r-pill); background: var(--c-line);
+}
+.ledger-badge-progress__text {
+  font-size: 10px; color: var(--c-text-mut); text-align: right;
+}
+
+.ledger-badge-earned-date {
+  display: block; text-align: center; margin-bottom: 6px;
+  font-size: 10px; color: var(--c-text-mut);
+}
+.badge-status-chip {
+  display: block; width: 100%; text-align: center;
+  font-size: 11px; font-weight: var(--fw-bold); padding: 4px 0;
+  border-radius: var(--r-sm);
+}
+.badge-status-chip.is-rep {
+  background: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+}
+.badge-set-btn {
+  font-size: 11px !important; padding: 4px 0 !important;
+}
+
+/* ---------- 뱃지 도감 모달 / 바텀시트 ---------- */
+.ledger-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: ledgerModalFadeIn .2s ease-out;
+}
+.ledger-modal-overlay.is-hidden { display: none; }
+@keyframes ledgerModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ledger-modal-sheet {
+  background: var(--c-surface); width: 100%; max-width: 520px;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  max-height: 85vh; display: flex; flex-direction: column;
+  padding: var(--s-4) var(--s-4) var(--s-5);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+  animation: ledgerSheetSlideUp .25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (min-width: 600px) {
+  .ledger-modal-overlay { align-items: center; padding: var(--s-4); }
+  .ledger-modal-sheet {
+    border-radius: var(--r-xl); max-height: 82vh;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    animation: ledgerModalScaleUp .2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@keyframes ledgerSheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes ledgerModalScaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.ledger-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding-bottom: var(--s-2); border-bottom: 1px solid var(--c-line-weak);
+  flex-shrink: 0;
+}
+.ledger-modal-title { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+.ledger-modal-subtitle { font-size: 11px; color: var(--c-text-sub); margin-top: 2px; }
+.ledger-modal-close {
+  background: var(--c-bg); border: none; border-radius: 50%;
+  width: 32px; height: 32px; font-size: 14px; font-weight: var(--fw-bold);
+  color: var(--c-text-sub); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s ease;
+  flex-shrink: 0;
+}
+.ledger-modal-close:hover { background: var(--c-line); color: var(--c-text); }
+
+.ledger-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-2) 0;
+  margin-top: var(--s-2);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- 탭: 랭킹 (이번 달 절약액 기준) ---------- */
+.ledger-rank-row {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-2) var(--s-1); border-bottom: 1px solid var(--c-line-weak);
+}
+.ledger-rank-row:last-child { border-bottom: none; }
+.ledger-rank-row.is-me {
+  background: var(--c-primary-weak); border-radius: var(--r-md);
+  padding-left: var(--s-2); padding-right: var(--s-2); border-bottom-color: transparent;
+}
+.ledger-rank-row__rank {
+  flex-shrink: 0; width: 28px; text-align: center;
+  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-mut);
+}
+.ledger-rank-row__rank.is-medal { font-size: 20px; }
+.ledger-rank-row__nickname {
+  flex: 1; min-width: 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ledger-rank-row__amount { flex-shrink: 0; font-size: var(--fs-sm); font-weight: var(--fw-black); color: var(--c-primary); }
+
+/* 내 순위가 상위 10위 밖일 때 하단에 고정 표시하는 카드 */
+.ledger-rank-my-card {
+  display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+  margin-top: var(--s-4); padding: var(--s-3);
+  background: var(--c-primary-weak); border: 1px dashed var(--c-primary-border);
+  border-radius: var(--r-md);
+}
+.ledger-rank-my-card__label { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary-strong); }
+.ledger-rank-my-card__rank { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+.ledger-rank-my-card__amount { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary); margin-left: auto; }
+.ledger-rank-my-card__total { flex-basis: 100%; font-size: 10px; color: var(--c-text-mut); }
+
+.ledger-rank-empty-me {
+  margin-top: var(--s-3); text-align: center; font-size: var(--fs-xs); color: var(--c-text-mut);
+}
