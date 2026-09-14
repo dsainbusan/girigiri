@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.PhoneUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ public class MypageService {
 	private final ReservationRepository reservationRepository;
 	private final StoreAccessService storeAccessService;
 	private final PasswordEncoder passwordEncoder;
+	private final UserBadgeRepository userBadgeRepository;
 
 	public enum ProfileUpdateResult { SUCCESS, INVALID_NICKNAME, INVALID_PHONE, PHONE_TAKEN }
 
@@ -135,6 +137,9 @@ public class MypageService {
 
 	@Transactional
 	public void withdraw(Long userId) {
+		// user_badge는 users를 참조하는 FK가 없어서 먼저 지워둔다 — 안 그러면 탈퇴 후에도
+		// 고아 행으로 남아 사라진 유저의 뱃지 기록이 DB에 계속 쌓인다.
+		userBadgeRepository.deleteByUserId(userId);
 		userRepository.deleteById(userId);
 	}
 }

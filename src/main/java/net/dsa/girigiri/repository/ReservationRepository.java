@@ -107,4 +107,10 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 예약이 실제로 접수된 시점(reservedAt) 기준으로 기간을 자른다 — "이 기간에 들어온 주문 중 몇 %가
 	// 취소/노쇼됐는지"까지 같이 보여주려면 픽업완료(picked)만이 아니라 그 기간의 주문 전체가 필요하다.
 	List<ReservationEntity> findByReservedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+	// 추가됨 (2026-09-12, 절약 랭킹 WBS 6.0) — 이번 달 절약 랭킹 집계용. countByStatusAndPickedAtBetween과
+	// 같은 조건이지만 userId·productId·totalPrice·reservedQuantity가 다 필요해서 목록으로 가져온다.
+	// 유저 수가 아무리 많아도 이 쿼리 1번 + product/user 배치조회 2번으로 끝나서(LedgerService.loadLines와
+	// 동일한 패턴), 유저마다 반복 조회하는 것보다 훨씬 싸다.
+	List<ReservationEntity> findByStatusAndPickedAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

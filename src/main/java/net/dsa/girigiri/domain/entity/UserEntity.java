@@ -81,6 +81,17 @@ public class UserEntity {
 	@Column(name = "phone", length = 20)
 	private String phone;
 
+	// 추가됨 (2026-09-12) — 왜: 마이페이지 절약 가계부(WBS 6.0)의 "이번 달 절약 목표" 설정값.
+	// 월별로 따로 관리하지 않고 사용자당 목표 금액 1개만 두는 단순한 모델 — 매달 갱신하는 게
+	// 아니라 "요즘 이 정도를 목표로 아껴보자"는 느슨한 기준으로 쓰는 걸 가정한다. null이면 미설정.
+	@Column(name = "savings_goal_amount")
+	private Integer savingsGoalAmount;
+
+	// 추가됨 (2026-09-12) — 왜: 가계부 뱃지 도감에서 사용자가 설정한 대표 뱃지 코드 (예: "RESCUE_5", "BAKERY_LOVER").
+	// null이면 대표 뱃지 미설정 상태로, 화면에서는 기본 등급 티어(브론즈 등)로 폴백한다.
+	@Column(name = "representative_badge", length = 50)
+	private String representativeBadge;
+
 	// 추가됨 (2026-08-21) — 왜: 회원가입 완료 화면에서 "주로 이용할 동네"를 입력받기 위해 신설.
 	// 카카오맵 좌표 연동 전이라 위경도(latitude/longitude)와 별개로 자유 텍스트로만 받는다.
 	@Column(name = "region", length = 100)

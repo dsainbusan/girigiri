@@ -20,8 +20,13 @@
 
 		<!-- 닉네임 및 동네 / 절약 N일째 정보 -->
 		<div class="u-grow" style="min-width: 0;">
-			<div class="u-row" style="gap: var(--s-2);">
+			<div class="u-row" style="gap: var(--s-2); flex-wrap: wrap; align-items: center;">
 				<h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold);" th:text="${user != null ? user.nickname : '로그인이 필요합니다'}">송보미</h2>
+				<span th:if="${user != null and user.representativeBadge != null and T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).isPresent()}"
+				      class="badge" style="font-size: 10px; font-weight: var(--fw-bold); background: #fef3c7; color: #92400e; border: 1px solid #fde68a;"
+				      th:text="${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().icon} + ' ' + ${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().name}">
+					🦸 골목길 구조대
+				</span>
 				<span th:if="${user != null and user.role == 'OWNER'}" class="badge badge--success" style="font-size: 10px;">사장님</span>
 				<span th:if="${user != null and user.role == 'ADMIN'}" class="badge badge--accent" style="font-size: 10px;">운영자</span>
 			</div>

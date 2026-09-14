@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.SalesReportData;
 import net.dsa.girigiri.domain.dto.SalesRow;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.util.Co2EstimateUtil;
 import net.dsa.girigiri.util.SupabaseRestClient;
 import org.springframework.stereotype.Service;
 
@@ -35,15 +36,8 @@ import java.util.TreeMap;
 @RequiredArgsConstructor
 public class SalesReportService {
 
-	/**
-	 * CO₂ 절감(kg) = 판매 수량 × 카테고리 계수.
-	 * 계수 = (품목당 평균 중량 가정) × (식품 LCA 상 kg당 CO₂e 일반값). 정확한 값은 팀에서 튜닝.
-	 * 무게를 품목마다 입력받지 않고 카테고리만으로 자동 산출하려는 절충안.
-	 */
-	private static final Map<String, Double> CO2_PER_ITEM_KG = Map.of(
-			"베이커리", 0.3, "반찬", 0.6, "도시락", 1.0, "카페", 0.3,
-			"음료", 0.3, "청과", 0.3, "정육", 1.5, "기타", 0.7);
-	private static final double CO2_PER_ITEM_DEFAULT = 0.5;
+	// CO₂ 절감 계수(카테고리별 kg/개)는 util/Co2EstimateUtil로 뺐다 — 마이페이지 절약 가계부도
+	// 같은 기준을 쓴다(2026-09-12).
 
 	private static final DateTimeFormatter MD = DateTimeFormatter.ofPattern("M/d");
 
@@ -140,7 +134,7 @@ public class SalesReportService {
 	// --- 내부 ---
 
 	private double co2Of(SalesRow r) {
-		double coeff = CO2_PER_ITEM_KG.getOrDefault(r.category(), CO2_PER_ITEM_DEFAULT);
+		double coeff = Co2EstimateUtil.perItemKg(r.category());
 		return r.soldQty() * coeff;
 	}
 
