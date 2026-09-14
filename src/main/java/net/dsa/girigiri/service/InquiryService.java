@@ -83,8 +83,24 @@ public class InquiryService {
 						sorted.stream().map(InquiryEntity::getStoreId).filter(java.util.Objects::nonNull).distinct().toList())
 				.stream().collect(Collectors.toMap(StoreEntity::getId, StoreEntity::getStoreName));
 
-		Map<Long, Long> commentCountByInquiryId = inquiryCommentRepository.findAll().stream()
+		List<InquiryCommentEntity> allComments = inquiryCommentRepository.findAll();
+
+		Map<Long, Long> commentCountByInquiryId = allComments.stream()
 				.collect(Collectors.groupingBy(InquiryCommentEntity::getInquiryId, Collectors.counting()));
+
+		// 추가됨 (강노은, 2026-09-14, QA 발견) — 왜: "답변완료"는 댓글이 있다는 뜻이 아니라 작성자
+		// 본인이 아닌 사람(가게 사장님/운영자)이 답을 남겼다는 뜻이어야 한다. 작성자 본인이 자기
+		// 문의에 후속 댓글만 단 경우(사장님/운영자 답변 없음)까지 "답변완료"로 뜨던 걸 직접
+		// 재현해서 확인했다 — commentCount만 보던 supportView/home.html의 배지 판단을 이 값으로 바꾼다.
+		Map<Long, Long> authorByInquiryId = sorted.stream()
+				.collect(Collectors.toMap(InquiryEntity::getId, InquiryEntity::getUserId));
+		java.util.Set<Long> answeredInquiryIds = allComments.stream()
+				.filter(c -> {
+					Long authorId = authorByInquiryId.get(c.getInquiryId());
+					return authorId != null && !authorId.equals(c.getUserId());
+				})
+				.map(InquiryCommentEntity::getInquiryId)
+				.collect(Collectors.toSet());
 
 		return sorted.stream()
 				.map(i -> new InquiryRowDto(
@@ -93,6 +109,7 @@ public class InquiryService {
 						nicknameByUserId.getOrDefault(i.getUserId(), "익명"),
 						i.getStoreId() == null ? null : storeNameById.get(i.getStoreId()),
 						commentCountByInquiryId.getOrDefault(i.getId(), 0L).intValue(),
+						answeredInquiryIds.contains(i.getId()),
 						relativeLabel(i.getCreatedAt()),
 						canDelete(i.getUserId(), userId, role)
 				))

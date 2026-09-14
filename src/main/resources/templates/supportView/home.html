@@ -73,8 +73,8 @@
 						<span th:text="' · ' + ${q.createdAtLabel}"> · 오늘</span>
 					</div>
 				</a>
-				<span th:if="${q.commentCount} > 0" class="badge badge--success">답변완료</span>
-				<span th:if="${q.commentCount} == 0" class="badge badge--accent">문의진행중</span>
+				<span th:if="${q.answered}" class="badge badge--success">답변완료</span>
+				<span th:unless="${q.answered}" class="badge badge--accent">문의진행중</span>
 			</div>
 			<div th:if="${#lists.isEmpty(myInquiries)}" class="support-empty">
 				<span class="support-empty__ico">📄</span>

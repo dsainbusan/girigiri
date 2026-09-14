@@ -161,6 +161,14 @@ public class ReviewService {
 	// 락을 잡고 그 락을 유지해야 할 이유가 없다(캐시 테이블이라 store_id 유니크 제약 안에서
 	// 마지막에 쓴 값이 이기면 충분) — @Transactional을 떼서 조회(findByStoreId)·외부 호출(Gemini)·
 	// 저장(save)이 각자 짧은 트랜잭션으로 끝나게 한다.
+	//
+	// 변경됨 (강노은, 2026-09-14, QA 발견) — 왜: SYSTEM_PROMPT가 "한국어 존댓말로 요약해"라고
+	// 못박아뒀는데도 실제로 한 번은 Gemini가 영어 문장("Kind owner, nice that items were left
+	// before")을 돌려준 적이 있었다(DB review_summary에 그대로 저장돼 있었음, 직접 확인). 문제는
+	// 그 뒤: reviewCountAtSummary가 그대로면 캐시를 검증 없이 영구적으로 재사용하는 구조라, 리뷰가
+	// 하나도 안 늘어나는 한 이 이상한 영어 문장이 화면에 계속 떴다. looksLikeKoreanSummary()로
+	// "그럴듯한 한국어 응답인지"를 캐시 히트/신규 응답 양쪽에 다 검증해서, 캐시가 이미 오염돼 있어도
+	// 다음 조회 때 자동으로 재생성을 시도하고, 새로 받은 응답도 한국어가 아니면 저장하지 않는다.
 	public Optional<String> getReviewSummary(Long storeId) {
 		int reviewCount = getReviewCount(storeId);
 		if (reviewCount < MIN_REVIEWS_FOR_SUMMARY) {
@@ -168,14 +176,20 @@ public class ReviewService {
 		}
 
 		Optional<ReviewSummaryEntity> cached = reviewSummaryRepository.findByStoreId(storeId);
-		if (cached.isPresent() && cached.get().getReviewCountAtSummary() == reviewCount) {
+		boolean cacheUsable = cached.isPresent()
+				&& cached.get().getReviewCountAtSummary() == reviewCount
+				&& looksLikeKoreanSummary(cached.get().getSummary());
+		if (cacheUsable) {
 			return Optional.of(cached.get().getSummary());
 		}
 
-		Optional<String> fresh = reviewSummaryClient.summarize(buildSummaryPrompt(storeId));
+		Optional<String> fresh = reviewSummaryClient.summarize(buildSummaryPrompt(storeId))
+				.filter(this::looksLikeKoreanSummary);
 		if (fresh.isEmpty()) {
-			log.warn("> [ReviewService] 리뷰 요약 생성 실패 - storeId={}, 캐시 폴백 사용", storeId);
-			return cached.map(ReviewSummaryEntity::getSummary); // 예전 캐시라도 있으면 그거라도
+			log.warn("> [ReviewService] 리뷰 요약 생성 실패(또는 한국어가 아닌 응답) - storeId={}, 캐시 폴백 사용", storeId);
+			// 예전 캐시라도 한국어로 된 정상 응답일 때만 그거라도 보여준다 — 오염된 캐시를 폴백으로
+			// 다시 내보내면 안 된다.
+			return cached.map(ReviewSummaryEntity::getSummary).filter(this::looksLikeKoreanSummary);
 		}
 
 		String summary = truncateSummary(fresh.get());
@@ -186,6 +200,30 @@ public class ReviewService {
 		reviewSummaryRepository.save(entity);
 
 		return Optional.of(summary);
+	}
+
+	// 추가됨 (강노은, 2026-09-14, QA 발견) — 한글 완성형 음절이 일정 개수 이상 없으면 버린다.
+	// "하나라도 있으면 통과"로 처음 짰더니, ReviewSummaryClient가 토큰 예산 부족으로 중간에 잘린
+	// 응답("120자 이내? Yes (83" — 한글 음절 3개뿐)까지 통과시켜서 반쪽짜리 문장이 저장되는 걸
+	// 직접 재현해서 봤다. SYSTEM_PROMPT의 최소 응답인 "아직 뚜렷한 특징을 요약하기 어려워요."가
+	// 한글 음절 16개라, 그보다 넉넉히 낮은 8을 기준으로 잡아 정상 응답은 다 통과시키면서 잘린
+	// 조각 응답은 걸러낸다. (ReviewSummaryClient의 finishReason=MAX_TOKENS 체크와 이중 방어.)
+	private static final java.util.regex.Pattern HANGUL_SYLLABLE = java.util.regex.Pattern.compile("[가-힣]");
+	private static final int MIN_HANGUL_SYLLABLES_FOR_SUMMARY = 8;
+
+	private boolean looksLikeKoreanSummary(String summary) {
+		if (summary == null || summary.isBlank()) {
+			return false;
+		}
+		java.util.regex.Matcher matcher = HANGUL_SYLLABLE.matcher(summary);
+		int hangulCount = 0;
+		while (matcher.find()) {
+			hangulCount++;
+			if (hangulCount >= MIN_HANGUL_SYLLABLES_FOR_SUMMARY) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private String truncateSummary(String summary) {

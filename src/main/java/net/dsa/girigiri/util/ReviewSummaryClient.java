@@ -49,8 +49,20 @@ public class ReviewSummaryClient {
 	private final String apiKey;
 	private final String model;
 
-	// 요약은 2~3문장이면 충분해서 챗봇(기본 1024)보다 훨씬 작게 잡는다.
-	private static final int MAX_OUTPUT_TOKENS = 300;
+	// 변경됨 (강노은, 2026-09-14, QA 발견) — 왜: 300으로 잡았을 때 실제 응답
+	// (finishReason=MAX_TOKENS, usageMetadata.thoughtsTokenCount=287/300)을 까보니, 지금 모델이
+	// "생각(thinking)" 토큰을 눈에 안 보이게 먼저 쓰고 남는 토큰으로 실제 답을 쓰는 방식이라
+	// 300자 예산의 대부분(287)을 생각에 쓰고 진짜 요약 문장은 9토큰만에 잘려서
+	// "빵이 촉촉하고 신선하며 마" 같은 조각 문장이 그대로 화면에 저장된 적이 있었다(직접 재현 확인).
+	// thinkingConfig.thinkingBudget=0으로 생각 자체를 꺼보려 했지만 이 모델은 여전히 400
+	// INVALID_ARGUMENT로 거절한다(2026-09-01 주석과 같은 결과, 재확인함) — 그래서 끄는 대신
+	// "생각 + 실제 답변"이 둘 다 들어갈 만큼 예산을 넉넉히 늘리는 쪽으로 대응한다.
+	// 800으로 한 번 올렸을 때도 실제 매장(리뷰 9개짜리 프롬프트)에서 한 번 더 MAX_TOKENS로
+	// 잘린 걸 재현했다 — 생각 토큰 소비량이 요청마다 들쭉날쭉해서(같은 프롬프트인데도 0~287+로
+	// 편차가 큼) 안전 마진이 더 필요하다고 보고 2048로 다시 올렸고, 같은 실제 프롬프트로 3회
+	// 연속 finishReason=STOP·정상 한국어 요약을 확인했다. 그래도 100% 보장은 아니라서 아래
+	// summarize()에 MAX_TOKENS 재시도까지 같이 넣어둔다.
+	private static final int MAX_OUTPUT_TOKENS = 2048;
 	private static final int MAX_ATTEMPTS = 2;
 	private static final long RETRY_DELAY_MS = 1500;
 
@@ -121,8 +133,24 @@ public class ReviewSummaryClient {
 					return Optional.empty();
 				}
 
-				String text = objectMapper.readTree(response.body())
-						.path("candidates").path(0)
+				JsonNode candidate = objectMapper.readTree(response.body()).path("candidates").path(0);
+				// 추가됨 (강노은, 2026-09-14, QA 발견) — 위 MAX_OUTPUT_TOKENS 주석 참고. 예산을
+				// 넉넉히 늘려도 생각 토큰 소비가 들쭉날쭉해서 드물게 또 잘릴 수 있다 — 503/429와
+				// 같은 재시도 경로를 태워서 한 번 더 시도하고, 마지막 시도까지 잘리면 그때
+				// 조각난 문장을 그대로 쓰지 않고 실패로 취급한다(호출부 ReviewService가 예전 캐시
+				// 폴백/요약 섹션 숨김으로 처리).
+				if ("MAX_TOKENS".equals(candidate.path("finishReason").asText())) {
+					if (attempt < MAX_ATTEMPTS) {
+						log.warn("> [ReviewSummaryClient] 응답이 토큰 예산 안에 못 끝나서 잘림(재시도) - attempt={}/{}",
+								attempt, MAX_ATTEMPTS);
+						sleepBeforeRetry();
+						continue;
+					}
+					log.warn("> [ReviewSummaryClient] 응답이 토큰 예산 안에 못 끝나서 잘림(finishReason=MAX_TOKENS) - 재시도 소진, 실패로 처리");
+					return Optional.empty();
+				}
+
+				String text = candidate
 						.path("content").path("parts").path(0)
 						.path("text").asText("");
 				return text.isBlank() ? Optional.empty() : Optional.of(text.trim());
