@@ -18,7 +18,14 @@
 	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
 */-->
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/ledger.css(v=2)}">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=3)}">
+
+	<!-- 뱃지 공유 카드용 원본 데이터 — 화면엔 안 보임. 뱃지마다 카드를 새로 만드는 대신, 카드 1개
+	     템플릿에 이 값 + 클릭한 뱃지의 아이콘/이름/카테고리만 갈아끼운다(아래 공유 버튼 JS 참고).
+	     나무 환산은 th:attr 안에서 T(...) 정적 클래스 접근이 막혀 있어(Thymeleaf 제약) JS에서
+	     co2Kg÷20으로 직접 계산한다 — 20은 Co2EstimateUtil.TREE_ANNUAL_ABSORPTION_KG와 반드시 맞춰야 한다. -->
+	<div id="ledger-share-source" class="is-hidden"
+	     th:attr="data-nickname=${data.nickname},data-total-saved=${data.totalSaved},data-co2=${#numbers.formatDecimal(data.co2Kg, 1, 1)}"></div>
 
 	<!-- 방금 이 build() 호출에서 새로 해금된 뱃지가 있으면 축하 토스트. "정적 계산형"이라 실시간(그
 	     순간)은 아니고 가계부를 다시 열었을 때 뜨는 것 — 진짜 즉시 알림은 픽업 완료 시점에 걸어야 해서
@@ -35,6 +42,9 @@
 					<span class="ledger-badge-toast__name" th:text="${b.name}">구제 첫걸음</span>
 					<span class="ledger-badge-toast__desc" th:text="${b.description}">마감 직전 음식을 처음으로 구제했어요!</span>
 				</div>
+				<button type="button" class="ledger-badge-toast__share-btn ledger-share-trigger-btn"
+				        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}"
+				        aria-label="카드로 공유" title="카드로 공유">🖼️</button>
 			</div>
 		</div>
 		<span class="ledger-badge-toast__hint">눌러서 뱃지 도감 보기 ›</span>
@@ -455,6 +465,8 @@
 							<!-- 달성 완료 시 대표 뱃지 설정 버튼 / 착용 중 표시 -->
 							<div th:if="${b.unlocked}" class="ledger-badge-action">
 								<span th:if="${b.earnedDateLabel != null}" class="ledger-badge-earned-date" th:text="${b.earnedDateLabel}">2026.09.12 달성</span>
+								<button type="button" class="btn btn--outline btn--block ledger-badge-share-btn ledger-share-trigger-btn"
+								        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}">🖼️ 카드 공유</button>
 								<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep">✓ 착용 중</span>
 								<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" style="width: 100%;">
 									<input type="hidden" name="badgeCode" th:value="${b.code}">
@@ -497,6 +509,56 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- ===== 뱃지 공유 카드 모달 (SNS 공유용 이미지 캡처) ===== -->
+	<!--/* 뱃지 하나하나마다 카드를 새로 만드는 게 아니라, 이 카드 1개를 재사용한다 —
+	     카테고리별 배경색(CSS [data-category] 선택자)만 바뀌고, 아이콘·이름·날짜는 클릭한 뱃지의
+	     data-* 값으로, 하단 3개 지표는 #ledger-share-source(누적 절약/CO2/나무 환산)로 채운다. */-->
+	<div id="share-card-modal" class="ledger-modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="share-card-modal-title">
+		<div class="ledger-modal-sheet">
+			<div class="ledger-modal-header">
+				<h3 id="share-card-modal-title" class="ledger-modal-title">뱃지 공유 카드</h3>
+				<button type="button" id="close-share-card-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+			</div>
+			<div class="ledger-modal-body">
+				<div id="share-card" class="ledger-share-card">
+					<span class="ledger-share-card__tag">기리기리 뱃지 획득</span>
+					<div class="ledger-share-card__header">
+						<span class="ledger-share-card__brand">🌱 기리기리</span>
+					</div>
+					<div class="ledger-share-card__icon-wrap">
+						<span id="share-card-icon" class="ledger-share-card__icon">🌳</span>
+					</div>
+					<div id="share-card-name" class="ledger-share-card__name">숲의 수호자</div>
+					<p class="ledger-share-card__sub"><strong id="share-card-nickname">닉네임</strong>님이 뱃지를 획득했어요!</p>
+					<span id="share-card-date" class="ledger-share-card__date">2026.09.15 인증</span>
+					<div class="ledger-share-card__stats">
+						<div class="ledger-share-card__stat">
+							<span id="share-card-total" class="ledger-share-card__stat-value">0원</span>
+							<span class="ledger-share-card__stat-label">누적 절약</span>
+						</div>
+						<div class="ledger-share-card__stat">
+							<span id="share-card-co2" class="ledger-share-card__stat-value">0kg</span>
+							<span class="ledger-share-card__stat-label">CO2 절감</span>
+						</div>
+						<div class="ledger-share-card__stat">
+							<span id="share-card-tree" class="ledger-share-card__stat-value">0그루</span>
+							<span class="ledger-share-card__stat-label">소나무 효과</span>
+						</div>
+					</div>
+					<p class="ledger-share-card__hashtags">#기리기리 #환경지킴이 #오늘의구제</p>
+				</div>
+				<button type="button" id="download-share-card-btn" class="btn btn--block" style="margin-top: var(--s-4)">📥 이미지로 저장</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- 카드를 이미지로 캡처하는 용도로만 사용(다른 화면 요소 캡처 없음) -->
+	<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+	<!-- html2canvas는 이모지를 Canvas2D fillText로 직접 그리는데, 최신 이모지(예: 🪙)는 캔버스 폰트에
+	     색상 글리프가 없어 완전히 다른(깨진) 아이콘으로 대체되는 문제가 있다 — 캡처 직전 이모지를
+	     twemoji로 <img>화해서 우회한다(아래 다운로드 핸들러 참고). -->
+	<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 
 	<!--/* 탭 전환 및 뱃지/랭킹 모달·필터 스크립트 */-->
 	<script th:inline="none">
@@ -778,7 +840,7 @@
 				var closeToastBtn = document.getElementById('close-badge-toast-btn');
 				var autoHideTimer = setTimeout(function () { badgeToast.classList.add('is-hidden'); }, 8000);
 				badgeToast.addEventListener('click', function (e) {
-					if (e.target === closeToastBtn) { return; }
+					if (e.target === closeToastBtn || e.target.closest('.ledger-share-trigger-btn')) { return; }
 					jumpToBadgeTab();
 				});
 				if (closeToastBtn) {
@@ -892,6 +954,72 @@
 			if (openBadgeModalBtn && updateFiltersScrollHint) {
 				openBadgeModalBtn.addEventListener('click', function () {
 					setTimeout(updateFiltersScrollHint, 50);
+				});
+			}
+
+			// 뱃지 공유 카드 — 토스트/도감 어디서 눌러도 같은 카드 1개를 채워서 보여준다.
+			// openBtnId 없이 setupModal을 재사용해서(존재하지 않는 id를 넘김) 닫기/배경클릭/ESC만 얻어온다.
+			setupModal('share-card-modal', null, 'close-share-card-modal-btn');
+			var shareSource = document.getElementById('ledger-share-source');
+			var shareCard = document.getElementById('share-card');
+			var shareCardModal = document.getElementById('share-card-modal');
+			function openShareCard(btn) {
+				if (!shareCard || !shareCardModal || !shareSource) { return; }
+				shareCard.setAttribute('data-category', btn.getAttribute('data-category') || '');
+				document.getElementById('share-card-icon').textContent = btn.getAttribute('data-icon') || '';
+				document.getElementById('share-card-name').textContent = btn.getAttribute('data-name') || '';
+				document.getElementById('share-card-nickname').textContent = shareSource.getAttribute('data-nickname') || '';
+				var earned = btn.getAttribute('data-earned');
+				document.getElementById('share-card-date').textContent = earned ? earned.replace(' 달성', '') + ' 인증' : '오늘 인증';
+				var totalSaved = parseInt(shareSource.getAttribute('data-total-saved'), 10) || 0;
+				document.getElementById('share-card-total').textContent = totalSaved.toLocaleString('ko-KR') + '원';
+				var co2Kg = parseFloat(shareSource.getAttribute('data-co2')) || 0;
+				document.getElementById('share-card-co2').textContent = co2Kg.toFixed(1) + 'kg';
+				// TREE_ANNUAL_ABSORPTION_KG(Co2EstimateUtil)와 동일한 기준(20kg = 소나무 1그루/년).
+				document.getElementById('share-card-tree').textContent = (co2Kg / 20).toFixed(1) + '그루';
+				shareCardModal.classList.remove('is-hidden');
+				document.body.style.overflow = 'hidden';
+			}
+			document.querySelectorAll('.ledger-share-trigger-btn').forEach(function (btn) {
+				btn.addEventListener('click', function (e) {
+					e.stopPropagation();
+					openShareCard(btn);
+				});
+			});
+
+			// 카드 이미지 저장 — html2canvas로 #share-card DOM을 그대로 찍어서 PNG 다운로드.
+			var downloadShareCardBtn = document.getElementById('download-share-card-btn');
+			if (downloadShareCardBtn && shareCard) {
+				downloadShareCardBtn.addEventListener('click', function () {
+					if (typeof html2canvas !== 'function') { return; }
+					downloadShareCardBtn.disabled = true;
+					var originalLabel = downloadShareCardBtn.textContent;
+					downloadShareCardBtn.textContent = '이미지 생성 중...';
+					// 캡처 직전에만 뱃지 아이콘 하나만 <img>(twemoji)로 바꿔서 html2canvas의 Canvas2D 이모지
+					// 렌더링 문제(예: 🪙가 전혀 다른 아이콘으로 깨져 나오는 것)를 우회한다. twemoji 기본
+					// CDN(twemoji.maxcdn.com)은 CORS 헤더가 없어 html2canvas useCORS 모드에서 막히므로, CORS를
+					// 지원하는 jsdelivr 미러(GitHub jdecked/twemoji, 트위터 twemoji 폐지 후 커뮤니티 관리 포크)로
+					// base를 바꾼다. SVG는 html2canvas가 캔버스에 그릴 때 viewBox 처리가 어긋나 아이콘이 잘려
+					// 나와서(실사용 확인됨) 래스터(PNG)를 쓴다. 카드 전체(shareCard)가 아니라 아이콘 한
+					// 엘리먼트에만 적용하는 이유 — 텍스트와 이모지가 한 줄에 섞인 곳(예: 브랜드행 "🌱 기리기리")에
+					// twemoji가 끼어들면 html2canvas가 그 이미지를 카드 좌상단에 엉뚱하게 그리는 문제가 있었다.
+					var shareIconEl = document.getElementById('share-card-icon');
+					if (typeof twemoji !== 'undefined' && shareIconEl) {
+						twemoji.parse(shareIconEl, {
+							folder: '72x72', ext: '.png',
+							base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
+						});
+					}
+					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+						var link = document.createElement('a');
+						var name = document.getElementById('share-card-name').textContent || '뱃지';
+						link.download = '기리기리_' + name + '.png';
+						link.href = canvas.toDataURL('image/png');
+						link.click();
+					}).finally(function () {
+						downloadShareCardBtn.disabled = false;
+						downloadShareCardBtn.textContent = originalLabel;
+					});
 				});
 			}
 		})();
