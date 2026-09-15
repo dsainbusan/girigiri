@@ -1030,6 +1030,14 @@
 						ctx.textBaseline = 'middle';
 						ctx.fillText(pillEl.textContent.trim(), x + w / 2, y + h / 2);
 						ctx.restore();
+						// 진단용(2026-09-15) — 이 함수가 계산한 좌표를 다운로드 이미지에 빨간 테두리로
+						// 직접 표시해서, 실제로 어디를 다시 그리고 있는지 눈으로 바로 확인하기 위함.
+						ctx.save();
+						ctx.strokeStyle = 'red';
+						ctx.lineWidth = Math.max(1, Math.round(2 * scale));
+						ctx.strokeRect(x, y, w, h);
+						ctx.restore();
+						console.log('[share-card] redraw', pillEl.className || pillEl.id, { x: x, y: y, w: w, h: h, scale: scale, canvasW: canvas.width, canvasH: canvas.height });
 					}
 					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
 						// scale:2를 그대로 쓰지 않고 실제 캔버스 크기에서 역산한다 — 브라우저의 화면
