@@ -1011,15 +1011,24 @@
 							return d[3] === 0;
 						});
 					}
+					// 진단용 로그(2026-09-15) — 어느 경로로 캡처됐는지 콘솔에서 바로 확인하기 위함.
 					function captureWithFallback() {
 						return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true, foreignObjectRendering: true })
 							.then(function (canvas) {
-								if (!isCanvasBlank(canvas)) { return canvas; }
+								if (!isCanvasBlank(canvas)) {
+									console.log('[share-card] foreignObjectRendering 성공, 이 경로로 캡처됨');
+									return canvas;
+								}
+								console.log('[share-card] foreignObjectRendering 결과가 비어있어 Canvas2D로 폴백');
 								return captureWithCanvas2d();
 							})
-							.catch(function () { return captureWithCanvas2d(); });
+							.catch(function (err) {
+								console.log('[share-card] foreignObjectRendering 에러로 Canvas2D로 폴백:', err);
+								return captureWithCanvas2d();
+							});
 					}
 					function captureWithCanvas2d() {
+						console.log('[share-card] Canvas2D(+twemoji) 경로로 캡처됨');
 						// twemoji 아이콘 보정은 이 폴백 경로에서만 필요하다(foreignObjectRendering 성공 시엔
 						// 브라우저가 이모지를 정상적으로 그려주므로 불필요).
 						var shareIconEl = document.getElementById('share-card-icon');
