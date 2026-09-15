@@ -786,6 +786,10 @@
      한글 글자폭이 달라지는(=캡처했을 때만 배열이 틀어져 보이는) 문제가 있었다. 실제로 설치돼 있는
      폰트로 바로 고정해서 폴백 자체를 없앤다. */
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  /* line-height를 명시하지 않으면(기본값 normal) html2canvas가 한글 폰트의 줄높이를 브라우저와
+     다르게 추정해서, 다운로드한 이미지에서만 줄 간격이 실제보다 좁게(글자끼리 붙어 보이게) 나오는
+     문제가 있었다 — 숫자로 고정해서 이 추정 자체를 없앤다. */
+  line-height: 1.35;
 }
 .ledger-share-card[data-category="구제"] { --ledger-share-from: #fbbf24; --ledger-share-to: #b45309; }
 .ledger-share-card[data-category="절약"] { --ledger-share-from: #34d399; --ledger-share-to: #047857; }
@@ -794,7 +798,9 @@
 .ledger-share-card[data-category="랭킹"] { --ledger-share-from: #fde047; --ledger-share-to: #a16207; }
 
 .ledger-share-card__tag {
-  display: inline-block; margin-bottom: var(--s-3); padding: 4px 14px;
+  /* inline-block은 html2canvas가 기준선(baseline)을 브라우저와 다르게 계산해서 알약 배지가
+     엉뚱한 위치로 튀는 문제가 있다(실사용 확인됨) — table로 바꿔서 인라인 서식 맥락 자체를 피한다. */
+  display: table; margin: 0 auto var(--s-3); padding: 4px 14px;
   background: rgba(0, 0, 0, .25); border-radius: var(--r-pill);
   font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .04em;
 }
@@ -814,7 +820,8 @@
 .ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
-  display: inline-block; padding: 3px 12px; margin-bottom: var(--s-4);
+  /* __tag와 동일한 이유로 inline-block 대신 table을 쓴다. */
+  display: table; margin: 0 auto var(--s-4); padding: 3px 12px;
   border: 1px solid rgba(255, 255, 255, .6); border-radius: var(--r-pill);
   font-size: 11px;
 }
