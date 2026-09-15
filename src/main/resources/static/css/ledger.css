@@ -781,6 +781,11 @@
   border-radius: var(--r-xl);
   background: linear-gradient(165deg, var(--ledger-share-from), var(--ledger-share-to));
   color: #fff; text-align: center; overflow: hidden;
+  /* --font-base의 1순위인 "Noto Sans KR"은 이 프로젝트에서 실제로 로드하지 않는 폰트라(설치 안 됨)
+     브라우저는 알아서 다음 폰트로 폴백하지만, html2canvas는 그 폴백 순서를 브라우저와 다르게 계산해
+     한글 글자폭이 달라지는(=캡처했을 때만 배열이 틀어져 보이는) 문제가 있었다. 실제로 설치돼 있는
+     폰트로 바로 고정해서 폴백 자체를 없앤다. */
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
 }
 .ledger-share-card[data-category="구제"] { --ledger-share-from: #fbbf24; --ledger-share-to: #b45309; }
 .ledger-share-card[data-category="절약"] { --ledger-share-from: #34d399; --ledger-share-to: #047857; }
@@ -794,7 +799,11 @@
   font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .04em;
 }
 .ledger-share-card__header { margin-bottom: var(--s-4); }
-.ledger-share-card__brand { font-size: var(--fs-sm); font-weight: var(--fw-black); }
+/* 아래 3곳(brand/name/stat-value) 전부 --fw-black(900) 대신 --fw-bold(700)를 쓴다 — Malgun
+   Gothic엔 900(블랙) 굵기 서체가 없어 OS가 700을 다시 더 굵게 합성하는데, 이 합성 방식이 브라우저
+   실제 렌더링과 html2canvas Canvas2D 렌더링에서 서로 달라 캡처한 이미지에서만 글자 폭이 어긋나
+   보였다(다운로드한 PNG에서만 배열이 틀어지는 문제, 웹에서는 정상). */
+.ledger-share-card__brand { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
 .ledger-share-card__icon-wrap {
   width: 116px; height: 116px; margin: 0 auto var(--s-4);
   border-radius: 50%; background: rgba(255, 255, 255, .92);
@@ -802,7 +811,7 @@
   box-shadow: 0 0 0 6px rgba(255, 255, 255, .18);
 }
 .ledger-share-card__icon { font-size: 52px; line-height: 1; }
-.ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-black); margin-bottom: 6px; }
+.ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
   display: inline-block; padding: 3px 12px; margin-bottom: var(--s-4);
@@ -813,7 +822,7 @@
   display: flex; border-top: 1px solid rgba(255, 255, 255, .3); padding-top: var(--s-3);
 }
 .ledger-share-card__stat { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.ledger-share-card__stat-value { font-size: var(--fs-md); font-weight: var(--fw-black); }
+.ledger-share-card__stat-value { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .ledger-share-card__stat-label { font-size: 10px; opacity: .85; }
 .ledger-share-card__hashtags { margin: var(--s-3) 0 0; font-size: 10px; opacity: .8; }
 /* 이미지 저장 직전 twemoji가 이모지를 <img class="emoji">로 바꿔치기한다 — 글자 크기(font-size)에
