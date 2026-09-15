@@ -1019,6 +1019,13 @@
 					var dateRectAtCapture = document.getElementById('share-card-date').getBoundingClientRect();
 					function redrawPillTextCentered(canvas, pillEl, pillRect, cardRect, scale) {
 						var ctx = canvas.getContext('2d', { willReadFrequently: true });
+						// html2canvas가 내부적으로 각 DOM 요소를 그릴 때 남겨둔 변환행렬(transform)이 남아있을
+						// 수 있다 — getImageData는 이 변환과 무관하게 항상 원본 픽셀 좌표를 읽지만(그래서
+						// 배경색 샘플링은 늘 맞았다), fillRect/fillText는 이 변환의 영향을 받아 내가 지정한
+						// 좌표와 다른 곳에 그려질 수 있다. 그래서 지금까지 다시 그린 게 안 보이는 것처럼
+						// 보였다(=사실은 캔버스 어딘가 엉뚱한 곳에 그려지고 있었음). 그리기 전에 항등행렬로
+						// 리셋해서 내가 계산한 좌표가 그대로 캔버스 픽셀 좌표가 되게 한다.
+						ctx.setTransform(1, 0, 0, 1, 0, 0);
 						var cs = getComputedStyle(pillEl);
 						var x = (pillRect.left - cardRect.left) * scale;
 						var y = (pillRect.top - cardRect.top) * scale;
@@ -1029,12 +1036,25 @@
 						var sample = ctx.getImageData(Math.round(x + 3 * scale), Math.round(y + 2 * scale), 1, 1).data;
 						ctx.save();
 						ctx.fillStyle = 'rgba(' + sample[0] + ',' + sample[1] + ',' + sample[2] + ',' + (sample[3] / 255) + ')';
-						ctx.fillRect(x + 3 * scale, y + 1 * scale, w - 6 * scale, h - 2 * scale);
+						// 세로 방향은 여백 없이 알약 높이 전체를 지운다(가로만 3*scale만큼 인셋해서 둥근
+						// 양끝은 건드리지 않음) — 예전 글자가 이 상자보다 아래로 삐져나와 있었어서 일부가
+						// 안 지워지고 남는 문제가 있었다.
+						ctx.fillRect(x + 3 * scale, y, w - 6 * scale, h);
 						ctx.fillStyle = cs.color;
 						ctx.font = cs.fontWeight + ' ' + (parseFloat(cs.fontSize) * scale) + 'px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
 						ctx.textAlign = 'center';
-						ctx.textBaseline = 'middle';
-						ctx.fillText(pillEl.textContent.trim(), x + w / 2, y + h / 2);
+						// textBaseline:'middle'은 못 믿는다 — 크롬 Canvas2D가 한글 폰트의 middle 기준선을
+						// 실제 글자 모양보다 아래로 치우치게 계산하는 문제가 있었다(실사용 픽셀 분석으로
+						// 확인, 알약 높이의 약 30%만큼 아래로 쏠림). 대신 이번에 그릴 글자의 실제 렌더링
+						// 픽셀 높이(actualBoundingBoxAscent/Descent)를 직접 재서 수동으로 중앙에 놓는다 —
+						// 이건 폰트가 보고하는 일반 지표가 아니라 이 글자를 그렸을 때의 실측값이라 정확하다.
+						var text = pillEl.textContent.trim();
+						ctx.textBaseline = 'alphabetic';
+						var metrics = ctx.measureText(text);
+						var ascent = metrics.actualBoundingBoxAscent;
+						var descent = metrics.actualBoundingBoxDescent;
+						var baselineY = y + h / 2 + (ascent - descent) / 2;
+						ctx.fillText(text, x + w / 2, baselineY);
 						ctx.restore();
 					}
 					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
@@ -1043,8 +1063,20 @@
 						// 실제로 만드는 캔버스 배율이 2와 달라져서, 하드코딩된 2를 쓰면 좌표 계산이
 						// 어긋난다. cardRectAtCapture(캡처 직전에 미리 재둔 값)를 기준으로 역산한다.
 						var actualScale = canvas.width / cardRectAtCapture.width;
-						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), tagRectAtCapture, cardRectAtCapture, actualScale);
-						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), dateRectAtCapture, cardRectAtCapture, actualScale);
+						// try/catch로 감싼다 — 재작도 중 예외(예: 교차 출처 이미지로 인한 캔버스 오염)가
+						// 조용히 다운로드 자체를 막아버리는지, 아니면 성공하는지 콘솔에서 확실히 구분하기 위함.
+						try {
+							redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), tagRectAtCapture, cardRectAtCapture, actualScale);
+							console.log('[share-card] 태그 알약 재작도 성공');
+						} catch (err) {
+							console.error('[share-card] 태그 알약 재작도 실패:', err);
+						}
+						try {
+							redrawPillTextCentered(canvas, document.getElementById('share-card-date'), dateRectAtCapture, cardRectAtCapture, actualScale);
+							console.log('[share-card] 날짜 알약 재작도 성공');
+						} catch (err) {
+							console.error('[share-card] 날짜 알약 재작도 실패:', err);
+						}
 						var link = document.createElement('a');
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
 						link.download = '기리기리_' + name + '.png';
