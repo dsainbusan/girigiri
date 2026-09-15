@@ -1018,7 +1018,7 @@
 					var tagRectAtCapture = document.querySelector('.ledger-share-card__tag').getBoundingClientRect();
 					var dateRectAtCapture = document.getElementById('share-card-date').getBoundingClientRect();
 					function redrawPillTextCentered(canvas, pillEl, pillRect, cardRect, scale) {
-						var ctx = canvas.getContext('2d');
+						var ctx = canvas.getContext('2d', { willReadFrequently: true });
 						var cs = getComputedStyle(pillEl);
 						var x = (pillRect.left - cardRect.left) * scale;
 						var y = (pillRect.top - cardRect.top) * scale;
