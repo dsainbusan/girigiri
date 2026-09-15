@@ -798,15 +798,13 @@
 .ledger-share-card[data-category="랭킹"] { --ledger-share-from: #fde047; --ledger-share-to: #a16207; }
 
 .ledger-share-card__tag {
-  /* 알약을 없앴다가(허전하다는 피드백으로) 다시 넣는다. display는 inline-block + 부모의
-     text-align:center로 가로 중앙 정렬만 하면 충분하다(flex/table 같은 특수 정렬 방식은 불필요).
-     세로는 위/아래 패딩을 일부러 비대칭(4px/16px)으로 준다 — html2canvas가 한글 텍스트를 캔버스에
-     그릴 때 항상 일정하게(약 5~6px) 아래로 치우치는 것을 실측으로 확인해서, 그 오차를 패딩
-     비대칭으로 미리 상쇄한 값이다(웹 화면에서는 약간 위쪽으로 치우쳐 보이지만 육안으로는 티가
-     안 나고, 캡처한 PNG에서 정확히 중앙에 오도록 맞춘 값). */
-  display: inline-block; margin-bottom: var(--s-3); padding: 4px 18px 16px;
-  background: rgba(0, 0, 0, .25); border-radius: var(--r-pill);
-  font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .08em; line-height: 1;
+  /* 알약 배경은 완전히 뺀다 — 패딩 비대칭 보정까지 해봤지만 웹 화면 쪽 균형이 깨져서 배보다
+     배꼽이 커졌다. 박스(도형) 없이 타이포그래피만으로 존재감을 준다: 크게/굵게/자간 넓게 +
+     은은한 그림자로 입체감. text-shadow는 박스 정렬이 필요 없는 순수 텍스트 속성이라
+     html2canvas 캡처에서도 웹과 동일하게 나온다. */
+  display: block; text-align: center; margin-bottom: var(--s-3);
+  font-size: 13px; font-weight: var(--fw-bold); letter-spacing: .12em; line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
 }
 .ledger-share-card__header { margin-bottom: var(--s-4); }
 /* 아래 3곳(brand/name/stat-value) 전부 --fw-black(900) 대신 --fw-bold(700)를 쓴다 — Malgun
@@ -824,10 +822,10 @@
 .ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
-  /* __tag와 같은 이유로 테두리 알약을 다시 넣되, 같은 비대칭 패딩 보정을 적용한다. */
-  display: inline-block; margin-bottom: var(--s-4); padding: 2px 16px 14px;
-  border: 1px solid rgba(255, 255, 255, .6); border-radius: var(--r-pill);
-  font-size: 11px; line-height: 1;
+  /* __tag와 같은 이유로 테두리 알약도 뺀다 — 굵기만 세게 줘서 존재감을 살린다. */
+  display: block; text-align: center; margin-bottom: var(--s-4);
+  font-size: 12px; font-weight: var(--fw-bold); line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 .ledger-share-card__stats {
   display: flex; border-top: 1px solid rgba(255, 255, 255, .3); padding-top: var(--s-3);
