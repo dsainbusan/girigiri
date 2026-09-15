@@ -1009,10 +1009,16 @@
 							base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
 						});
 					}
-					function redrawPillTextCentered(canvas, pillEl, scale) {
+					// 캡처 "직전"에 좌표를 미리 재둔다 — html2canvas 캡처는 비동기라(교차 출처 이미지
+					// 로딩 등으로 시간이 걸림) 캡처가 끝난 "뒤"에 getBoundingClientRect()를 다시 부르면,
+					// 그 사이 개발자도구를 열고 닫거나 화면 크기가 바뀌어 모달(position:fixed) 위치가
+					// 살짝 달라져서 좌표가 어긋나는 문제가 있었다(실사용 콘솔 로그로 확인됨 — 캡처된
+					// 그림과 다시 계산한 좌표가 서로 다른 스크롤/뷰포트 기준이었다).
+					var cardRectAtCapture = shareCard.getBoundingClientRect();
+					var tagRectAtCapture = document.querySelector('.ledger-share-card__tag').getBoundingClientRect();
+					var dateRectAtCapture = document.getElementById('share-card-date').getBoundingClientRect();
+					function redrawPillTextCentered(canvas, pillEl, pillRect, cardRect, scale) {
 						var ctx = canvas.getContext('2d');
-						var pillRect = pillEl.getBoundingClientRect();
-						var cardRect = shareCard.getBoundingClientRect();
 						var cs = getComputedStyle(pillEl);
 						var x = (pillRect.left - cardRect.left) * scale;
 						var y = (pillRect.top - cardRect.top) * scale;
@@ -1030,23 +1036,15 @@
 						ctx.textBaseline = 'middle';
 						ctx.fillText(pillEl.textContent.trim(), x + w / 2, y + h / 2);
 						ctx.restore();
-						// 진단용(2026-09-15) — 이 함수가 계산한 좌표를 다운로드 이미지에 빨간 테두리로
-						// 직접 표시해서, 실제로 어디를 다시 그리고 있는지 눈으로 바로 확인하기 위함.
-						ctx.save();
-						ctx.strokeStyle = 'red';
-						ctx.lineWidth = Math.max(1, Math.round(2 * scale));
-						ctx.strokeRect(x, y, w, h);
-						ctx.restore();
-						console.log('[share-card] redraw', pillEl.className || pillEl.id, { x: x, y: y, w: w, h: h, scale: scale, canvasW: canvas.width, canvasH: canvas.height });
 					}
 					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
 						// scale:2를 그대로 쓰지 않고 실제 캔버스 크기에서 역산한다 — 브라우저의 화면
 						// 배율(Windows 디스플레이 확대·축소, 예: 125%/150%)이 100%가 아니면 html2canvas가
 						// 실제로 만드는 캔버스 배율이 2와 달라져서, 하드코딩된 2를 쓰면 좌표 계산이
-						// 어긋나 알약을 다시 그리는 위치가 틀어진다(실사용 확인됨).
-						var actualScale = canvas.width / shareCard.getBoundingClientRect().width;
-						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), actualScale);
-						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), actualScale);
+						// 어긋난다. cardRectAtCapture(캡처 직전에 미리 재둔 값)를 기준으로 역산한다.
+						var actualScale = canvas.width / cardRectAtCapture.width;
+						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), tagRectAtCapture, cardRectAtCapture, actualScale);
+						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), dateRectAtCapture, cardRectAtCapture, actualScale);
 						var link = document.createElement('a');
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
 						link.download = '기리기리_' + name + '.png';
