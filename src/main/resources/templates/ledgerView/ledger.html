@@ -995,22 +995,43 @@
 					downloadShareCardBtn.disabled = true;
 					var originalLabel = downloadShareCardBtn.textContent;
 					downloadShareCardBtn.textContent = '이미지 생성 중...';
-					// 캡처 직전에만 뱃지 아이콘 하나만 <img>(twemoji)로 바꿔서 html2canvas의 Canvas2D 이모지
-					// 렌더링 문제(예: 🪙가 전혀 다른 아이콘으로 깨져 나오는 것)를 우회한다. twemoji 기본
-					// CDN(twemoji.maxcdn.com)은 CORS 헤더가 없어 html2canvas useCORS 모드에서 막히므로, CORS를
-					// 지원하는 jsdelivr 미러(GitHub jdecked/twemoji, 트위터 twemoji 폐지 후 커뮤니티 관리 포크)로
-					// base를 바꾼다. SVG는 html2canvas가 캔버스에 그릴 때 viewBox 처리가 어긋나 아이콘이 잘려
-					// 나와서(실사용 확인됨) 래스터(PNG)를 쓴다. 카드 전체(shareCard)가 아니라 아이콘 한
-					// 엘리먼트에만 적용하는 이유 — 텍스트와 이모지가 한 줄에 섞인 곳(예: 브랜드행 "🌱 기리기리")에
-					// twemoji가 끼어들면 html2canvas가 그 이미지를 카드 좌상단에 엉뚱하게 그리는 문제가 있었다.
-					var shareIconEl = document.getElementById('share-card-icon');
-					if (typeof twemoji !== 'undefined' && shareIconEl) {
-						twemoji.parse(shareIconEl, {
-							folder: '72x72', ext: '.png',
-							base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
+					// html2canvas는 기본적으로 Canvas2D로 텍스트/이모지를 "다시 그리는" 방식이라(브라우저의
+					// 실제 레이아웃·폰트 계산을 재구현) 알약 배지 위치, 이모지 글리프, 글자 세로 위치 등
+					// 여러 군데서 미묘하게 브라우저 화면과 달라지는 문제가 계속 나왔다(실사용 확인됨).
+					// foreignObjectRendering: true는 브라우저가 실제로 그린 DOM을 SVG<foreignObject>로
+					// 그대로 캡처하는 모드라 이 문제 자체가 없다 — 다만 일부 환경(특히 헤드리스 브라우저)
+					// 에서 빈 이미지가 나오는 알려진 문제가 있어서, 결과가 비어있으면 자동으로 기존
+					// Canvas2D 방식(+twemoji 아이콘 보정)으로 되돌아간다.
+					function isCanvasBlank(canvas) {
+						var ctx = canvas.getContext('2d');
+						var w = canvas.width, h = canvas.height;
+						var samples = [[Math.floor(w * 0.5), Math.floor(h * 0.05)], [Math.floor(w * 0.1), Math.floor(h * 0.1)]];
+						return samples.every(function (p) {
+							var d = ctx.getImageData(p[0], p[1], 1, 1).data;
+							return d[3] === 0;
 						});
 					}
-					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+					function captureWithFallback() {
+						return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true, foreignObjectRendering: true })
+							.then(function (canvas) {
+								if (!isCanvasBlank(canvas)) { return canvas; }
+								return captureWithCanvas2d();
+							})
+							.catch(function () { return captureWithCanvas2d(); });
+					}
+					function captureWithCanvas2d() {
+						// twemoji 아이콘 보정은 이 폴백 경로에서만 필요하다(foreignObjectRendering 성공 시엔
+						// 브라우저가 이모지를 정상적으로 그려주므로 불필요).
+						var shareIconEl = document.getElementById('share-card-icon');
+						if (typeof twemoji !== 'undefined' && shareIconEl) {
+							twemoji.parse(shareIconEl, {
+								folder: '72x72', ext: '.png',
+								base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
+							});
+						}
+						return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true });
+					}
+					captureWithFallback().then(function (canvas) {
 						var link = document.createElement('a');
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
 						link.download = '기리기리_' + name + '.png';
