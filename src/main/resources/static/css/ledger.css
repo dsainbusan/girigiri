@@ -798,11 +798,11 @@
 .ledger-share-card[data-category="랭킹"] { --ledger-share-from: #fde047; --ledger-share-to: #a16207; }
 
 .ledger-share-card__tag {
-  /* inline-block은 html2canvas가 기준선(baseline)을 브라우저와 다르게 계산해서 알약 배지가
-     엉뚱한 위치로 튀는 문제가 있다(실사용 확인됨) — table로 바꿔서 인라인 서식 맥락 자체를 피한다.
-     line-height도 1로 고정 — html2canvas가 한글 폰트의 ascent(글자 위 여백)를 실제보다 크게
-     잡아서, 알약 안에서 글자가 아래로 쏠려 보이는(위쪽 여백만 남는) 문제가 있었다. */
-  display: table; margin: 0 auto var(--s-3); padding: 4px 14px;
+  /* display:table로 바꿨더니(예전 시도) 브라우저가 내용을 감싸는 익명 테이블 셀을 만드는데,
+     이 셀의 세로정렬 기본값이 middle이 아니라 baseline이라 글자가 아래로 쏠려 보였다(실사용
+     확인됨 — html2canvas가 아니라 진짜 CSS 버그였다). flex로 바꿔서 기준선 계산 자체를 없앤다. */
+  display: flex; align-items: center; justify-content: center;
+  width: fit-content; margin: 0 auto var(--s-3); padding: 4px 14px;
   background: rgba(0, 0, 0, .25); border-radius: var(--r-pill);
   font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .04em; line-height: 1;
 }
@@ -822,8 +822,9 @@
 .ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
-  /* __tag와 동일한 이유로 inline-block 대신 table + line-height:1을 쓴다. */
-  display: table; margin: 0 auto var(--s-4); padding: 3px 12px;
+  /* __tag와 동일한 이유로 table 대신 flex를 쓴다. */
+  display: flex; align-items: center; justify-content: center;
+  width: fit-content; margin: 0 auto var(--s-4); padding: 3px 12px;
   border: 1px solid rgba(255, 255, 255, .6); border-radius: var(--r-pill);
   font-size: 11px; line-height: 1;
 }
