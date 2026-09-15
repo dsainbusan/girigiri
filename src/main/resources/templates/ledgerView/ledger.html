@@ -995,52 +995,45 @@
 					downloadShareCardBtn.disabled = true;
 					var originalLabel = downloadShareCardBtn.textContent;
 					downloadShareCardBtn.textContent = '이미지 생성 중...';
-					// html2canvas는 기본적으로 Canvas2D로 텍스트/이모지를 "다시 그리는" 방식이라(브라우저의
-					// 실제 레이아웃·폰트 계산을 재구현) 알약 배지 위치, 이모지 글리프, 글자 세로 위치 등
-					// 여러 군데서 미묘하게 브라우저 화면과 달라지는 문제가 계속 나왔다(실사용 확인됨).
-					// foreignObjectRendering: true는 브라우저가 실제로 그린 DOM을 SVG<foreignObject>로
-					// 그대로 캡처하는 모드라 이 문제 자체가 없다 — 다만 일부 환경(특히 헤드리스 브라우저)
-					// 에서 빈 이미지가 나오는 알려진 문제가 있어서, 결과가 비어있으면 자동으로 기존
-					// Canvas2D 방식(+twemoji 아이콘 보정)으로 되돌아간다.
-					function isCanvasBlank(canvas) {
-						var ctx = canvas.getContext('2d');
-						var w = canvas.width, h = canvas.height;
-						var samples = [[Math.floor(w * 0.5), Math.floor(h * 0.05)], [Math.floor(w * 0.1), Math.floor(h * 0.1)]];
-						return samples.every(function (p) {
-							var d = ctx.getImageData(p[0], p[1], 1, 1).data;
-							return d[3] === 0;
+					// foreignObjectRendering(브라우저가 그린 DOM을 그대로 캡처하는 모드)을 시도해봤지만
+					// 헤드리스 환경뿐 아니라 실사용 크롬에서도 계속 빈 이미지가 나와서(콘솔 로그로 확인됨)
+					// 제외했다. 기본 Canvas2D 경로는 대부분 정확한데 "기리기리 뱃지 획득"/날짜 알약 두
+					// 곳만 텍스트 세로 위치가 계속 어긋났다(line-height, display:table, flex 다 시도해도
+					// 안 됨 — CSS가 아니라 html2canvas의 Canvas2D 텍스트 렌더링 자체의 한계로 판단).
+					// 그래서 이 두 곳만 html2canvas가 그린 글자를 지우고, Canvas API가 폰트와 무관하게
+					// 항상 정확히 중앙에 맞춰주는 textBaseline:'middle'로 직접 다시 그린다.
+					var shareIconEl = document.getElementById('share-card-icon');
+					if (typeof twemoji !== 'undefined' && shareIconEl) {
+						twemoji.parse(shareIconEl, {
+							folder: '72x72', ext: '.png',
+							base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
 						});
 					}
-					// 진단용 로그(2026-09-15) — 어느 경로로 캡처됐는지 콘솔에서 바로 확인하기 위함.
-					function captureWithFallback() {
-						return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true, foreignObjectRendering: true })
-							.then(function (canvas) {
-								if (!isCanvasBlank(canvas)) {
-									console.log('[share-card] foreignObjectRendering 성공, 이 경로로 캡처됨');
-									return canvas;
-								}
-								console.log('[share-card] foreignObjectRendering 결과가 비어있어 Canvas2D로 폴백');
-								return captureWithCanvas2d();
-							})
-							.catch(function (err) {
-								console.log('[share-card] foreignObjectRendering 에러로 Canvas2D로 폴백:', err);
-								return captureWithCanvas2d();
-							});
+					function redrawPillTextCentered(canvas, pillEl, scale) {
+						var ctx = canvas.getContext('2d');
+						var pillRect = pillEl.getBoundingClientRect();
+						var cardRect = shareCard.getBoundingClientRect();
+						var cs = getComputedStyle(pillEl);
+						var x = (pillRect.left - cardRect.left) * scale;
+						var y = (pillRect.top - cardRect.top) * scale;
+						var w = pillRect.width * scale;
+						var h = pillRect.height * scale;
+						// 알약 안쪽 배경색을 실제 캔버스에서 샘플링해서(그라데이션·반투명이라 값을 미리
+						// 알 수 없다) 기존 글자를 그 색으로 지운 뒤, 같은 자리에 텍스트를 새로 그린다.
+						var sample = ctx.getImageData(Math.round(x + 3 * scale), Math.round(y + 2 * scale), 1, 1).data;
+						ctx.save();
+						ctx.fillStyle = 'rgba(' + sample[0] + ',' + sample[1] + ',' + sample[2] + ',' + (sample[3] / 255) + ')';
+						ctx.fillRect(x + 3 * scale, y + 1 * scale, w - 6 * scale, h - 2 * scale);
+						ctx.fillStyle = cs.color;
+						ctx.font = cs.fontWeight + ' ' + (parseFloat(cs.fontSize) * scale) + 'px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+						ctx.textAlign = 'center';
+						ctx.textBaseline = 'middle';
+						ctx.fillText(pillEl.textContent.trim(), x + w / 2, y + h / 2);
+						ctx.restore();
 					}
-					function captureWithCanvas2d() {
-						console.log('[share-card] Canvas2D(+twemoji) 경로로 캡처됨');
-						// twemoji 아이콘 보정은 이 폴백 경로에서만 필요하다(foreignObjectRendering 성공 시엔
-						// 브라우저가 이모지를 정상적으로 그려주므로 불필요).
-						var shareIconEl = document.getElementById('share-card-icon');
-						if (typeof twemoji !== 'undefined' && shareIconEl) {
-							twemoji.parse(shareIconEl, {
-								folder: '72x72', ext: '.png',
-								base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
-							});
-						}
-						return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true });
-					}
-					captureWithFallback().then(function (canvas) {
+					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), 2);
+						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), 2);
 						var link = document.createElement('a');
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
 						link.download = '기리기리_' + name + '.png';
