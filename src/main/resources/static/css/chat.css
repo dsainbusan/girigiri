@@ -73,6 +73,7 @@
 	padding: 4px 8px;
 }
 
+
 .chat-panel__messages {
 	flex: 1 1 auto;
 	overflow-y: auto;
@@ -102,6 +103,65 @@
 	align-self: flex-end;
 	background: var(--c-primary);
 	color: #fff;
+}
+
+/* 빠른 질문(퀵 리플라이) 버튼 줄 (2026-09-15 추가) — 메시지 목록과 입력창 사이, 가로 스크롤 */
+.chat-quick-replies {
+	display: flex;
+	gap: var(--s-2);
+	padding: var(--s-2) var(--s-4);
+	overflow-x: auto;
+	flex-shrink: 0;
+	border-top: 1px solid var(--c-line);
+}
+
+.chat-quick-reply {
+	flex-shrink: 0;
+	background: var(--c-bg);
+	border: 1px solid var(--c-line);
+	border-radius: var(--r-pill);
+	padding: 6px 12px;
+	font-size: var(--fs-xs);
+	color: var(--c-text);
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+/* 응답 대기 중 로딩 애니메이션 (2026-09-15 추가) — 점 3개가 순서대로 통통 튀는 타이핑 표시 */
+.chat-typing {
+	display: inline-flex;
+	gap: 4px;
+	align-items: center;
+	padding: 2px 0;
+}
+
+.chat-typing span {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--c-text-mut);
+	animation: chat-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes chat-typing-bounce {
+	0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+	30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* 상담원 연결 링크 (2026-09-15 추가) — 아이콘 하나짜리 버튼은 눌러보기 전엔 뭔지 몰라서,
+   글자가 바로 보이는 링크로 빠른 질문 줄 바로 아래에 뒀다. */
+.chat-escalate-link {
+	display: block;
+	flex-shrink: 0;
+	text-align: center;
+	padding: var(--s-2) var(--s-4);
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut);
+	text-decoration: none;
+	border-top: 1px solid var(--c-line);
 }
 
 .chat-panel__input-row {

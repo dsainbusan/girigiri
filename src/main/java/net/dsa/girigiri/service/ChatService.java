@@ -10,7 +10,11 @@ import net.dsa.girigiri.domain.dto.ReservationCancelStatusDto;
 import net.dsa.girigiri.util.GeminiClient;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 고객 지원 챗봇 서비스.
@@ -59,6 +63,16 @@ public class ChatService {
 	// 브라우저 UI 제한이라 API를 직접 호출하면 얼마든지 우회할 수 있다. 너무 긴 메시지는 구글
 	// API 비용/지연을 늘리고 악용 소지도 있어서, 서버에서도 한 번 더 길이를 막아준다.
 	private static final int MAX_MESSAGE_LENGTH = 500;
+
+	// 추가됨 (2026-09-15, 담당: 송채현) — 왜: 챗봇 API는 로그인만 하면 누구나 부를 수 있어서
+	// (REQ-F-120), 한 사람이 짧은 시간에 메시지를 계속 연달아 보내면 Gemini API 호출이 급격히
+	// 늘어나 비용/장애 위험이 커진다(WBS "요청 횟수 제한(어뷰징 방지)"). 사용자별로 최근
+	// RATE_LIMIT_WINDOW_MILLIS 동안 보낸 요청 수를 세서, 너무 많으면 Gemini를 아예 호출하지 않고
+	// 바로 안내 문구만 돌려준다. 서버를 여러 대로 늘리면 이 메모리 맵은 인스턴스별로 따로 세게
+	// 되니(공유 캐시 아님) 그때는 Redis 등으로 옮겨야 한다 — 지금 프로젝트 규모에선 충분하다.
+	private static final int RATE_LIMIT_MAX_REQUESTS = 10;
+	private static final long RATE_LIMIT_WINDOW_MILLIS = 60_000L; // 1분
+	private final Map<Long, Deque<Long>> requestTimestampsByUser = new ConcurrentHashMap<>();
 
 	private static final String CUSTOMER_SYSTEM_PROMPT = """
 			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
@@ -144,6 +158,11 @@ public class ChatService {
 			""";
 
 	public ChatResponseDto sendMessage(Long userId, String viewMode, ChatRequestDto request) {
+		// 추가됨 (2026-09-15, 담당: 송채현) — 요청 횟수 제한은 메시지 내용 검증보다 먼저 확인한다:
+		// 어뷰징 방지가 목적이니 빈 메시지나 너무 긴 메시지로 연달아 두드리는 것도 똑같이 막아야 한다.
+		if (isRateLimited(userId)) {
+			return ChatResponseDto.failed("요청이 너무 많아요. 잠시 후 다시 시도해주세요.");
+		}
 		if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
 			return ChatResponseDto.failed("메시지를 입력해주세요.");
 		}
@@ -170,6 +189,28 @@ public class ChatService {
 		}
 
 		return ChatResponseDto.success(result.reply());
+	}
+
+	/**
+	 * 최근 RATE_LIMIT_WINDOW_MILLIS 동안 이 사용자가 보낸 요청이 RATE_LIMIT_MAX_REQUESTS개
+	 * 이상이면 true. 통과한 요청은 지금 시각을 큐에 남겨서 다음 호출 판단 기준이 되게 한다.
+	 */
+	private boolean isRateLimited(Long userId) {
+		if (userId == null) {
+			return false; // 정상 흐름에선 컨트롤러의 @LoginRequired가 먼저 막아서 여기까지 안 옴
+		}
+		Deque<Long> timestamps = requestTimestampsByUser.computeIfAbsent(userId, key -> new ArrayDeque<>());
+		long now = System.currentTimeMillis();
+		synchronized (timestamps) {
+			while (!timestamps.isEmpty() && now - timestamps.peekFirst() > RATE_LIMIT_WINDOW_MILLIS) {
+				timestamps.pollFirst();
+			}
+			if (timestamps.size() >= RATE_LIMIT_MAX_REQUESTS) {
+				return true;
+			}
+			timestamps.addLast(now);
+			return false;
+		}
 	}
 
 	/**
