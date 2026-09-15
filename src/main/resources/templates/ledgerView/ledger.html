@@ -1032,8 +1032,13 @@
 						ctx.restore();
 					}
 					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
-						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), 2);
-						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), 2);
+						// scale:2를 그대로 쓰지 않고 실제 캔버스 크기에서 역산한다 — 브라우저의 화면
+						// 배율(Windows 디스플레이 확대·축소, 예: 125%/150%)이 100%가 아니면 html2canvas가
+						// 실제로 만드는 캔버스 배율이 2와 달라져서, 하드코딩된 2를 쓰면 좌표 계산이
+						// 어긋나 알약을 다시 그리는 위치가 틀어진다(실사용 확인됨).
+						var actualScale = canvas.width / shareCard.getBoundingClientRect().width;
+						redrawPillTextCentered(canvas, document.querySelector('.ledger-share-card__tag'), actualScale);
+						redrawPillTextCentered(canvas, document.getElementById('share-card-date'), actualScale);
 						var link = document.createElement('a');
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
 						link.download = '기리기리_' + name + '.png';
