@@ -799,10 +799,12 @@
 
 .ledger-share-card__tag {
   /* inline-block은 html2canvas가 기준선(baseline)을 브라우저와 다르게 계산해서 알약 배지가
-     엉뚱한 위치로 튀는 문제가 있다(실사용 확인됨) — table로 바꿔서 인라인 서식 맥락 자체를 피한다. */
+     엉뚱한 위치로 튀는 문제가 있다(실사용 확인됨) — table로 바꿔서 인라인 서식 맥락 자체를 피한다.
+     line-height도 1로 고정 — html2canvas가 한글 폰트의 ascent(글자 위 여백)를 실제보다 크게
+     잡아서, 알약 안에서 글자가 아래로 쏠려 보이는(위쪽 여백만 남는) 문제가 있었다. */
   display: table; margin: 0 auto var(--s-3); padding: 4px 14px;
   background: rgba(0, 0, 0, .25); border-radius: var(--r-pill);
-  font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .04em;
+  font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .04em; line-height: 1;
 }
 .ledger-share-card__header { margin-bottom: var(--s-4); }
 /* 아래 3곳(brand/name/stat-value) 전부 --fw-black(900) 대신 --fw-bold(700)를 쓴다 — Malgun
@@ -820,10 +822,10 @@
 .ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
-  /* __tag와 동일한 이유로 inline-block 대신 table을 쓴다. */
+  /* __tag와 동일한 이유로 inline-block 대신 table + line-height:1을 쓴다. */
   display: table; margin: 0 auto var(--s-4); padding: 3px 12px;
   border: 1px solid rgba(255, 255, 255, .6); border-radius: var(--r-pill);
-  font-size: 11px;
+  font-size: 11px; line-height: 1;
 }
 .ledger-share-card__stats {
   display: flex; border-top: 1px solid rgba(255, 255, 255, .3); padding-top: var(--s-3);
