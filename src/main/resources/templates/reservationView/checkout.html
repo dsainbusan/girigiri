@@ -20,21 +20,40 @@
 		<p class="u-sub">죄송해요, 이 상품은 품절됐어요.</p>
 	</div>
 
+	<!-- 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 매장 사정 취소가 반복돼 정지/영구정지된
+		매장은 새 예약을 못 받게 서버(ReservationService.prepareReservation)가 막는데, 버튼을 눌러야만
+		그 사실을 아는 건 UX가 안 좋아서 체크아웃 화면에 미리 안내한다. 실제 차단은 서버가 하므로
+		이 카드는 안내용일 뿐이고, 버튼도 같이 비활성화한다(위 actionbar 참고).
+		변경됨 (2026-09-16, 채채 판단) — 왜: "정지" 사실 자체가 손님에게 티가 나면 그게 소문이 돼서
+		매장이 신뢰도를 회복하는 데 방해가 될 수 있어서, 그냥 평범한 "오늘은 쉬어요" 휴무 안내처럼
+		보이도록 회색 배경으로 바꿨다(품절 카드와는 시각적으로 구분되게). 문구도 서비스 쪽에서 이미
+		두루뭉술하게 나간다(StoreReliabilityService.blockedReservationMessage 참고).
+		뱃지+운영안내 형태로 한 번 바꿔봤다가(2026-09-16), 채채가 참고 화면 대신 이 원래 버전(평범한
+		회색 카드)을 최종으로 선택해서 다시 되돌렸다. -->
+	<div class="card" th:if="${storeBlocked}"
+		 style="margin-top:var(--s-3); background:var(--c-bg); box-shadow:none; text-align:center">
+		<p class="u-sub" th:text="${storeBlockedMessage}">오늘은 이 매장이 예약을 받고 있지 않아요. 다음에 다시 확인해주세요.</p>
+	</div>
+
 	<!-- 변경됨 (2026-08-21) — 왜: 예약 수량이 항상 1개로 고정돼 있어서, 남은 수량 이하 범위에서
 		직접 +/- 로 조절할 수 있게 스테퍼(qty-stepper)로 바꿨다. 서버는 이미 재고 이상 예약 시
 		OutOfStockException으로 막고 있어서(StockService), 여기서는 UI상 남은 수량을 넘지 않게만
-		막아주면 된다. 품절(soldOut)이면 이 카드 자체를 아예 숨긴다. -->
-	<div class="card qty-stepper" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+		막아주면 된다. 품절(soldOut)이면 이 카드 자체를 아예 숨긴다.
+		변경됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 정지된 매장은 버튼만 막고 수량/쿠폰/금액은
+		멀쩡히 조작되는 게 이상하다는 채채 피드백으로, storeBlocked면 이 스테퍼·쿠폰·금액 카드
+		셋 다 th:disabled로 실제 조작을 막고 .is-disabled로 시각적으로도 흐리게 처리한다(soldOut처럼
+		카드 자체를 숨기지는 않는다 — 상품 정보/예정 금액은 참고로 계속 보여준다). -->
+	<div class="card qty-stepper" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
 		<span class="u-sub">예약 수량</span>
 		<div class="qty-stepper__control">
-			<button type="button" class="qty-stepper__btn" id="qty-minus" aria-label="수량 감소">−</button>
+			<button type="button" class="qty-stepper__btn" id="qty-minus" aria-label="수량 감소" th:disabled="${storeBlocked}">−</button>
 			<!-- 변경됨 (2026-08-24) — 왜: 원래 +/- 버튼으로만 수량을 바꿀 수 있었는데, 숫자를 직접 타이핑해서
 				바꾸고 싶다는 요청으로 span 대신 number input으로 바꿨다. 타이핑 중간 상태(예: 지우고 다시
 				입력)에서 매번 범위를 강제로 맞추면 입력이 튕기니, 실제 보정은 change/blur 시점에만
 				한다(아래 스크립트의 commitTypedValue 참고) — +/- 버튼은 그대로 즉시 반영된다. -->
 			<input type="number" class="qty-stepper__value" id="qty-value" th:value="${quantity}"
-				   inputmode="numeric" min="1" th:max="${remainingQuantity}" aria-label="예약 수량 직접 입력">
-			<button type="button" class="qty-stepper__btn" id="qty-plus" aria-label="수량 증가">+</button>
+				   inputmode="numeric" min="1" th:max="${remainingQuantity}" aria-label="예약 수량 직접 입력" th:disabled="${storeBlocked}">
+			<button type="button" class="qty-stepper__btn" id="qty-plus" aria-label="수량 증가" th:disabled="${storeBlocked}">+</button>
 		</div>
 	</div>
 	<!-- 최대 수량에 닿았을 때만 보이는 안내 문구. 평소엔 숨겨져 있다 -->
@@ -45,9 +64,9 @@
 		미만료) 쿠폰만 드롭다운으로 보여주고, 고르면 아래 결제 예정 금액이 바로 할인 반영해서 다시
 		계산된다(화면 표시용 — 실제 최종 금액은 /reservation/prepare에서 서버가 다시 계산해서 확정한다,
 		이 select 값을 그대로 믿지 않음). 쿠폰이 하나도 없으면 "사용 안 함"만 있는 select만 보인다. -->
-	<div class="card" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+	<div class="card" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
 		<label class="u-sub" for="coupon-select">쿠폰 사용</label>
-		<select id="coupon-select" class="field" style="margin-top:var(--s-2); width:100%">
+		<select id="coupon-select" class="field" style="margin-top:var(--s-2); width:100%" th:disabled="${storeBlocked}">
 			<option value="">쿠폰 사용 안 함</option>
 			<option th:each="c : ${usableCoupons}" th:value="${c.id}"
 					th:text="${c.discountRate} + '% 할인 쿠폰 (' + ${c.expiresAtLabel} + ' 까지)'">10% 할인 쿠폰 (2026-10-07 까지)</option>
@@ -55,7 +74,7 @@
 		<p class="text-muted text-muted--sm" th:if="${#lists.isEmpty(usableCoupons)}" style="margin-top:var(--s-1)">지금 쓸 수 있는 쿠폰이 없어요.</p>
 	</div>
 
-	<div class="card" th:unless="${soldOut}" style="margin-top:var(--s-3)">
+	<div class="card" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
 		<p class="u-sub" id="coupon-discount-display" style="display:none"></p>
 		<p class="u-sub" style="margin-top:var(--s-1)">결제 예정 금액: <strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong></p>
 	</div>
@@ -68,12 +87,16 @@
 	-->
 	<!-- 수정됨 (2026-08-21) — 왜: 품절(soldOut)인데도 "주문 시간 지남" 카드나 "예상 픽업 가능 시각"
 		배너가 그대로 보이는 버그가 있었다. 품절 안내가 이미 위에 떠 있으니, 이 아래 두 블록은
-		품절이 아닐 때만(!soldOut) 보이게 조건을 추가했다. -->
-	<div class="card" th:if="${!soldOut and !canOrder}" style="margin-top:var(--s-3)">
+		품절이 아닐 때만(!soldOut) 보이게 조건을 추가했다.
+		수정됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 매장이 정지된 상태에서도 이 두 블록이 그대로
+		보여서, 위의 "오늘은 예약을 받지 않아요" 카드 바로 밑에 "예상 픽업 가능 시각" 배너가 뜨는
+		앞뒤 안 맞는 화면이 됐다(채채가 캡처 보고 발견). storeBlocked도 soldOut과 같은 급으로 취급해서
+		(!storeBlocked) 조건을 추가 — soldOut/storeBlocked/시간마감/픽업배너 넷 중 하나만 뜬다. -->
+	<div class="card" th:if="${!soldOut and !storeBlocked and !canOrder}" style="margin-top:var(--s-3)">
 		<p class="u-sub">죄송해요, 오늘은 주문 가능한 시간이 지났어요. 내일 다시 확인해주세요.</p>
 	</div>
 
-	<div class="banner" th:if="${!soldOut and canOrder}" style="margin-top:var(--s-3)">
+	<div class="banner" th:if="${!soldOut and !storeBlocked and canOrder}" style="margin-top:var(--s-3)">
 		<div>
 			<p class="banner__title">예상 픽업 가능 시각: <span th:text="${earliestPickupDisplay}">08월 20일 10:20</span></p>
 			<p class="banner__desc">주문 후 매장이 확인하면, 이 시각 이후로 오시면 바로 픽업하실 수 있어요.</p>
@@ -98,6 +121,11 @@
 		</div>
 	</div>
 
+	<!-- 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 신생매장(예약 10건 미만)인데 신뢰도가 낮은
+		매장에게 손님이 그래도 예약할지 확인받는 경고 모달을 여기 만들었었는데, 뺐다(채채 판단) —
+		"취소 가능성이 있다"는 문구 자체가 매장에 대한 소문이 될 수 있어서, 신생매장 보호는 정지
+		규칙만 면제하고 손님에게 따로 알리지는 않기로 했다. -->
+
 	<!-- 추가됨 (2026-08-24, PortOne 연동) — 왜: PortOne V2 결제창을 띄우려면 이 브라우저 SDK가 필요하다.
 		아직 PortOne 설정이 안 끝난 로컬 환경(portOneConfigured=false)에서는 굳이 외부 스크립트를
 		불러올 필요가 없어서 조건부로만 로드한다. -->
@@ -119,13 +147,16 @@
 		// 용도로만 남아있다(실제 전송은 fetch로 함).
 		var reserveBtn = document.getElementById('reserve-confirm-btn');
 		var modal = document.getElementById('cancel-notice-modal');
-		if (reserveBtn && modal) {
-			var confirmBtn = document.getElementById('cancel-notice-confirm');
-			var closeBtn = document.getElementById('cancel-notice-close');
 
+		if (reserveBtn && modal) {
 			reserveBtn.addEventListener('click', function () {
 				modal.style.display = 'flex';
 			});
+		}
+
+		if (modal) {
+			var confirmBtn = document.getElementById('cancel-notice-confirm');
+			var closeBtn = document.getElementById('cancel-notice-close');
 
 			confirmBtn.addEventListener('click', function () {
 				modal.style.display = 'none';
@@ -350,7 +381,7 @@
 	<form id="checkout-form" style="width:100%" onsubmit="return false;">
 		<input type="hidden" name="productId" th:value="${productId}">
 		<input type="hidden" name="quantity" id="qty-hidden-input" th:value="${quantity}">
-		<button type="button" id="reserve-confirm-btn" class="btn btn--block" th:disabled="${!canOrder or soldOut}">예약 확정하기</button>
+		<button type="button" id="reserve-confirm-btn" class="btn btn--block" th:disabled="${!canOrder or soldOut or storeBlocked}">예약 확정하기</button>
 	</form>
 </div>
 </body>

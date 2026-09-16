@@ -16,6 +16,7 @@ import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
+import net.dsa.girigiri.service.StoreReliabilityService;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
 import net.dsa.girigiri.util.PortOneClient;
 import net.dsa.girigiri.util.QrCodeUtil;
@@ -63,6 +64,12 @@ public class ReservationController {
 	// CouponService를 직접 호출하므로(레이어 규칙: 비즈니스 로직은 서비스에), 여기 컨트롤러는 화면에
 	// 보여줄 목록을 조회하는 것뿐이다.
 	private final CouponService couponService;
+	// 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 체크아웃 화면에서 정지/영구정지 매장이면 안내를
+	// 보여주고 버튼을 막기 위해 쓴다. 실제 차단(서버 강제)은 ReservationService.prepareReservation
+	// 안에서 한다. 신생매장(예약 10건 미만) 경고 모달은 처음엔 있었는데, 손님에게 "취소 가능성
+	// 있음"을 알리는 것 자체가 매장 신뢰도에 대한 소문이 될 수 있어서 뺐다(2026-09-16, 채채 판단) —
+	// 신생매장은 정지 규칙만 면제하고 손님에게 따로 알리지는 않는다.
+	private final StoreReliabilityService storeReliabilityService;
 
 	// 변경됨 (2026-09-01) — 문창호님의 로그인/세션 작업이 끝나서 세션의 실제 userId를 쓴다(고정
 	// 사용자 1L 아님). /reservation/**이 WebSecurityConfig 공개 목록에서 빠져있어 여기 도달했다면
@@ -128,6 +135,15 @@ public class ReservationController {
 		// 추가됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동) — 지금 이 회원이 실제로 고를 수 있는
 		// (미사용 + 미만료) 쿠폰만 내려준다. 품절 화면에서는 어차피 결제 자체를 못 하니 조회를 건너뛴다.
 		model.addAttribute("usableCoupons", soldOut ? List.of() : couponService.listUsableForUser(resolveCurrentUserId(session)));
+
+		// 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 정지/영구정지 매장이면 안내를 보여주고
+		// "예약 확정하기" 버튼을 막는다(실제 차단은 서버의 prepareReservation이 한다, 이건 UX용).
+		// 품절이면 어차피 결제 자체를 못 하니 조회를 건너뛴다. 문구는 일부러 평범한 "휴무" 안내처럼
+		// 두루뭉술하게 나간다(구체적인 사유는 storeReliabilityService.blockedReservationMessage 참고) —
+		// 신생매장 경고 모달은 뺐다(위 필드 주석 참고).
+		boolean storeBlocked = !soldOut && storeReliabilityService.isBlockedFromNewReservations(store);
+		model.addAttribute("storeBlocked", storeBlocked);
+		model.addAttribute("storeBlockedMessage", storeBlocked ? storeReliabilityService.blockedReservationMessage(store) : null);
 
 		return "reservationView/checkout";
 	}

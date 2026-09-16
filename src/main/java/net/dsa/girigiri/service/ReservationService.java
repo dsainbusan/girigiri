@@ -22,6 +22,7 @@ import net.dsa.girigiri.domain.entity.CouponEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
+import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
 import net.dsa.girigiri.repository.PaymentCancelRepository;
@@ -124,6 +125,10 @@ public class ReservationService {
 	private final SalesSyncService salesSyncService;
 	// 추가됨 (2026-09-09) — 슈퍼어드민 "매장 주문 내역"(getOrdersForStore)에서 구매자 닉네임 조회용.
 	private final UserRepository userRepository;
+	// 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 매장 취소 직후 신뢰도 재평가(cancelByStore)와
+	// 새 예약 시 정지/영구정지 매장 차단(prepareReservation)에 쓴다. getStoreCancelStats도 이제
+	// 이 서비스로 위임한다(계산 로직 자체가 옮겨감) — 기존 호출부(컨트롤러 3곳)는 안 바뀐다.
+	private final StoreReliabilityService storeReliabilityService;
 
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
@@ -151,6 +156,17 @@ public class ReservationService {
 	@Transactional
 	public ReservationEntity prepareReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime, Long couponId) {
 
+		// 0. 상품/매장 조회 + 신뢰도 자동 정지·영구정지 매장이면 새 예약 자체를 막는다 (2026-09-16
+		//    추가, 송채현) — 재고 차감/쿠폰 사용 같은 부수효과가 생기기 전에 제일 먼저 확인해야 하고,
+		//    가격 계산에도 어차피 상품 정보가 필요해서 여기서 한 번만 조회해 아래(옛 3번)에서 재사용한다.
+		ProductEntity product = productRepository.findById(productId)
+				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + productId));
+		StoreEntity store = storeRepository.findById(product.getStoreId())
+				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + product.getStoreId()));
+		if (storeReliabilityService.isBlockedFromNewReservations(store)) {
+			throw new OrderNotAllowedException(storeReliabilityService.blockedReservationMessage(store));
+		}
+
 		// 1. 쿠폰을 골랐다면 재고를 건드리기 전에 먼저 검증한다 (본인 소유 + 미사용 + 미만료).
 		//    유효하지 않으면 CouponService.validateForRedeem이 ResponseStatusException을 던지고,
 		//    이 메서드가 @Transactional이라 여기까지 온 변경사항(아직 없음)은 자동 롤백된다.
@@ -160,10 +176,7 @@ public class ReservationService {
 		//    (동시에 여러 명이 예약해도 안전하게 처리되는 부분은 StockService가 이미 책임진다.)
 		stockService.decreaseStock(productId, quantity);
 
-		// 3. 가격 계산을 위해 상품 정보 조회
-		ProductEntity product = productRepository.findById(productId)
-				.orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다. id=" + productId));
-
+		// 3. 가격 계산 (0번에서 이미 조회해둔 product를 그대로 쓴다)
 		int totalPrice = product.getDiscountedPrice() * quantity;
 		if (coupon != null) {
 			int discountAmount = totalPrice * coupon.getDiscountRate() / 100;
@@ -902,6 +915,10 @@ public class ReservationService {
 		// 취소 안내 배너 + QR 제외 버전으로 영수증도 이 시점에 바로 다시 만들어둔다.
 		receiptService.generateReceipt(reservationId);
 
+		// 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 매장 취소가 방금 하나 더 쌓였으니 신뢰도를
+		// 다시 평가해서, 70% 밑이면 다음 단계 정지를 적용한다(StoreReliabilityService 참고).
+		storeReliabilityService.evaluateAfterStoreCancel(reservation.getStoreId());
+
 		return saved;
 	}
 
@@ -1163,16 +1180,13 @@ public class ReservationService {
 	/**
 	 * 매장 신뢰도(취소율) 통계: 전체 예약 중 "매장 사정으로" 취소된 비율. 손님 취소는 매장 잘못이 아니라서 뺀다.
 	 *
-	 * 변경됨 (2026-09-08, 코드 감사) — 왜: 분모(total)를 countByStoreId로 구하면 결제까지 안 가고
-	 * 포기한(pending) 예약까지 다 세어버려서, 트래픽만 많고 결제 전환이 낮은 매장일수록 분모가
-	 * 부풀어 취소율이 실제보다 좋게(희석되어) 나온다. "결제까지 갔던"(pending 제외) 예약만 분모로
-	 * 삼도록 바꿨다.
+	 * 변경됨 (2026-09-16) — 왜: 계산 로직 자체를 StoreReliabilityService로 옮겼다(최근 N건 기준으로
+	 * 바뀌면서 매장 자동 정지/해제 로직과 같은 계산을 공유해야 해서). 여기 메서드는 기존 호출부
+	 * (StoreDetailController/MypageController/SuperAdminStoreController)가 하나도 안 바뀌게 남겨둔
+	 * 얇은 위임 메서드다.
 	 */
 	public StoreCancelStatsDto getStoreCancelStats(Long storeId) {
-		long total = reservationRepository.countByStoreIdAndStatusNot(storeId, "pending");
-		long storeCancelled = reservationRepository.countByStoreIdAndCancelledBy(storeId, "STORE");
-		double rate = total == 0 ? 0.0 : (storeCancelled * 100.0 / total);
-		return new StoreCancelStatsDto(total, storeCancelled, rate);
+		return storeReliabilityService.getStoreCancelStats(storeId);
 	}
 
 	/**
