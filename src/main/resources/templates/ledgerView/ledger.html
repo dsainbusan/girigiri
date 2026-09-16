@@ -18,7 +18,7 @@
 	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
 */-->
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/ledger.css(v=10)}">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=11)}">
 
 	<!-- 뱃지 공유 카드용 원본 데이터 — 화면엔 안 보임. 뱃지마다 카드를 새로 만드는 대신, 카드 1개
 	     템플릿에 이 값 + 클릭한 뱃지의 아이콘/이름/카테고리만 갈아끼운다(아래 공유 버튼 JS 참고).
@@ -463,15 +463,21 @@
 							</div>
 
 							<!-- 달성 완료 시 대표 뱃지 설정 버튼 / 착용 중 표시 -->
+							<!-- 카드 공유는 이 카드의 주 동작(대표 설정)과 나란한 전체너비 버튼으로 두면
+							     뭐가 메인 기능인지 헷갈린다는 피드백으로, 화살표 아이콘 버튼 하나로 줄여서
+							     주 동작 옆에 보조적으로 배치했다. -->
 							<div th:if="${b.unlocked}" class="ledger-badge-action">
 								<span th:if="${b.earnedDateLabel != null}" class="ledger-badge-earned-date" th:text="${b.earnedDateLabel}">2026.09.12 달성</span>
-								<button type="button" class="btn btn--outline btn--block ledger-badge-share-btn ledger-share-trigger-btn"
-								        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}">🖼️ 카드 공유</button>
-								<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep">✓ 착용 중</span>
-								<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" style="width: 100%;">
-									<input type="hidden" name="badgeCode" th:value="${b.code}">
-									<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
-								</form>
+								<div class="u-row">
+									<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep u-grow">✓ 착용 중</span>
+									<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" class="u-grow">
+										<input type="hidden" name="badgeCode" th:value="${b.code}">
+										<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
+									</form>
+									<button type="button" class="ledger-badge-share-icon-btn ledger-share-trigger-btn"
+									        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}"
+									        aria-label="카드로 공유" title="카드로 공유">↗</button>
+								</div>
 							</div>
 						</div>
 					</div>

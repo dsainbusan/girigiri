@@ -666,8 +666,18 @@
 .badge-set-btn {
   font-size: 11px !important; padding: 4px 0 !important;
 }
-.ledger-badge-share-btn {
-  font-size: 11px !important; padding: 4px 0 !important; margin-bottom: 6px;
+/* 대표 설정(주 동작) 옆에 붙는 보조 아이콘 버튼 — 화살표 하나만으로 "공유"라는 걸 알리고,
+   전체너비 버튼으로 나란히 두지 않아 뭐가 메인 기능인지 헷갈리지 않게 한다. */
+.ledger-badge-share-icon-btn {
+  flex-shrink: 0; width: 30px; height: 30px;
+  border: 1px solid var(--c-line); border-radius: var(--r-sm);
+  background: var(--c-surface); color: var(--c-text-sub);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ledger-badge-share-icon-btn:hover {
+  border-color: var(--c-primary); color: var(--c-primary);
 }
 
 /* ---------- 뱃지 도감 모달 / 바텀시트 ---------- */
