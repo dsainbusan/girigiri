@@ -48,4 +48,17 @@ public class ReviewEntity {
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
+
+	// 추가됨 (문창호, 2026-09-17) — 왜: WBS "문의 답변/리뷰 답글"(김태훈 인수) — 가게 사장님이 리뷰에
+	// 남기는 답글. replyEdited는 위 edited와 같은 패턴(수정 여부만 가볍게 표시 — 과거 답글 내용을
+	// 전부 남기는 별도 이력 테이블은 아니고, 리뷰 자체도 그렇게 하지 않는 것과 동일한 컨벤션이다).
+	@Column(name = "reply_content", length = 500)
+	private String replyContent;
+
+	@Column(name = "reply_created_at")
+	private LocalDateTime replyCreatedAt;
+
+	@Builder.Default
+	@Column(name = "reply_edited", nullable = false)
+	private boolean replyEdited = false;
 }

@@ -9,6 +9,10 @@ public record ReviewRowDto(
 		String createdAtLabel,   // "오늘" | "어제" | "N일 전"
 		boolean mine,            // 지금 로그인한 사용자가 쓴 리뷰인지 — 목록에서 "수정" 버튼 노출에 쓴다
 		boolean edited,          // 수정된 적 있는 리뷰인지 — "수정됨" 표시용
-		boolean canDelete        // 작성자 본인이거나 관리자일 때만 true — 삭제 버튼 노출에 쓴다
+		boolean canDelete,       // 작성자 본인이거나 관리자일 때만 true — 삭제 버튼 노출에 쓴다
+		// 추가됨 (문창호, 2026-09-17) — WBS "문의 답변/리뷰 답글". 사장님 답글, 없으면 replyContent=null.
+		String replyContent,
+		String replyCreatedAtLabel,
+		boolean replyEdited
 ) {
 }

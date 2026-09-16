@@ -236,6 +236,15 @@
 						<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
 						     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
 						     style="margin-top:6px;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
+						<!-- 사장님 답글 — 읽기 전용(등록/수정/삭제는 /store/reviews, 문창호 담당) -->
+						<div th:if="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}"
+						     style="margin-top:6px;padding:var(--s-3);background:var(--c-bg);border-radius:var(--r-md)">
+							<div class="u-row" style="justify-content:space-between">
+								<b style="font-size:var(--fs-xs);color:var(--c-primary)">🏪 사장님 답글</b>
+								<span class="u-mut" style="font-size:var(--fs-xs)" th:text="${r.replyCreatedAtLabel}">1일 전</span>
+							</div>
+							<p style="font-size:var(--fs-sm);margin-top:var(--s-1)" th:text="${r.replyContent}">답글 내용</p>
+						</div>
 						<div class="u-row" style="gap:6px;margin-top:6px">
 							<button th:if="${r.mine}" type="button" id="review-edit-btn" class="btn btn--outline" data-toggle-target="review-edit-form"
 							        style="padding:var(--s-1) var(--s-3);font-size:12px">수정</button>
