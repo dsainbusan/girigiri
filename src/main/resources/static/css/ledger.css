@@ -844,6 +844,9 @@
 .ledger-share-card__stat-value { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .ledger-share-card__stat-label { font-size: 10px; opacity: .85; }
 .ledger-share-card__hashtags { margin: var(--s-3) 0 0; font-size: 10px; opacity: .8; }
+/* 버튼 줄을 카드(max-width:300px)와 같은 폭으로 맞춰서 카드보다 옆으로 삐져나오지 않게 한다. */
+.ledger-share-card__actions { max-width: 300px; margin-left: auto; margin-right: auto; }
+.ledger-share-card__action-btn { padding-left: 4px !important; padding-right: 4px !important; font-size: 12px !important; }
 /* 이미지 저장 직전 twemoji가 이모지를 <img class="emoji">로 바꿔치기한다 — 글자 크기(font-size)에
    맞춰 정사각형으로 보이게(twemoji 공식 권장 스니펫과 동일). */
 .ledger-share-card img.emoji { height: 1em; width: 1em; vertical-align: -0.1em; }

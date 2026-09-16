@@ -18,7 +18,7 @@
 	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
 */-->
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/ledger.css(v=11)}">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=12)}">
 
 	<!-- 뱃지 공유 카드용 원본 데이터 — 화면엔 안 보임. 뱃지마다 카드를 새로 만드는 대신, 카드 1개
 	     템플릿에 이 값 + 클릭한 뱃지의 아이콘/이름/카테고리만 갈아끼운다(아래 공유 버튼 JS 참고).
@@ -562,10 +562,11 @@
 					</div>
 					<p class="ledger-share-card__hashtags">#기리기리 #환경지킴이 #오늘의구제</p>
 				</div>
-				<div class="u-row" style="margin-top: var(--s-4)">
-					<button type="button" id="share-share-card-btn" class="btn u-grow">📤 공유하기</button>
-					<button type="button" id="download-share-card-btn" class="btn btn--outline u-grow">📥 저장</button>
-					<button type="button" id="copy-share-card-btn" class="btn btn--outline u-grow">📋 복사</button>
+				<!-- 카드(max-width:300px)와 폭을 맞춰서 아래 버튼 줄이 카드보다 넓게 삐져나오지 않게 한다. -->
+				<div class="u-row ledger-share-card__actions" style="margin-top: var(--s-4)">
+					<button type="button" id="share-share-card-btn" class="btn u-grow ledger-share-card__action-btn">📤 공유</button>
+					<button type="button" id="download-share-card-btn" class="btn btn--outline u-grow ledger-share-card__action-btn">📥 저장</button>
+					<button type="button" id="copy-share-card-btn" class="btn btn--outline u-grow ledger-share-card__action-btn">📋 복사</button>
 				</div>
 			</div>
 		</div>
