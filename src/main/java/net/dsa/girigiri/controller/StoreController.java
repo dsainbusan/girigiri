@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreDashboardStatsDto;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,6 +46,7 @@ public class StoreController {
 
 	private final StoreAccessService storeAccessService;
 	private final StoreService storeService;
+	private final ReviewService reviewService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -123,6 +125,10 @@ public class StoreController {
 		model.addAttribute("needsBankAccount", stats.needsBankAccount());
 
 		model.addAttribute("settlementPayout", stats.settlementPayout());
+
+		// 추가됨 (2026-09-17) — "리뷰 관리" 카드가 다른 카드들처럼 라벨+값 2줄 구조를 갖게(평점·건수).
+		model.addAttribute("reviewAverageRating", store == null ? 0 : reviewService.getAverageRating(store.getId()));
+		model.addAttribute("reviewCount", store == null ? 0 : reviewService.getReviewCount(store.getId()));
 
 		return "storeView/dashboard";
 	}
