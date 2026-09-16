@@ -13,7 +13,10 @@
   팀 컨벤션으로 항상 전부 채운다)
    - title     : 상단바 제목 & <title>
    - content   : 본문 fragment (~{:: #content})
-   - active    : 하단 탭 활성값 ('home' | 'like' | 'ledger' | 'alert' | 'my' | '' 없음)
+   - active    : 하단 탭 활성값
+                 유저: 'home' | 'like' | 'ledger' | 'alert' | 'my'
+                 점주(2026-09-16 추가): 'dashboard' | 'products' | 'incoming' | 'my-owner'
+                 '' 넘기면 하단 탭바 없음(common/footer.html의 bottomNav(active) 참고)
    - dark      : 상단바 다크 여부 (사장님/운영자 모드는 true)
    - badge     : 상단바 제목 옆에 붙는 텍스트 뱃지 (예: '관리자 모드'), 없으면 ''
    - actionbar : 상세/체크아웃형 화면의 하단 고정 버튼바 fragment (~{:: #actionbar}), 없으면 null

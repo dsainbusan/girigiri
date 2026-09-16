@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, '', true, '점주 모드', null)}">
+      th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, 'dashboard', true, '점주 모드', null)}">
 <body>
 <!--/*
 	점주 대시보드
@@ -11,6 +11,11 @@
 	- "현황"(보기): 하나의 카드 안에서 [오늘]↔[최근 7일] 토글. 최근 7일 탭에 리포트 다운로드도 함께.
 	- "주문·픽업"(하기): 성격이 달라서 토글에 안 섞고 그 아래 별도 카드 하나로 버튼을 모음.
 	  (예전엔 픽업 처리 / 주문·설정 / 리포트 3개 카드로 흩어져 있었다.)
+
+	변경됨 (2026-09-16, UI/UX 검토) — 점주 모드에 하단 탭바(대시보드/재고관리/예약확인/마이)가
+	생기면서, 화면 맨 아래 로그아웃 버튼을 없앴다. 매출 리포트 버튼 바로 밑에 있어서 실수로
+	로그아웃될 위험이 있었는데(지적된 항목), "마이" 탭 → 마이페이지에 이미 로그아웃 버튼이
+	있으니 여기 중복으로 둘 이유가 없어졌다.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
@@ -280,17 +285,8 @@
 		</div>
 	</div>
 
-	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다.
-	     2026-09-16 — 유저 모드 전환 버튼도 상단바에서 여기로 옮겨왔다(모든 점주 화면 상단바를
-	     차지하는 대신, 점주 모드의 "홈"인 대시보드 하단에서만 전환하도록). -->
-	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4)">
-		<input type="hidden" name="target" value="user" />
-		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
-			<span class="topbar__mode-icon" aria-hidden="true">👤</span>
-			<span>유저 모드로</span>
-		</button>
-	</form>
-	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-3); margin-bottom: var(--s-4)">
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
 		<button type="submit" class="btn btn--outline btn--block u-mut"
 		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>

@@ -139,11 +139,15 @@
               <form th:action="@{/superadmin/members/{id}/unsuspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
                 <button class="chip-btn" type="submit">이용 재개</button>
               </form>
-              <form th:action="@{/superadmin/members/{id}/withdraw(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
+              <!-- confirm() 추가 (2026-09-16, UI/UX 검토) — 되돌릴 수 없는 계정 탈퇴 처리인데 확인
+                   절차가 없었다. 매장 삭제 등 다른 파괴적 액션과 같은 패턴 재사용. -->
+              <form th:action="@{/superadmin/members/{id}/withdraw(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post"
+                    onsubmit="return confirm('이 회원을 강제 탈퇴시킬까요? 되돌릴 수 없어요.')">
                 <button class="chip-btn chip-btn--danger" type="submit">강제 탈퇴</button>
               </form>
             </th:block>
-            <form th:unless="${u.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post">
+            <form th:unless="${u.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post"
+                  onsubmit="return confirm('이 회원의 이용을 정지할까요?')">
               <button class="chip-btn chip-btn--danger" type="submit">이용 정지</button>
             </form>
           </td>

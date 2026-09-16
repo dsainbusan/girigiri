@@ -529,7 +529,22 @@ public class ReservationService {
 	 * 지적을 받은 적이 있어서, 네 번째 매핑을 새로 만들지 않고 손님용 마이페이지 배지와 같은 걸 쓴다).
 	 */
 	public List<ReservationOrderItemDto> getOrdersForStore(Long storeId) {
-		return reservationRepository.findByStoreId(storeId).stream()
+		return getOrdersForStore(storeId, null);
+	}
+
+	/**
+	 * 추가됨 (2026-09-15) — 매장 신뢰도(취소율) 통계 카드에서 "취소 관련 예약 건"만 바로 보고 싶다는
+	 * 요청으로, statusGroup을 받아 걸러줄 수 있게 확장. getAllOrders(전체 예약 탭)가 이미 쓰던
+	 * ALL_ORDERS_STATUS_FILTER("cancelled" -> 취소+노쇼)를 그대로 재사용해서 상태 그룹 이름을
+	 * 화면마다 다르게 두지 않는다. statusGroup이 null/미지원 값이면 기존과 동일하게 전체를 보여준다.
+	 */
+	public List<ReservationOrderItemDto> getOrdersForStore(Long storeId, String statusGroup) {
+		List<String> statuses = statusGroup != null ? ALL_ORDERS_STATUS_FILTER.get(statusGroup) : null;
+		List<ReservationEntity> reservations = statuses != null
+				? reservationRepository.findByStoreIdAndStatusInOrderByReservedAtAsc(storeId, statuses)
+				: reservationRepository.findByStoreId(storeId);
+
+		return reservations.stream()
 				.sorted(Comparator.comparing(ReservationEntity::getReservedAt,
 						Comparator.nullsLast(Comparator.reverseOrder())))
 				.map(this::toOrderItemDto)

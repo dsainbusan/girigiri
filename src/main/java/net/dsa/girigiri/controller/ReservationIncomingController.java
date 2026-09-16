@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
+import net.dsa.girigiri.domain.dto.ReservationOrderItemDto;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
@@ -94,6 +95,21 @@ public class ReservationIncomingController {
 		model.addAttribute("filterTo", to == null ? "" : to);
 		model.addAttribute("filterActive", d != null || f != null || t != null);
 		return "reservationView/completed";
+	}
+
+	/**
+	 * 추가됨 (2026-09-15) — 마이페이지 "내 매장 신뢰도" 카드에서 취소율만 보여주고 그 뒤의 예약
+	 * 목록으로는 못 들어갔다는 요청으로 추가. 상태(대기/확정/픽업가능/픽업완료/취소/노쇼)와 무관하게
+	 * 지금까지의 전체 예약을 최신순으로 보여준다 — 슈퍼어드민 "매장 주문 내역"과 같은 계산
+	 * (ReservationService.getOrdersForStore)을 그대로 재사용한다.
+	 */
+	@GetMapping("/orders")
+	public String orders(HttpSession session, Model model) {
+		Long storeId = resolveCurrentStoreId(session);
+		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(storeId);
+		model.addAttribute("orders", orders);
+		model.addAttribute("totalCount", orders.size());
+		return "reservationView/orders";
 	}
 
 	private LocalDate parseLocalDate(String s) {

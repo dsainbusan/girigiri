@@ -14,7 +14,7 @@
 - Backend: Java 21 + Spring Boot 3.5.16 (Gradle)
 - Frontend: Thymeleaf + JavaScript（モバイル固定幅 ~420px）
 - Database: MySQL
-- 認証: Spring Security（+ OAuth2 Kakao/Naver 予定）
+- 認証: Spring Security（+ OAuth2 Kakao/Google/LINE）
 
 ### ローカル実行
 ```bash
@@ -62,7 +62,7 @@ ENV
 - Backend: Java 21 + Spring Boot 3.5.16 (Gradle)
 - Frontend: Thymeleaf + JavaScript (모바일 고정폭 ~420px)
 - Database: MySQL
-- 인증: Spring Security (+ OAuth2 카카오/네이버 예정)
+- 인증: Spring Security (+ OAuth2 카카오/구글/라인)
 
 ### 로컬 실행
 ```bash

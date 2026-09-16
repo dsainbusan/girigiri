@@ -66,7 +66,7 @@
         <div class="info-row__title">입점 신청</div>
         <div class="info-row__sub" th:text="${pendingStoreCount} + '건 대기 중'">0건 대기 중</div>
       </div>
-      <span class="badge" th:classappend="${pendingStoreCount > 0} ? 'badge--neutral' : 'badge--success'"
+      <span class="badge" th:classappend="${pendingStoreCount > 0} ? 'badge--warning' : 'badge--neutral'"
             th:text="${pendingStoreCount} + '건'">0건</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>
@@ -78,7 +78,7 @@
         <div class="info-row__title">매장 문의</div>
         <div class="info-row__sub" th:text="${pendingStoreInquiryCount} + '건 대기 중'">0건 대기 중</div>
       </div>
-      <span class="badge" th:classappend="${pendingStoreInquiryCount > 0} ? 'badge--neutral' : 'badge--success'"
+      <span class="badge" th:classappend="${pendingStoreInquiryCount > 0} ? 'badge--warning' : 'badge--neutral'"
             th:text="${pendingStoreInquiryCount} + '건'">0건</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>
@@ -90,7 +90,7 @@
         <div class="info-row__title">유저 문의</div>
         <div class="info-row__sub" th:text="${pendingUserInquiryCount} + '건 대기 중'">0건 대기 중</div>
       </div>
-      <span class="badge" th:classappend="${pendingUserInquiryCount > 0} ? 'badge--neutral' : 'badge--success'"
+      <span class="badge" th:classappend="${pendingUserInquiryCount > 0} ? 'badge--warning' : 'badge--neutral'"
             th:text="${pendingUserInquiryCount} + '건'">0건</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>
@@ -102,7 +102,7 @@
         <div class="info-row__title">신고 접수</div>
         <div class="info-row__sub" th:text="${pendingComplaintCount} + '건 대기 중'">0건 대기 중</div>
       </div>
-      <span class="badge" th:classappend="${pendingComplaintCount > 0} ? 'badge--neutral' : 'badge--success'"
+      <span class="badge" th:classappend="${pendingComplaintCount > 0} ? 'badge--warning' : 'badge--neutral'"
             th:text="${pendingComplaintCount} + '건'">0건</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>

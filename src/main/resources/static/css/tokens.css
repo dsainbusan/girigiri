@@ -15,12 +15,15 @@
 
   --c-accent:         #F97316;   /* 마감임박 / 할인 주황 */
   --c-accent-weak:    #FFF7ED;
+  --c-accent-strong:  #C2410C;   /* 배지 텍스트 전용 — -weak 배경 위 WCAG AA(4.5:1) 확보용, 배경은 그대로 둔다 */
 
   --c-danger:         #EF4444;   /* 폐기/긴급 빨강 */
   --c-danger-weak:    #FEF2F2;
   --c-danger-border:  #FECACA;
+  --c-danger-strong:  #B91C1C;   /* 배지 텍스트 전용 — -weak 배경 위 WCAG AA(4.5:1) 확보용, 배경은 그대로 둔다 */
   --c-info:           #0EA5E9;   /* 정보 파랑 */
   --c-info-weak:      #EFF6FF;
+  --c-info-strong:    #0369A1;   /* 배지 텍스트 전용 — -weak 배경 위 WCAG AA(4.5:1) 확보용, 배경은 그대로 둔다 */
 
   /* 추가됨 — 왜: 점주 대시보드 "오늘 판매 현황" 도넛 카드용. 판매(primary)/폐기(danger)만으론
      "예약됐지만 아직 픽업 전"(마감 전엔 아직 결과 미정인 재고)을 표현할 색이 없었다. */
@@ -31,6 +34,7 @@
   --c-text:      #0F172A;   /* 기본 글자 */
   --c-text-sub:  #64748B;   /* 보조 글자 */
   --c-text-mut:  #94A3B8;   /* 흐린 글자 */
+  --c-text-mut-strong: #475569;  /* badge--muted 텍스트 전용 — --c-line-weak 배경 위 WCAG AA(4.5:1) 확보용 */
   --c-line:      #E2E8F0;   /* 경계선 */
   --c-line-weak: #EEF2F6;
   --c-bg:        #F1F5F9;   /* 앱 배경 */
