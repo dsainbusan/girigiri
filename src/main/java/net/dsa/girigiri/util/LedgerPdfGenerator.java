@@ -82,12 +82,13 @@ public final class LedgerPdfGenerator {
 						Math.abs(data.deltaAmount()), data.deltaPercent() >= 0 ? "+" : "", data.deltaPercent())
 				: "전월 비교 데이터 없음";
 
-		// 상단 배지: 대표 뱃지를 설정해뒀으면 그 뱃지 이름을 보여주고(더 구체적이고 개인화된 정보),
-		// 안 정했으면 기존처럼 누적 구제 개수 기반 등급으로 대체한다 — 둘 다 없는 경우는 없다.
+		// 상단 배지: 웹 절약 가계부 화면(ledger.html의 hero-badge-chip)과 동일하게, 구제 개수 기반
+		// 등급(브론즈 등)은 실제 화면 어디에도 노출되지 않는 내부 계산값이라 PDF/CSV에서도 쓰지 않는다.
+		// 대표 뱃지가 있으면 그 이름을, 없으면 "대표 뱃지 미설정"을 보여준다.
 		// ⚠️ 아이콘(이모지)은 UnDotum 폰트에 글리프가 없어 깨진 문자로 나오므로 PDF에서는 제외한다.
 		String badgeTag = data.representativeBadge() != null
 				? esc(data.representativeBadge().name())
-				: esc(data.tier()) + " 등급";
+				: "대표 뱃지 미설정";
 
 		return """
 				<html>
@@ -111,7 +112,7 @@ public final class LedgerPdfGenerator {
 				</style></head>
 				<body>
 					<h1>%s님의 절약 가계부</h1><span class="tier">%s</span>
-					<p class="sub">기리기리 · 발급일 %s · %s 등급 · %s</p>
+					<p class="sub">기리기리 · 발급일 %s · %s</p>
 					<table class="stat-row">
 						<tr>
 							<td><span class="label">이번 달 절약</span><span class="value">%,d원</span></td>
@@ -130,7 +131,7 @@ public final class LedgerPdfGenerator {
 				</body>
 				</html>
 				""".formatted(FONT_FAMILY, esc(data.nickname() != null ? data.nickname() : "회원"),
-				badgeTag, java.time.LocalDate.now(), esc(data.tier()), deltaLine,
+				badgeTag, java.time.LocalDate.now(), deltaLine,
 				data.thisMonthSaved(), data.totalSaved(), data.rescueRatePercent(), data.co2Kg(),
 				goalLine, rows, categoryBlock);
 	}
