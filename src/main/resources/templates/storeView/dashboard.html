@@ -88,6 +88,13 @@
 		<span class="settlement-cta__go">정산 내역 보기 ›</span>
 	</a>
 
+	<!-- 공지사항 — 슈퍼어드민이 올린 공지를 읽기 전용으로 확인 (WBS 3.0, 김태훈 인수분 → 문창호 2026-09-16) -->
+	<a th:href="@{/store/notices}" class="card"
+	   style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4); display:flex; align-items:center; justify-content:space-between;">
+		<span>📢 공지사항</span>
+		<span class="u-mut">›</span>
+	</a>
+
 	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
 	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
 		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
