@@ -88,13 +88,6 @@
 		<span class="settlement-cta__go">정산 내역 보기 ›</span>
 	</a>
 
-	<!-- 공지사항 — 슈퍼어드민이 올린 공지를 읽기 전용으로 확인 (WBS 3.0, 김태훈 인수분 → 문창호 2026-09-16) -->
-	<a th:href="@{/store/notices}" class="card"
-	   style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4); display:flex; align-items:center; justify-content:space-between;">
-		<span>📢 공지사항</span>
-		<span class="u-mut">›</span>
-	</a>
-
 	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
 	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
 		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
@@ -287,8 +280,17 @@
 		</div>
 	</div>
 
-	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
-	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다.
+	     2026-09-16 — 유저 모드 전환 버튼도 상단바에서 여기로 옮겨왔다(모든 점주 화면 상단바를
+	     차지하는 대신, 점주 모드의 "홈"인 대시보드 하단에서만 전환하도록). -->
+	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4)">
+		<input type="hidden" name="target" value="user" />
+		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
+			<span class="topbar__mode-icon" aria-hidden="true">👤</span>
+			<span>유저 모드로</span>
+		</button>
+	</form>
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-3); margin-bottom: var(--s-4)">
 		<button type="submit" class="btn btn--outline btn--block u-mut"
 		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>
