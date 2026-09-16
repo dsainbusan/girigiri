@@ -33,7 +33,7 @@
 	<div id="new-badge-toast" class="ledger-badge-toast" th:if="${!#lists.isEmpty(data.newlyUnlockedBadges)}" role="status">
 		<div class="ledger-badge-toast__header">
 			<span class="ledger-badge-toast__title">🎉 새 뱃지 획득!</span>
-			<button type="button" id="close-badge-toast-btn" class="ledger-badge-toast__close" aria-label="닫기">✕</button>
+			<button type="button" id="close-badge-toast-btn" class="ledger-badge-toast__close" aria-label="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
 		</div>
 		<div class="ledger-badge-toast__list">
 			<div th:each="b : ${data.newlyUnlockedBadges}" class="ledger-badge-toast__item">
@@ -149,7 +149,7 @@
 	     CO2 kg 숫자만으로는 안 와닿아서, "나무 OO그루 효과"로 환산해 옆에 같이 보여준다 —
 	     ECO_20KG 뱃지("소나무 한 그루")와 같은 환산 기준(Co2EstimateUtil.treeEquivalent). */-->
 	<div class="ledger-eco-banner">
-		🌍 이번 달 <strong th:text="${data.thisMonthRescuedCount}">12</strong>개 구제
+		<svg class="icon" style="width:15px;height:15px"><use href="#i-globe"/></svg> 이번 달 <strong th:text="${data.thisMonthRescuedCount}">12</strong>개 구제
 		· CO2 <strong th:text="${#numbers.formatDecimal(data.thisMonthCo2Kg, 1, 1)}">5.2</strong>kg 절감
 		<span th:if="${data.thisMonthCo2Kg > 0}" class="ledger-eco-banner__tree"
 		      th:text="'(나무 ' + ${#numbers.formatDecimal(T(net.dsa.girigiri.util.Co2EstimateUtil).treeEquivalent(data.thisMonthCo2Kg), 1, 1)} + '그루 효과)'">(나무 0.3그루 효과)</span>
@@ -268,7 +268,7 @@
 		<p class="u-sub" style="font-size: var(--fs-sm)">목표 금액을 정해두면 위 게이지로 진행률을 볼 수 있어요. 비워두고 저장하면 목표가 해제됩니다.</p>
 		<!-- 서버가 ?error=goalTooLow로 리다이렉트했을 때만 JS로 보여준다(LedgerController.updateGoal 참고) —
 		     최소 금액(1만원) 미만은 목표 달성 뱃지(GOAL_HIT)를 사실상 거저 따게 만들어서 서버에서 막는다. -->
-		<p id="goal-too-low-msg" class="ledger-goal-error is-hidden">⚠️ 목표 금액은 최소 10,000원 이상으로 설정해주세요.</p>
+		<p id="goal-too-low-msg" class="ledger-goal-error is-hidden"><svg class="icon" style="width:13px;height:13px"><use href="#i-warning"/></svg> 목표 금액은 최소 10,000원 이상으로 설정해주세요.</p>
 		<form th:action="@{/user/ledger/goal}" method="post" style="margin-top: var(--s-3)">
 			<!-- 프리셋 — 타이핑 없이 탭 한 번으로. 직접 입력과 값이 같으면 자동으로 활성 표시(아래 스크립트). -->
 			<div class="ledger-goal-presets">
@@ -414,7 +414,7 @@
 						수집한 뱃지 <strong th:text="${data.unlockedBadgeCount}">4</strong> / <span th:text="${data.totalBadgeCount}">14</span>개
 					</p>
 				</div>
-				<button type="button" id="close-badge-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+				<button type="button" id="close-badge-modal-btn" class="ledger-modal-close" aria-label="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
 			</div>
 
 			<!-- 카테고리 필터 탭 -->
@@ -425,8 +425,8 @@
 				<div id="badge-filters" class="ledger-badge-filters">
 					<button type="button" class="ledger-badge-filter is-active" data-cat="all">전체 (<span th:text="${data.totalBadgeCount}">14</span>)</button>
 					<button type="button" class="ledger-badge-filter" data-cat="구제">🌱 구제</button>
-					<button type="button" class="ledger-badge-filter" data-cat="절약">💰 절약</button>
-					<button type="button" class="ledger-badge-filter" data-cat="환경">🌍 환경</button>
+					<button type="button" class="ledger-badge-filter" data-cat="절약"><svg class="icon" style="width:14px;height:14px"><use href="#i-money"/></svg> 절약</button>
+					<button type="button" class="ledger-badge-filter" data-cat="환경"><svg class="icon" style="width:14px;height:14px"><use href="#i-globe"/></svg> 환경</button>
 					<button type="button" class="ledger-badge-filter" data-cat="취향·탐험">🥐 취향·탐험</button>
 					<button type="button" class="ledger-badge-filter" data-cat="랭킹">🏆 랭킹</button>
 				</div>
@@ -448,7 +448,7 @@
 							<span class="ledger-badge-card__icon" th:text="${b.icon}">🌱</span>
 							<span th:if="${b.isRepresentative}" class="ledger-badge-card__tag is-rep">★ 대표</span>
 							<span th:if="${b.unlocked and !b.isRepresentative}" class="ledger-badge-card__tag is-unlocked">획득</span>
-							<span th:if="${!b.unlocked}" class="ledger-badge-card__tag is-locked">🔒 잠김</span>
+							<span th:if="${!b.unlocked}" class="ledger-badge-card__tag is-locked"><svg class="icon" style="width:11px;height:11px"><use href="#i-lock"/></svg> 잠김</span>
 						</div>
 
 						<div class="ledger-badge-card__body">
@@ -509,7 +509,7 @@
 						전체 <strong th:text="${ranking.totalParticipants}">12</strong>명 중 · 매달 1일에 새로 시작해요
 					</p>
 				</div>
-				<button type="button" id="close-ranking-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+				<button type="button" id="close-ranking-modal-btn" class="ledger-modal-close" aria-label="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
 			</div>
 			<div class="ledger-modal-body">
 				<div th:each="row : ${ranking.topRanks}" class="ledger-rank-row"
@@ -537,7 +537,7 @@
 		<div class="ledger-modal-sheet">
 			<div class="ledger-modal-header">
 				<h3 id="share-card-modal-title" class="ledger-modal-title">뱃지 공유 카드</h3>
-				<button type="button" id="close-share-card-modal-btn" class="ledger-modal-close" aria-label="닫기">✕</button>
+				<button type="button" id="close-share-card-modal-btn" class="ledger-modal-close" aria-label="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
 			</div>
 			<div class="ledger-modal-body">
 				<div id="share-card" class="ledger-share-card">
@@ -1054,7 +1054,7 @@
 										if (err && err.name !== 'AbortError') { throw err; }
 									});
 							}
-							alert('이 브라우저에서는 공유하기가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
+							window.girigiriAlert('이 브라우저에서는 공유하기가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
 						});
 					});
 				});
@@ -1085,7 +1085,7 @@
 				copyShareCardBtn.addEventListener('click', function () {
 					if (typeof html2canvas !== 'function') { return; }
 					if (!navigator.clipboard || typeof window.ClipboardItem !== 'function') {
-						alert('이 브라우저에서는 이미지 복사가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
+						window.girigiriAlert('이 브라우저에서는 이미지 복사가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
 						return;
 					}
 					withBusyLabel(copyShareCardBtn, '복사 중...', function () {

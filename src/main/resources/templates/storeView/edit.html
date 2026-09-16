@@ -65,7 +65,7 @@
 				손님 홈 화면 지도에 매장이 표시되려면, 위 주소를 좌표로 한 번 변환해둬야 해요.
 			</p>
 			<button type="button" id="geocodeBtn" class="btn btn--outline btn--sm">
-				📍 주소로 위치 확인
+				<svg class="icon" style="width:14px;height:14px"><use href="#i-pin"/></svg> 주소로 위치 확인
 			</button>
 			<p id="geocodeStatus" class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;"
 			   th:text="${store.latitude != null} ? '✅ 위치 확인됨 — 아래 지도 핀 위치가 맞는지 확인해 주세요.' : '아직 위치가 확인되지 않았어요 — 버튼을 눌러 확인해 주세요.'"></p>
@@ -152,7 +152,7 @@
 	         : 'background: var(--c-primary-weak); border-color: var(--c-primary-border);')}">
 		<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
 			<div>
-				<p class="u-bold" style="font-size: var(--fs-sm)">⚙️ POS 연동</p>
+				<p class="u-bold" style="font-size: var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> POS 연동</p>
 				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 2px"
 				   th:text="${posConnected ? posProviderLabel + ' 연동됨 · 메뉴 ' + posMenuCount + '개' : 'POS를 연동하면 매일 메뉴·가격·재고를 자동으로 불러와요'}">POS를 연동하면 매일 메뉴·가격·재고를 자동으로 불러와요</p>
 			</div>
@@ -300,7 +300,7 @@
 				updateHidden();
 				if ((openEl.value && !closeEl.value) || (!openEl.value && closeEl.value)) {
 					e.preventDefault();
-					alert('영업 시작 시각과 마감 시각을 모두 선택해 주세요.');
+					window.girigiriAlert('영업 시작 시각과 마감 시각을 모두 선택해 주세요.');
 					if (!openEl.value) openEl.focus();
 					else closeEl.focus();
 				}

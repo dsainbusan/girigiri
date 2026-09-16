@@ -35,7 +35,7 @@
 				</div>
 			</div>
 			<div class="info-row">
-				<span class="info-row__ico">📦</span>
+				<span class="info-row__ico"><svg class="icon"><use href="#i-box"/></svg></span>
 				<div class="u-grow">
 					<b style="font-size:13px">남은 수량</b>
 					<span class="u-sub" style="font-size:13px" th:text="${product.remainingQuantity} + '개'">3개</span>
@@ -60,7 +60,7 @@
 		</p>
 
 		<div class="banner" style="margin-top:14px" th:if="${savedAmount} > 0">
-			<span style="font-size:16px">💰</span>
+			<svg class="icon" style="width:16px;height:16px"><use href="#i-money"/></svg>
 			<div class="u-grow">
 				<div class="banner__title" th:text="'이 상품으로 ' + ${#numbers.formatInteger(savedAmount, 0, 'COMMA')} + '원 절약해요'">이 상품으로 6,100원 절약해요</div>
 			</div>

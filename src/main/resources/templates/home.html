@@ -24,7 +24,7 @@
 			<div class="banner__desc" id="geo-blocked-desc"></div>
 		</div>
 		<button type="button" id="geo-blocked-dismiss" aria-label="닫기"
-		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);font-size:14px;line-height:1;padding:2px">✕</button>
+		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);line-height:1;padding:2px"><svg class="icon" style="width:14px;height:14px"><use href="#i-close"/></svg></button>
 	</div>
 
 	<div class="chip-row" id="category-filter" style="margin-top:var(--s-3)">
@@ -36,7 +36,7 @@
 	</div>
 
 	<div class="banner" style="margin-top:var(--s-4)" th:if="${todayRescueCount} > 0">
-		<span style="font-size:16px">🌍</span>
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-globe"/></svg>
 		<div class="u-grow">
 			<div class="banner__title" th:text="'오늘 ' + ${todayRescueCount} + '명이 마감 음식을 구했어요'">오늘 3,940명이 마감 음식을 구했어요</div>
 		</div>

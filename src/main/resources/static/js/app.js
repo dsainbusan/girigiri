@@ -256,9 +256,91 @@
         btn.classList.toggle("is-liked", !!data.liked);
       })
       .catch(function () {
-        if (confirm("찜하려면 로그인이 필요해요. 로그인 화면으로 이동할까요?")) {
+        window.girigiriConfirm("찜하려면 로그인이 필요해요. 로그인 화면으로 이동할까요?", function () {
           location.href = "/auth/loginForm";
-        }
+        });
       });
   });
+
+  // 공용 확인/알림 모달 (2026-09-16, 디자인 리팩토링 2차) — window.confirm()/alert()/prompt()가
+  // 브라우저 네이티브 UI라 앱 톤과 안 맞는다는 지적으로 도입. common/layout.html의 #girigiri-modal
+  // 마크업(모든 화면에 한 번만 존재)을 채워서 연다. 원래 checkout.html 전용이던 .modal-overlay/
+  // .modal-box 스타일을 components.css로 승격해서 재사용한다.
+  (function () {
+    var modalEl = document.getElementById("girigiri-modal");
+    if (!modalEl) return; // 레이아웃이 아직 안 바뀐 옛 페이지 캐시 등 방어
+
+    var titleEl = document.getElementById("girigiri-modal-title");
+    var descEl = document.getElementById("girigiri-modal-desc");
+    var inputEl = document.getElementById("girigiri-modal-input");
+    var okBtn = document.getElementById("girigiri-modal-ok");
+    var cancelBtn = document.getElementById("girigiri-modal-cancel");
+    var iconEl = document.getElementById("girigiri-modal-icon");
+
+    function closeModal() {
+      modalEl.style.display = "none";
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+    }
+
+    function openModal(opts) {
+      titleEl.textContent = opts.title || "";
+      titleEl.hidden = !opts.title;
+      descEl.textContent = opts.desc || "";
+      iconEl.classList.toggle("modal-box__icon--neutral", opts.tone === "neutral");
+      okBtn.textContent = opts.okLabel || "확인";
+      cancelBtn.hidden = !opts.showCancel;
+      if (opts.showCancel) cancelBtn.textContent = opts.cancelLabel || "취소";
+      inputEl.hidden = !opts.withInput;
+      modalEl.style.display = "flex";
+      if (opts.withInput) {
+        inputEl.value = opts.inputValue != null ? opts.inputValue : "";
+        setTimeout(function () { inputEl.focus(); inputEl.select(); }, 0);
+      }
+    }
+
+    // alert() 대체 — 버튼 1개("확인"). tone:"neutral"이면 경고(빨강) 대신 브랜드 그린 아이콘.
+    window.girigiriAlert = function (message, opts) {
+      opts = opts || {};
+      openModal({ desc: message, showCancel: false, tone: opts.tone || "neutral" });
+      okBtn.onclick = function () { closeModal(); if (opts.onClose) opts.onClose(); };
+    };
+
+    // confirm() 대체 — 버튼 2개, "확인"을 눌러야 onConfirm이 호출된다.
+    window.girigiriConfirm = function (message, onConfirm) {
+      openModal({ desc: message, showCancel: true });
+      okBtn.onclick = function () { closeModal(); onConfirm(); };
+      cancelBtn.onclick = closeModal;
+    };
+
+    // prompt() 대체 — 지금 유일한 쓰임(대시보드 구제율 목표, 1~100 숫자)에 맞춘 숫자 입력 전용.
+    window.girigiriPromptNumber = function (opts, onConfirm) {
+      openModal({ title: opts.title, desc: opts.desc, showCancel: true, withInput: true, inputValue: opts.value });
+      inputEl.type = "number";
+      inputEl.min = opts.min != null ? opts.min : "";
+      inputEl.max = opts.max != null ? opts.max : "";
+      okBtn.onclick = function () {
+        var val = parseInt(inputEl.value, 10);
+        closeModal();
+        onConfirm(val);
+      };
+      cancelBtn.onclick = closeModal;
+    };
+
+    modalEl.addEventListener("click", function (e) {
+      if (e.target === modalEl) closeModal(); // 오버레이(바깥) 클릭 = 취소
+    });
+
+    // 기존 onsubmit="return confirm('메시지')" 자리를 대체 — <form data-confirm="메시지">에 적용.
+    // form.submit()은 (click과 달리) submit 이벤트를 다시 발생시키지 않는 스펙이라, 모달에서
+    // "확인"을 누른 뒤 다시 이 리스너를 타지 않는다 — 별도 플래그로 막을 필요가 없다.
+    document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        window.girigiriConfirm(form.getAttribute("data-confirm"), function () {
+          form.submit();
+        });
+      });
+    });
+  })();
 })();

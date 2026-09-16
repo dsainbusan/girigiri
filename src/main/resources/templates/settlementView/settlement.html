@@ -22,7 +22,7 @@
 	<!-- 계좌 미등록 안내 — 대시보드 "처리할 일" 배너와 문구·색 통일 (.todo-banner 재사용) -->
 	<div th:if="${!bankRegistered}" class="todo-banner">
 		<a th:href="@{/store/edit}" class="todo-banner__row">
-			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span><svg class="icon" style="width:14px;height:14px"><use href="#i-warning"/></svg> 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 	</div>

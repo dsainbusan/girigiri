@@ -16,7 +16,7 @@
     상단바 우측엔 공지사항 벨을 둔다(강노은 홈 화면의 알림벨과 같은 자리 — dark=true인 점주/운영 화면
     에서만 보인다).
   */-->
-  <a th:if="${dark}" th:href="@{/store/notices}" class="topbar__action" title="공지사항">📢</a>
+  <a th:if="${dark}" th:href="@{/store/notices}" class="topbar__action" title="공지사항"><svg class="icon"><use href="#i-megaphone"/></svg></a>
 </header>
 
 <!--/*

@@ -12,7 +12,7 @@
 	<!-- 계정 소셜 연동 정보 박스 -->
 	<div class="card" style="background: var(--c-surface); border: 1px solid var(--c-line-weak); margin-bottom: var(--s-4);">
 		<div class="u-row" style="gap: var(--s-3);">
-			<span style="font-size: 22px;">👤</span>
+			<svg class="icon" style="width:22px;height:22px"><use href="#i-user"/></svg>
 			<div>
 				<div class="u-row" style="gap: var(--s-2);">
 					<span class="u-bold" style="font-size: var(--fs-sm);"
@@ -77,8 +77,10 @@
 			   th:text="${param.pwError[0] == 'current' ? '현재 비밀번호가 올바르지 않아요.'
 			           : (param.pwError[0] == 'mismatch' ? '새 비밀번호가 서로 일치하지 않아요.'
 			           : '새 비밀번호는 8자 이상이어야 해요.')}">비밀번호를 확인해 주세요.</p>
-			<form th:action="@{/mypage/password}" method="post"
-			      onsubmit="return document.getElementById('newPassword').value === document.getElementById('newPasswordConfirm').value || (alert('새 비밀번호가 일치하지 않아요.'), false);">
+			<!-- 비밀번호 일치 검사 (2026-09-16 이전엔 onsubmit="... || (alert(...), false)" 콤마 연산자
+			     트릭으로 처리했는데, alert()이 앱 모달로 바뀌면서(비동기라 콤마 연산자로는 못 씀)
+			     아래 스크립트의 일반 submit 리스너로 옮겼다. -->
+			<form id="password-change-form" th:action="@{/mypage/password}" method="post">
 				<div class="field">
 					<label class="field__label" for="currentPassword">현재 비밀번호</label>
 					<input class="input" type="password" id="currentPassword" name="currentPassword" required>
@@ -105,7 +107,7 @@
 		<!-- Case 1: 아직 입점 신청을 하지 않은 일반 소비자 -->
 		<div th:if="${store == null}">
 			<div class="u-row" style="gap: var(--s-2);">
-				<span style="font-size: 20px;">🏪</span>
+				<svg class="icon" style="width:20px;height:20px"><use href="#i-storefront"/></svg>
 				<h3 style="font-size: var(--fs-md);">사장님이신가요?</h3>
 			</div>
 			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; line-height: 1.4;">
@@ -147,7 +149,7 @@
 	<!-- 회원 탈퇴 -->
 	<div style="margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--c-line-weak); text-align: center;">
 		<form th:action="@{/mypage/withdraw}" method="post"
-		      onsubmit="return confirm('정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다.');">
+		      data-confirm="정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다.">
 			<button type="submit" class="u-danger"
 			        style="background: none; border: none; font-size: var(--fs-xs); text-decoration: underline; padding: var(--s-2); cursor: pointer;">
 				회원 탈퇴
@@ -205,6 +207,21 @@
 				var d = p.value.replace(/\D/g, '').slice(0, 11);
 				p.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)
 					: d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d;
+			});
+		})();
+	</script>
+
+	<script th:inline="none">
+		(function () {
+			var form = document.getElementById('password-change-form');
+			if (!form) { return; }
+			form.addEventListener('submit', function (e) {
+				var newPw = document.getElementById('newPassword').value;
+				var confirmPw = document.getElementById('newPasswordConfirm').value;
+				if (newPw !== confirmPw) {
+					e.preventDefault();
+					window.girigiriAlert('새 비밀번호가 일치하지 않아요.');
+				}
 			});
 		})();
 	</script>

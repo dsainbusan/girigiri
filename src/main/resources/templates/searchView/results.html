@@ -5,7 +5,7 @@
 <div id="content" th:fragment="content" class="page">
 
 	<form th:action="@{/user/search}" method="get" class="search" style="margin-bottom:var(--s-3)">
-		<span>🔍</span>
+		<span><svg class="icon"><use href="#i-search"/></svg></span>
 		<input type="text" name="q" th:value="${keyword}" placeholder="베이커리, 반찬, 도시락 검색"
 		       style="border:none;background:transparent;outline:none;width:100%;font-size:var(--fs-md);color:var(--c-text)">
 		<input type="hidden" name="sort" th:value="${sort}">
@@ -17,13 +17,13 @@
 
 	<!--/* 강노은: 위치 권한이 차단돼 있으면 어디서 풀 수 있는지 안내한다 — 아래 "거리순" 클릭 스크립트 참고. */-->
 	<div id="geo-blocked-banner" class="banner banner--info" style="margin-bottom:var(--s-3);display:none;align-items:flex-start">
-		<span style="font-size:16px">📍</span>
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-pin"/></svg>
 		<div class="u-grow">
 			<div class="banner__title">위치 권한이 꺼져 있어요</div>
 			<div class="banner__desc" id="geo-blocked-desc"></div>
 		</div>
 		<button type="button" id="geo-blocked-dismiss" aria-label="닫기"
-		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);font-size:14px;line-height:1;padding:2px">✕</button>
+		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);line-height:1;padding:2px"><svg class="icon" style="width:14px;height:14px"><use href="#i-close"/></svg></button>
 	</div>
 
 	<div class="u-row" style="justify-content:space-between">

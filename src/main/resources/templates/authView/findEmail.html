@@ -18,7 +18,7 @@
 	<!-- 결과: 계정 찾음 (이메일 계정) -->
 	<div th:if="${result != null and result.found and result.provider == 'email'}"
 	     class="banner" style="margin-top: var(--s-5)">
-		<span style="font-size:16px">📧</span>
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-mail"/></svg>
 		<div class="u-grow">
 			<p class="banner__title">가입된 이메일</p>
 			<p class="banner__desc" style="font-size: var(--fs-sm)" th:text="${result.maskedEmail}">ab***@gmail.com</p>

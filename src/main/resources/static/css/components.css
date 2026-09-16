@@ -10,6 +10,9 @@
    stroke 관련 속성이 필요 없다. */
 .icon-sprite { display: none; }
 .icon { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: -3px; fill: currentColor; }
+/* 별점 표시용 — 채워진 별은 .icon 그대로, 빈 별은 옅게. 리뷰 별점(★★★★☆ 텍스트 반복)을
+   SVG로 바꾸면서 추가 (2026-09-16, 디자인 리팩토링 2차). */
+.icon--dim { opacity: .28; }
 
 /* ---------------- Button ---------------- */
 .btn {
@@ -324,3 +327,54 @@
   background: none; border-top: none; border-left: none; border-right: none;
 }
 .tab.is-active { color: var(--c-text); border-color: var(--c-text); }
+
+/* ---------------- Modal (2026-09-16, 공용으로 승격) ----------------
+   원래 reservationView/checkout.html 전용이었던 확인 팝업 스타일 — 네이티브 confirm()/alert()를
+   앱 톤 모달로 바꾸면서(디자인 리팩토링 2차), common/layout.html의 공용 모달(#girigiri-modal)이
+   이걸 그대로 재사용한다. icon은 이모지 대신 .icon SVG를 쓴다(사각형 배경 원 안에 아이콘). */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;   /* 하단 고정 액션바(25)/탭바(30)보다 위에 떠야 해서 넉넉하게 잡음 */
+  padding: var(--s-5);
+}
+.modal-box {
+  width: 100%;
+  max-width: 320px;
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--s-5);
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+.modal-box__icon {
+  width: 48px; height: 48px; margin: 0 auto var(--s-3);
+  border-radius: 50%; background: var(--c-danger-weak); color: var(--c-danger);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-box__icon .icon { width: 24px; height: 24px; }
+.modal-box__icon--neutral { background: var(--c-primary-weak); color: var(--c-primary); }
+.modal-box__title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  margin-bottom: var(--s-2);
+}
+.modal-box__desc {
+  font-size: var(--fs-sm);
+  color: var(--c-text-sub);
+  line-height: 1.5;
+  margin-bottom: var(--s-4);
+}
+.modal-box__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+/* 목표 입력 모달(대시보드 구제율 목표 수정, window.prompt 대체) 전용 필드 한 줄 */
+.modal-box__field {
+  width: 100%; text-align: center; margin-bottom: var(--s-4);
+}

@@ -11,7 +11,7 @@
 		<div class="u-row" style="justify-content:space-between;align-items:flex-start">
 			<b style="font-size:16px" th:text="${inquiry.title}">문의 제목</b>
 			<form th:if="${canDeleteInquiry}" th:action="@{/user/inquiries/{id}/delete(id=${inquiry.id})}" method="post"
-			      onsubmit="return confirm('문의를 삭제할까요? 댓글도 함께 삭제됩니다.')">
+			      data-confirm="문의를 삭제할까요? 댓글도 함께 삭제됩니다.">
 				<button type="submit" class="btn btn--outline" style="padding:4px 10px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
 			</form>
 		</div>
@@ -41,7 +41,7 @@
 				</div>
 				<p style="font-size:13px;margin-top:4px" th:text="${c.content}">댓글 내용</p>
 				<form th:if="${c.canDelete}" th:action="@{/user/inquiries/{id}/comments/{commentId}/delete(id=${inquiry.id}, commentId=${c.id})}"
-				      method="post" onsubmit="return confirm('댓글을 삭제할까요?')" style="margin-top:4px">
+				      method="post" data-confirm="댓글을 삭제할까요?" style="margin-top:4px">
 					<button type="submit" class="btn btn--outline" style="padding:2px 8px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
 				</form>
 			</div>

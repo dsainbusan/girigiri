@@ -77,7 +77,7 @@
 	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
 		<!-- 예약 내역 — /reservation/my (진행중/픽업완료/노쇼·취소 탭, 영수증 PDF 보기 포함). 링크 누락돼 있던 걸 연결. -->
 		<a th:href="@{/reservation/my}" class="list-menu-item">
-			<span class="list-menu-item__icon">🧾</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-document"/></svg></span>
 			<span class="list-menu-item__title">예약 내역</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
@@ -106,7 +106,7 @@
 		<!-- 고객 지원 (문의 게시판 — 구현 완료, 강노은. FAQ/내 문의내역/문의하기 탭 화면.
 		     챗봇은 우측 하단 플로팅 버튼(#chat-fab-btn)에서만 연다 — 이 항목은 챗봇이랑 분리함) -->
 		<a th:href="@{/user/support}" class="list-menu-item">
-			<span class="list-menu-item__icon">💬</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-chat"/></svg></span>
 			<span class="list-menu-item__title">고객 지원</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
@@ -126,7 +126,7 @@
 	<form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-5)">
 		<input type="hidden" name="target" value="owner" />
 		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
-			<span class="topbar__mode-icon" aria-hidden="true">🏪</span>
+			<span class="topbar__mode-icon" aria-hidden="true"><svg class="icon" style="width:14px;height:14px"><use href="#i-storefront"/></svg></span>
 			<span>점주 모드로</span>
 		</button>
 	</form>
@@ -152,14 +152,14 @@
 	<!-- 챗봇 플로팅 버튼 — 마이페이지 화면 우측 하단에 항상 떠 있는 채팅 열기 버튼.
 	     위 메뉴 리스트의 "고객 지원" 항목(문의 게시판, WBS 6.0 강노은 담당)과는 별개다 —
 	     챗봇은 이 버튼에서만 열리도록 분리함. -->
-	<button type="button" id="chat-fab-btn" class="chat-fab" title="고객 지원 챗봇 열기">💬</button>
+	<button type="button" id="chat-fab-btn" class="chat-fab" title="고객 지원 챗봇 열기"><svg class="icon"><use href="#i-chat"/></svg></button>
 
 	<div id="chat-panel" class="chat-panel" style="display: none;">
 		<div class="chat-panel__header">
 			<span class="chat-panel__title">고객 지원 챗봇</span>
 			<div class="chat-panel__header-actions">
 				<button type="button" id="chat-reset-btn" class="chat-panel__icon-btn" title="새 대화 시작">↺</button>
-				<button type="button" id="chat-close-btn" class="chat-panel__icon-btn" title="닫기">✕</button>
+				<button type="button" id="chat-close-btn" class="chat-panel__icon-btn" title="닫기"><svg class="icon"><use href="#i-close"/></svg></button>
 			</div>
 		</div>
 		<div id="chat-messages" class="chat-panel__messages">
@@ -273,7 +273,7 @@
 				if (!text) {
 					// (WBS "빈 메시지 전송 방지") — 서버(ChatService)도 한 번 더 막아주지만, 프론트에서
 					// 아예 안 보내는 게 더 빠르고, alert로 명확하게 안내한다.
-					alert('메시지를 입력해주세요.');
+					window.girigiriAlert('메시지를 입력해주세요.');
 					return;
 				}
 
