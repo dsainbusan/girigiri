@@ -133,9 +133,24 @@
 
 			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
 
+			// 커스텀 마커 (2026-09-16, 디자인 리팩토링) — 카카오맵 기본 빨간 물방울 핀 그대로 쓰고
+			// 있었다("지도 API 튜토리얼 그대로"인 느낌의 흔한 원인). 브랜드 그린(--c-primary: #15803D)
+			// 톤의 핀 모양 SVG를 data URI로 만들어 씀 — 이미지 파일을 새로 추가할 필요 없이 마커
+			// 하나로 재사용(store마다 새로 안 만듦).
+			var markerImage = new kakao.maps.MarkerImage(
+				'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">' +
+					'<path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#15803D"/>' +
+					'<circle cx="18" cy="18" r="7" fill="#fff"/>' +
+					'</svg>'
+				),
+				new kakao.maps.Size(36, 44),
+				{ offset: new kakao.maps.Point(18, 44) }
+			);
+
 			stores.forEach(function (store) {
 				var position = new kakao.maps.LatLng(store.latitude, store.longitude);
-				var marker = new kakao.maps.Marker({ position: position, map: map });
+				var marker = new kakao.maps.Marker({ position: position, map: map, image: markerImage });
 
 				kakao.maps.event.addListener(marker, 'click', function () {
 					// 강노은: 마커 클릭 시 이름/카테고리만 보여주고 끝이라 가게 상세로 넘어갈 방법이
