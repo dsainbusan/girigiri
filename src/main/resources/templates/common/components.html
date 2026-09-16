@@ -35,15 +35,22 @@
 
 <!--/*
   가게 카드. store 객체 필드 예: thumbText, thumbColor, name, category, distance,
-  origPrice, salePrice, discountRate, leftLabel, urgent(boolean)
+  origPrice, salePrice, discountRate, leftLabel, urgent(boolean), blocked(boolean)
 
   linkToStore: true면 가게 상세(/user/stores/{storeId})로, false/생략이면 이 카드가 대표하는
   상품 상세(/user/products/{id})로 바로 이동한다.
   강노은 — 왜: 홈 화면은 "가게를 둘러보다가 상품을 고르는" 흐름이라 가게 상세를 거치게 하고
   (storeId 사용), 검색 결과는 "이미 찾던 상품을 눌렀는데" 다른 화면(가게 상세)으로 새는 게
   어색해서 기존처럼 그 상품 상세로 바로 보낸다(id 사용, 기본값).
+
+  추가됨 (2026-09-16, 채채 요청 — 매장 신뢰도 자동 정지) — blocked는 store 객체를 만드는 서비스가
+  이 필드를 채우는 화면(지금은 HomeService)에서만 true가 될 수 있고, 안 채우면(검색/찜/추천 등
+  기존 화면) 기본값 false라 이 카드는 그대로 예전처럼 보인다 — 다른 화면에 영향 없음. blocked면
+  카드 전체를 흐리게 하고(store-card.css) 마감 카운트다운 대신 "오늘 휴무"만 보여준다 — 체크아웃
+  화면과 같은 원칙으로 정지 사유는 노출하지 않는다.
 */-->
 <a th:fragment="storeCard(store, linkToStore)" class="store-card"
+   th:classappend="${store.blocked} ? ' is-blocked'"
    th:href="${linkToStore} ? @{/user/stores/{storeId}(storeId=${store.storeId})} : @{/user/products/{id}(id=${store.id})}">
   <span class="store-card__thumb"
         th:style="'background:' + ${store.thumbColor}"
@@ -65,9 +72,10 @@
       <span class="price__orig" th:text="${store.origPrice}">12,000원</span>
       <span class="price__sale" style="font-size:var(--fs-lg)" th:text="${store.salePrice}">5,900원</span>
     </span>
-    <span class="store-card__left" th:classappend="${store.urgent} ? ' is-urgent'">
+    <span class="store-card__left" th:if="${!store.blocked}" th:classappend="${store.urgent} ? ' is-urgent'">
       <span>&#9201;</span><span th:text="${store.leftLabel}">마감까지 42분</span>
     </span>
+    <span class="store-card__left" th:if="${store.blocked}">오늘 휴무</span>
   </span>
 </a>
 

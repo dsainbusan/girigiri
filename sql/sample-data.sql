@@ -17,6 +17,10 @@
 -- 추가됨 (2026-08-27) — 왜: payment/payment_cancel/inquiry/inquiry_comment/notice 테이블이 엔티티에는
 -- 이미 추가됐는데 이 초기화 목록엔 빠져 있었다. 그대로 두면 재실행 시 이 테이블들에 남은 이전 실행분과
 -- 아래 새 INSERT의 고정 id가 충돌(중복 PK)한다.
+-- 추가됨 (2026-09-16, 채채 요청 — 로컬 DB 초기화 중 발견) — 왜: complaint 테이블이 2026-09-01에
+-- 추가됐는데 이 초기화 목록엔 빠져 있었다(payment 등과 같은 종류의 누락, 위 2026-08-27 주석 참고).
+-- 그대로 두면 재실행 시 이전 실행분과 아래 INSERT INTO complaint의 고정 id가 충돌한다.
+DELETE FROM complaint;
 DELETE FROM notice;
 DELETE FROM inquiry_comment;
 DELETE FROM inquiry;
@@ -40,12 +44,17 @@ DELETE FROM users;
 -- 변경됨 — 왜: 슈퍼어드민 회원 관리 화면(/superadmin/members)을 실 데이터로 연동하면서
 -- status(ACTIVE/SUSPENDED) 컬럼과, role/상태 다양성을 보여줄 ADMIN·정지 계정 샘플을 추가했다.
 -- ---------------------------------------------------------------------
-INSERT INTO users (id, oauth_provider, oauth_id, role, status, nickname, email, region, profile_completed, latitude, longitude, created_at, updated_at) VALUES
-(1, 'google', 'google_1001', 'USER', 'ACTIVE', '구제왕나은', 'noeun@example.com', '서울 중구', 1, 37.566826, 126.978656, NOW(), NOW()),
-(2, 'kakao', 'kakao_1001', 'USER', 'ACTIVE', '알뜰소비자김태훈', NULL, '서울 중구', 1, 37.550000, 126.990000, NOW(), NOW()),
-(3, 'google', 'google_1002', 'OWNER', 'ACTIVE', '사장님송채현', 'songchaehyeon@example.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW()),
-(4, 'email', 'admin@girigiri.com', 'ADMIN', 'ACTIVE', '운영자', 'admin@girigiri.com', '서울 중구', 1, 37.560000, 126.985000, NOW(), NOW()),
-(5, 'kakao', 'kakao_1002', 'USER', 'SUSPENDED', '노쇼왕문창호', NULL, '서울 중구', 1, 37.552000, 126.988000, NOW(), NOW());
+-- 변경됨 (2026-09-16, 채채 요청 — 로컬 DB 초기화 중 발견) — 왜: UserEntity에 2026-09-10에
+-- terms_agreed/privacy_agreed/marketing_agreed(전부 NOT NULL) 컬럼이 추가됐는데, 이 샘플
+-- 스크립트는 그때 같이 안 바뀌어서 재실행하면 "Field 'marketing_agreed' doesn't have a default
+-- value" 에러가 났다. 필수 약관(terms/privacy)은 이미 동의하고 가입 완료한 샘플 유저라는
+-- 가정으로 1, 마케팅 수신은 선택이라 0으로 채운다.
+INSERT INTO users (id, oauth_provider, oauth_id, role, status, nickname, email, region, profile_completed, terms_agreed, privacy_agreed, marketing_agreed, latitude, longitude, created_at, updated_at) VALUES
+(1, 'google', 'google_1001', 'USER', 'ACTIVE', '구제왕나은', 'noeun@example.com', '서울 중구', 1, 1, 1, 0, 37.566826, 126.978656, NOW(), NOW()),
+(2, 'kakao', 'kakao_1001', 'USER', 'ACTIVE', '알뜰소비자김태훈', NULL, '서울 중구', 1, 1, 1, 0, 37.550000, 126.990000, NOW(), NOW()),
+(3, 'google', 'google_1002', 'OWNER', 'ACTIVE', '사장님송채현', 'songchaehyeon@example.com', '서울 중구', 1, 1, 1, 0, 37.560000, 126.985000, NOW(), NOW()),
+(4, 'email', 'admin@girigiri.com', 'ADMIN', 'ACTIVE', '운영자', 'admin@girigiri.com', '서울 중구', 1, 1, 1, 0, 37.560000, 126.985000, NOW(), NOW()),
+(5, 'kakao', 'kakao_1002', 'USER', 'SUSPENDED', '노쇼왕문창호', NULL, '서울 중구', 1, 1, 1, 0, 37.552000, 126.988000, NOW(), NOW());
 
 -- ---------------------------------------------------------------------
 -- store (users.id=3 이 소유한 매장 1곳 + 입점 승인 대기 중인 신청 1건)
@@ -58,9 +67,13 @@ INSERT INTO users (id, oauth_provider, oauth_id, role, status, nickname, email, 
 -- approval_status='APPROVED'로 명시(안 그러면 "입점 승인 대기" 필터링과 뒤섞여 애매해짐).
 -- 추가됨 — 왜: "입점 승인 대기" 목록이 항상 비어 보이던 문제 — 슈퍼어드민 승인 버튼 데모용으로
 -- PENDING 상태 매장 신청 1건을 users.id=2(알뜰소비자김태훈)의 신청으로 추가한다.
-INSERT INTO store (id, store_name, category, address, latitude, longitude, operating_hours, phone, business_number, role, owner_id, approval_status, created_at, updated_at) VALUES
-(1, '다이스키 베이커리', '베이커리', '서울시 중구 을지로 100', 37.560000, 126.985000, '09:00 ~ 22:00', '02-1234-5678', '123-45-67890', 'OWNER', 3, 'APPROVED', NOW(), NOW()),
-(2, '동네빵집 청파점', '베이커리', '서울시 용산구 청파로 10', 37.541000, 126.965000, '08:00 ~ 20:00', '02-111-2222', '222-11-22222', 'OWNER', 2, 'PENDING', '2026-08-20 09:00:00', '2026-08-20 09:00:00');
+-- 변경됨 (2026-09-16, 채채 요청 — 로컬 DB 초기화 중 발견) — 왜: StoreEntity에 2026-09-16에
+-- reliability_suspension_count/reliability_banned(둘 다 NOT NULL)가 추가됐는데, 이 샘플 스크립트는
+-- 같이 안 바뀌어서 재실행하면 "Field 'reliability_banned' doesn't have a default value" 에러가
+-- 났다. 샘플 매장은 신뢰도 정지 이력이 없는 상태로 0/0(정지 아님)으로 채운다.
+INSERT INTO store (id, store_name, category, address, latitude, longitude, operating_hours, phone, business_number, role, owner_id, approval_status, reliability_suspension_count, reliability_banned, created_at, updated_at) VALUES
+(1, '다이스키 베이커리', '베이커리', '서울시 중구 을지로 100', 37.560000, 126.985000, '09:00 ~ 22:00', '02-1234-5678', '123-45-67890', 'OWNER', 3, 'APPROVED', 0, 0, NOW(), NOW()),
+(2, '동네빵집 청파점', '베이커리', '서울시 용산구 청파로 10', 37.541000, 126.965000, '08:00 ~ 20:00', '02-111-2222', '222-11-22222', 'OWNER', 2, 'PENDING', 0, 0, '2026-08-20 09:00:00', '2026-08-20 09:00:00');
 
 -- ---------------------------------------------------------------------
 -- product (store.id=1의 마감세일 상품)

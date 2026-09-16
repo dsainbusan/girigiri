@@ -36,6 +36,9 @@ public class HomeService {
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 	private final ReservationRepository reservationRepository;
+	// 추가됨 (2026-09-16, 채채 요청 — 매장 신뢰도 자동 정지) — 홈 카드에 정지 여부(blocked)를 표시하기
+	// 위해 쓴다. 실제 예약 차단은 ReservationService.prepareReservation이 하므로 여기는 화면 표시용.
+	private final StoreReliabilityService storeReliabilityService;
 
 	/**
 	 * 지도(stores)용: 좌표 있는 매장 전체. 카테고리 필터는 적용하지 않는다.
@@ -137,6 +140,7 @@ public class HomeService {
 				.leftLabel(closingInfo.label())
 				.urgent(closingInfo.urgent())
 				.liked(likedStoreIds.contains(store.getId()))
+				.blocked(storeReliabilityService.isBlockedFromNewReservations(store))
 				.build();
 	}
 
