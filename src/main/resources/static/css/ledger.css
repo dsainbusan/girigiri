@@ -236,6 +236,14 @@
 .ledger-eco-banner strong { font-weight: var(--fw-black); }
 .ledger-eco-banner__tree { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
 
+/* ---------- 분석 탭: 카테고리 탐험 유도 문구 (카테고리 1개뿐일 때만) ---------- */
+.ledger-explore-nudge {
+  margin-top: var(--s-4); padding: 10px var(--s-4); text-align: center;
+  background: #faf5ff; border: 1px solid #e9d5ff; border-radius: var(--r-md);
+  font-size: var(--fs-sm); color: #6b21a8; line-height: 1.4;
+}
+.ledger-explore-nudge strong { font-weight: var(--fw-black); }
+
 .ledger-export-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
 .ledger-export-btn { flex: 1; text-align: center; text-decoration: none; }
 
