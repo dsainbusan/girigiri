@@ -131,6 +131,27 @@ public class StoreEntity {
 	@Column(name = "owner_id")
 	private Long ownerId;
 
+	// 매장 신뢰도(취소율) 자동 정지 — 2026-09-16 추가, 송채현.
+	// 신뢰도(= 100 - 최근 예약 기준 취소율)가 70% 미만이 되면(최소 예약 10건 이상 매장만 대상,
+	// 신생매장 보호) 단계별로 자동 정지된다: 1회차 7일 → 2회차 14일 → 3회차 30일 → 4회차부터 영구정지.
+	// 정지는 시간이 지나면 자동으로 풀리는데(reliabilitySuspendedUntil이 지난 시각이 되면 그걸로
+	// 끝 — 별도 스케줄러 없이 조회 시점마다 동적으로 판정한다), reliabilitySuspensionCount(단계)는
+	// 정지가 풀려도 리셋되지 않는다. 트리거/단계 계산 로직은 StoreReliabilityService 참고.
+	//
+	// 기존 status(ACTIVE/SUSPENDED, 슈퍼어드민이 수동으로 매장을 정지시킬 때 쓰는 필드)와는 일부러
+	// 별도 컬럼으로 관리한다 — 같은 필드를 공유하면, 운영자가 수동으로 정지시킨 매장을 이 자동 해제
+	// 로직이 착각해서 풀어버리는 사고가 날 수 있다.
+	@Column(name = "reliability_suspended_until")
+	private LocalDateTime reliabilitySuspendedUntil;   // null 또는 과거 시각이면 신뢰도 사유로 정지된 상태 아님
+
+	@Builder.Default
+	@Column(name = "reliability_suspension_count", nullable = false)
+	private int reliabilitySuspensionCount = 0;   // 지금까지 신뢰도 위반으로 정지된 누적 횟수(0~3)
+
+	@Builder.Default
+	@Column(name = "reliability_banned", nullable = false)
+	private boolean reliabilityBanned = false;   // true면 영구정지(4회차 위반)
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

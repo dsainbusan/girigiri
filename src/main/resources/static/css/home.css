@@ -1,0 +1,12 @@
+/*
+ * 홈(home) 화면 전용 스타일.
+ * 공통 파일(tokens/base/layout/components.css)은 건드리지 않고, 이 화면에서만 쓰는 스타일은 여기에 둔다.
+ */
+
+/* 추가됨 (2026-09-16, 채채 요청 — 매장 신뢰도 자동 정지) — 왜: 정지된 매장 카드가 평소랑 똑같이
+   보여서 눌러서 체크아웃까지 가봐야 정지된 걸 알 수 있었다. common/components.html의 storeCard
+   fragment가 store.blocked=true면 이 클래스를 얹는다(카드 자체는 계속 보여주되 흐리게) — 체크아웃
+   화면의 .card.is-disabled와 같은 생각. */
+.store-card.is-blocked {
+	opacity: .55;
+}

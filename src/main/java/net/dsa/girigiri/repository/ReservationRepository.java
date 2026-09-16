@@ -2,6 +2,7 @@ package net.dsa.girigiri.repository;
 
 import jakarta.persistence.LockModeType;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -37,16 +38,20 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// (탭 없이) 전부 최신순으로 한 번에 보여준다.
 	List<ReservationEntity> findByUserIdOrderByReservedAtDesc(Long userId);
 
-	// 매장 신뢰도(취소율) 계산용: 그 매장의 전체 예약 수 / 그중 특정 주체(USER, STORE)가 취소한 수
+	// 매장 신뢰도(취소율) 계산용: 그 매장의 전체 예약 수
 	long countByStoreId(Long storeId);
 
-	long countByStoreIdAndCancelledBy(Long storeId, String cancelledBy);
-
-	// 추가됨 (2026-09-08, 코드 감사) — 왜: getStoreCancelStats의 분모(total)를 countByStoreId로
-	// 구하면 결제까지 안 가고 포기한(pending) 예약까지 다 세어버려서, 트래픽만 많고 결제 전환이
-	// 낮은 매장일수록 분모가 부풀어 취소율이 실제보다 좋게(희석되어) 나온다. "결제까지 갔던"
-	// 예약(pending 제외)만 분모로 삼기 위한 카운트.
-	long countByStoreIdAndStatusNot(Long storeId, String status);
+	// 매장 신뢰도(취소율) 계산용 — 최근 N건(결제까지 갔던 예약만, pending 제외) 조회.
+	// 변경됨 (2026-09-16) — 왜: 예전엔 countByStoreIdAndStatusNot/countByStoreIdAndCancelledBy로
+	// "가입 이후 전체 누적" 기준 카운트만 했는데, 그러면 한 번 취소율이 나빠진 매장은 그 이후 아무리
+	// 잘해도 오래된 취소 건이 분모/분자에 영원히 남아서 회복이 사실상 불가능했다(StoreReliabilityService의
+	// 자동 정지·해제가 "회복 가능한" 지표를 전제로 하므로 문제). 최근 예약 N건(reservedAt 최신순)만
+	// 보는 걸로 바꿔서 취소 없이 새 예약을 잘 받으면 실제로 점수가 오르게 했다.
+	// pending 제외 이유는 그대로 유지 — 결제까지 안 가고 포기한 예약까지 세면 트래픽만 많고 결제
+	// 전환이 낮은 매장일수록 분모가 부풀어 취소율이 실제보다 좋게(희석되어) 나온다.
+	@Query("select r from ReservationEntity r where r.storeId = :storeId and r.status <> :excludedStatus order by r.reservedAt desc")
+	List<ReservationEntity> findRecentByStoreIdAndStatusNot(
+			@Param("storeId") Long storeId, @Param("excludedStatus") String status, Pageable pageable);
 
 	// 추가됨 (2026-08-21) — 왜: 노쇼 자동 처리가 이제 confirmed/ready 두 상태를 다 봐야 해서
 	// (매장이 아직 안 왔거나, 수락은 했는데 손님이 안 온 경우 둘 다 노쇼 후보) 상태 여러 개로 조회.

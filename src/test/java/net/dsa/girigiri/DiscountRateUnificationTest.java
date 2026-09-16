@@ -5,15 +5,11 @@ import net.dsa.girigiri.repository.LikeRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
-import net.dsa.girigiri.service.HomeService;
-import net.dsa.girigiri.service.LikeService;
-import net.dsa.girigiri.service.RecommendationService;
-import net.dsa.girigiri.service.SearchService;
+import net.dsa.girigiri.service.*;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -38,7 +34,7 @@ class DiscountRateUnificationTest {
 		assertEquals(40, expected, "기준값 자체가 40%가 아니면 테스트 더미값부터 다시 잡아야 함");
 
 		HomeService homeService = new HomeService(mock(ProductRepository.class), mock(StoreRepository.class),
-				mock(ReservationRepository.class));
+				mock(ReservationRepository.class), mock(StoreReliabilityService.class));
 		SearchService searchService = new SearchService(mock(ProductRepository.class), mock(StoreRepository.class));
 		LikeService likeService = new LikeService(mock(LikeRepository.class), mock(StoreRepository.class),
 				mock(ProductRepository.class));

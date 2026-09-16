@@ -14,6 +14,20 @@
 	cursor: not-allowed;
 }
 
+/* 추가됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 정지된 매장의 체크아웃 화면에서 수량 스테퍼/
+   쿠폰 선택/결제 예정 금액 카드가 예약 버튼만 막힌 채로 멀쩡히 조작 가능해 보이는 게 이상하다는
+   피드백(채채)으로 추가. checkout.html에서 storeBlocked면 이 클래스를 카드에 얹고(th:classappend)
+   내부 버튼/입력/select엔 th:disabled를 같이 걸어서, 시각적으로도 흐리고 실제로도 조작이 안 되게
+   한다. select는 브라우저 기본 disabled 스타일이 투박해서(회색조가 옅음) 우리 토큰으로 덮어쓴다. */
+.card.is-disabled {
+	opacity: .55;
+}
+#coupon-select:disabled {
+	color: var(--c-text-mut);
+	background: var(--c-line-weak);
+	cursor: not-allowed;
+}
+
 /* 추가됨 (2026-08-21) — 왜: 노쇼·취소 탭에서 "취소"와 "노쇼" 배지가 똑같이 파란색(badge--info)이라
    구분이 안 됐다. components.css(송보미 오너, 공통 파일)엔 회색 계열 배지가 없어서, 이 화면(예약)
    전용으로 여기에 하나 추가한다 — "취소"는 대부분 정상적인 흐름(손님/매장 사정)이라 중립적인 회색,
