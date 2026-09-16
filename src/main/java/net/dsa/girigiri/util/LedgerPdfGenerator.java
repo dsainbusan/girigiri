@@ -90,9 +90,15 @@ public final class LedgerPdfGenerator {
 				? esc(data.representativeBadge().name())
 				: "대표 뱃지 미설정";
 
+		// <title>을 넣어두면 openhtmltopdf가 PDF 문서 정보(Title)에 그대로 반영한다 — 없으면
+		// 브라우저가 새 탭에서 열 때 탭 제목이 URL 마지막 경로("pdf")로 나온다.
+		String docTitle = esc(data.nickname() != null ? data.nickname() : "회원") + "님의 절약 가계부";
+
 		return """
 				<html>
-				<head><style>
+				<head>
+				<title>%s</title>
+				<style>
 					body { font-family: '%s', sans-serif; padding: 24px; color: #1f2937; }
 					h1 { font-size: 18px; margin: 0; display: inline-block; }
 					h2 { font-size: 13px; margin: 20px 0 6px; }
@@ -130,7 +136,7 @@ public final class LedgerPdfGenerator {
 					%s
 				</body>
 				</html>
-				""".formatted(FONT_FAMILY, esc(data.nickname() != null ? data.nickname() : "회원"),
+				""".formatted(docTitle, FONT_FAMILY, esc(data.nickname() != null ? data.nickname() : "회원"),
 				badgeTag, java.time.LocalDate.now(), deltaLine,
 				data.thisMonthSaved(), data.totalSaved(), data.rescueRatePercent(), data.co2Kg(),
 				goalLine, rows, categoryBlock);
