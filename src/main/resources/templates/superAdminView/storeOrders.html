@@ -21,10 +21,17 @@
   <a class="link-action mb-16" th:href="@{/superadmin/stores/{id}(id=${store.id})}">&larr; 매장 상세</a>
 
   <div class="detail-header">
-    <h2 class="detail-header__title" th:text="${store.storeName} + ' 주문 내역'">매장명 주문 내역</h2>
+    <h2 class="detail-header__title" th:text="${store.storeName} + (${statusFilter == 'cancelled'} ? ' 취소·노쇼 내역' : ' 주문 내역')">매장명 주문 내역</h2>
   </div>
 
-  <p class="result-count">주문 <b th:text="${totalCount}">0</b>건 조회되었습니다.</p>
+  <!-- 추가됨 (2026-09-15) — 매장 신뢰도 카드에서 "취소 관련 예약만" 눌러 들어왔을 때, 지금 걸러진
+       상태라는 걸 알려주고 전체 목록으로 돌아갈 방법을 준다 (stores.html의 "초기화" 링크와 같은 패턴). -->
+  <p class="result-count">
+    <span th:if="${statusFilter == 'cancelled'}">취소·노쇼 <b th:text="${totalCount}">0</b>건 조회되었습니다.</span>
+    <span th:unless="${statusFilter == 'cancelled'}">주문 <b th:text="${totalCount}">0</b>건 조회되었습니다.</span>
+    <a class="link-action" th:if="${statusFilter == 'cancelled'}"
+       th:href="@{/superadmin/stores/{id}/orders(id=${store.id})}">전체 보기</a>
+  </p>
 
   <div class="table-wrap">
     <table class="data-table">

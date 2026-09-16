@@ -218,15 +218,20 @@ public class SuperAdminStoreController {
 	 * 예약(주문) 목록을 조회 전용으로 보여주는 화면. 점주/손님용 화면들과 달리 상태별로 나누지 않고
 	 * 대기·확정·픽업가능·픽업완료·취소·노쇼를 전부 한 목록에서, 구매자가 누군지까지 보여준다
 	 * (ReservationService#getOrdersForStore 참고).
+	 * 변경됨 (2026-09-15) — "매장 신뢰도" 통계 카드에서 취소 관련 예약만 바로 보고 싶다는 요청으로
+	 * status 쿼리 파라미터(예: cancelled) 추가. 없으면 기존과 동일하게 전체를 보여준다.
 	 */
 	@GetMapping("/stores/{id}/orders")
-	public String storeOrders(@PathVariable Long id, Model model) {
+	public String storeOrders(@PathVariable Long id,
+	                          @RequestParam(required = false) String status,
+	                          Model model) {
 		StoreEntity store = lookupService.getStore(id);
-		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(id);
+		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(id, status);
 
 		model.addAttribute("store", store);
 		model.addAttribute("orders", orders);
 		model.addAttribute("totalCount", orders.size());
+		model.addAttribute("statusFilter", status);
 		return "superAdminView/storeOrders";
 	}
 

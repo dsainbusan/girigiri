@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('전체 예약', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	점주용 "전체 예약" 목록 (2026-09-15 추가). 마이페이지 "내 매장 신뢰도" 카드에서 진입 —
+	상태(대기/확정/픽업가능/픽업완료/취소/노쇼) 구분 없이 지금까지의 예약을 전부 최신순으로 보여준다.
+	ReservationIncomingController#orders가 담아주는 ${orders}(ReservationOrderItemDto 목록,
+	ReservationService.getOrdersForStore 재사용 — 슈퍼어드민 "매장 주문 내역"과 같은 계산).
+	조회 전용이라 취소/수락 같은 처리 버튼은 없다(그건 들어온 예약/완료 내역 화면의 몫).
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+
+	<!-- 이 화면은 마이페이지에서만 진입 → 뒤로가기를 항상 마이페이지로 고정 -->
+	<script th:inline="none">
+	(function () {
+		var backBtn = document.querySelector('.topbar__back');
+		if (!backBtn) { return; }
+		backBtn.removeAttribute('data-back');
+		backBtn.addEventListener('click', function () { location.href = '/mypage'; });
+	})();
+	</script>
+
+	<div class="card" style="display:flex; justify-content:space-between; align-items:center">
+		<span class="u-sub">지금까지의 전체 예약</span>
+		<span class="u-bold" th:text="${totalCount} + '건'">0건</span>
+	</div>
+
+	<div th:if="${totalCount == 0}" class="empty-state">아직 들어온 예약이 없어요.</div>
+
+	<div class="card" th:each="o : ${orders}" style="margin-top: var(--s-3)">
+		<div class="u-row" style="justify-content:space-between; align-items:flex-start">
+			<h3 th:text="${o.productName} + ' × ' + ${o.quantity} + '개'">식빵 마감세트 × 1개</h3>
+			<span class="badge"
+			      th:classappend="${o.statusVariant == 'ready' or o.statusVariant == 'done'} ? 'badge--success' : (${o.statusVariant == 'noshow'} ? 'badge--discount' : (${o.statusVariant == 'cancelled'} ? 'badge--muted' : 'badge--info'))"
+			      th:text="${o.statusLabel}">픽업 가능</span>
+		</div>
+		<p class="u-sub">주문자: <strong th:text="${o.buyerName}">닉네임</strong></p>
+		<p class="u-sub">결제 금액: <strong th:text="${#numbers.formatInteger(o.totalPrice, 0, 'COMMA')} + '원'">3,000원</strong></p>
+		<p class="u-sub">픽업 코드: <strong th:text="${o.pickupCode}">PICK-XXXXXXXX</strong></p>
+		<p class="u-sub" style="font-size: var(--fs-xs)">주문 <span th:text="${o.reservedAtDisplay}">08월 21일 15:00</span></p>
+		<p class="u-sub" style="font-size: var(--fs-xs); color: var(--c-danger)" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
+	</div>
+</div>
+</body>
+</html>
