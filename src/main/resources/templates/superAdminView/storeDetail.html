@@ -111,35 +111,60 @@
     </div>
   </th:block>
 
+  <!-- 변경됨 (2026-09-15) — 숫자만 보여주고 그 뒤 데이터로는 못 들어갔다는 피드백으로, 카드 각각을
+       관련 화면으로 바로 이동하는 링크로 바꿨다(dashboard.html의 stat-card--link와 같은 패턴).
+       이 두 카드(구제율/판매·등록 수량)는 재고 현황(=지금 뭘 팔고 있는지) 화면으로 보낸다 — 새 필터
+       화면을 만들지 않고 기존 "재고 현황" 버튼과 같은 URL을 재사용한다. -->
   <h3 class="subhead mt-24">최근 7일 판매율(구제율)</h3>
   <div class="stat-grid stat-grid--2">
-    <div class="stat-card">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores/{id}/inventory(id=${store.id})}">
       <span class="stat-card__label">구제율</span>
       <span class="stat-card__value" th:text="${rescueRate7d} + '%'">0%</span>
-      <span class="stat-card__delta" th:classappend="${rescueRate7d >= rescueGoalPercent} ? 'stat-card__delta--up' : ''"
-            th:text="'목표 ' + ${rescueGoalPercent} + '%' + (${rescueRate7d >= rescueGoalPercent} ? ' 달성' : '')">목표 70%</span>
-    </div>
-    <div class="stat-card">
+      <!-- 색상 경고 추가 (2026-09-16, UI/UX 검토) — 목표 미달일 때도 회색 그대로라 경고 신호가 없었다.
+           th:classappend 삼항연산 안에 BEM 이중언더스코어 클래스 리터럴을 2개(up/down) 넣었더니
+           Thymeleaf의 "__표현식__" 전처리 구문과 충돌해 파싱 에러가 났다(코드 감사로 발견) — 이
+           파일 46~47행의 badge--open/badge--danger 토글과 같은 "일반 class + th:if/th:unless로
+           엘리먼트 자체를 나누는" 안전한 패턴으로 바꿔서 회피한다. -->
+      <span class="stat-card__delta stat-card__delta--up" th:if="${rescueRate7d >= rescueGoalPercent}"
+            th:text="'목표 ' + ${rescueGoalPercent} + '% 달성'">목표 70% 달성</span>
+      <span class="stat-card__delta stat-card__delta--down" th:unless="${rescueRate7d >= rescueGoalPercent}"
+            th:text="'목표 ' + ${rescueGoalPercent} + '% 미달'">목표 70% 미달</span>
+    </a>
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores/{id}/inventory(id=${store.id})}">
       <span class="stat-card__label">판매 수량 / 등록 수량 (최근 7일)</span>
       <span class="stat-card__value" th:text="${soldCount7d} + ' / ' + ${totalQuantity7d}">0 / 0</span>
       <span class="stat-card__delta" th:text="'상품 ' + ${registeredCount7d} + '종 등록'">상품 0종 등록</span>
-    </div>
+    </a>
   </div>
 
   <!--/* 매장 신뢰도 (2026-09-14 추가, 담당: 송채현) — 위 "최근 7일 판매율(구제율)"과 같은 자리에,
        그 매장이 결제완료 주문을 가게 사정으로 얼마나 자주 취소하는지 보여준다. 새 계산 로직이 아니라
        ReservationService.getStoreCancelStats(원래 있던 매장 취소율 계산)를 그대로 재사용한다. 이
-       점수로 매장을 막거나 하는 로직은 아직 없다 — 운영자가 참고만 하는 용도. */-->
+       점수로 매장을 막거나 하는 로직은 아직 없다 — 운영자가 참고만 하는 용도.
+       변경됨 (2026-09-15) — 이 두 카드는 "취소 관련 예약 건"으로 바로 들어가게, 주문 내역 화면에
+       status=cancelled를 붙여서 링크한다(ReservationService.getOrdersForStore가 이미 쓰던
+       ALL_ORDERS_STATUS_FILTER["cancelled"] = 취소+노쇼 그룹 그대로 재사용). */-->
   <h3 class="subhead mt-24">매장 신뢰도</h3>
   <div class="stat-grid stat-grid--2">
-    <div class="stat-card">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores/{id}/orders(id=${store.id}, status='cancelled')}">
       <span class="stat-card__label">취소율 (전체 예약 기준)</span>
-      <span class="stat-card__value" th:text="${storeReliability.totalReservationCount() > 0} ? ${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%' : '이력 없음'">0%</span>
-    </div>
-    <div class="stat-card">
+      <!-- 색상 경고 추가 (2026-09-16, UI/UX 검토) — 취소율이 아무리 높아도 항상 같은 검정 텍스트라
+           운영자가 위험 매장을 빠르게 스캔할 수 없었다. 30% 이상 위험(빨강), 15% 이상 주의(주황).
+           바로 위 구제율 delta와 같은 이유로 th:classappend 삼항연산 대신 일반 class +
+           th:if/th:unless로 엘리먼트를 나눈다(BEM 이중언더스코어 클래스가 2개 이상 한 표현식에
+           들어가면 Thymeleaf 전처리 구문과 충돌한다). -->
+      <span class="stat-card__value stat-card__value--danger" th:if="${storeReliability.cancelRatePercent() >= 30}"
+            th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+      <span class="stat-card__value stat-card__value--warning" th:if="${storeReliability.cancelRatePercent() >= 15 and storeReliability.cancelRatePercent() < 30}"
+            th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+      <span class="stat-card__value" th:if="${storeReliability.totalReservationCount() > 0 and storeReliability.cancelRatePercent() < 15}"
+            th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+      <span class="stat-card__value" th:if="${storeReliability.totalReservationCount() == 0}">이력 없음</span>
+    </a>
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores/{id}/orders(id=${store.id}, status='cancelled')}">
       <span class="stat-card__label">매장취소 / 전체 예약</span>
       <span class="stat-card__value" th:text="${storeReliability.storeCancelledCount()} + ' / ' + ${storeReliability.totalReservationCount()}">0 / 0</span>
-    </div>
+    </a>
   </div>
 
   <!--/* 정산 페이지가 아직 없어 자리만 — TODO(송보미) 위 주석 참고. 검색창은 아직 비기능(정적) UI다. */-->

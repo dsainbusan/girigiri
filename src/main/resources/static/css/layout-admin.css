@@ -540,6 +540,10 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
 .stat-card__delta { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--gray-500); }
 .stat-card__delta--up   { color: var(--blue-600); }
 .stat-card__delta--down { color: var(--red-500); }
+/* 추가됨 (2026-09-16, UI/UX 검토) — storeDetail.html "매장 신뢰도"(취소율)처럼 delta 줄 없이
+   value 자체가 위험 신호인 카드용. 운영자가 위험 매장을 스캔할 때 색상 경고가 전혀 없었다. */
+.stat-card__value--warning { color: var(--amber-600); }
+.stat-card__value--danger  { color: var(--red-500); }
 /* 대시보드 "오늘 플랫폼 지표" 카드를 눌러 관련 화면으로 갈 수 있게 해달라는 요청(2026-09-09) —
    storeDetail.html의 "최근 7일 판매율" stat-grid--2는 그냥 숫자 표시용이라 .stat-card 기본은
    그대로 두고, 클릭 가능한 곳에만 이 모디파이어를 얹는다(<a class="stat-card stat-card--link">). */

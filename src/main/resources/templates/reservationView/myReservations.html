@@ -44,9 +44,13 @@
 		<a th:href="@{/reservation/{id}/receipt(id=${r.reservationId})}"
 		   class="btn btn--outline btn--block" style="margin-top:var(--s-2)" target="_blank">영수증 PDF 보기</a>
 
-		<!-- 취소는 아직 픽업 전(진행중 탭)일 때만 의미가 있다. -->
+		<!-- 취소는 아직 픽업 전(진행중 탭)일 때만 의미가 있다.
+			 confirm() 추가 (2026-09-16, UI/UX 검토) — 되돌릴 수 없는 환불 트리거인데 확인 절차 없이
+			 "영수증 보기"와 나란히 있어 실수로 누르기 쉬웠다. 다른 화면들(매장/리뷰/문의 삭제)과 같은
+			 onsubmit="return confirm(...)" 패턴을 그대로 재사용. -->
 		<form th:if="${activeTab == 'progress'}"
 			  th:action="@{/reservation/{id}/cancel(id=${r.reservationId})}" method="post"
+			  onsubmit="return confirm('예약을 취소할까요? 결제하신 금액은 환불되며 되돌릴 수 없어요.')"
 			  style="margin-top:var(--s-2)">
 			<button type="submit" class="btn btn--outline btn--block">예약 취소</button>
 		</form>

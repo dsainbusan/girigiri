@@ -70,10 +70,12 @@
   font-size: var(--fs-xs);
   font-weight: var(--fw-black);
 }
-.badge--discount { background: var(--c-danger-weak); color: var(--c-danger); }
+/* 색상 대비 수정 (2026-09-16, UI/UX 검토) — 배경(-weak)은 그대로 두고, 텍스트만 -strong 토큰으로
+   진하게 바꿔 WCAG AA(4.5:1)를 만족시킨다. badge--success는 이미 4.79:1로 통과라 그대로 둔다. */
+.badge--discount { background: var(--c-danger-weak); color: var(--c-danger-strong); }
 .badge--success  { background: var(--c-primary-weak); color: var(--c-primary); }
-.badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent); }
-.badge--info     { background: var(--c-info-weak);    color: var(--c-info); }
+.badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent-strong); }
+.badge--info     { background: var(--c-info-weak);    color: var(--c-info-strong); }
 
 /* .field(flex-direction:column)의 직계 자식 배지(signup.html/mypageView edit.html의 GPS 상태 배지)만
    align-self:flex-start를 준다 — 기본 align-items:stretch 때문에 부모 폭까지 늘어나던 문제. 처음엔
@@ -107,7 +109,10 @@
 .store-card__top  { display: flex; align-items: center; gap: var(--s-2); }
 .store-card__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .store-card__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
-.store-card__like { margin-left: auto; font-size: 18px; color: var(--c-line); line-height: 1; }
+/* 터치 타겟 확대 (2026-09-16, UI/UX 검토) — 아이콘은 18px인데 padding/hit area가 전혀 없어서
+   실제 클릭 가능 영역도 18px 안팎이었다(권장 40~44px에 크게 못 미침). 시각적 위치·크기는 그대로
+   두고 padding + 음수 margin(왼쪽만 auto 유지, 카드 오른쪽 정렬 유지)으로 히트 영역만 넓힌다. */
+.store-card__like { margin: -12px -12px -12px auto; padding: 12px; font-size: 18px; color: var(--c-line); line-height: 1; }
 .store-card__like.is-liked { color: var(--c-danger); }
 .store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-accent); }
 .store-card__left.is-urgent { color: var(--c-danger); }
