@@ -32,14 +32,14 @@
 */-->
 <header th:fragment="topbarHome(location, unreadCount)" class="topbar">
   <span class="u-row" style="font-size:14px;font-weight:900">
-    📍<span th:text="${location}">내 동네</span>
+    <svg class="icon" style="width:15px;height:15px"><use href="#i-pin"/></svg><span th:text="${location}">내 동네</span>
   </span>
   <span class="topbar__spacer"></span>
   <!--/* 강노은: /notifications는 실제로 없는 경로였다(하단 탭바는 /user/alerts를 씀) — 알림함을
        만들면서 통일했다. */-->
   <!--/* id="alert-bell"/"alert-dot": home.html의 SSE 스크립트가 실시간으로 이 점을 붙였다 뗐다 한다. */-->
   <a th:href="@{/user/alerts}" class="topbar__action" id="alert-bell" style="position:relative">
-    🔔
+    <svg class="icon"><use href="#i-bell"/></svg>
     <span th:if="${unreadCount} != null and ${unreadCount} > 0" id="alert-dot"
           style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)"></span>
   </a>

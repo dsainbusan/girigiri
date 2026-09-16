@@ -84,21 +84,21 @@
 
 		<!-- 찜한 가게 -->
 		<a th:href="@{/user/likes}" class="list-menu-item">
-			<span class="list-menu-item__icon">🖤</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-heart"/></svg></span>
 			<span class="list-menu-item__title">찜한 가게</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 내가 쓴 리뷰 (구현 완료 — 강노은) -->
 		<a th:href="@{/user/reviews/my}" class="list-menu-item">
-			<span class="list-menu-item__icon">⭐</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-star"/></svg></span>
 			<span class="list-menu-item__title">내가 쓴 리뷰</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 알림 설정 -->
 		<a th:href="@{/user/alerts}" class="list-menu-item">
-			<span class="list-menu-item__icon">🔔</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-bell"/></svg></span>
 			<span class="list-menu-item__title">알림 설정</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
@@ -113,7 +113,7 @@
 
 		<!-- 회원정보 수정 (구현 완료) -->
 		<a th:href="@{/mypage/edit}" class="list-menu-item" style="border-bottom: none;">
-			<span class="list-menu-item__icon">⚙️</span>
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-settings"/></svg></span>
 			<span class="list-menu-item__title">회원정보 수정</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>

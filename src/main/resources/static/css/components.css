@@ -4,6 +4,13 @@
      각자 페이지 CSS(store.css, ledger.css 등)에 둔다.
    ===================================================================== */
 
+/* ---------------- Icon (2026-09-16, 디자인 리팩토링) ----------------
+   common/layout.html의 <svg class="icon-sprite"> 참고. 이모지 아이콘을 SVG로 교체하면서 도입 —
+   layout-admin.css의 .icon(18px, stroke 스타일)과 구조는 같지만 여긴 fill 채움 스타일이라
+   stroke 관련 속성이 필요 없다. */
+.icon-sprite { display: none; }
+.icon { width: 18px; height: 18px; flex: none; display: inline-block; vertical-align: -3px; fill: currentColor; }
+
 /* ---------------- Button ---------------- */
 .btn {
   display: inline-flex;

@@ -22,7 +22,7 @@
 				     th:text="${store.category} + (${store.address} != null ? ' · ' + ${store.address} : '')">베이커리 · 광안동</div>
 			</div>
 			<button type="button" class="store-card__like" data-like-btn style="font-size:24px"
-			        th:classappend="${liked} ? ' is-liked'" th:attr="data-store-id=${store.id}">&hearts;</button>
+			        th:classappend="${liked} ? ' is-liked'" th:attr="data-store-id=${store.id}"><svg class="icon"><use href="#i-heart"/></svg></button>
 		</div>
 
 		<div class="u-row" style="gap:6px;margin-top:var(--s-2)" th:if="${reviewCount} > 0">
