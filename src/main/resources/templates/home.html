@@ -4,8 +4,11 @@
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/home.css}">
-	<h1>기리기리</h1>
-	<p class="u-sub">동네 가게 마감 임박 음식 긴급 구제 서비스</p>
+
+	<!-- 삭제됨 (2026-09-16, 디자인 리팩토링) — 왜: 상단바(topbarHome)가 이미 동네 위치를 보여주는데,
+	     그 밑에 앱 이름 <h1>+태그라인 문장까지 매번 반복해서 실제 콘텐츠(지도·검색)가 그만큼 아래로
+	     밀렸다. 처음 방문하는 랜딩페이지가 아니라 하루에도 여러 번 여는 홈 화면이라 자기소개가
+	     필요 없다 — 지도가 위쪽에 바로 오도록 뺐다. -->
 
 	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
 	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;"></div>

@@ -22,20 +22,23 @@
 
 	<!-- 처리할 일 배너 — 항상 최상단. 각 줄 0건이면 숨김. -->
 	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+		<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 왜: 완결된 문장(~해야 ~할 수 있어요) 대신
+		     라벨형으로 줄였다. 행 자체가 클릭 가능하고 화살표(›)가 있어 "누르면 더 볼 수 있다"는
+		     맥락은 이미 전달되므로, 여기서 결과까지 설명할 필요가 없다. -->
 		<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
-			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span>⚠️ 정산 계좌 등록 필요</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
-			<span>📦 오늘의 구제 <b th:text="${draftPendingCount}">3</b>건이 발행을 기다려요</span>
+			<span>📦 발행 대기 <b th:text="${draftPendingCount}">3</b>건</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">
-			<span>🔔 새 예약 <b th:text="${incomingReservationCount}">2</b>건 확인이 필요해요</span>
+			<span>🔔 새 예약 <b th:text="${incomingReservationCount}">2</b>건</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
-			<span>⚙️ POS를 연동하면 매일 자동으로 등록돼요</span>
+			<span>⚙️ POS 자동 등록 설정</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 	</div>

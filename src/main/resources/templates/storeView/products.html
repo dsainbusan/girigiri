@@ -98,8 +98,10 @@
 		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
 	</div>
 
+	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
+	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
 	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 판매 중인 상품이 없어요.<br>발행 대기 초안을 <b>바로 올리기</b>하면 여기 나와요.
+		아직 판매 중인 상품이 없어요
 	</div>
 
 	<ul>
