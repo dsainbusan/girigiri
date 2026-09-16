@@ -474,9 +474,17 @@
 										<input type="hidden" name="badgeCode" th:value="${b.code}">
 										<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
 									</form>
+									<!-- 이 버튼은 뱃지 도감 모달 전용이라 공유 카드(html2canvas 캡처 대상)에 안 들어간다
+									     — 그래서 흔히 쓰는 "박스+화살표" 공유 아이콘을 SVG로 그대로 써도 안전하다. -->
 									<button type="button" class="ledger-badge-share-icon-btn ledger-share-trigger-btn"
 									        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}"
-									        aria-label="카드로 공유" title="카드로 공유">↗</button>
+									        aria-label="카드로 공유" title="카드로 공유">
+										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M12 16V4"/>
+											<path d="M7 9l5-5 5 5"/>
+											<path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>
+										</svg>
+									</button>
 								</div>
 							</div>
 						</div>
