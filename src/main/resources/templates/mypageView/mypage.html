@@ -120,8 +120,19 @@
 	</div>
 
 
+	<!-- 4-1. 점주 모드 전환 (2026-09-16 추가) — 상단바 모드 전환 버튼을 여기로 옮겨왔다(모든 화면
+	     상단바를 차지하는 대신, 유저 모드의 "홈"인 마이페이지 하단에서 전환). OWNER 계정에만 노출 —
+	     USER는 전환할 "점주 모드" 자체가 없다(common/header.html 예전 조건과 동일). -->
+	<form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-5)">
+		<input type="hidden" name="target" value="owner" />
+		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
+			<span class="topbar__mode-icon" aria-hidden="true">🏪</span>
+			<span>점주 모드로</span>
+		</button>
+	</form>
+
 	<!-- 5. 로그아웃 버튼 -->
-	<div style="margin-top: var(--s-5); margin-bottom: var(--s-4);">
+	<div style="margin-top: var(--s-3); margin-bottom: var(--s-4);">
 		<form th:if="${user != null}" th:action="@{/auth/logout}" method="post">
 			<button type="submit" class="btn btn--block btn--outline u-mut" style="padding: 12px; font-size: var(--fs-sm); border-color: var(--c-line);">
 				로그아웃

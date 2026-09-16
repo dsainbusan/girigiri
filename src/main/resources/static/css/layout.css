@@ -108,6 +108,7 @@
 }
 .topbar--dark .topbar__title { color: #fff; }
 .topbar--dark .topbar__back  { color: #fff; }
+.topbar--dark .topbar__action{ color: #fff; }
 .topbar--dark .topbar__mode-btn {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);

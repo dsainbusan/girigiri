@@ -82,9 +82,23 @@ public final class LedgerPdfGenerator {
 						Math.abs(data.deltaAmount()), data.deltaPercent() >= 0 ? "+" : "", data.deltaPercent())
 				: "전월 비교 데이터 없음";
 
+		// 상단 배지: 웹 절약 가계부 화면(ledger.html의 hero-badge-chip)과 동일하게, 구제 개수 기반
+		// 등급(브론즈 등)은 실제 화면 어디에도 노출되지 않는 내부 계산값이라 PDF/CSV에서도 쓰지 않는다.
+		// 대표 뱃지가 있으면 그 이름을, 없으면 "대표 뱃지 미설정"을 보여준다.
+		// ⚠️ 아이콘(이모지)은 UnDotum 폰트에 글리프가 없어 깨진 문자로 나오므로 PDF에서는 제외한다.
+		String badgeTag = data.representativeBadge() != null
+				? esc(data.representativeBadge().name())
+				: "대표 뱃지 미설정";
+
+		// <title>을 넣어두면 openhtmltopdf가 PDF 문서 정보(Title)에 그대로 반영한다 — 없으면
+		// 브라우저가 새 탭에서 열 때 탭 제목이 URL 마지막 경로("pdf")로 나온다.
+		String docTitle = esc(data.nickname() != null ? data.nickname() : "회원") + "님의 절약 가계부";
+
 		return """
 				<html>
-				<head><style>
+				<head>
+				<title>%s</title>
+				<style>
 					body { font-family: '%s', sans-serif; padding: 24px; color: #1f2937; }
 					h1 { font-size: 18px; margin: 0; display: inline-block; }
 					h2 { font-size: 13px; margin: 20px 0 6px; }
@@ -103,7 +117,7 @@ public final class LedgerPdfGenerator {
 					tr.total td { background: #f9fafb; font-weight: bold; }
 				</style></head>
 				<body>
-					<h1>%s님의 절약 가계부</h1><span class="tier">%s 등급</span>
+					<h1>%s님의 절약 가계부</h1><span class="tier">%s</span>
 					<p class="sub">기리기리 · 발급일 %s · %s</p>
 					<table class="stat-row">
 						<tr>
@@ -122,8 +136,8 @@ public final class LedgerPdfGenerator {
 					%s
 				</body>
 				</html>
-				""".formatted(FONT_FAMILY, esc(data.nickname() != null ? data.nickname() : "회원"),
-				esc(data.tier()), java.time.LocalDate.now(), deltaLine,
+				""".formatted(docTitle, FONT_FAMILY, esc(data.nickname() != null ? data.nickname() : "회원"),
+				badgeTag, java.time.LocalDate.now(), deltaLine,
 				data.thisMonthSaved(), data.totalSaved(), data.rescueRatePercent(), data.co2Kg(),
 				goalLine, rows, categoryBlock);
 	}

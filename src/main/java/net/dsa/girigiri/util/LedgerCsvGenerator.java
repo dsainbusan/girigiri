@@ -24,7 +24,10 @@ public final class LedgerCsvGenerator {
 		line(sb, "절약률", data.rescueRatePercent() + "%");
 		line(sb, "구제한 음식", data.rescuedCount() + "개");
 		line(sb, "CO2 절감", String.format("%.1fkg", data.co2Kg()));
-		line(sb, "등급", data.tier());
+		// 구제 개수 기반 등급(브론즈 등)은 웹 화면 어디에도 노출되지 않는 내부 계산값이라 여기서도 뺀다.
+		line(sb, "대표 뱃지", data.representativeBadge() != null
+				? data.representativeBadge().icon() + " " + data.representativeBadge().name()
+				: "미설정");
 		sb.append('\n');
 
 		sb.append("날짜,매장,상품,수량,정상가 합,결제액,절약액\n");

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('공지사항', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	점주용 공지사항 상세 — /store/notices 목록에서 진입. 작성/수정/삭제 버튼 없음(읽기 전용,
+	그건 슈퍼어드민 화면 전용). WBS 3.0 "공지사항 게시판 관리" (김태훈 인수분 → 문창호, 2026-09-16).
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<a th:href="@{/store/notices}" class="u-sub" style="font-size: var(--fs-sm); text-decoration: underline;">&larr; 공지사항 목록</a>
+
+	<div class="card" style="margin-top: var(--s-3)">
+		<p class="u-bold" style="font-size: var(--fs-lg)" th:text="${notice.title}">공지 제목</p>
+		<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 6px; margin-bottom: var(--s-4)"
+		   th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')} + ' 등록'">2026-09-16 등록</p>
+		<p style="white-space: pre-wrap; line-height: 1.6" th:text="${notice.content}">공지 내용</p>
+	</div>
+</div>
+</body>
+</html>

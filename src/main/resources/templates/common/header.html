@@ -10,19 +10,13 @@
   <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">관리자 모드</span>
   <span class="topbar__spacer"></span>
   <!--/*
-    유저 모드 / 점주 모드 전환 토글 — role은 세션에 항상 있으니 페이지마다 layout() 호출부(6개 파라미터)를
-    안 건드리고 여기서 바로 세션을 읽는다(Thymeleaf+Spring이 제공하는 ${session.xxx} 암시 객체).
-    OWNER 계정에만 노출 — USER는 전환할 "점주 모드" 자체가 없다.
+    2026-09-16 — 유저 모드/점주 모드 전환 버튼을 여기서 대시보드(/store/dashboard)·마이페이지(/mypage)
+    하단으로 옮겼다(점주 모드엔 원래 하단 탭바가 없어서 로그아웃 버튼도 거기 뒀던 것과 같은 이유 —
+    모든 점주 화면 상단바를 매번 차지하는 대신, 모드별 "홈" 화면 하단에서 전환하도록). 대신 점주 모드
+    상단바 우측엔 공지사항 벨을 둔다(강노은 홈 화면의 알림벨과 같은 자리 — dark=true인 점주/운영 화면
+    에서만 보인다).
   */-->
-  <form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" class="topbar__mode-form">
-    <input type="hidden" name="target" th:value="${dark} ? 'user' : 'owner'" />
-    <button type="submit" class="topbar__mode-btn"
-            th:title="${dark} ? '손님(유저) 모드로 화면 전환' : '점주 모드로 화면 전환'">
-      <span class="topbar__mode-icon" aria-hidden="true"
-            th:text="${dark} ? '👤' : '🏪'">👤</span>
-      <span th:text="${dark} ? '유저 모드로' : '점주 모드로'">모드 전환</span>
-    </button>
-  </form>
+  <a th:if="${dark}" th:href="@{/store/notices}" class="topbar__action" title="공지사항">📢</a>
 </header>
 
 <!--/*

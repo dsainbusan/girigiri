@@ -236,6 +236,14 @@
 .ledger-eco-banner strong { font-weight: var(--fw-black); }
 .ledger-eco-banner__tree { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
 
+/* ---------- 분석 탭: 카테고리 탐험 유도 문구 (카테고리 1개뿐일 때만) ---------- */
+.ledger-explore-nudge {
+  margin-top: var(--s-4); padding: 10px var(--s-4); text-align: center;
+  background: #faf5ff; border: 1px solid #e9d5ff; border-radius: var(--r-md);
+  font-size: var(--fs-sm); color: #6b21a8; line-height: 1.4;
+}
+.ledger-explore-nudge strong { font-weight: var(--fw-black); }
+
 .ledger-export-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
 .ledger-export-btn { flex: 1; text-align: center; text-decoration: none; }
 
@@ -666,8 +674,18 @@
 .badge-set-btn {
   font-size: 11px !important; padding: 4px 0 !important;
 }
-.ledger-badge-share-btn {
-  font-size: 11px !important; padding: 4px 0 !important; margin-bottom: 6px;
+/* 대표 설정(주 동작) 옆에 붙는 보조 아이콘 버튼 — 화살표 하나만으로 "공유"라는 걸 알리고,
+   전체너비 버튼으로 나란히 두지 않아 뭐가 메인 기능인지 헷갈리지 않게 한다. */
+.ledger-badge-share-icon-btn {
+  flex-shrink: 0; width: 30px; height: 30px;
+  border: 1px solid var(--c-line); border-radius: var(--r-sm);
+  background: var(--c-surface); color: var(--c-text-sub);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ledger-badge-share-icon-btn:hover {
+  border-color: var(--c-primary); color: var(--c-primary);
 }
 
 /* ---------- 뱃지 도감 모달 / 바텀시트 ---------- */
@@ -798,13 +816,13 @@
 .ledger-share-card[data-category="랭킹"] { --ledger-share-from: #fde047; --ledger-share-to: #a16207; }
 
 .ledger-share-card__tag {
-  /* 알약(배경+테두리) 안에 텍스트를 정확히 세로 중앙 정렬하려고 CSS(inline-block/table/flex)와
-     html2canvas 캡처 보정을 계속 시도했는데도 캡처 환경마다 결과가 달라 계속 어긋났다 — "박스 안에
-     글자를 딱 맞추는" 디자인 자체가 이 문제의 근본 원인이라 판단해 배경 없는 플레인 텍스트로
-     바꿨다. 박스가 없으니 세로 정렬이 몇 px 어긋나도 비교 기준이 없어 눈에 띄지 않는다. */
+  /* 알약 배경은 완전히 뺀다 — 패딩 비대칭 보정까지 해봤지만 웹 화면 쪽 균형이 깨져서 배보다
+     배꼽이 커졌다. 박스(도형) 없이 타이포그래피만으로 존재감을 준다: 크게/굵게/자간 넓게 +
+     은은한 그림자로 입체감. text-shadow는 박스 정렬이 필요 없는 순수 텍스트 속성이라
+     html2canvas 캡처에서도 웹과 동일하게 나온다. */
   display: block; text-align: center; margin-bottom: var(--s-3);
-  font-size: 10px; font-weight: var(--fw-bold); letter-spacing: .08em; line-height: 1;
-  opacity: .85;
+  font-size: 13px; font-weight: var(--fw-bold); letter-spacing: .12em; line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
 }
 .ledger-share-card__header { margin-bottom: var(--s-4); }
 /* 아래 3곳(brand/name/stat-value) 전부 --fw-black(900) 대신 --fw-bold(700)를 쓴다 — Malgun
@@ -822,9 +840,10 @@
 .ledger-share-card__name { font-size: var(--fs-lg); font-weight: var(--fw-bold); margin-bottom: 6px; }
 .ledger-share-card__sub { font-size: var(--fs-sm); margin: 0 0 var(--s-2); }
 .ledger-share-card__date {
-  /* __tag와 같은 이유로 테두리 알약 대신 플레인 텍스트로 바꿨다. */
+  /* __tag와 같은 이유로 테두리 알약도 뺀다 — 굵기만 세게 줘서 존재감을 살린다. */
   display: block; text-align: center; margin-bottom: var(--s-4);
-  font-size: 11px; line-height: 1; opacity: .85;
+  font-size: 12px; font-weight: var(--fw-bold); line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .3);
 }
 .ledger-share-card__stats {
   display: flex; border-top: 1px solid rgba(255, 255, 255, .3); padding-top: var(--s-3);
@@ -833,6 +852,9 @@
 .ledger-share-card__stat-value { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .ledger-share-card__stat-label { font-size: 10px; opacity: .85; }
 .ledger-share-card__hashtags { margin: var(--s-3) 0 0; font-size: 10px; opacity: .8; }
+/* 버튼 줄을 카드(max-width:300px)와 같은 폭으로 맞춰서 카드보다 옆으로 삐져나오지 않게 한다. */
+.ledger-share-card__actions { max-width: 300px; margin-left: auto; margin-right: auto; }
+.ledger-share-card__action-btn { padding-left: 4px !important; padding-right: 4px !important; font-size: 12px !important; }
 /* 이미지 저장 직전 twemoji가 이모지를 <img class="emoji">로 바꿔치기한다 — 글자 크기(font-size)에
    맞춰 정사각형으로 보이게(twemoji 공식 권장 스니펫과 동일). */
 .ledger-share-card img.emoji { height: 1em; width: 1em; vertical-align: -0.1em; }

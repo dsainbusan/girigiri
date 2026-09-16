@@ -18,7 +18,7 @@
 	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
 */-->
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/ledger.css(v=8)}">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=13)}">
 
 	<!-- 뱃지 공유 카드용 원본 데이터 — 화면엔 안 보임. 뱃지마다 카드를 새로 만드는 대신, 카드 1개
 	     템플릿에 이 값 + 클릭한 뱃지의 아이콘/이름/카테고리만 갈아끼운다(아래 공유 버튼 JS 참고).
@@ -256,6 +256,11 @@
 			</div>
 			<span class="u-sub" style="font-size: var(--fs-xs)" th:text="'소비 ' + ${#numbers.formatInteger(c.spent, 0, 'COMMA')} + '원'">소비 12,000원</span>
 		</div>
+		<!-- 카테고리가 하나뿐이면 화면이 휑해 보여서, 다른 카테고리 탐험을 유도하는 문구를 넣는다
+		     (취향·탐험 뱃지들과 자연스럽게 연결 — 빵에 진심인 자/도시락 해결사/동네 마당발). -->
+		<div th:if="${#lists.size(data.categories) == 1}" class="ledger-explore-nudge">
+			🗺️ <strong th:text="${data.categories[0].category}">베이커리</strong>만 이용하고 계시네요! 다른 카테고리도 구제해보면 절약도 늘리고 새로운 뱃지도 모을 수 있어요.
+		</div>
 	</div>
 
 	<!-- 탭: 목표 -->
@@ -463,15 +468,29 @@
 							</div>
 
 							<!-- 달성 완료 시 대표 뱃지 설정 버튼 / 착용 중 표시 -->
+							<!-- 카드 공유는 이 카드의 주 동작(대표 설정)과 나란한 전체너비 버튼으로 두면
+							     뭐가 메인 기능인지 헷갈린다는 피드백으로, 화살표 아이콘 버튼 하나로 줄여서
+							     주 동작 옆에 보조적으로 배치했다. -->
 							<div th:if="${b.unlocked}" class="ledger-badge-action">
 								<span th:if="${b.earnedDateLabel != null}" class="ledger-badge-earned-date" th:text="${b.earnedDateLabel}">2026.09.12 달성</span>
-								<button type="button" class="btn btn--outline btn--block ledger-badge-share-btn ledger-share-trigger-btn"
-								        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}">🖼️ 카드 공유</button>
-								<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep">✓ 착용 중</span>
-								<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" style="width: 100%;">
-									<input type="hidden" name="badgeCode" th:value="${b.code}">
-									<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
-								</form>
+								<div class="u-row">
+									<span th:if="${b.isRepresentative}" class="badge-status-chip is-rep u-grow">✓ 착용 중</span>
+									<form th:if="${!b.isRepresentative}" th:action="@{/user/ledger/badge/representative}" method="post" class="u-grow">
+										<input type="hidden" name="badgeCode" th:value="${b.code}">
+										<button type="submit" class="btn btn--outline btn--block badge-set-btn">대표 설정</button>
+									</form>
+									<!-- 이 버튼은 뱃지 도감 모달 전용이라 공유 카드(html2canvas 캡처 대상)에 안 들어간다
+									     — 그래서 흔히 쓰는 "박스+화살표" 공유 아이콘을 SVG로 그대로 써도 안전하다. -->
+									<button type="button" class="ledger-badge-share-icon-btn ledger-share-trigger-btn"
+									        th:attr="data-code=${b.code},data-name=${b.name},data-icon=${b.icon},data-category=${b.category},data-earned=${b.earnedDateLabel}"
+									        aria-label="카드로 공유" title="카드로 공유">
+										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M12 16V4"/>
+											<path d="M7 9l5-5 5 5"/>
+											<path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>
+										</svg>
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -548,7 +567,12 @@
 					</div>
 					<p class="ledger-share-card__hashtags">#기리기리 #환경지킴이 #오늘의구제</p>
 				</div>
-				<button type="button" id="download-share-card-btn" class="btn btn--block" style="margin-top: var(--s-4)">📥 이미지로 저장</button>
+				<!-- 카드(max-width:300px)와 폭을 맞춰서 아래 버튼 줄이 카드보다 넓게 삐져나오지 않게 한다. -->
+				<div class="u-row ledger-share-card__actions" style="margin-top: var(--s-4)">
+					<button type="button" id="share-share-card-btn" class="btn u-grow ledger-share-card__action-btn">📤 공유</button>
+					<button type="button" id="download-share-card-btn" class="btn btn--outline u-grow ledger-share-card__action-btn">📥 저장</button>
+					<button type="button" id="copy-share-card-btn" class="btn btn--outline u-grow ledger-share-card__action-btn">📋 복사</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -987,35 +1011,92 @@
 				});
 			});
 
-			// 카드 이미지 저장 — html2canvas로 #share-card DOM을 그대로 찍어서 PNG 다운로드.
+			// 카드 이미지 생성 — html2canvas로 #share-card DOM을 그대로 찍어서 PNG Blob으로 만든다.
+			// "공유하기"/"PNG로 저장" 두 버튼이 이 함수 하나를 같이 쓴다(윈도우 공유창에는 "저장"
+			// 옵션이 안 보인다는 피드백으로 버튼을 분리했다 — OS 공유 시트에 저장 기능이 항상
+			// 있다고 가정하면 안 된다).
+			function buildShareCardBlob() {
+				var shareIconEl = document.getElementById('share-card-icon');
+				if (typeof twemoji !== 'undefined' && shareIconEl) {
+					twemoji.parse(shareIconEl, {
+						folder: '72x72', ext: '.png',
+						base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
+					});
+				}
+				return html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
+					return new Promise(function (resolve) {
+						canvas.toBlob(function (blob) { resolve(blob); }, 'image/png');
+					});
+				});
+			}
+			function withBusyLabel(btn, busyLabel, task) {
+				btn.disabled = true;
+				var originalLabel = btn.textContent;
+				btn.textContent = busyLabel;
+				return task().finally(function () {
+					btn.disabled = false;
+					btn.textContent = originalLabel;
+				});
+			}
+
+			var shareShareCardBtn = document.getElementById('share-share-card-btn');
+			if (shareShareCardBtn && shareCard) {
+				shareShareCardBtn.addEventListener('click', function () {
+					if (typeof html2canvas !== 'function') { return; }
+					withBusyLabel(shareShareCardBtn, '이미지 생성 중...', function () {
+						var name = document.getElementById('share-card-name').textContent || '뱃지';
+						return buildShareCardBlob().then(function (blob) {
+							var file = new File([blob], '기리기리_' + name + '.png', { type: 'image/png' });
+							if (navigator.canShare && navigator.canShare({ files: [file] })) {
+								return navigator.share({ files: [file], title: '기리기리 뱃지 획득', text: name + ' 뱃지를 획득했어요!' })
+									.catch(function (err) {
+										// AbortError는 사용자가 공유 시트를 그냥 닫은 것 — 실패로 취급하지 않는다.
+										if (err && err.name !== 'AbortError') { throw err; }
+									});
+							}
+							alert('이 브라우저에서는 공유하기가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
+						});
+					});
+				});
+			}
+
 			var downloadShareCardBtn = document.getElementById('download-share-card-btn');
 			if (downloadShareCardBtn && shareCard) {
 				downloadShareCardBtn.addEventListener('click', function () {
 					if (typeof html2canvas !== 'function') { return; }
-					downloadShareCardBtn.disabled = true;
-					var originalLabel = downloadShareCardBtn.textContent;
-					downloadShareCardBtn.textContent = '이미지 생성 중...';
-					// 이전엔 태그/날짜를 배경 있는 알약으로 만들고 그 안에 텍스트를 정확히 세로 중앙
-					// 정렬시키려고 html2canvas 캡처 후 Canvas API로 다시 그리는 보정까지 했었는데,
-					// 캡처 환경(브라우저/화면 배율)마다 결과가 달라 계속 어긋났다. "박스 안에 글자를
-					// 딱 맞추는" 디자인 자체를 없애 배경 없는 플레인 텍스트로 바꾸면서 이 보정 코드
-					// 전체가 필요 없어졌다 — 이제 html2canvas 기본 캡처만으로 충분하다.
-					var shareIconEl = document.getElementById('share-card-icon');
-					if (typeof twemoji !== 'undefined' && shareIconEl) {
-						twemoji.parse(shareIconEl, {
-							folder: '72x72', ext: '.png',
-							base: 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/'
-						});
-					}
-					html2canvas(shareCard, { backgroundColor: null, scale: 2, useCORS: true }).then(function (canvas) {
-						var link = document.createElement('a');
+					withBusyLabel(downloadShareCardBtn, '이미지 생성 중...', function () {
 						var name = document.getElementById('share-card-name').textContent || '뱃지';
-						link.download = '기리기리_' + name + '.png';
-						link.href = canvas.toDataURL('image/png');
-						link.click();
-					}).finally(function () {
-						downloadShareCardBtn.disabled = false;
-						downloadShareCardBtn.textContent = originalLabel;
+						return buildShareCardBlob().then(function (blob) {
+							var link = document.createElement('a');
+							link.download = '기리기리_' + name + '.png';
+							link.href = URL.createObjectURL(blob);
+							link.click();
+							URL.revokeObjectURL(link.href);
+						});
+					});
+				});
+			}
+
+			// 클립보드에 이미지 데이터 자체를 복사 — "공유하기"가 파일 참조만 넘겨서 디스코드 같은
+			// 일부 앱에서 자동 붙여넣기가 안 되는 문제(실사용 확인됨)를 우회한다. 스크린샷을 복사했을
+			// 때와 동일한 클립보드 형식이라 Ctrl+V로 어디든(카톡 PC판, 디스코드 등) 바로 붙는다.
+			var copyShareCardBtn = document.getElementById('copy-share-card-btn');
+			if (copyShareCardBtn && shareCard) {
+				copyShareCardBtn.addEventListener('click', function () {
+					if (typeof html2canvas !== 'function') { return; }
+					if (!navigator.clipboard || typeof window.ClipboardItem !== 'function') {
+						alert('이 브라우저에서는 이미지 복사가 지원되지 않아요. "저장" 버튼을 이용해주세요.');
+						return;
+					}
+					withBusyLabel(copyShareCardBtn, '복사 중...', function () {
+						return buildShareCardBlob().then(function (blob) {
+							return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+						}).then(function () {
+							// withBusyLabel이 끝나자마자 원래 라벨로 되돌리기 때문에, "복사 완료" 표시가
+							// 보일 시간을 벌어주려고 여기서 1.5초 대기한 뒤에 resolve한다.
+							copyShareCardBtn.textContent = '✅ 복사 완료';
+							return new Promise(function (resolve) { setTimeout(resolve, 1500); });
+						});
 					});
 				});
 			}
