@@ -6,6 +6,9 @@
 	<!-- 추가됨 (2026-08-21) — 왜: 아래 취소 완료 배너(.banner--danger)가 reservation.css에 정의돼
 		있는데 이 화면엔 그 스타일시트를 안 불러오고 있어서, 빠뜨렸던 걸 여기서 같이 고친다. -->
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+	<!-- 추가됨 (2026-09-17) — 아래 "새 주문/픽업 대기중" 토글에 store.css의 .stat-toggle-tabs
+		(대시보드 요약/통계 탭과 같은 컴포넌트)를 재사용한다. -->
+	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<!-- 변경됨 (2026-09-17) — 왜: 대시보드의 "주문·픽업 바로가기" 카드를 없애면서, 거기 있던
 		QR 픽업 확인/완료된 거래 내역/매장 취소를 여기 상단 유틸리티 카드로 옮겼다. QR 픽업 확인은
@@ -53,6 +56,21 @@
 		</div>
 	</div>
 
+	<!-- 새 주문 / 픽업 대기중 토글 (2026-09-17) — 세로로 쭉 이어져 있던 두 섹션을 대시보드
+		요약/통계와 같은 .stat-toggle-tabs로 나눴다. 건수가 있을 때만 탭에 뱃지 숫자를 붙인다. -->
+	<div class="stat-toggle-tabs">
+		<button type="button" class="stat-toggle-tab is-active" data-target="panel-new-orders">
+			새 주문
+			<span th:if="${!#lists.isEmpty(incoming)}" class="badge" style="background:var(--c-accent); color:#fff; margin-left:4px" th:text="${#lists.size(incoming)}">2</span>
+		</button>
+		<button type="button" class="stat-toggle-tab" data-target="panel-waiting-pickup">
+			픽업 대기중
+			<span th:if="${!#lists.isEmpty(ready)}" class="badge" style="background:var(--c-accent); color:#fff; margin-left:4px" th:text="${#lists.size(ready)}">1</span>
+		</button>
+	</div>
+
+	<div id="panel-new-orders" class="stat-panel">
+
 	<div class="card">
 		<p class="u-sub">결제가 끝난 새 주문들이에요. 확인되면 "수락", 어려우면 바로 "취소"할 수 있어요.</p>
 	</div>
@@ -97,10 +115,15 @@
 		</div>
 	</div>
 
+	</div>
+	<!-- /panel-new-orders -->
+
 	<!-- 추가됨 — 왜: 수락(ready)까지는 됐는데 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된
 		예약을 볼 방법이 없었다. "손님이 아직 안 왔나?" 확인용 — 실제 픽업 처리(QR 스캔/코드입력)는
 		여기서 바로 안 하고 /reservation/pickup으로 보낸다(그 화면 로직을 중복 구현하지 않기 위해). -->
-	<div class="card" style="margin-top:var(--s-5)">
+	<div id="panel-waiting-pickup" class="stat-panel is-hidden">
+
+	<div class="card">
 		<p class="u-bold">픽업 대기중 (수락됨 · 손님 미방문)</p>
 		<p class="u-sub" style="font-size:var(--fs-sm); margin-top:2px">수락은 됐지만 아직 QR/코드로 픽업 처리가 안 된 예약이에요.</p>
 	</div>
@@ -122,8 +145,27 @@
 		QR/코드로 픽업 처리하러 가기
 	</a>
 
+	</div>
+	<!-- /panel-waiting-pickup -->
+
 	<script th:inline="none">
 	(function () {
+		// 새 주문 / 픽업 대기중 탭 토글 (dashboard.html의 .stat-toggle-tabs 그룹 처리와 동일 로직).
+		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+			var panels = tabs
+				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
+				.filter(Boolean);
+			tabs.forEach(function (tab, i) {
+				tab.addEventListener('click', function () {
+					tabs.forEach(function (t) { t.classList.remove('is-active'); });
+					panels.forEach(function (p) { p.classList.add('is-hidden'); });
+					tab.classList.add('is-active');
+					if (panels[i]) { panels[i].classList.remove('is-hidden'); }
+				});
+			});
+		});
+
 		document.querySelectorAll('.reject-toggle-btn').forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				var panel = document.getElementById(btn.getAttribute('data-target'));
