@@ -16,19 +16,20 @@ public final class AuthSessionInitializer {
 	public static String initSessionAndGetTargetUrl(HttpSession session, UserEntity user) {
 		session.setAttribute("userId", user.getId());
 		session.setAttribute("role", user.getRole());
-		// 로그인 시 기본 도착지가 유저 홈("/")이므로 초기 viewMode는 USER_MODE로 설정한다.
+		// 로그인 시 기본 도착지가 유저 홈("/app")이므로 초기 viewMode는 USER_MODE로 설정한다.
 		session.setAttribute("viewMode", "USER_MODE");
 		// 부가정보 입력 여부 — ProfileCompletionInterceptor가 매 요청 DB 조회 대신 이 플래그를 본다.
 		session.setAttribute("profileCompleted", user.isProfileCompleted());
 
 		// 추가됨 (2026-09-08) — 왜: role=ADMIN으로 로그인해도 profileCompleted 기준으로만 목적지를
-		// 정해서 항상 유저 홈("/")으로 떨어졌다(사용자 리포트로 발견) — 운영자 계정은 애초에 셀프
+		// 정해서 항상 유저 홈("/app")으로 떨어졌다(사용자 리포트로 발견) — 운영자 계정은 애초에 셀프
 		// 가입 플로우(회원가입 완료 화면)를 거칠 일이 없으니 profileCompleted 체크보다 먼저 확인해서
 		// 곧장 슈퍼어드민 대시보드로 보낸다.
 		if (UserEntity.ROLE_ADMIN.equals(user.getRole())) {
 			return "/superadmin/dashboard";
 		}
 
-		return user.isProfileCompleted() ? "/" : "/auth/signup";
+		// 변경됨 (2026-09-17) — 왜: "/"가 마케팅 홈페이지로 바뀌면서 로그인 후 목적지도 "/app"으로.
+		return user.isProfileCompleted() ? "/app" : "/auth/signup";
 	}
 }

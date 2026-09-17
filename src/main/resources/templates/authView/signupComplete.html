@@ -23,7 +23,7 @@
 	</div>
 
 	<div style="margin-top: var(--s-8);">
-		<a th:href="@{/}" class="btn btn--block">기리기리 시작하기</a>
+		<a th:href="@{/app}" class="btn btn--block">기리기리 시작하기</a>
 		<a th:href="@{/mypage}" class="btn btn--block btn--outline" style="margin-top: var(--s-3);">마이페이지 보기</a>
 	</div>
 
@@ -33,7 +33,7 @@
 			var back = document.querySelector('.topbar__back[data-back]');
 			if (!back) { return; }
 			back.removeAttribute('data-back');
-			back.addEventListener('click', function () { location.href = '/'; });
+			back.addEventListener('click', function () { location.href = '/app'; });
 		})();
 	</script>
 

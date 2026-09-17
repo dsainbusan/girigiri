@@ -120,7 +120,7 @@ public class AuthController {
 	@PostMapping("/mode")
 	public String toggleMode(@RequestParam(required = false) String target, HttpSession session) {
 		if (!UserEntity.ROLE_OWNER.equals(session.getAttribute("role"))) {
-			return "redirect:/";
+			return "redirect:/app";
 		}
 
 		boolean switchToOwner;
@@ -209,7 +209,7 @@ public class AuthController {
 			authService.cancelIncompleteSignup(userId);
 		}
 		session.invalidate();
-		return "redirect:/";
+		return "redirect:/app";
 	}
 
 	/**

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<!--/*
+	회사/서비스 소개 홈페이지 (2026-09-17 추가, MarketingController 참고).
+	Too Good To Go / 배달의민족 홈페이지처럼 실제 서비스(지도 앱, "/app") 진입 전에 보여주는
+	데스크톱 반응형 랜딩 페이지 — common/layout.html(모바일 420px 고정폭 앱 셸)을 쓰지 않고
+	완전히 독립된 문서 + 전용 CSS(marketing.css)를 쓴다. 브랜드 컬러만 tokens.css로 공유한다.
+*/-->
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>기리기리 — 동네 가게 마감 임박 음식 긴급 구제</title>
+	<meta name="description" content="우리 동네 마감 세일 음식을 지도에서 찾고 합리적인 가격에 구매하세요. 사장님껜 폐기 손실을 줄여드립니다.">
+	<link rel="stylesheet" th:href="@{/css/tokens.css}">
+	<link rel="stylesheet" th:href="@{/css/marketing.css}">
+</head>
+<body class="mkt">
+
+	<!-- 상단 네비게이션 -->
+	<header class="mkt-nav">
+		<div class="mkt__wrap mkt-nav__row">
+			<a href="#top" class="mkt-logo">
+				<span class="mkt-logo__badge">ギリ</span>
+				기리기리
+			</a>
+			<nav class="mkt-nav__links">
+				<a href="#how-it-works">이용 방법</a>
+				<a href="#impact">임팩트</a>
+				<a href="#owners">사장님이신가요?</a>
+			</nav>
+			<a th:href="@{/app}" class="mkt-btn mkt-btn--primary mkt-btn--sm">서비스 이용하기</a>
+		</div>
+	</header>
+
+	<!-- 히어로 -->
+	<section id="top" class="mkt-hero">
+		<div class="mkt__wrap mkt-hero__grid">
+			<div>
+				<span class="mkt-eyebrow">🍞 동네 마감세일 플랫폼</span>
+				<h1>마감 임박 음식,<br>아깝게 버리지 마세요</h1>
+				<p class="lead">
+					우리 동네 가게의 마감 세일 음식을 지도에서 바로 찾고 합리적인 가격에 구매하세요.
+					사장님께는 그날 팔지 못하면 그대로 버려질 재고를, 폐기 대신 <em style="font-style:normal;color:var(--c-primary-strong);font-weight:800">판매</em>로 바꿔드립니다.
+				</p>
+				<div class="mkt-hero__actions">
+					<a th:href="@{/app}" class="mkt-btn mkt-btn--primary">서비스 이용하기 →</a>
+					<a th:href="@{/auth/owner-apply}" class="mkt-hero__owner-link">사장님이신가요? 입점 신청하기</a>
+				</div>
+			</div>
+
+			<div class="mkt-mock" aria-hidden="true">
+				<div class="mkt-mock__frame">
+					<div class="mkt-mock__map">
+						<span class="mkt-mock__pin">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/></svg>
+						</span>
+					</div>
+					<div class="mkt-mock__body">
+						<div class="mkt-mock__card">
+							<span class="mkt-mock__thumb">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.223 2.25c-.497 0-.974.198-1.325.55l-1.3 1.298A3.75 3.75 0 0 0 7.5 9.75c.627.47 1.406.75 2.25.75.844 0 1.624-.28 2.25-.75.626.47 1.406.75 2.25.75.844 0 1.623-.28 2.25-.75a3.75 3.75 0 0 0 4.902-5.652l-1.3-1.299a1.875 1.875 0 0 0-1.325-.549H5.223Z"/><path fill-rule="evenodd" d="M3 20.25v-8.755c1.42.674 3.08.673 4.5 0A5.234 5.234 0 0 0 9.75 12c.804 0 1.568-.182 2.25-.506a5.234 5.234 0 0 0 2.25.506c.804 0 1.567-.182 2.25-.506 1.42.674 3.08.675 4.5.001v8.755h.75a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1 0-1.5H3Z" clip-rule="evenodd"/></svg>
+							</span>
+							<span class="mkt-mock__lines">
+								<span class="mkt-mock__line"></span>
+								<span class="mkt-mock__line"></span>
+							</span>
+							<span class="mkt-mock__badge">−40%</span>
+						</div>
+						<div class="mkt-mock__card">
+							<span class="mkt-mock__thumb">
+								<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 6.75a5.25 5.25 0 0 1 6.775-5.025.75.75 0 0 1 .313 1.248l-3.32 3.319c.063.475.276.934.641 1.299.365.365.824.578 1.3.64l3.318-3.319a.75.75 0 0 1 1.248.313 5.25 5.25 0 0 1-5.472 6.756c-1.018-.086-1.87.1-2.309.634L7.344 21.3A3.298 3.298 0 1 1 2.7 16.657l8.684-7.151c.533-.44.72-1.291.634-2.309A5.342 5.342 0 0 1 12 6.75ZM4.117 19.125a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75h-.008a.75.75 0 0 1-.75-.75v-.008Z" clip-rule="evenodd"/></svg>
+							</span>
+							<span class="mkt-mock__lines">
+								<span class="mkt-mock__line"></span>
+								<span class="mkt-mock__line"></span>
+							</span>
+							<span class="mkt-mock__badge">−25%</span>
+						</div>
+					</div>
+				</div>
+				<div class="mkt-chip mkt-chip--1">⏱ 마감 32분 전</div>
+				<div class="mkt-chip mkt-chip--2">🌱 오늘도 구제 완료</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- 임팩트 통계 -->
+	<section id="impact" class="mkt-section">
+		<div class="mkt__wrap">
+			<div class="mkt-section__head">
+				<div class="mkt-section__eyebrow">Impact</div>
+				<h2>기리기리와 함께 달라지고 있어요</h2>
+				<p>버려질 뻔한 음식이 누군가의 한 끼가 됩니다.</p>
+			</div>
+			<div class="mkt-stats">
+				<div class="mkt-stat">
+					<div class="mkt-stat__num" th:text="${#numbers.formatInteger(stats.rescuedCount, 1, 'COMMA')}">0</div>
+					<div class="mkt-stat__label">지금까지 구제한 음식</div>
+					<div class="mkt-stat__sub">픽업 완료 기준</div>
+				</div>
+				<div class="mkt-stat">
+					<div class="mkt-stat__num" th:text="${#numbers.formatInteger(stats.storeCount, 1, 'COMMA')}">0</div>
+					<div class="mkt-stat__label">함께하는 가게</div>
+					<div class="mkt-stat__sub">입점 승인 기준</div>
+				</div>
+				<div class="mkt-stat">
+					<div class="mkt-stat__num">실시간</div>
+					<div class="mkt-stat__label">지도 기반 마감세일 탐색</div>
+					<div class="mkt-stat__sub">지금 우리 동네 기준</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- 이용 방법 -->
+	<section id="how-it-works" class="mkt-section mkt-section--tint">
+		<div class="mkt__wrap">
+			<div class="mkt-section__head">
+				<div class="mkt-section__eyebrow">How it works</div>
+				<h2>이용 방법은 아주 간단해요</h2>
+				<p>가입부터 픽업까지, 세 단계면 충분합니다.</p>
+			</div>
+			<div class="mkt-steps">
+				<div class="mkt-step">
+					<span class="mkt-step__num">1</span>
+					<span class="mkt-step__icon">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/></svg>
+					</span>
+					<h3>지도에서 찾기</h3>
+					<p>내 주변에서 지금 마감세일 중인 가게를 지도로 바로 확인해요. 카테고리·거리·할인율로 필터링할 수 있어요.</p>
+				</div>
+				<div class="mkt-step">
+					<span class="mkt-step__num">2</span>
+					<span class="mkt-step__icon">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z"/><path fill-rule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0Z" clip-rule="evenodd"/></svg>
+					</span>
+					<h3>예약 및 결제</h3>
+					<p>원하는 상품을 선결제하고 픽업 시간대를 예약해요. 결제 영수증은 마이페이지에서 언제든 다시 받을 수 있어요.</p>
+				</div>
+				<div class="mkt-step">
+					<span class="mkt-step__num">3</span>
+					<span class="mkt-step__icon">
+						<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M6.912 3a3 3 0 0 0-2.868 2.118l-2.411 7.838a3 3 0 0 0-.133.882V18a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-4.162c0-.299-.045-.596-.133-.882l-2.412-7.838A3 3 0 0 0 17.088 3H6.912Zm13.823 9.75-2.213-7.191A1.5 1.5 0 0 0 17.088 4.5H6.912a1.5 1.5 0 0 0-1.434 1.059L3.265 12.75H6.11a2.25 2.25 0 0 1 2.15 1.586l.353 1.128a.75.75 0 0 0 .716.536h5.343a.75.75 0 0 0 .716-.536l.353-1.128a2.25 2.25 0 0 1 2.15-1.586h2.844Z" clip-rule="evenodd"/></svg>
+					</span>
+					<h3>픽업</h3>
+					<p>매장에 도착해서 QR 코드나 픽업 번호로 간단히 인증하고 픽업하면 끝이에요.</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- 사장님용 -->
+	<section id="owners" class="mkt-section">
+		<div class="mkt__wrap">
+			<div class="mkt-owner">
+				<div>
+					<h2>사장님이신가요?<br>마감 재고를 손실 대신 매출로</h2>
+					<ul>
+						<li>
+							<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"/></svg>
+							남은 재고를 사진과 함께 몇 분만에 등록
+						</li>
+						<li>
+							<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"/></svg>
+							마감 시간에 맞춰 할인율 자동 계산
+						</li>
+						<li>
+							<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"/></svg>
+							판매·폐기 리포트로 한눈에 확인
+						</li>
+					</ul>
+				</div>
+				<div class="mkt-owner__actions">
+					<a th:href="@{/auth/owner-apply}" class="mkt-btn mkt-btn--primary mkt-btn--block">사장님으로 시작하기</a>
+					<a th:href="@{/auth/loginForm}" class="mkt-btn mkt-btn--ghost mkt-btn--block">이미 계정이 있어요</a>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- 푸터 -->
+	<footer class="mkt-footer">
+		<div class="mkt__wrap">
+			<div class="mkt-footer__row">
+				<div>
+					<div class="mkt-footer__brand">
+						<span class="mkt-logo__badge" style="width:28px;height:28px;font-size:10px;border-radius:8px">ギリ</span>
+						기리기리
+					</div>
+					<p class="mkt-footer__desc">동네 소상공인의 폐기 손실을 줄이고, 소비자에게는 합리적인 가격에 신선식품·베이커리를 구매할 기회를 제공합니다.</p>
+				</div>
+				<nav class="mkt-footer__links">
+					<a th:href="@{/app}">서비스 이용하기</a>
+					<a th:href="@{/auth/loginForm}">로그인</a>
+					<a th:href="@{/auth/owner-apply}">입점 신청</a>
+				</nav>
+			</div>
+			<div class="mkt-footer__meta">
+				© 2026 기리기리(다이스키) · 14기 A반 2조 팀 프로젝트
+			</div>
+		</div>
+	</footer>
+
+</body>
+</html>

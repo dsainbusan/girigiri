@@ -118,4 +118,8 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 유저 수가 아무리 많아도 이 쿼리 1번 + product/user 배치조회 2번으로 끝나서(LedgerService.loadLines와
 	// 동일한 패턴), 유저마다 반복 조회하는 것보다 훨씬 싸다.
 	List<ReservationEntity> findByStatusAndPickedAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+	// 추가됨 (2026-09-17) — 마케팅 홈페이지(MarketingService)의 "지금까지 구제한 음식" 통계용.
+	// 픽업 완료(status="picked")만 실제로 "구제된" 것으로 센다.
+	long countByStatus(String status);
 }

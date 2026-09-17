@@ -55,7 +55,8 @@ public class WebSecurityConfig {
 
 	// 로그인 없이 접근 가능한 경로
 	private static final List<String> PUBLIC_URLS = List.of(
-			"/"
+			"/"       // 마케팅 홈페이지(MarketingController) — 2026-09-17부터 지도 앱 홈이 아니다.
+			, "/app"  // 지도 기반 앱 홈(HomeController) — 비회원도 둘러볼 수 있어야 해서 "/"와 함께 공개.
 			, "/favicon.ico"
 			, "/css/**"
 			, "/js/**"
@@ -160,7 +161,10 @@ public class WebSecurityConfig {
 						.logoutUrl("/auth/logout")
 						.invalidateHttpSession(true)
 						.deleteCookies("JSESSIONID")
-						.logoutSuccessUrl("/")
+						// 변경됨 (2026-09-17) — 왜: "/"가 마케팅 홈페이지로 바뀌었다. 로그아웃해도
+						// 비회원으로 지도는 계속 볼 수 있으니(topbarHome의 게스트 로그인 버튼 참고)
+						// 회사 소개 페이지 대신 앱으로 돌려보낸다.
+						.logoutSuccessUrl("/app")
 				);
 
 		return http.build();

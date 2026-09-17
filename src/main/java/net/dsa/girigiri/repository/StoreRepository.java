@@ -32,4 +32,7 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
 
 	// 추가됨 (2026-09-01, 문창호) — 왜: 주간 정산 스케줄러가 승인된 매장 전체를 훑는다.
 	List<StoreEntity> findByApprovalStatusAndRole(String approvalStatus, String role);
+
+	// 추가됨 (2026-09-17) — 마케팅 홈페이지(MarketingService)의 "참여 매장 수" 통계용.
+	long countByApprovalStatus(String approvalStatus);
 }

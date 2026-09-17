@@ -37,11 +37,16 @@ public class HomeController {
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
 
+	// 경로 변경됨 (2026-09-17) — 왜: "/"는 이제 회사/서비스 소개용 마케팅 홈페이지(MarketingController)가
+	// 차지한다. 지도 기반 앱 홈은 "/app"으로 옮기고, 마케팅 페이지의 "서비스 이용하기"
+	// 버튼이 여기로 연결된다. 로그인 성공 후 목적지(AuthSessionInitializer), 로그아웃 이후 목적지
+	// (WebSecurityConfig), 앱 내부에서 "홈으로" 돌아가는 링크들도 전부 "/app"으로 같이 옮겼다.
+	//
 	// 추가됨 (강노은) — 왜: "현재 위치 기준 거리순 카드 목록" 요구사항 — 서버는 사용자 위치를 모르니
 	// home.html의 JS가 브라우저 Geolocation으로 좌표를 받아 이 파라미터를 붙여 자동으로 한 번 다시
 	// 불러온다(검색 페이지의 거리순 정렬과 같은 방식). 좌표가 없으면(권한 거부/미지원) 기존처럼
 	// 마감임박순으로 폴백 — HomeService.getActiveStoreCards 참고.
-	@GetMapping("/")
+	@GetMapping("/app")
 	public String home(@RequestParam(required = false) Double lat,
 						@RequestParam(required = false) Double lng,
 						HttpSession session, Model model) {

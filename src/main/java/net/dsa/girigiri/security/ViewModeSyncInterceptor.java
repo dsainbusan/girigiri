@@ -33,7 +33,7 @@ public class ViewModeSyncInterceptor implements HandlerInterceptor {
 				if (!"OWNER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "OWNER_MODE");
 				}
-			} else if (uri.startsWith("/mypage") || uri.startsWith("/user") || "/".equals(uri)) {
+			} else if (uri.startsWith("/mypage") || uri.startsWith("/user") || "/app".equals(uri)) {
 				if (!"USER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "USER_MODE");
 				}

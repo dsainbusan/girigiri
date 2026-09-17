@@ -26,7 +26,7 @@
     </a>
   </th:block>
   <th:block th:unless="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner'}">
-    <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/}">
+    <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/app}">
       <svg class="icon bottomnav__ico"><use href="#i-home"/></svg><span>홈</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='like'}   ? ' is-active'" th:href="@{/user/likes}">

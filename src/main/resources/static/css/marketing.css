@@ -1,0 +1,363 @@
+/* =====================================================================
+   marketing.css — 회사/서비스 소개 홈페이지("/") 전용 디자인 시스템
+   ---------------------------------------------------------------------
+   앱(유저/매장, 420px 고정폭)·슈퍼어드민과는 완전히 분리된 세 번째 디자인 시스템이다.
+   브랜드 컬러(--c-primary 등)만 tokens.css에서 그대로 가져다 쓰고, 타이포/간격/레이아웃은
+   데스크톱 반응형 풀와이드 기준으로 이 파일에서 새로 정의한다. 절대 tokens.css의 --fs-*
+   (모바일 전용, 11~36px)나 --app-max(420px)를 여기서 쓰지 않는다.
+   ===================================================================== */
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body.mkt {
+	margin: 0;
+	font-family: var(--font-base);
+	color: #1C1C1C;
+	background: #FFFFFF;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+.mkt a { color: inherit; text-decoration: none; }
+.mkt img, .mkt svg { display: block; }
+.mkt__wrap {
+	max-width: 1160px;
+	margin: 0 auto;
+	padding: 0 24px;
+}
+
+/* ---------------- Nav ---------------- */
+.mkt-nav {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+	background: rgba(255, 255, 255, .92);
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid #EDE5D4;
+}
+.mkt-nav__row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 72px;
+}
+.mkt-logo {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: 800;
+	font-size: 19px;
+	letter-spacing: -0.02em;
+	margin-right: auto;
+}
+.mkt-logo__badge {
+	width: 36px;
+	height: 36px;
+	border-radius: 11px;
+	background: var(--c-primary);
+	color: var(--c-primary-weak);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	font-weight: 900;
+	flex: none;
+}
+.mkt-nav__links {
+	display: flex;
+	align-items: center;
+	gap: 32px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #6B6354;
+}
+.mkt-nav__links a:hover { color: var(--c-primary-strong); }
+@media (max-width: 860px) {
+	.mkt-nav__links { display: none; }
+}
+
+/* ---------------- Buttons ---------------- */
+.mkt-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 14px 26px;
+	border-radius: 999px;
+	font-weight: var(--fw-black);
+	font-size: 16px;
+	white-space: nowrap;
+	transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+	border: none;
+	cursor: pointer;
+}
+/* .mkt-btn과 묶어 ".mkt a { color: inherit }" (앞쪽, 지정도 0,1,1)보다 지정도를 높인다
+   (".mkt-btn.mkt-btn--primary"는 클래스 2개 = 0,2,0) — 안 그러면 버튼 글자색이 방금 전 링크
+   기본색(inherit)에 밀려 검정으로 보인다 (2026-09-17, 버튼 글자 안 보임 버그 수정). */
+.mkt-btn.mkt-btn--primary {
+	background: var(--c-primary);
+	color: var(--c-primary-weak);   /* 흰색 대신 브랜드 크림톤 (2026-09-17 요청) */
+	box-shadow: 0 10px 24px rgba(1, 42, 140, .28);
+}
+.mkt-btn--primary:hover { transform: translateY(-1px); filter: brightness(1.04); }
+.mkt-btn.mkt-btn--ghost {
+	background: transparent;
+	color: var(--c-primary-strong);
+	border: 1.5px solid var(--c-primary-border);
+}
+.mkt-btn--ghost:hover { background: var(--c-primary-weak); }
+.mkt-btn--sm { padding: 10px 20px; font-size: 14px; }
+.mkt-btn--block { width: 100%; }
+
+/* ---------------- Hero ---------------- */
+.mkt-hero {
+	position: relative;
+	overflow: hidden;
+	padding: 88px 0 100px;
+	background:
+		radial-gradient(720px 420px at 88% -10%, var(--c-primary-weak) 0%, rgba(240,253,244,0) 70%),
+		#FFFFFF;
+}
+.mkt-hero__grid {
+	display: grid;
+	grid-template-columns: 1.05fr .95fr;
+	gap: 56px;
+	align-items: center;
+}
+@media (max-width: 900px) {
+	.mkt-hero__grid { grid-template-columns: 1fr; }
+	.mkt-hero { padding: 56px 0 64px; }
+}
+.mkt-eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 14px;
+	border-radius: 999px;
+	background: var(--c-primary-weak);
+	color: var(--c-primary-strong);
+	font-size: 13px;
+	font-weight: 800;
+	margin-bottom: 20px;
+}
+.mkt-hero h1 {
+	font-size: clamp(32px, 4.4vw, 52px);
+	line-height: 1.18;
+	font-weight: 900;
+	letter-spacing: -0.03em;
+	margin: 0 0 20px;
+}
+.mkt-hero h1 em {
+	font-style: normal;
+	color: var(--c-primary-strong);
+}
+.mkt-hero p.lead {
+	font-size: 18px;
+	line-height: 1.65;
+	color: #6B6354;
+	max-width: 480px;
+	margin: 0 0 32px;
+}
+.mkt-hero__actions {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+.mkt-hero__owner-link {
+	font-weight: 700;
+	font-size: 15px;
+	color: #4A4438;
+	border-bottom: 1.5px solid #D9D2C4;
+	padding-bottom: 2px;
+}
+.mkt-hero__owner-link:hover { color: var(--c-primary-strong); border-color: var(--c-primary-strong); }
+
+/* 히어로 우측 목업 — 실제 스크린샷 대신 지도+카드 UI를 흉내낸 장식용 카드 */
+.mkt-mock {
+	position: relative;
+	max-width: 340px;
+	margin: 0 auto;
+}
+.mkt-mock__frame {
+	background: #fff;
+	border-radius: 28px;
+	box-shadow: 0 30px 70px -20px rgba(15, 23, 42, .28), 0 0 0 1px #EDE5D4;
+	overflow: hidden;
+	transform: rotate(2deg);
+}
+.mkt-mock__map {
+	height: 180px;
+	background:
+		linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);
+	position: relative;
+}
+.mkt-mock__pin {
+	position: absolute;
+	top: 50%; left: 50%;
+	transform: translate(-50%, -60%);
+	width: 34px; height: 34px;
+	border-radius: 50% 50% 50% 0;
+	background: var(--c-primary-weak);
+	rotate: -45deg;
+	display: flex; align-items: center; justify-content: center;
+	box-shadow: 0 6px 16px rgba(0,0,0,.25);
+}
+.mkt-mock__pin svg { rotate: 45deg; width: 16px; height: 16px; color: var(--c-primary-strong); }
+.mkt-mock__body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.mkt-mock__card {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px;
+	border-radius: 14px;
+	background: #F6F0E3;
+}
+.mkt-mock__thumb {
+	width: 44px; height: 44px; border-radius: 10px; flex: none;
+	background: var(--c-primary-weak);
+	display: flex; align-items: center; justify-content: center;
+	color: var(--c-primary-strong);
+}
+.mkt-mock__thumb svg { width: 22px; height: 22px; }
+.mkt-mock__lines { flex: 1; min-width: 0; }
+.mkt-mock__line { height: 8px; border-radius: 4px; background: #DDD6C6; }
+.mkt-mock__line + .mkt-mock__line { margin-top: 6px; width: 60%; }
+.mkt-mock__badge {
+	flex: none;
+	font-size: 11px;
+	font-weight: 800;
+	color: var(--c-primary-weak);
+	background: var(--c-accent);
+	padding: 3px 8px;
+	border-radius: 999px;
+}
+.mkt-chip {
+	position: absolute;
+	background: var(--c-primary-weak);
+	border-radius: 14px;
+	padding: 10px 14px;
+	box-shadow: 0 14px 30px -10px rgba(15,23,42,.22);
+	font-weight: 800;
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.mkt-chip--1 { top: -10px; right: -18px; color: var(--c-accent-strong); }
+.mkt-chip--2 { bottom: -18px; left: -26px; color: var(--c-primary-strong); }
+@media (max-width: 900px) {
+	.mkt-mock { margin-top: 40px; }
+	.mkt-chip--2 { left: -8px; }
+	.mkt-chip--1 { right: -6px; }
+}
+
+/* ---------------- Section shared ---------------- */
+.mkt-section { padding: 88px 0; }
+.mkt-section--tint { background: #F6F0E3; }
+.mkt-section__head { text-align: center; max-width: 620px; margin: 0 auto 56px; }
+.mkt-section__eyebrow {
+	font-size: 13px; font-weight: 800; color: var(--c-primary-strong);
+	text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+}
+.mkt-section__head h2 {
+	font-size: clamp(26px, 3vw, 36px);
+	font-weight: 900;
+	letter-spacing: -0.02em;
+	margin: 0 0 12px;
+}
+.mkt-section__head p { color: #8A8371; font-size: 16px; line-height: 1.6; margin: 0; }
+
+/* ---------------- Stats ---------------- */
+.mkt-stats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 20px;
+}
+@media (max-width: 760px) { .mkt-stats { grid-template-columns: 1fr; } }
+.mkt-stat {
+	background: #fff;
+	border: 1px solid #EDE5D4;
+	border-radius: 20px;
+	padding: 32px 24px;
+	text-align: center;
+}
+.mkt-stat__num {
+	font-size: 40px;
+	font-weight: 900;
+	color: var(--c-primary-strong);
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+}
+.mkt-stat__label { margin-top: 8px; font-size: 15px; font-weight: 700; color: #4A4438; }
+.mkt-stat__sub { margin-top: 4px; font-size: 13px; color: #B5AD9C; }
+
+/* ---------------- Steps ---------------- */
+.mkt-steps {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 24px;
+}
+@media (max-width: 760px) { .mkt-steps { grid-template-columns: 1fr; } }
+.mkt-step {
+	background: #fff;
+	border: 1px solid #EDE5D4;
+	border-radius: 20px;
+	padding: 28px;
+	position: relative;
+}
+.mkt-step__num {
+	position: absolute;
+	top: 24px; right: 24px;
+	font-size: 34px;
+	font-weight: 900;
+	color: #F6F0E3;
+}
+.mkt-step__icon {
+	width: 48px; height: 48px;
+	border-radius: 14px;
+	background: var(--c-primary-weak);
+	color: var(--c-primary-strong);
+	display: flex; align-items: center; justify-content: center;
+	margin-bottom: 18px;
+}
+.mkt-step__icon svg { width: 24px; height: 24px; }
+.mkt-step h3 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
+.mkt-step p { font-size: 14.5px; color: #8A8371; line-height: 1.6; margin: 0; }
+
+/* ---------------- Owner CTA banner ---------------- */
+.mkt-owner {
+	border-radius: 28px;
+	background: linear-gradient(135deg, var(--c-primary-strong) 0%, var(--c-primary) 100%);
+	color: #fff;
+	padding: 56px;
+	display: grid;
+	grid-template-columns: 1.3fr .7fr;
+	gap: 32px;
+	align-items: center;
+}
+@media (max-width: 760px) {
+	.mkt-owner { grid-template-columns: 1fr; padding: 36px 28px; text-align: left; }
+}
+.mkt-owner h2 { font-size: clamp(24px, 2.6vw, 32px); font-weight: 900; margin: 0 0 14px; letter-spacing: -0.02em; }
+.mkt-owner ul { list-style: none; margin: 0 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mkt-owner li { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: rgba(255,255,255,.92); }
+.mkt-owner li svg { width: 18px; height: 18px; flex: none; color: #fff; }
+.mkt-owner__actions { display: flex; flex-direction: column; gap: 12px; }
+.mkt-owner .mkt-btn--primary { background: var(--c-primary-weak); color: var(--c-primary-strong); box-shadow: none; }
+.mkt-owner .mkt-btn--ghost { color: var(--c-primary-weak); border-color: rgba(255,255,255,.5); }
+.mkt-owner .mkt-btn--ghost:hover { background: rgba(255,255,255,.12); }
+
+/* ---------------- Footer ---------------- */
+.mkt-footer { padding: 56px 0 40px; border-top: 1px solid #EDE5D4; }
+.mkt-footer__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 24px;
+	flex-wrap: wrap;
+}
+.mkt-footer__brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; }
+.mkt-footer__desc { margin-top: 10px; font-size: 13.5px; color: #B5AD9C; max-width: 320px; line-height: 1.6; }
+.mkt-footer__links { display: flex; gap: 28px; font-size: 14px; font-weight: 700; color: #6B6354; }
+.mkt-footer__links a:hover { color: var(--c-primary-strong); }
+.mkt-footer__meta { margin-top: 32px; padding-top: 24px; border-top: 1px solid #F6F0E3; font-size: 12.5px; color: #D9D2C4; }

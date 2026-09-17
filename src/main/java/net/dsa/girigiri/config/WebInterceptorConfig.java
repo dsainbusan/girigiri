@@ -26,7 +26,7 @@ public class WebInterceptorConfig implements WebMvcConfigurer {
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(viewModeSyncInterceptor)
-				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/");
+				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/app");
 		registry.addInterceptor(loginRequiredInterceptor)
 				.addPathPatterns("/**");
 		// 부가정보 미입력 사용자 가드 — 정적 리소스·인증 콜백은 제외(제외 안 하면 signup 화면 CSS까지 리다이렉트됨).
