@@ -107,6 +107,11 @@ public class StoreProductController {
 			form.setCurrentImageUrl(menu.getImageUrl());
 		}
 
+		// 추가됨 (2026-09-17) — 품목명을 매번 직접 타이핑하지 않고, POS 카탈로그에 이미 있는 메뉴
+		// 중에서 골라 쓸 수 있게(선택하면 품목명·원가·사진 자동완성). POS 연동을 안 했거나 메뉴가
+		// 없으면 목록이 비어서 화면에서 "직접 입력"만 남는다 — 별도 분기 없이 자연스럽게 처리된다.
+		model.addAttribute("menuItems", posCatalogService.listMenu(ownerId));
+
 		model.addAttribute("mode", "create");
 		model.addAttribute("isDraft", false);
 		model.addAttribute("form", form);
