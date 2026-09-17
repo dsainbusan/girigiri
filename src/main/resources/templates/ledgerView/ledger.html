@@ -265,7 +265,7 @@
 
 	<!-- 탭: 목표 -->
 	<div id="panel-goal" class="seg-panel is-hidden">
-		<p class="u-sub" style="font-size: var(--fs-sm)">목표 금액을 정해두면 위 게이지로 진행률을 볼 수 있어요. 비워두고 저장하면 목표가 해제됩니다.</p>
+		<p class="u-sub" style="font-size: var(--fs-sm)">목표 금액을 정해두면 위 게이지로 진행률을 볼 수 있어요.<br>비워두고 저장하면 목표가 해제됩니다.</p>
 		<!-- 서버가 ?error=goalTooLow로 리다이렉트했을 때만 JS로 보여준다(LedgerController.updateGoal 참고) —
 		     최소 금액(1만원) 미만은 목표 달성 뱃지(GOAL_HIT)를 사실상 거저 따게 만들어서 서버에서 막는다. -->
 		<p id="goal-too-low-msg" class="ledger-goal-error is-hidden"><svg class="icon" style="width:13px;height:13px"><use href="#i-warning"/></svg> 목표 금액은 최소 10,000원 이상으로 설정해주세요.</p>

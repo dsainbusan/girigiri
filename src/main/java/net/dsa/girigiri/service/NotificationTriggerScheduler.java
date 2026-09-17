@@ -88,7 +88,7 @@ public class NotificationTriggerScheduler {
 	private void scanReservationConfirmed() {
 		for (ReservationEntity r : reservationRepository.findByStatusIn(List.of("confirmed"))) {
 			notificationService.createNotification(r.getUserId(), NotificationEntity.TYPE_RESERVATION_CONFIRMED,
-					"\"" + productLabel(r) + "\" 예약이 확정됐어요. 픽업을 기다려주세요.",
+					"\"" + productLabel(r) + "\" 예약 확정",
 					RESERVATION_URL, "reservation_confirmed:" + r.getId());
 		}
 	}
@@ -109,7 +109,7 @@ public class NotificationTriggerScheduler {
 	private void scanReservationNoShow() {
 		for (ReservationEntity r : reservationRepository.findByStatusIn(List.of("noshowed"))) {
 			notificationService.createNotification(r.getUserId(), NotificationEntity.TYPE_RESERVATION_NOSHOW,
-					"\"" + productLabel(r) + "\" 예약이 픽업 시간 경과로 노쇼 처리됐어요.",
+					"\"" + productLabel(r) + "\" 픽업 시간 경과 (노쇼 처리)",
 					RESERVATION_URL, "reservation_noshow:" + r.getId());
 		}
 	}

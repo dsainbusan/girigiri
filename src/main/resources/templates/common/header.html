@@ -24,7 +24,13 @@
   location: 표시할 동네 텍스트. 위치 권한을 허용하면 실제 동네 이름(카카오 역지오코딩), 아니면 "내 동네" 고정 문구(HomeController#resolveLocationLabel 참고).
   unreadCount: 안 읽은 알림 개수. 0보다 크면 벨 아이콘에 빨간 점. 알림 기능 붙기 전까지는 항상 0.
 */-->
-<header th:fragment="topbarHome(location, unreadCount)" class="topbar">
+<!--/*
+  loggedIn 추가됨 (2026-09-17) — 왜: "비회원도 지도는 볼 수 있는데, 홈 화면에 로그인 버튼이 없다"는
+  피드백. 비회원에게 알림벨(/user/alerts, 로그인 필요)을 보여줘 봐야 어차피 로그인 화면으로 튕기기만
+  하니, 로그인 안 했을 때는 그 자리에 로그인 버튼을 대신 보여준다. HomeController가 세션의 userId
+  유무로 채워주는 model attribute를 그대로 받는다(location/unreadCount와 같은 방식).
+*/-->
+<header th:fragment="topbarHome(location, unreadCount, loggedIn)" class="topbar">
   <span class="u-row" style="font-size:14px;font-weight:900">
     <svg class="icon" style="width:15px;height:15px"><use href="#i-pin"/></svg><span th:text="${location}">내 동네</span>
   </span>
@@ -32,11 +38,12 @@
   <!--/* 강노은: /notifications는 실제로 없는 경로였다(하단 탭바는 /user/alerts를 씀) — 알림함을
        만들면서 통일했다. */-->
   <!--/* id="alert-bell"/"alert-dot": home.html의 SSE 스크립트가 실시간으로 이 점을 붙였다 뗐다 한다. */-->
-  <a th:href="@{/user/alerts}" class="topbar__action" id="alert-bell" style="position:relative">
+  <a th:if="${loggedIn}" th:href="@{/user/alerts}" class="topbar__action" id="alert-bell" style="position:relative">
     <svg class="icon"><use href="#i-bell"/></svg>
     <span th:if="${unreadCount} != null and ${unreadCount} > 0" id="alert-dot"
           style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)"></span>
   </a>
+  <a th:unless="${loggedIn}" th:href="@{/auth/loginForm}" class="topbar__cta">로그인</a>
 </header>
 
 </body>
