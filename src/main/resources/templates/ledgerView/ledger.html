@@ -50,12 +50,12 @@
 		<span class="ledger-badge-toast__hint">눌러서 뱃지 도감 보기 ›</span>
 	</div>
 
-	<!-- ===== 요약 / 상세 전환 (2026-09-17) — 히어로 카드 + 4개 탭이 세로로 쭉 이어져 스크롤이
-	     길어진다는 피드백으로, 최상단을 "요약"(히어로·환경 배너·내보내기)과 "상세"(내역/분석/목표/뱃지
+	<!-- ===== 현황 / 상세 전환 (2026-09-17) — 히어로 카드 + 4개 탭이 세로로 쭉 이어져 스크롤이
+	     길어진다는 피드백으로, 최상단을 "현황"(히어로·환경 배너·내보내기)과 "상세"(내역/분석/목표/뱃지
 	     탭)로 나눴다. 기존 seg-tabs 메커니즘(그룹 단위로 동작)을 그대로 재사용한다. -->
 	<div class="seg-tabs">
-		<button type="button" class="seg-tab is-active" data-target="panel-summary">요약</button>
-		<button type="button" class="seg-tab" data-target="panel-detail">내역·분석</button>
+		<button type="button" class="seg-tab is-active" data-target="panel-summary">현황</button>
+		<button type="button" class="seg-tab" data-target="panel-detail">상세</button>
 	</div>
 
 	<div id="panel-summary" class="seg-panel">
@@ -177,7 +177,7 @@
 	<div id="panel-detail" class="seg-panel is-hidden">
 
 	<!-- ===== 탭 전환 ===== -->
-	<!-- seg-tabs--sub (2026-09-17) — 바로 위 요약/상세 토글과 나란히 붙어 똑같은 스타일로 겹쳐 보이지
+	<!-- seg-tabs--sub (2026-09-17) — 바로 위 현황/상세 토글과 나란히 붙어 똑같은 스타일로 겹쳐 보이지
 	     않게, 이미 있는 하위 토글 스타일(뱃지 탭 안 도감/랭킹 전환과 동일)을 재사용해 톤을 낮췄다. -->
 	<div class="seg-tabs seg-tabs--sub">
 		<button type="button" class="seg-tab is-active" data-target="panel-history">내역</button>
@@ -656,7 +656,7 @@
 				});
 			});
 
-			// 요약/상세 토글이 생기면서(2026-09-17), 상세 쪽 하위 탭(목표/뱃지/내역/분석)으로 바로
+			// 현황/상세 토글이 생기면서(2026-09-17), 상세 쪽 하위 탭(목표/뱃지/내역/분석)으로 바로
 			// 이동하는 모든 경로가 먼저 "상세" 섹션 자체를 펼쳐야 한다 — 안 그러면 하위 탭은 전환되지만
 			// 부모인 panel-detail이 여전히 숨겨져 있어 화면엔 아무 변화가 없어 보인다.
 			function showDetailSection() {
