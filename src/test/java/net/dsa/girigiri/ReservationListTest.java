@@ -5,6 +5,7 @@ import net.dsa.girigiri.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *      초기화한 다음 이 테스트를 돌려보세요.
  */
 @SpringBootTest
+@Transactional
 class ReservationListTest {
 
 	@Autowired
@@ -36,7 +38,14 @@ class ReservationListTest {
 		assertEquals(1, result.size());
 		ReservationListItemDto item = result.get(0);
 		assertEquals(1L, item.reservationId());
-		assertEquals("예약완료", item.statusBadge());   // 픽업 시간이 아직 안 지났으니 "예약완료"
+		// 주의 (2026-09-17 수정): 이 assertEquals는 원래 "예약완료"를 기대했는데, ReservationService
+		// #resolveStatusBadge가 2026-08-21에 "매장 수락 여부를 ready 상태로 분리"하면서
+		// confirmed 상태는 (매장이 아직 수락 안 한) "주문 확인중"으로 바뀌었다(2026-09-08 코드 감사에서
+		// 라벨 불일치까지 이미 확인된 의도된 변경). 이 테스트는 그때 안 따라가서 계속 실패할 assertion을
+		// 갖고 있었는데, 지금까지는 테스트 DB 공유 문제로 그 앞의 개수(size) assertion에서 먼저 실패해서
+		// 이 줄까지 실행이 안 됐던 것뿐이었다 — 실제 버그가 있는 게 아니라 테스트가 오래된 라벨을 기대하고
+		// 있었던 것.
+		assertEquals("주문 확인중", item.statusBadge());
 
 		System.out.println("진행중 탭: " + result);
 	}

@@ -30,6 +30,10 @@ public class NotificationEntity {
 	public static final String TYPE_RESERVATION_NOSHOW = "RESERVATION_NOSHOW";     // 노쇼 처리
 	public static final String TYPE_INQUIRY_COMMENT = "INQUIRY_COMMENT";           // 문의에 새 댓글(강노은)
 
+	// 추가됨 (문창호, 2026-09-17) — 왜: WBS "문의 답변/리뷰 답글"(김태훈 인수) — 사장님이 리뷰에
+	// 답글을 남기면 그 리뷰 작성자에게 알린다. 위 다른 타입들처럼 스키마 변경 없이 문자열만 추가.
+	public static final String TYPE_REVIEW_REPLY = "REVIEW_REPLY";                 // 내 리뷰에 사장님 답글
+
 	// 추가됨 — 왜: 슈퍼어드민 알림 패널(회원/게시판/예약 3개 탭)용. 수신자는 항상 대표 관리자 계정
 	// 1명(AdminNotificationTriggerScheduler 참고) — 스키마 변경 없이 타입 문자열만 추가.
 	public static final String TYPE_ADMIN_NEW_MEMBER = "ADMIN_NEW_MEMBER";         // 신규 회원가입

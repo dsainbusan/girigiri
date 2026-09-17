@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -46,6 +47,7 @@ import static org.mockito.Mockito.when;
  * 재고가 바닥나서 실패할 수 있다 — 그럴 땐 sample-data.sql을 다시 실행해서 초기화하면 된다.
  */
 @SpringBootTest
+@Transactional
 class ReservationServiceTest {
 
 	@Autowired

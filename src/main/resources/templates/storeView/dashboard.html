@@ -96,6 +96,21 @@
 		<span class="settlement-cta__go">정산 내역 보기 ›</span>
 	</a>
 
+	<!-- 리뷰 관리 (WBS 3.0 "문의 답변/리뷰 답글", 김태훈 인수분 → 문창호 2026-09-17) —
+	     정산 카드 바로 밑에 붙는 두 번째 CTA라, 위 stat-card·settlement-cta와 같은 "라벨 위 + 값 아래"
+	     2줄 구조로 맞춰서 이 카드만 밋밋한 한 줄짜리로 튀지 않게 했다. -->
+	<a th:href="@{/store/reviews}" class="card"
+	   style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4); display:flex; align-items:center; justify-content:space-between;">
+		<span>
+			<span style="display:block; font-size: var(--fs-xs); color: var(--c-text-sub); font-weight: var(--fw-bold);">리뷰 관리</span>
+			<span style="display:block; margin-top: 2px; font-size: var(--fs-md); font-weight: var(--fw-bold);">
+				⭐ <span th:text="${#numbers.formatDecimal(reviewAverageRating, 1, 1)}">4.5</span>
+				<span class="u-mut" style="font-size: var(--fs-xs); font-weight: var(--fw-medium);" th:text="'(' + ${reviewCount} + '개)'">(12개)</span>
+			</span>
+		</span>
+		<span class="u-mut" style="font-size: 18px; font-weight: var(--fw-bold);">›</span>
+	</a>
+
 	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
 	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
 		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
@@ -288,16 +303,10 @@
 		</div>
 	</div>
 
-	<!-- 유저 모드 전환 (2026-09-16, 병합 중 발견해서 복구) — 상단바 모드 전환 버튼을 대시보드·
-	     마이페이지 하단으로 옮기는 작업(common/header.html 참고)이 마이페이지("점주 모드로")에만
-	     반영되고 이 화면("유저 모드로")엔 안 들어와 있었다 — 원격 병합 과정에서 유실된 것으로
-	     보여 mypage.html과 대칭되는 형태로 복구한다. -->
-	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
-		<input type="hidden" name="target" value="user" />
-		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
-			<span class="topbar__mode-icon" aria-hidden="true"><svg class="icon" style="width:14px;height:14px"><use href="#i-user"/></svg></span>
-			<span>유저 모드로</span>
-		</button>
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
+		<button type="submit" class="btn btn--outline btn--block u-mut"
+		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>
 
 	<!-- 탭 토글(현황: 오늘/최근7일, 주문·픽업: 주문/픽업) · 상단바 뒤로 버튼 숨김 · 구제율 목표 수정 -->

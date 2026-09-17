@@ -29,6 +29,12 @@ public record StoreDashboardStatsDto(
 		int reservedNotPickedCount,
 		int idleCount,
 		boolean isClosed,
+		// 추가됨 (2026-09-17) — 왜: StoreHoursUtil.isOpen(closeAt)은 closeAt==null(영업시간 미설정·
+		// 형식 이상)이면 무조건 영업중(isClosed=false)으로 본다 — "정보 없으면 막지 않는다"는 의도로
+		// 다른 9곳(발행 가능 여부 등)과 공유하는 판정이라 그 자체는 안 바꾼다. 하지만 대시보드
+		// 배지에 실제로 영업 여부를 모르는데 "영업중"이라고 단정해서 보여주는 건 오해를 부르므로,
+		// 화면에서만 "영업시간 미설정"이라는 3번째 상태로 구분해서 보여줄 수 있게 이 값을 따로 내려준다.
+		boolean hoursConfigured,
 		String closingCountdownLabel,
 		int donutPickedPct,
 		int donutReservedCumPct,

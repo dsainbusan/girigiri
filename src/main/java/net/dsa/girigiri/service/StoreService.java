@@ -81,6 +81,7 @@ public class StoreService {
 		// 변경됨 (2026-09-08, 코드 감사) — StoreHoursUtil.isOpen으로 위임(3곳 중복 중 하나, 여기는
 		// 부정형(isClosed)이라 그대로 뒤집는다 — 판정 로직 자체는 한 곳에서만 관리).
 		boolean isClosed = !StoreHoursUtil.isOpen(closingInfo.closeAt());
+		boolean hoursConfigured = closingInfo.closeAt() != null;
 
 		int donutPickedPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * pickedCount / totalQuantity);
 		int donutReservedCumPct = totalQuantity == 0 ? 0 : (int) Math.round(100.0 * (pickedCount + reservedNotPickedCount) / totalQuantity);
@@ -173,7 +174,7 @@ public class StoreService {
 				reservationCount, reservationWaiting, reservationDone, reservationCancelled,
 				expiredCount, rescueRate, rescueGoalPercent, rescueGoal,
 				totalQuantity, pickedCount, reservedNotPickedCount, idleCount,
-				isClosed, closingInfo.label(),
+				isClosed, hoursConfigured, closingInfo.label(),
 				donutPickedPct, donutReservedCumPct, donutSoldCumPct,
 				weeklySalesBars, weeklySoldTotal, weeklyWasteTotal,
 				savings.rescuedCount(), formatWon(savings.recoveredAmount()), String.format("%.1f", savings.co2Kg()),
@@ -190,7 +191,7 @@ public class StoreService {
 				0, 0, 0, 0,
 				0, 0, 70, "목표 70%",
 				0, 0, 0, 0,
-				false, "",
+				false, false, "",
 				0, 0, 0,
 				List.of(), 0, 0,
 				0, formatWon(0), "0.0",

@@ -100,7 +100,10 @@ public class ReviewService {
 						relativeLabel(r.getCreatedAt()),
 						currentUserId != null && currentUserId.equals(r.getUserId()),
 						r.isEdited(),
-						canDelete(r.getUserId(), currentUserId, role)
+						canDelete(r.getUserId(), currentUserId, role),
+						r.getReplyContent(),
+						relativeLabel(r.getReplyCreatedAt()),
+						r.isReplyEdited()
 				))
 				.toList();
 	}

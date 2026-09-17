@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('리뷰 관리', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	가게 사장님이 자기 매장 리뷰를 보고 답글을 남기는 화면 (WBS 3.0 "문의 답변/리뷰 답글",
+	원래 김태훈 담당 → 문창호가 인수, 2026-09-17). 리뷰 자체는 못 지우고(강노은 ReviewService
+	canDelete 컨벤션 그대로) 답글만 등록/수정/삭제할 수 있다.
+
+	답글 수정 폼은 리뷰별로 여러 개 열릴 수 있어서(detail.html의 "내 리뷰 수정"과 달리 한 화면에
+	여러 리뷰가 있음), data-toggle-target id를 리뷰 id로 구분해 각각 독립적으로 펼친다(app.js의
+	공용 data-toggle-target/data-close-panel 패턴 재사용).
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-4)">
+		<span class="u-bold">
+			<span style="color: var(--c-accent)" th:text="'★' + ${#numbers.formatDecimal(averageRating, 1, 1)}">★4.5</span>
+			<span class="u-mut" style="font-size: var(--fs-sm)" th:text="'(' + ${reviewCount} + '개)'">(12개)</span>
+		</span>
+	</div>
+
+	<div th:if="${#lists.isEmpty(reviews)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+		아직 등록된 리뷰가 없어요.
+	</div>
+
+	<div th:each="r : ${reviews}" class="card" style="margin-bottom: var(--s-3)">
+		<div class="u-row" style="justify-content: space-between">
+			<b style="font-size: var(--fs-sm)" th:text="${r.reviewerName}">닉네임</b>
+			<span class="u-mut" style="font-size: var(--fs-xs)">
+				<span th:text="${r.createdAtLabel}">3일 전</span>
+				<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
+			</span>
+		</div>
+		<div style="color: var(--c-accent); font-size: var(--fs-sm); margin-top: 2px"
+		     th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
+		<p style="font-size: var(--fs-sm); margin-top: var(--s-1)" th:text="${r.content}">리뷰 내용</p>
+		<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
+		     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
+		     style="margin-top: 6px; width: 100%; max-width: 220px; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--r-md)">
+
+		<!-- 사장님 답글 — 있으면 보여주고 수정/삭제, 없으면 등록 폼 -->
+		<div th:if="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}"
+		     style="margin-top: var(--s-3); padding: var(--s-3); background: var(--c-bg); border-radius: var(--r-md)">
+			<div class="u-row" style="justify-content: space-between">
+				<b style="font-size: var(--fs-xs); color: var(--c-primary)">🏪 사장님 답글</b>
+				<span class="u-mut" style="font-size: var(--fs-xs)">
+					<span th:text="${r.replyCreatedAtLabel}">1일 전</span>
+					<span th:if="${r.replyEdited}"> · 수정됨</span>
+				</span>
+			</div>
+			<p style="font-size: var(--fs-sm); margin-top: var(--s-1)" th:text="${r.replyContent}">답글 내용</p>
+			<div class="u-row" style="gap: 6px; margin-top: var(--s-2)">
+				<button type="button" th:id="'reply-edit-btn-' + ${r.id}" class="btn btn--outline"
+				        th:attr="data-toggle-target='reply-edit-form-' + ${r.id}"
+				        style="padding: var(--s-1) var(--s-3); font-size: 12px">수정</button>
+				<form th:action="@{/store/reviews/{id}/reply/delete(id=${r.id})}" method="post"
+				      onsubmit="return confirm('답글을 삭제할까요?')">
+					<button type="submit" class="btn btn--outline"
+					        style="padding: var(--s-1) var(--s-3); font-size: 12px; color: var(--c-danger); border-color: var(--c-danger)">삭제</button>
+				</form>
+			</div>
+			<form th:id="'reply-edit-form-' + ${r.id}" th:attr="data-reopen-btn='reply-edit-btn-' + ${r.id}" hidden
+			      th:action="@{/store/reviews/{id}/reply(id=${r.id})}" method="post" style="margin-top: var(--s-2)">
+				<textarea name="content" class="input js-autogrow" rows="3" maxlength="500" required th:text="${r.replyContent}"></textarea>
+				<div class="u-row" style="gap: 6px; margin-top: var(--s-2)">
+					<button type="submit" class="btn btn--primary u-grow" style="padding: 8px 0; font-size: var(--fs-sm)">저장</button>
+					<button type="button" data-close-panel class="btn btn--outline u-grow" style="padding: 8px 0; font-size: var(--fs-sm)">취소</button>
+				</div>
+			</form>
+		</div>
+
+		<form th:unless="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}"
+		      th:action="@{/store/reviews/{id}/reply(id=${r.id})}" method="post" style="margin-top: var(--s-3)">
+			<textarea name="content" class="input js-autogrow" rows="2" maxlength="500" required
+			          placeholder="답글을 남겨보세요"></textarea>
+			<button type="submit" class="btn btn--outline btn--block" style="margin-top: var(--s-2); font-size: var(--fs-sm)">답글 등록</button>
+		</form>
+	</div>
+
+	<!-- 답글 입력창 자동 높이 조절 (2026-09-17) — 기본 textarea가 리사이즈 핸들로 한없이 커지는
+	     버그 수정. productForm.html의 상품 설명 입력칸과 같은 방식(js-autogrow, store.css에서
+	     resize:none + max-height:40vh 캡). 수정 폼은 처음엔 hidden이라 열릴 때(data-toggle-target
+	     클릭 시) 한 번 더 높이를 맞춰준다 — hidden 상태에서 scrollHeight가 0으로 잡히기 때문. -->
+	<script>
+		(function () {
+			function fit(el) {
+				el.style.height = 'auto';
+				el.style.height = el.scrollHeight + 'px';
+			}
+
+			document.querySelectorAll('.js-autogrow').forEach(function (el) {
+				el.addEventListener('input', function () { fit(el); });
+				fit(el);
+			});
+
+			// app.js의 문서 위임 클릭 핸들러가 hidden을 실제로 벗기는 건 이 버튼 자체의 클릭 리스너보다
+			// 나중(버블링 단계)에 일어난다 — 같은 틱에서 바로 fit()하면 아직 hidden이라 scrollHeight가
+			// 0으로 잡힌다. setTimeout(0)으로 한 틱 미뤄서 hidden이 풀린 뒤에 재기 재도록 한다.
+			document.querySelectorAll('[data-toggle-target]').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var target = document.getElementById(btn.getAttribute('data-toggle-target'));
+					var textarea = target && target.querySelector('.js-autogrow');
+					if (textarea) { setTimeout(function () { fit(textarea); }, 0); }
+				});
+			});
+		})();
+	</script>
+</div>
+</body>
+</html>

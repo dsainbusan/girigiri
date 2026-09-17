@@ -175,6 +175,7 @@ public class NotificationService {
 			case NotificationEntity.TYPE_RESERVATION_PICKUP_SOON -> "⏰";
 			case NotificationEntity.TYPE_RESERVATION_NOSHOW -> "⚠️";
 			case NotificationEntity.TYPE_INQUIRY_COMMENT -> "💬";
+			case NotificationEntity.TYPE_REVIEW_REPLY -> "✍️";
 			case NotificationEntity.TYPE_ADMIN_NEW_MEMBER -> "👤";
 			case NotificationEntity.TYPE_ADMIN_NEW_INQUIRY -> "💬";
 			case NotificationEntity.TYPE_ADMIN_NEW_RESERVATION -> "📅";
