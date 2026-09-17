@@ -25,13 +25,31 @@
 		아직 등록된 리뷰가 없어요.
 	</div>
 
-	<div th:each="r : ${reviews}" class="card" style="margin-bottom: var(--s-3)">
+	<div th:each="r : ${reviews}" class="card" style="margin-bottom: var(--s-3)" th:with="info=${reviewerInfo.get(r.id)}">
 		<div class="u-row" style="justify-content: space-between">
-			<b style="font-size: var(--fs-sm)" th:text="${r.reviewerName}">닉네임</b>
+			<!-- 닉네임을 누르면 간단 정보(뱃지·가입기간·이 매장 방문 횟수) 토글 (2026-09-17).
+			     민감정보(전화번호 등)는 일부러 안 넣는다 — ReviewerInfoDto 주석 참고. -->
+			<button type="button" th:id="'reviewer-info-btn-' + ${r.id}" class="u-bold"
+			        style="font-size: var(--fs-sm); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px"
+			        th:attr="data-toggle-target='reviewer-info-' + ${r.id}" th:text="${r.reviewerName}">닉네임</button>
 			<span class="u-mut" style="font-size: var(--fs-xs)">
 				<span th:text="${r.createdAtLabel}">3일 전</span>
 				<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
 			</span>
+		</div>
+
+		<div th:id="'reviewer-info-' + ${r.id}" th:attr="data-reopen-btn='reviewer-info-btn-' + ${r.id}" hidden
+		     style="margin-top: var(--s-2); padding: var(--s-3); background: var(--c-bg); border-radius: var(--r-md); font-size: var(--fs-xs)">
+			<div class="u-row" style="justify-content: space-between; align-items: flex-start">
+				<div>
+					<p th:if="${info != null and info.badgeIcon != null}"
+					   th:text="${info.badgeIcon} + ' ' + ${info.badgeName}">🌱 구제 첫걸음</p>
+					<p th:if="${info == null or info.badgeIcon == null}" class="u-mut">대표 뱃지 미설정</p>
+					<p class="u-sub" style="margin-top: 4px" th:if="${info != null}" th:text="${info.daysJoinedLabel}">가입 47일째</p>
+					<p class="u-sub" style="margin-top: 2px" th:if="${info != null}" th:text="'우리 매장 이용 ' + ${info.visitCount} + '회'">우리 매장 이용 3회</p>
+				</div>
+				<button type="button" data-close-panel class="u-mut" style="background: none; border: none; padding: 0; cursor: pointer; font-size: var(--fs-sm)">✕</button>
+			</div>
 		</div>
 		<div style="color: var(--c-accent); font-size: var(--fs-sm); margin-top: 2px"
 		     th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
@@ -103,6 +121,16 @@
 					var target = document.getElementById(btn.getAttribute('data-toggle-target'));
 					var textarea = target && target.querySelector('.js-autogrow');
 					if (textarea) { setTimeout(function () { fit(textarea); }, 0); }
+				});
+			});
+
+			// 닉네임 정보 토글 버튼은 app.js의 공용 data-toggle-target 핸들러가 "한 번 쓰고 사라지는
+			// 버튼"으로 취급해서(리뷰 작성 버튼처럼) 열자마자 자기 자신도 숨겨버린다 — 닉네임은 계속
+			// 보여야 하는 라벨이라 그 숨김만 한 틱 뒤에 되돌린다(닫기 버튼을 누르면 app.js가 다시
+			// 정상적으로 보여주므로 거기는 안 건드림).
+			document.querySelectorAll('[id^="reviewer-info-btn-"]').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					setTimeout(function () { btn.hidden = false; }, 0);
 				});
 			});
 		})();

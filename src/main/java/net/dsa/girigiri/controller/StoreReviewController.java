@@ -42,6 +42,9 @@ public class StoreReviewController {
 		model.addAttribute("reviews", reviewService.getReviews(store.getId(), userId, role));
 		model.addAttribute("averageRating", reviewService.getAverageRating(store.getId()));
 		model.addAttribute("reviewCount", reviewService.getReviewCount(store.getId()));
+		// 추가됨 (2026-09-17) — 리뷰 작성자 닉네임을 누르면 보여줄 간단 정보(뱃지·가입기간·이 매장
+		// 방문 횟수). 민감정보(전화번호 등)는 뺐다 — ReviewerInfoDto 주석 참고.
+		model.addAttribute("reviewerInfo", storeReviewService.getReviewerInfoByReviewId(store.getId()));
 		return "storeView/reviews";
 	}
 
