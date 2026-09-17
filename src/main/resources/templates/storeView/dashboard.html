@@ -22,20 +22,23 @@
 
 	<!-- 처리할 일 배너 — 항상 최상단. 각 줄 0건이면 숨김. -->
 	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+		<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 왜: 완결된 문장(~해야 ~할 수 있어요) 대신
+		     라벨형으로 줄였다. 행 자체가 클릭 가능하고 화살표(›)가 있어 "누르면 더 볼 수 있다"는
+		     맥락은 이미 전달되므로, 여기서 결과까지 설명할 필요가 없다. -->
 		<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
-			<span>⚠️ 정산 계좌를 등록해야 판매 대금을 받을 수 있어요</span>
+			<span><svg class="icon" style="width:14px;height:14px"><use href="#i-warning"/></svg> 정산 계좌 등록 필요</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
-			<span>📦 오늘의 구제 <b th:text="${draftPendingCount}">3</b>건이 발행을 기다려요</span>
+			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 발행 대기 <b th:text="${draftPendingCount}">3</b>건</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">
-			<span>🔔 새 예약 <b th:text="${incomingReservationCount}">2</b>건 확인이 필요해요</span>
+			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 <b th:text="${incomingReservationCount}">2</b>건</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
-			<span>⚙️ POS를 연동하면 매일 자동으로 등록돼요</span>
+			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> POS 자동 등록 설정</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 	</div>
@@ -112,15 +115,15 @@
 	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
 		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
 			<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);">주문 · 픽업 바로가기</span>
-			<a th:href="@{/reservation/settings}" class="u-sub" style="font-size: var(--fs-xs);">⚙️ 주문 마감 설정</a>
+			<a th:href="@{/reservation/settings}" class="u-sub" style="font-size: var(--fs-xs);"><svg class="icon" style="width:12px;height:12px"><use href="#i-settings"/></svg> 주문 마감 설정</a>
 		</div>
 		<div class="u-row" style="gap: var(--s-2)">
 			<a th:href="@{/reservation/incoming}" class="btn btn--primary btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span>🔔 새 예약 확인</span>
+				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 확인</span>
 				<span th:if="${incomingReservationCount > 0}" class="badge" style="background: var(--c-accent); color: #fff; margin-left: 4px;" th:text="${incomingReservationCount}">2</span>
 			</a>
 			<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span>📷 QR 픽업 확인</span>
+				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-camera"/></svg> QR 픽업 확인</span>
 			</a>
 		</div>
 		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-2); font-size: var(--fs-xs);">
@@ -151,7 +154,7 @@
 						      id="rescue-goal-text" th:text="${rescueGoal}">목표 70% 달성</span>
 						<button type="button" id="rescue-goal-edit-btn" class="rescue-goal-edit-btn"
 						        th:attr="data-rescue-rate=${rescueRate},data-goal-percent=${rescueGoalPercent}"
-						        title="구제율 목표 수정">✏️</button>
+						        title="구제율 목표 수정"><svg class="icon" style="width:14px;height:14px"><use href="#i-pencil"/></svg></button>
 					</div>
 				</div>
 
@@ -300,16 +303,10 @@
 		</div>
 	</div>
 
-	<!-- 2026-09-16 송보미가 점주 모드 하단 탭바(대시보드/재고관리/예약확인/마이)를 추가하면서
-	     로그아웃은 "마이" 탭 → 마이페이지에 이미 있어 중복이라 삭제했다(커밋 7a8b703) — 이후 머지 중
-	     그 삭제가 되돌아가고, 대신 이 자리에 있던 유저 모드 전환 버튼(커밋 3831a26)이 없어져 있어서
-	     2026-09-17 다시 정리: 로그아웃은 마이페이지 것 그대로 쓰고, 유저 모드 전환 버튼만 복원한다. -->
-	<form th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
-		<input type="hidden" name="target" value="user" />
-		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
-			<span class="topbar__mode-icon" aria-hidden="true">👤</span>
-			<span>유저 모드로</span>
-		</button>
+	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
+		<button type="submit" class="btn btn--outline btn--block u-mut"
+		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
 	</form>
 
 	<!-- 탭 토글(현황: 오늘/최근7일, 주문·픽업: 주문/픽업) · 상단바 뒤로 버튼 숨김 · 구제율 목표 수정 -->
@@ -347,27 +344,33 @@
 
 		editBtn.addEventListener('click', function () {
 			var currentGoal = editBtn.getAttribute('data-goal-percent');
-			var input = window.prompt('구제율 목표를 입력하세요 (1~100)', currentGoal);
-			if (input === null) { return; }
+			// window.prompt()/alert() 대체 (2026-09-16, 디자인 리팩토링 2차) — 앱 전체에서 유일한
+			// prompt() 쓰임이라 범용 프롬프트 대신 숫자 입력 전용 girigiriPromptNumber로 대체했다.
+			window.girigiriPromptNumber({
+				title: '구제율 목표 수정',
+				desc: '1~100 사이의 숫자를 입력하세요.',
+				value: currentGoal,
+				min: 1,
+				max: 100
+			}, function (percent) {
+				if (isNaN(percent) || percent < 1 || percent > 100) {
+					window.girigiriAlert('1~100 사이의 숫자를 입력해주세요.');
+					return;
+				}
 
-			var percent = parseInt(input, 10);
-			if (isNaN(percent) || percent < 1 || percent > 100) {
-				window.alert('1~100 사이의 숫자를 입력해주세요.');
-				return;
-			}
-
-			fetch('/store/rescue-goal', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body: 'percent=' + percent
-			}).then(function (res) {
-				if (!res.ok) { throw new Error('저장 실패'); }
-				var rescueRate = parseInt(editBtn.getAttribute('data-rescue-rate'), 10);
-				var goalText = document.getElementById('rescue-goal-text');
-				goalText.textContent = rescueRate >= percent ? ('목표 ' + percent + '% 달성') : ('목표 ' + percent + '%');
-				editBtn.setAttribute('data-goal-percent', percent);
-			}).catch(function () {
-				window.alert('목표 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+				fetch('/store/rescue-goal', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'percent=' + percent
+				}).then(function (res) {
+					if (!res.ok) { throw new Error('저장 실패'); }
+					var rescueRate = parseInt(editBtn.getAttribute('data-rescue-rate'), 10);
+					var goalText = document.getElementById('rescue-goal-text');
+					goalText.textContent = rescueRate >= percent ? ('목표 ' + percent + '% 달성') : ('목표 ' + percent + '%');
+					editBtn.setAttribute('data-goal-percent', percent);
+				}).catch(function () {
+					window.girigiriAlert('목표 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+				});
 			});
 		});
 	})();

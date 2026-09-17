@@ -69,7 +69,7 @@
 					<button type="submit" class="btn btn--outline btn--block">메뉴 다시 불러오기</button>
 				</form>
 				<form th:action="@{/store/pos/disconnect}" method="post" style="flex:1"
-				      onsubmit="return confirm('연동을 해제할까요? 불러온 메뉴 목록이 삭제돼요 (등록된 상품은 그대로).')">
+				      data-confirm="연동을 해제할까요? 불러온 메뉴 목록이 삭제돼요 (등록된 상품은 그대로).">
 					<button type="submit" class="btn btn--ghost btn--block">연동 해제</button>
 				</form>
 			</div>

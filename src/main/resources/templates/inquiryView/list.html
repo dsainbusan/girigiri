@@ -23,7 +23,7 @@
 				</div>
 			</a>
 			<form th:if="${q.canDelete}" th:action="@{/user/inquiries/{id}/delete(id=${q.id})}" method="post"
-			      onsubmit="return confirm('문의를 삭제할까요? 댓글도 함께 삭제됩니다.')">
+			      data-confirm="문의를 삭제할까요? 댓글도 함께 삭제됩니다.">
 				<button type="submit" class="btn btn--outline"
 				        style="padding:4px 10px;font-size:11px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
 			</form>

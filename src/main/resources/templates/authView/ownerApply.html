@@ -174,7 +174,7 @@
 				updateHidden();
 				if ((openEl.value && !closeEl.value) || (!openEl.value && closeEl.value)) {
 					e.preventDefault();
-					alert('영업 시작 시각과 마감 시각을 모두 선택해 주세요.');
+					window.girigiriAlert('영업 시작 시각과 마감 시각을 모두 선택해 주세요.');
 					if (!openEl.value) openEl.focus();
 					else closeEl.focus();
 				}

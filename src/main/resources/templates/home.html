@@ -4,24 +4,27 @@
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/home.css}">
-	<h1>기리기리</h1>
-	<p class="u-sub">동네 가게 마감 임박 음식 긴급 구제 서비스</p>
+
+	<!-- 삭제됨 (2026-09-16, 디자인 리팩토링) — 왜: 상단바(topbarHome)가 이미 동네 위치를 보여주는데,
+	     그 밑에 앱 이름 <h1>+태그라인 문장까지 매번 반복해서 실제 콘텐츠(지도·검색)가 그만큼 아래로
+	     밀렸다. 처음 방문하는 랜딩페이지가 아니라 하루에도 여러 번 여는 홈 화면이라 자기소개가
+	     필요 없다 — 지도가 위쪽에 바로 오도록 뺐다. -->
 
 	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
 	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;"></div>
 
-	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)">🔍 <span>베이커리, 반찬, 도시락 검색</span></a>
+	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)"><svg class="icon" style="width:16px;height:16px"><use href="#i-search"/></svg> <span>베이커리, 반찬, 도시락 검색</span></a>
 
 	<!--/* 강노은: 위치 권한이 차단돼 있으면 조용히 넘어가지 않고 어디서 풀 수 있는지 안내한다
 	     (아래 script 참고). 한 번 닫으면 localStorage에 남겨서 방문할 때마다 다시 뜨지 않게 한다. */-->
 	<div id="geo-blocked-banner" class="banner banner--info" style="margin-top:var(--s-3);display:none;align-items:flex-start">
-		<span style="font-size:16px">📍</span>
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-pin"/></svg>
 		<div class="u-grow">
 			<div class="banner__title">위치 권한이 꺼져 있어요</div>
 			<div class="banner__desc" id="geo-blocked-desc"></div>
 		</div>
 		<button type="button" id="geo-blocked-dismiss" aria-label="닫기"
-		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);font-size:14px;line-height:1;padding:2px">✕</button>
+		        style="background:none;border:none;cursor:pointer;color:var(--c-text-mut);line-height:1;padding:2px"><svg class="icon" style="width:14px;height:14px"><use href="#i-close"/></svg></button>
 	</div>
 
 	<div class="chip-row" id="category-filter" style="margin-top:var(--s-3)">
@@ -33,7 +36,7 @@
 	</div>
 
 	<div class="banner" style="margin-top:var(--s-4)" th:if="${todayRescueCount} > 0">
-		<span style="font-size:16px">🌍</span>
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-globe"/></svg>
 		<div class="u-grow">
 			<div class="banner__title" th:text="'오늘 ' + ${todayRescueCount} + '명이 마감 음식을 구했어요'">오늘 3,940명이 마감 음식을 구했어요</div>
 		</div>
@@ -130,9 +133,24 @@
 
 			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
 
+			// 커스텀 마커 (2026-09-16, 디자인 리팩토링) — 카카오맵 기본 빨간 물방울 핀 그대로 쓰고
+			// 있었다("지도 API 튜토리얼 그대로"인 느낌의 흔한 원인). 브랜드 그린(--c-primary: #15803D)
+			// 톤의 핀 모양 SVG를 data URI로 만들어 씀 — 이미지 파일을 새로 추가할 필요 없이 마커
+			// 하나로 재사용(store마다 새로 안 만듦).
+			var markerImage = new kakao.maps.MarkerImage(
+				'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">' +
+					'<path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#15803D"/>' +
+					'<circle cx="18" cy="18" r="7" fill="#fff"/>' +
+					'</svg>'
+				),
+				new kakao.maps.Size(36, 44),
+				{ offset: new kakao.maps.Point(18, 44) }
+			);
+
 			stores.forEach(function (store) {
 				var position = new kakao.maps.LatLng(store.latitude, store.longitude);
-				var marker = new kakao.maps.Marker({ position: position, map: map });
+				var marker = new kakao.maps.Marker({ position: position, map: map, image: markerImage });
 
 				kakao.maps.event.addListener(marker, 'click', function () {
 					// 강노은: 마커 클릭 시 이름/카테고리만 보여주고 끝이라 가게 상세로 넘어갈 방법이

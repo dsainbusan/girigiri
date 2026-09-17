@@ -8,7 +8,9 @@ html, body { margin: 0; padding: 0; }
 body {
   font-family: var(--font-base);
   font-size: var(--fs-md);
-  font-weight: var(--fw-regular);
+  /* 변경됨 (2026-09-16, 디자인 리팩토링) — 전체 글자 굵기를 기본(regular/400)보다 한 단계
+     굵게(medium/500) — 톤을 크게 안 바꾸면서 화면이 좀 더 또렷하고 밀도 있게 보이도록. */
+  font-weight: var(--fw-medium);
   color: var(--c-text);
   background: var(--c-bg);
   line-height: 1.5;

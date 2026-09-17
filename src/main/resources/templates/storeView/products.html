@@ -30,7 +30,7 @@
 		<span class="pos-strip__title" th:text="'✅ ' + ${posProviderLabel}">✅ 오케이포스</span>
 		<span class="pos-strip__desc" th:if="${posDraftPromptLabel != null}"
 		      th:text="'매일 ' + ${posDraftPromptLabel} + ' 자동 준비'">매일 20:00 자동 준비</span>
-		<span class="pos-strip__desc" th:if="${posDraftPromptLabel == null}">⚠️ 재고 확인 시각 미설정</span>
+		<span class="pos-strip__desc" th:if="${posDraftPromptLabel == null}"><svg class="icon" style="width:13px;height:13px"><use href="#i-warning"/></svg> 재고 확인 시각 미설정</span>
 		<a th:href="@{/store/pos}" class="pos-strip__link">POS 설정 ›</a>
 	</div>
 	<div th:unless="${posConnected}" class="pos-strip">
@@ -44,7 +44,7 @@
 
 	<!-- 2. 발행 대기: "오늘의 구제" 자동 초안 — 이 화면의 핵심 -->
 	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
-		<p class="u-bold" style="margin-bottom: 2px">📦 오늘의 구제 — 발행 대기</p>
+		<p class="u-bold" style="margin-bottom: 2px"><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 오늘의 구제 — 발행 대기</p>
 		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
 		   th:text="${canPublishDrafts}
 		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
@@ -78,7 +78,7 @@
 				<span th:unless="${canPublishDrafts}" class="btn btn--sm btn--outline is-disabled">⏳ 등록 마감</span>
 				<a th:href="@{/store/products/{id}/edit(id=${d.id})}" class="btn btn--sm btn--outline">수정</a>
 				<form th:action="@{/store/products/{id}/discard(id=${d.id})}" method="post"
-				      onsubmit="return confirm('오늘은 이 상품을 안 올릴까요?')">
+				      data-confirm="오늘은 이 상품을 안 올릴까요?">
 					<button type="submit" class="btn btn--sm btn--outline">오늘 안 함</button>
 				</form>
 			</div>
@@ -98,8 +98,10 @@
 		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
 	</div>
 
+	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
+	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
 	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 판매 중인 상품이 없어요.<br>발행 대기 초안을 <b>바로 올리기</b>하면 여기 나와요.
+		아직 판매 중인 상품이 없어요
 	</div>
 
 	<ul>
@@ -134,7 +136,7 @@
 				</form>
 				<a th:href="@{/store/products/{id}/edit(id=${item.id})}" class="btn btn--sm btn--outline">수정</a>
 				<form th:action="@{/store/products/{id}/delete(id=${item.id})}" method="post"
-				      onsubmit="return confirm('이 상품을 삭제할까요? 되돌릴 수 없어요.')">
+				      data-confirm="이 상품을 삭제할까요? 되돌릴 수 없어요.">
 					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
 				</form>
 			</div>

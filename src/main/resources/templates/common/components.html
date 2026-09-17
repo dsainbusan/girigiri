@@ -61,7 +61,7 @@
       <!--/* 강노은: 찜하기 버튼. data-like-btn은 app.js가 전역으로 위임 처리(클릭 시 부모 <a> 이동 막고 토글). */-->
       <button type="button" class="store-card__like" data-like-btn
               th:classappend="${store.liked} ? ' is-liked'"
-              th:attr="data-store-id=${store.storeId}">&hearts;</button>
+              th:attr="data-store-id=${store.storeId}"><svg class="icon"><use href="#i-heart"/></svg></button>
     </span>
     <!--/* 강노은: distance는 사용자 위치 권한을 받았을 때만 채워진다. 없으면(빈 문자열) " · "가
          덩그러니 남지 않도록 구분자 자체를 생략한다. */-->

@@ -26,7 +26,9 @@
 							<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
 						</span>
 					</div>
-					<div style="color:var(--c-accent);font-size:13px;margin-top:2px" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
+					<div class="u-row" style="gap:1px;margin-top:2px">
+						<svg class="icon" th:each="i : ${#numbers.sequence(1,5)}" th:classappend="${i > r.rating} ? ' icon--dim'" style="width:13px;height:13px;color:var(--c-accent)"><use href="#i-star"/></svg>
+					</div>
 					<p style="font-size:13px;margin-top:4px" th:text="${r.content}">리뷰 내용</p>
 					<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
 					     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
@@ -39,7 +41,7 @@
 					        th:attr="id=${'my-review-edit-btn-' + r.id},data-toggle-target=${'my-review-edit-' + r.id}"
 					        style="padding:4px 12px;font-size:12px">수정</button>
 					<form th:action="@{/user/stores/{id}/reviews/{reviewId}/delete(id=${r.storeId}, reviewId=${r.id})}"
-					      method="post" onsubmit="return confirm('리뷰를 삭제할까요?')">
+					      method="post" data-confirm="리뷰를 삭제할까요?">
 						<!--/* 강노은: 처리 후 가게 상세로 안 보내고 이 페이지로 돌아오게. */-->
 						<input type="hidden" name="returnTo" value="/user/reviews/my">
 						<button type="submit" class="btn btn--outline"
@@ -54,7 +56,7 @@
 				<div class="card" style="margin-top:10px"
 				     th:attr="id=${'my-review-edit-' + r.id},data-reopen-btn=${'my-review-edit-btn-' + r.id}" hidden>
 					<form th:action="@{/user/stores/{id}/reviews(id=${r.storeId})}" method="post" enctype="multipart/form-data"
-					      onsubmit="return confirm('리뷰를 수정하시겠습니까?')">
+					      data-confirm="리뷰를 수정하시겠습니까?">
 						<!--/* 강노은: 처리 후 가게 상세로 안 보내고 이 페이지로 돌아오게. */-->
 						<input type="hidden" name="returnTo" value="/user/reviews/my">
 						<div class="star-input">
@@ -81,7 +83,7 @@
 							     th:hidden="${r.imageUrl == null or #strings.isEmpty(r.imageUrl)}">
 								<img data-photo-preview-img th:src="${r.imageUrl}" class="review-upload__preview-img" alt="현재 등록된 리뷰 사진">
 								<span class="review-upload__filename" data-photo-filename>현재 등록된 사진</span>
-								<button type="button" class="review-upload__remove" data-photo-remove aria-label="사진 제거">✕ 제거</button>
+								<button type="button" class="review-upload__remove" data-photo-remove aria-label="사진 제거"><svg class="icon" style="width:13px;height:13px"><use href="#i-close"/></svg> 제거</button>
 							</div>
 						</div>
 						<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 · 새 사진을 고르면 기존 사진 대신 저장돼요</p>

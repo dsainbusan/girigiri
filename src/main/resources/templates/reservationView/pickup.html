@@ -259,7 +259,7 @@
 
 			function startScanning() {
 				if (typeof Html5Qrcode === 'undefined') {
-					alert('QR 스캔 기능을 불러오지 못했어요 (인터넷 연결 확인). 코드를 직접 입력해주세요.');
+					window.girigiriAlert('QR 스캔 기능을 불러오지 못했어요 (인터넷 연결 확인). 코드를 직접 입력해주세요.');
 					return;
 				}
 				readerDiv.style.display = 'block';
@@ -277,7 +277,7 @@
 					readerDiv.style.display = 'none';
 					console.error('QR 스캔 카메라 시작 실패:', err);
 					var reason = (err && err.name) ? err.name : String(err);
-					alert('카메라를 사용할 수 없어요.\n원인 코드: ' + reason + '\n코드를 직접 입력해주세요.');
+					window.girigiriAlert('카메라를 사용할 수 없어요. 원인 코드: ' + reason + '. 코드를 직접 입력해주세요.');
 				});
 			}
 

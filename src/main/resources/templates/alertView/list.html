@@ -6,7 +6,7 @@
 
 	<div class="u-row" style="justify-content:space-between">
 		<h1 style="font-size:18px">알림</h1>
-		<a th:href="@{/user/alerts/settings}" class="u-mut" style="font-size:12px;text-decoration:none">⚙ 알림 설정</a>
+		<a th:href="@{/user/alerts/settings}" class="u-mut" style="font-size:12px;text-decoration:none"><svg class="icon" style="width:12px;height:12px"><use href="#i-settings"/></svg> 알림 설정</a>
 	</div>
 
 	<form th:if="${unreadCount} > 0" th:action="@{/user/alerts/read-all}" method="post" style="margin-top:8px">
@@ -30,7 +30,7 @@
 			<span th:if="${!n.read}" style="width:8px;height:8px;border-radius:999px;background:var(--c-danger);flex:0 0 auto"></span>
 		</a>
 		<div th:if="${#lists.isEmpty(notifications)}" class="support-empty">
-			<span class="support-empty__ico">🔔</span>
+			<span class="support-empty__ico"><svg class="icon"><use href="#i-bell"/></svg></span>
 			<p class="support-empty__text">아직 알림이 없어요</p>
 		</div>
 	</div>
@@ -48,7 +48,7 @@
 				banner.href = '/user/alerts';
 				banner.className = 'banner';
 				banner.style.cssText = 'display:flex;margin-top:10px;text-decoration:none';
-				banner.innerHTML = '<span style="font-size:16px">🔔</span>'
+				banner.innerHTML = '<svg class="icon" style="width:16px;height:16px"><use href="#i-bell"></use></svg>'
 					+ '<div><div class="banner__title">새 알림이 도착했어요</div>'
 					+ '<div class="banner__desc">눌러서 새로고침</div></div>';
 				var content = document.getElementById('content');

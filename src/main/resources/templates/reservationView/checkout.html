@@ -111,7 +111,7 @@
 		일단 이 화면 안에서만 쓰는 걸로 만들었다 — 나중에 공용 모달이 생기면 그걸로 바꿔도 된다. -->
 	<div id="cancel-notice-modal" class="modal-overlay" th:if="${!soldOut and canOrder}" style="display:none">
 		<div class="modal-box">
-			<p class="modal-box__icon">⚠️</p>
+			<div class="modal-box__icon"><svg class="icon"><use href="#i-warning"/></svg></div>
 			<p class="modal-box__title">결제 전에 확인해주세요</p>
 			<p class="modal-box__desc">결제 후 <strong th:text="${cancelWindowMinutes}">30</strong>분 이내에만 취소할 수 있어요.<br>신중하게 결제해주세요.</p>
 			<div class="modal-box__actions">
@@ -182,7 +182,7 @@
 		async function startPayment() {
 			var portOneConfigured = /*[[${portOneConfigured}]]*/ false;
 			if (!portOneConfigured) {
-				alert('결제 시스템이 아직 준비중이에요. 잠시 후 다시 시도해주세요.');
+				window.girigiriAlert('결제 시스템이 아직 준비중이에요. 잠시 후 다시 시도해주세요.');
 				return;
 			}
 
@@ -220,7 +220,7 @@
 				// releasePending을 부를 필요가 없다 — prepared를 null로 되돌려서 catch 블록에서도
 				// 잘못 releasePending을 호출하지 않게 한다.
 				if (!prepared.success) {
-					alert(prepared.message || '예약 준비에 실패했어요.');
+					window.girigiriAlert(prepared.message || '예약 준비에 실패했어요.');
 					prepared = null;
 					return;
 				}
@@ -243,7 +243,7 @@
 				// 스케줄러가 정리해줄 때까지(최대 15분+) 재고를 계속 붙잡고 있었다("결제 안 했는데
 				// 남은 수량이 안 돌아온다" 피드백). 실패를 확인한 이 순간 바로 release 요청을 보낸다.
 				if (paymentResponse && paymentResponse.code != null) {
-					alert(paymentResponse.message || '결제가 취소됐어요.');
+					window.girigiriAlert(paymentResponse.message || '결제가 취소됐어요.');
 					await releasePending(prepared.reservationId);
 					return;
 				}
@@ -260,7 +260,7 @@
 				} else {
 					// 이 실패 케이스(결제 검증 실패)는 서버가 confirmPayment() 안에서 이미 예약을
 					// cancelled로 바꾸고 재고도 복구해준다 — 여기서 또 releasePending을 부를 필요는 없다.
-					alert(confirmed.message || '결제 확인에 실패했어요. 다시 시도해주세요.');
+					window.girigiriAlert(confirmed.message || '결제 확인에 실패했어요. 다시 시도해주세요.');
 				}
 			} catch (err) {
 				// prepare까지는 성공해서(prepared가 채워짐) 재고가 이미 차감된 상태인데 그 이후
@@ -268,7 +268,7 @@
 				if (prepared) {
 					await releasePending(prepared.reservationId);
 				}
-				alert('결제 처리 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.');
+				window.girigiriAlert('결제 처리 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.');
 			}
 		}
 

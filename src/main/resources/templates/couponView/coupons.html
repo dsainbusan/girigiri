@@ -12,8 +12,9 @@
 
 	<a th:href="@{/coupons/claim}" class="btn btn--block" style="margin-bottom: var(--s-4)">코드로 쿠폰 받기</a>
 
+	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로 압축. -->
 	<div th:if="${#lists.isEmpty(coupons)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 쿠폰이 없어요.<br>가입하면 웰컴 쿠폰이 자동으로 들어와요.
+		아직 쿠폰이 없어요 · 가입 시 웰컴 쿠폰이 자동 지급돼요
 	</div>
 
 	<ul>

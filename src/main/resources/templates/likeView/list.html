@@ -16,7 +16,7 @@
 				<span class="store-card__top">
 					<span class="store-card__name" th:text="${s.name}">가게명</span>
 					<button type="button" class="store-card__like is-liked" data-like-btn
-					        th:attr="data-store-id=${s.storeId}">&hearts;</button>
+					        th:attr="data-store-id=${s.storeId}"><svg class="icon"><use href="#i-heart"/></svg></button>
 				</span>
 				<span class="store-card__meta" th:text="${s.category}">카테고리</span>
 				<span th:if="${s.onSale}" class="price" style="margin-top:2px">

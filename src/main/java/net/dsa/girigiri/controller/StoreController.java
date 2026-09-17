@@ -103,6 +103,7 @@ public class StoreController {
 		model.addAttribute("reservedNotPickedCount", stats.reservedNotPickedCount());
 		model.addAttribute("idleCount", stats.idleCount());
 		model.addAttribute("isClosed", stats.isClosed());
+		model.addAttribute("hoursConfigured", stats.hoursConfigured());
 		model.addAttribute("closingCountdownLabel", stats.closingCountdownLabel());
 		model.addAttribute("donutPickedPct", stats.donutPickedPct());
 		model.addAttribute("donutReservedCumPct", stats.donutReservedCumPct());

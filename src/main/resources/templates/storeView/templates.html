@@ -22,8 +22,10 @@
 
 	<a th:href="@{/store/templates/new}" class="btn btn--block" style="margin-bottom: var(--s-4)">+ 템플릿 추가</a>
 
+	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 위 안내문(13행)·POS 안내 카드·"+ 템플릿 추가"
+	     버튼에서 이미 개념을 두 번 설명했는데, 빈 상태에서 세 줄로 또 설명하고 있었다. -->
 	<div th:if="${#lists.isEmpty(templates)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 템플릿이 없어요.<br>자주 내놓는 마감 상품을 템플릿으로 만들면<br>매일 알림만 확인하면 돼요.
+		아직 템플릿이 없어요
 	</div>
 
 	<ul>
@@ -52,7 +54,7 @@
 					<button type="submit" class="btn btn--sm btn--outline" th:text="${t.active} ? '끄기' : '켜기'">끄기</button>
 				</form>
 				<form th:action="@{/store/templates/{id}/delete(id=${t.id})}" method="post"
-				      onsubmit="return confirm('이 템플릿을 삭제할까요?')">
+				      data-confirm="이 템플릿을 삭제할까요?">
 					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
 				</form>
 			</div>

@@ -9,35 +9,37 @@
      나눠 그린다 — layout()의 6개 인자 시그니처(active만 넘김)는 그대로 유지해서 기존 30여개
      호출부를 건드릴 필요가 없게 했다. */-->
 <nav th:fragment="bottomNav(active)" class="bottomnav">
+  <!-- 아이콘 교체 (2026-09-16, 디자인 리팩토링) — 유니코드 기호(■📦🔔◐⌂♥▤ 등)를 SVG 아이콘으로.
+       모든 화면에서 반복되는 자리라 레버리지가 가장 큰 교체 지점. -->
   <th:block th:if="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner'}">
     <a class="bottomnav__item" th:classappend="${active=='dashboard'} ? ' is-active'" th:href="@{/store/dashboard}">
-      <span class="bottomnav__ico">&#9632;</span><span>대시보드</span>
+      <svg class="icon bottomnav__ico"><use href="#i-dashboard"/></svg><span>대시보드</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='products'} ? ' is-active'" th:href="@{/store/products}">
-      <span class="bottomnav__ico">&#128230;</span><span>재고관리</span>
+      <svg class="icon bottomnav__ico"><use href="#i-box"/></svg><span>재고관리</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='incoming'} ? ' is-active'" th:href="@{/reservation/incoming}">
-      <span class="bottomnav__ico">&#128276;</span><span>예약확인</span>
+      <svg class="icon bottomnav__ico"><use href="#i-bell"/></svg><span>예약확인</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='my-owner'} ? ' is-active'" th:href="@{/mypage}">
-      <span class="bottomnav__ico">&#9680;</span><span>마이</span>
+      <svg class="icon bottomnav__ico"><use href="#i-user"/></svg><span>마이</span>
     </a>
   </th:block>
   <th:block th:unless="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner'}">
     <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/}">
-      <span class="bottomnav__ico">&#8962;</span><span>홈</span>
+      <svg class="icon bottomnav__ico"><use href="#i-home"/></svg><span>홈</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='like'}   ? ' is-active'" th:href="@{/user/likes}">
-      <span class="bottomnav__ico">&hearts;</span><span>찜</span>
+      <svg class="icon bottomnav__ico"><use href="#i-heart"/></svg><span>찜</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='ledger'} ? ' is-active'" th:href="@{/user/ledger}">
-      <span class="bottomnav__ico">&#9636;</span><span>가계부</span>
+      <svg class="icon bottomnav__ico"><use href="#i-ledger"/></svg><span>가계부</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='alert'}  ? ' is-active'" th:href="@{/user/alerts}">
-      <span class="bottomnav__ico">&#128276;</span><span>알림</span>
+      <svg class="icon bottomnav__ico"><use href="#i-bell"/></svg><span>알림</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='my'}     ? ' is-active'" th:href="@{/mypage}">
-      <span class="bottomnav__ico">&#9680;</span><span>마이</span>
+      <svg class="icon bottomnav__ico"><use href="#i-user"/></svg><span>마이</span>
     </a>
   </th:block>
 </nav>

@@ -88,7 +88,7 @@
 	</form>
 
 	<form th:if="${mode == 'edit'}" th:action="@{/store/templates/{id}/delete(id=${template.id})}" method="post"
-	      onsubmit="return confirm('이 템플릿을 삭제할까요? 이미 발행된 상품은 그대로 남아요.')" style="margin-top: var(--s-3)">
+	      data-confirm="이 템플릿을 삭제할까요? 이미 발행된 상품은 그대로 남아요." style="margin-top: var(--s-3)">
 		<button type="submit" class="btn btn--block btn--outline stock-item__del">템플릿 삭제</button>
 	</form>
 

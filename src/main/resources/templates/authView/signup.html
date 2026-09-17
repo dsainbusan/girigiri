@@ -149,7 +149,7 @@
 	<!--/* 부가정보를 안 채우면 이 화면을 벗어날 수 없다(ProfileCompletionInterceptor).
 	     "나가기" 또는 상단 뒤로가기 = 가입 취소: 방금 만든 미완성 계정을 삭제하고 홈으로 (아직 약관 동의 전). */-->
 	<form id="cancel-signup-form" th:action="@{/auth/signup/cancel}" method="post" class="u-center" style="margin-top: var(--s-4)"
-	      onsubmit="return confirm('가입을 취소하고 나가시겠어요? 지금까지 입력한 정보와 방금 만든 계정이 삭제됩니다.');">
+	      data-confirm="가입을 취소하고 나가시겠어요? 지금까지 입력한 정보와 방금 만든 계정이 삭제됩니다.">
 		<button type="submit" class="btn btn--sm u-mut"
 		        style="background: none; border: none; text-decoration: underline; font-size: var(--fs-sm)">
 			가입을 완료하지 않고 나가기
@@ -164,9 +164,9 @@
 			if (!back || !form) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () {
-				if (confirm('가입을 취소하고 나가시겠어요? 지금까지 입력한 정보와 방금 만든 계정이 삭제됩니다.')) {
-					form.submit();   // submit()은 onsubmit을 안 타므로 confirm 중복 없음
-				}
+				window.girigiriConfirm('가입을 취소하고 나가시겠어요? 지금까지 입력한 정보와 방금 만든 계정이 삭제됩니다.', function () {
+					form.submit();   // submit()은 submit 이벤트를 안 타므로 위 data-confirm 모달과 중복 없음
+				});
 			});
 		})();
 	</script>
