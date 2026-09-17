@@ -8,9 +8,11 @@ html, body { margin: 0; padding: 0; }
 body {
   font-family: var(--font-base);
   font-size: var(--fs-md);
-  /* 변경됨 (2026-09-16, 디자인 리팩토링) — 전체 글자 굵기를 기본(regular/400)보다 한 단계
-     굵게(medium/500) — 톤을 크게 안 바꾸면서 화면이 좀 더 또렷하고 밀도 있게 보이도록. */
-  font-weight: var(--fw-medium);
+  /* 변경됨 (2026-09-16 → 2026-09-17, 디자인 리팩토링) — 전체 글자 굵기를 기본(regular/400)에서
+     medium(500)으로 한 번 올렸다가, "전체적으로 한 단계 더 업" 요청으로 semibold(600)까지 한 단계
+     더 올렸다. bold(700)/black(900)은 제목·강조에 이미 많이 쓰이고 있어서 본문까지 그 단계로
+     올리면 제목과 구분이 안 될 정도로 뭉개진다 — 그 사이 단계로 새로 추가한 --fw-semibold 사용. */
+  font-weight: var(--fw-semibold);
   color: var(--c-text);
   background: var(--c-bg);
   line-height: 1.5;

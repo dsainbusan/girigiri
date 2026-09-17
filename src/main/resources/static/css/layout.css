@@ -64,6 +64,22 @@
 .topbar__spacer{ flex: 1 1 auto; }
 .topbar__action{ font-size: 18px; color: var(--c-text-sub); }
 
+/* 홈 상단바의 비회원용 로그인 버튼 (2026-09-17 추가) — common/header.html topbarHome 참고 */
+.topbar__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #fff;
+  background: var(--c-primary);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.topbar__cta:active { filter: brightness(.94); }
+
 /* 상단바 모드 전환 버튼 (유저 모드 ↔ 점주 모드) */
 .topbar__mode-form {
   margin: 0;

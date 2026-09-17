@@ -73,10 +73,11 @@
   --fs-xl:  22px;
   --fs-2xl: 28px;
   --fs-3xl: 36px;
-  --fw-regular: 400;
-  --fw-medium:  500;
-  --fw-bold:    700;
-  --fw-black:   900;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+  --fw-black:    900;
 
   /* ---------- Layout ---------- */
   --app-max:     420px;   /* 모바일 고정폭 */
