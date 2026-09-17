@@ -8,6 +8,7 @@ import net.dsa.girigiri.util.ReceiptPdfGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileOutputStream;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   여러 번 돌리면 결국 남은 수량이 바닥나서 OutOfStockException이 터지는 것도 확인해볼 수 있다.
  */
 @SpringBootTest
+@Transactional
 class ReservationComponentsTest {
 
 	@Autowired
@@ -121,13 +123,18 @@ class ReservationComponentsTest {
 		Long productId = 1L; // sample-data.sql 기준 "식빵 마감세트", 재고 4개로 시작
 
 		ProductEntity before = productRepository.findById(productId).orElseThrow();
-		System.out.println("차감 전 남은 수량: " + before.getRemainingQuantity());
+		int stockBefore = before.getRemainingQuantity();
+		System.out.println("차감 전 남은 수량: " + stockBefore);
 
 		stockService.decreaseStock(productId, 1);
 
 		ProductEntity after = productRepository.findById(productId).orElseThrow();
 		System.out.println("차감 후 남은 수량: " + after.getRemainingQuantity());
 
-		assertTrue(after.getRemainingQuantity() == before.getRemainingQuantity() - 1);
+		// 주의 (2026-09-17): before를 엔티티로 들고 있다가 바로 여기서 getRemainingQuantity()를 부르면
+		// @Transactional로 테스트 전체가 한 영속성 컨텍스트를 공유하는 지금 구조상 before와 after가
+		// 사실 같은 Hibernate 관리 객체(identity map)라서 before도 같이 변해버려 (X == X-1)이 되어
+		// 항상 false가 난다. before 값은 변경 전에 int로 미리 떼어둬야 안전하다.
+		assertTrue(after.getRemainingQuantity() == stockBefore - 1);
 	}
 }

@@ -15,6 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -54,6 +58,7 @@ import static org.mockito.Mockito.when;
  * 돌려줘서 NullPointerException이 난다.
  */
 @SpringBootTest
+@Transactional
 class ReservationCancelRulesTest {
 
 	@Autowired
@@ -70,6 +75,14 @@ class ReservationCancelRulesTest {
 
 	@MockitoBean
 	private PortOneClient portOneClient;
+
+	// 추가됨 (2026-09-17, 테스트 DB 공유 플레이키니스 수정) — 왜: 클래스 전체를 @Transactional로 감싸면서
+	// 테스트 메서드 하나가 영속성 컨텍스트(1차 캐시) 하나를 계속 들고 있게 됐다. jdbcTemplate로 DB를
+	// 직접 건드리는 건 이 영속성 컨텍스트를 거치지 않으므로, 그 뒤에 같은 id를 다시 조회하면 캐시에
+	// 남아있는 예전 값을 그대로 돌려받는다(실제 DB엔 반영됐지만 화면엔 안 보이는 셈). 아래
+	// 주문한지_30분_지난_예약은_취소할_수_없다()에서 이 문제를 피하려고 추가했다.
+	@PersistenceContext
+	private EntityManager entityManager;
 
 	/**
 	 * prepareReservation()+confirmPayment()를 목(mock) PortOne 결제 성공으로 이어붙여 confirmed 예약을 만든다.
@@ -140,6 +153,10 @@ class ReservationCancelRulesTest {
 		jdbcTemplate.update(
 				"UPDATE reservation SET reserved_at = ? WHERE id = ?",
 				LocalDateTime.now().minusMinutes(40), reservation.getId());
+
+		// jdbcTemplate 직접 수정은 영속성 컨텍스트가 모르는 변경이라, 캐시를 비워서 cancelReservation()이
+		// 방금 되돌린 reserved_at을 DB에서 새로 읽어오게 한다 (위 entityManager 필드 주석 참고).
+		entityManager.clear();
 
 		CancellationNotAllowedException e = assertThrows(CancellationNotAllowedException.class,
 				() -> reservationService.cancelReservation(reservation.getId()));

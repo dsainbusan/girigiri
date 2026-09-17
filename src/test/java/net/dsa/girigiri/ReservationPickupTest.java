@@ -6,6 +6,7 @@ import net.dsa.girigiri.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *      다시 처음부터 테스트하고 싶으면 sample-data.sql을 재실행해서 초기화하면 돼요.
  */
 @SpringBootTest
+@Transactional
 class ReservationPickupTest {
 
 	@Autowired
