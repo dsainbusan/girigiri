@@ -278,6 +278,28 @@
 }
 .seg-tabs--sub .seg-tab { padding: 6px 0; font-size: 12px; }
 
+/* 밑줄 스타일 하위 토글 (2026-09-17) — 현황/상세 토글(pill) 바로 아래 내역/분석/목표/뱃지 탭이
+   똑같은 pill 스타일이라 토글 2개가 겹쳐 보인다는 피드백. storeView 대시보드의 오늘/최근 7일
+   하위 토글(store.css .stat-toggle-tabs--underline)과 같은 방식으로, 배경/모서리를 없애고
+   밑줄로만 활성 상태를 표시해 상위 토글과 시각적으로 구분한다. */
+.seg-tabs--underline {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--c-line);
+  gap: 0;
+}
+.seg-tabs--underline .seg-tab {
+  border-radius: 0;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+}
+.seg-tabs--underline .seg-tab.is-active {
+  background: none;
+  box-shadow: none;
+  border-bottom-color: var(--c-primary);
+}
+
 .ledger-empty { padding: var(--s-6) 0; text-align: center; color: var(--c-text-mut); font-size: var(--fs-sm); }
 .ledger-empty.is-hidden { display: none; }
 

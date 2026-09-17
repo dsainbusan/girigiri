@@ -45,6 +45,48 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------- 밑줄 탭 (2026-09-17) — "요약/통계" 최상위 탭과 그 안의 "오늘/최근 7일" 하위 탭이
+   똑같은 pill 스타일로 바로 붙어있으니 "같은 걸 두 번 누르나?" 싶게 헷갈렸다는 피드백. 하위 탭에만
+   이 수정자 클래스를 얹어서 배경 없는 밑줄 스타일로 구분한다 — 상위 탭이 1차 네비게이션, 이건 그
+   안의 보조 컨트롤이라는 위계가 보이도록. 구조(.stat-toggle-tabs/.stat-toggle-tab/JS)는 그대로라
+   최상위 탭에서 재사용하던 토글 스크립트를 그대로 쓸 수 있다. */
+.stat-toggle-tabs--underline {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--c-line);
+  gap: 0;
+}
+.stat-toggle-tabs--underline .stat-toggle-tab {
+  border-radius: 0;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+}
+.stat-toggle-tabs--underline .stat-toggle-tab.is-active {
+  background: none;
+  box-shadow: none;
+  border-bottom-color: var(--c-primary);
+}
+
+/* ---------- 페이지네이션 (2026-09-17, 리뷰 관리) — 슈퍼어드민의 .pagination과 같은 구조·
+   클래스명이지만 이쪽 디자인 시스템 토큰으로 새로 정의한다(CSS 경계 규칙 — 서로 다른 파일이라
+   섞이지 않는다). ---------- */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: var(--s-4); }
+.pagination a {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  color: var(--c-text-sub);
+}
+.pagination a:hover { background: var(--c-bg); }
+.pagination a.is-active { background: var(--c-primary); color: #fff; font-weight: var(--fw-bold); }
+.pagination a.is-disabled { color: var(--c-line); pointer-events: none; }
+
 /* ---------- 2x2 핵심 지표 액션 카드 (클릭 가능 링크) ---------- */
 a.stat-card {
   text-decoration: none;

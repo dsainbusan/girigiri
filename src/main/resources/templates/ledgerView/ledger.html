@@ -50,7 +50,17 @@
 		<span class="ledger-badge-toast__hint">눌러서 뱃지 도감 보기 ›</span>
 	</div>
 
-	<!-- ===== 히어로 카드 (항상 보임) ===== -->
+	<!-- ===== 현황 / 상세 전환 (2026-09-17) — 히어로 카드 + 4개 탭이 세로로 쭉 이어져 스크롤이
+	     길어진다는 피드백으로, 최상단을 "현황"(히어로·환경 배너·내보내기)과 "상세"(내역/분석/목표/뱃지
+	     탭)로 나눴다. 기존 seg-tabs 메커니즘(그룹 단위로 동작)을 그대로 재사용한다. -->
+	<div class="seg-tabs">
+		<button type="button" class="seg-tab is-active" data-target="panel-summary">현황</button>
+		<button type="button" class="seg-tab" data-target="panel-detail">상세</button>
+	</div>
+
+	<div id="panel-summary" class="seg-panel">
+
+	<!-- ===== 히어로 카드 ===== -->
 	<div class="ledger-hero">
 		<div class="ledger-hero__top">
 			<span class="ledger-hero__label">이번 달 절약</span>
@@ -161,8 +171,15 @@
 		<a th:href="@{/user/ledger/csv}" class="btn btn--outline btn--sm ledger-export-btn">📑 CSV로 저장</a>
 	</div>
 
+	</div>
+	<!-- /panel-summary -->
+
+	<div id="panel-detail" class="seg-panel is-hidden">
+
 	<!-- ===== 탭 전환 ===== -->
-	<div class="seg-tabs">
+	<!-- seg-tabs--underline (2026-09-17) — 바로 위 현황/상세 토글과 똑같은 pill 스타일이라 겹쳐
+	     보인다는 피드백으로, storeView 대시보드의 오늘/최근 7일 하위 토글과 같은 밑줄 스타일로 교체. -->
+	<div class="seg-tabs seg-tabs--underline">
 		<button type="button" class="seg-tab is-active" data-target="panel-history">내역</button>
 		<button type="button" class="seg-tab" data-target="panel-category">분석</button>
 		<button type="button" class="seg-tab" data-target="panel-goal">목표</button>
@@ -403,6 +420,9 @@
 		</div>
 	</div>
 
+	</div>
+	<!-- /panel-detail -->
+
 	<!-- ===== 뱃지 도감 전체보기 모달 팝업 (바텀시트) ===== -->
 	<div id="badge-modal" class="ledger-modal-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="badge-modal-title">
 		<div class="ledger-modal-sheet">
@@ -636,12 +656,22 @@
 				});
 			});
 
+			// 현황/상세 토글이 생기면서(2026-09-17), 상세 쪽 하위 탭(목표/뱃지/내역/분석)으로 바로
+			// 이동하는 모든 경로가 먼저 "상세" 섹션 자체를 펼쳐야 한다 — 안 그러면 하위 탭은 전환되지만
+			// 부모인 panel-detail이 여전히 숨겨져 있어 화면엔 아무 변화가 없어 보인다.
+			function showDetailSection() {
+				var detailTab = document.querySelector('.seg-tab[data-target="panel-detail"]');
+				if (detailTab && !detailTab.classList.contains('is-active')) { detailTab.click(); }
+			}
+
 			var params = new URLSearchParams(location.search);
 			var targetTab = params.get('tab');
 			if (targetTab === 'goal') {
+				showDetailSection();
 				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
 				if (goalTab) { goalTab.click(); }
 			} else if (targetTab === 'badge') {
+				showDetailSection();
 				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
 				if (badgeTab) { badgeTab.click(); }
 			}
@@ -656,6 +686,7 @@
 			var heroGoalBtn = document.getElementById('hero-goal-btn');
 			var goalInput = document.getElementById('goalAmount');
 			function jumpToGoalTab() {
+				showDetailSection();
 				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
 				if (goalTab) { goalTab.click(); }
 				if (goalInput) {
@@ -676,6 +707,7 @@
 			// 히어로 카드의 대표 뱃지 칩 — 눌러서 "뱃지" 탭으로 이동 + 그 위치로 스크롤.
 			var heroBadgeChip = document.getElementById('hero-badge-chip');
 			function jumpToBadgeTab() {
+				showDetailSection();
 				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
 				if (badgeTab) { badgeTab.click(); }
 				var badgePanel = document.getElementById('panel-badge');
@@ -693,12 +725,14 @@
 
 			// 히어로 카드의 이번 달 절약/누적 절약/절약률 — 각각 관련 탭으로 바로 이동.
 			function jumpToHistoryTab() {
+				showDetailSection();
 				var tab = document.querySelector('.seg-tab[data-target="panel-history"]');
 				if (tab) { tab.click(); }
 				var panel = document.getElementById('panel-history');
 				if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 			}
 			function jumpToCategoryTab() {
+				showDetailSection();
 				var tab = document.querySelector('.seg-tab[data-target="panel-category"]');
 				if (tab) { tab.click(); }
 				var panel = document.getElementById('panel-category');

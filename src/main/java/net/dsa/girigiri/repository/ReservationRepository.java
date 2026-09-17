@@ -86,6 +86,11 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// (ReviewService#canWriteReview). status="picked"로 호출.
 	boolean existsByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
 
+	// 추가됨 (문창호, 2026-09-17) — 왜: 사장님이 리뷰 작성자 닉네임을 눌렀을 때 "이 손님이 우리
+	// 매장에서 몇 번 픽업했는지" 보여주기 위해(StoreReviewService). existsBy...는 있는데 정확한
+	// 횟수가 필요해서 count로 하나 추가한다.
+	long countByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
+
 	// 매장 정산 집계용 (SettlementService, 문창호 2026-08-31) — 그 매장의 전체 예약 → 결제 조인
 	List<ReservationEntity> findByStoreId(Long storeId);
 

@@ -16,6 +16,12 @@
 	생기면서, 화면 맨 아래 로그아웃 버튼을 없앴다. 매출 리포트 버튼 바로 밑에 있어서 실수로
 	로그아웃될 위험이 있었는데(지적된 항목), "마이" 탭 → 마이페이지에 이미 로그아웃 버튼이
 	있으니 여기 중복으로 둘 이유가 없어졌다.
+
+	변경됨 (2026-09-17) — 왜: 화면이 세로로 너무 길다는 피드백. 처리할 일 배너·영업 상태는 늘 보이게
+	위에 두고, 그 아래를 "요약"(핵심지표 4개·정산·리뷰관리·주문픽업 바로가기 — 다른 화면으로 가는
+	진입점 모음)과 "통계"(오늘/최근7일 토글 카드 — 숫자를 들여다보는 화면)로 최상위 탭 하나 더
+	나눴다. 안에 있던 "오늘 ↔ 최근 7일" 토글과 같은 .stat-toggle-tabs 컴포넌트를 그대로 재사용 —
+	이미 여러 그룹을 각자 독립적으로 처리하도록 짜여 있어서(아래 스크립트) JS는 안 건드려도 된다.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
@@ -48,6 +54,14 @@
 		<span class="pill" th:classappend="${!isClosed} ? ' pill--done' : ''"
 		      th:text="${!isClosed ? '🟢 영업중' : '영업 마감'}">영업중</span>
 	</div>
+
+	<!-- 요약 / 통계 최상위 탭 -->
+	<div class="stat-toggle-tabs">
+		<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">요약</button>
+		<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계</button>
+	</div>
+
+	<div id="panel-overview" class="stat-panel">
 
 	<!-- 핵심 지표 2x2 — 4대 주요 업무 바로가기 액션 카드 -->
 	<div class="stat-grid">
@@ -111,30 +125,18 @@
 		<span class="u-mut" style="font-size: 18px; font-weight: var(--fw-bold);">›</span>
 	</a>
 
-	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
-	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
-		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
-			<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);">주문 · 픽업 바로가기</span>
-			<a th:href="@{/reservation/settings}" class="u-sub" style="font-size: var(--fs-xs);"><svg class="icon" style="width:12px;height:12px"><use href="#i-settings"/></svg> 주문 마감 설정</a>
-		</div>
-		<div class="u-row" style="gap: var(--s-2)">
-			<a th:href="@{/reservation/incoming}" class="btn btn--primary btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 확인</span>
-				<span th:if="${incomingReservationCount > 0}" class="badge" style="background: var(--c-accent); color: #fff; margin-left: 4px;" th:text="${incomingReservationCount}">2</span>
-			</a>
-			<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-camera"/></svg> QR 픽업 확인</span>
-			</a>
-		</div>
-		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-2); font-size: var(--fs-xs);">
-			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역 ›</a>
-			<a th:href="@{/reservation/store-cancel}" class="u-sub u-danger">매장 취소 ›</a>
-		</div>
+	<!-- 2026-09-17 — "주문·픽업 바로가기" 카드 삭제. "새 예약 확인"은 위 "픽업 예약" 지표카드 및
+		처리할 일 배너(새 예약 N건)와 완전히 중복, QR 픽업 확인/완료된 거래 내역/매장 취소는
+		/reservation/incoming 상단 유틸리티 카드로 옮겼다 — 잃는 기능 없음. -->
+
 	</div>
+	<!-- /panel-overview -->
 
 	<!-- ============ 현황 (오늘 ↔ 최근 7일 토글) ============ -->
+	<div id="panel-stats" class="stat-panel is-hidden">
 	<div class="card" style="margin-top: var(--s-3)">
-		<div class="stat-toggle-tabs">
+		<!-- 밑줄 스타일(--underline) — 바로 위 "요약/통계" pill 탭과 구분되게 (2026-09-17) -->
+		<div class="stat-toggle-tabs stat-toggle-tabs--underline">
 			<button type="button" class="stat-toggle-tab is-active" data-target="panel-today">오늘</button>
 			<button type="button" class="stat-toggle-tab" data-target="panel-weekly">최근 7일</button>
 		</div>
@@ -302,6 +304,8 @@
 			</a>
 		</div>
 	</div>
+	</div>
+	<!-- /panel-stats -->
 
 	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
 	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
