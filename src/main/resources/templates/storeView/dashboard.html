@@ -125,26 +125,9 @@
 		<span class="u-mut" style="font-size: 18px; font-weight: var(--fw-bold);">›</span>
 	</a>
 
-	<!-- ============ 주문 · 픽업 바로가기 (슬림 퀵 액션) ============ -->
-	<div class="card" style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4);">
-		<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-2);">
-			<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub);">주문 · 픽업 바로가기</span>
-			<a th:href="@{/reservation/settings}" class="u-sub" style="font-size: var(--fs-xs);"><svg class="icon" style="width:12px;height:12px"><use href="#i-settings"/></svg> 주문 마감 설정</a>
-		</div>
-		<div class="u-row" style="gap: var(--s-2)">
-			<a th:href="@{/reservation/incoming}" class="btn btn--primary btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 확인</span>
-				<span th:if="${incomingReservationCount > 0}" class="badge" style="background: var(--c-accent); color: #fff; margin-left: 4px;" th:text="${incomingReservationCount}">2</span>
-			</a>
-			<a th:href="@{/reservation/pickup}" class="btn btn--outline btn--block" style="font-size: var(--fs-sm); padding: 9px 0;">
-				<span><svg class="icon" style="width:15px;height:15px"><use href="#i-camera"/></svg> QR 픽업 확인</span>
-			</a>
-		</div>
-		<div class="u-row" style="justify-content: space-between; margin-top: var(--s-2); font-size: var(--fs-xs);">
-			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역 ›</a>
-			<a th:href="@{/reservation/store-cancel}" class="u-sub u-danger">매장 취소 ›</a>
-		</div>
-	</div>
+	<!-- 2026-09-17 — "주문·픽업 바로가기" 카드 삭제. "새 예약 확인"은 위 "픽업 예약" 지표카드 및
+		처리할 일 배너(새 예약 N건)와 완전히 중복, QR 픽업 확인/완료된 거래 내역/매장 취소는
+		/reservation/incoming 상단 유틸리티 카드로 옮겼다 — 잃는 기능 없음. -->
 
 	</div>
 	<!-- /panel-overview -->

@@ -7,8 +7,18 @@
 		있는데 이 화면엔 그 스타일시트를 안 불러오고 있어서, 빠뜨렸던 걸 여기서 같이 고친다. -->
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
+	<!-- 변경됨 (2026-09-17) — 왜: 대시보드의 "주문·픽업 바로가기" 카드를 없애면서, 거기 있던
+		QR 픽업 확인/완료된 거래 내역/매장 취소를 여기 상단 유틸리티 카드로 옮겼다. QR 픽업 확인은
+		원래 아래 "픽업 대기중" 섹션에 항목이 있을 때만 조건부로 뜨는 버튼이 있었는데, 대시보드에
+		있던 것처럼 언제든 들어갈 수 있는 진입점도 필요해서 여기 추가한다(아래 조건부 버튼은 그대로
+		둠 — 픽업 대기중인 걸 알고 바로 들어가는 지름길로 남겨도 나쁘지 않아서). -->
 	<div class="card" style="margin-bottom:var(--s-3)">
 		<a th:href="@{/reservation/settings}" class="u-primary u-bold" style="font-size:var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> 주문 마감 설정 (준비시간 · 마감시간)</a>
+		<div class="u-row" style="justify-content:space-between; margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak); font-size:var(--fs-xs)">
+			<a th:href="@{/reservation/pickup}" class="u-sub">QR 픽업 확인 ›</a>
+			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역 ›</a>
+			<a th:href="@{/reservation/store-cancel}" class="u-sub u-danger">매장 취소 ›</a>
+		</div>
 	</div>
 
 	<!-- 추가됨 — 왜: 상단바 뒤로가기(common/header.html)는 공용 컴포넌트라 브라우저 history 기반으로
