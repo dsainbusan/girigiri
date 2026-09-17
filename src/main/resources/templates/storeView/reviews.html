@@ -97,6 +97,15 @@
 		</form>
 	</div>
 
+	<!-- 페이지네이션 (2026-09-17) — 리뷰가 쌓일수록 화면이 계속 길어진다는 피드백. 1페이지뿐이면
+	     굳이 안 보여준다. -->
+	<div class="pagination" th:if="${totalPages > 1}">
+		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/store/reviews(page=${page - 1})}">&lsaquo;</a>
+		<a th:each="p : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+		   th:text="${p + 1}" th:href="@{/store/reviews(page=${p})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/store/reviews(page=${page + 1})}">&rsaquo;</a>
+	</div>
+
 	<!-- 답글 입력창 자동 높이 조절 (2026-09-17) — 기본 textarea가 리사이즈 핸들로 한없이 커지는
 	     버그 수정. productForm.html의 상품 설명 입력칸과 같은 방식(js-autogrow, store.css에서
 	     resize:none + max-height:40vh 캡). 수정 폼은 처음엔 hidden이라 열릴 때(data-toggle-target

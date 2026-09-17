@@ -3,6 +3,7 @@ package net.dsa.girigiri.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.Badge;
+import net.dsa.girigiri.domain.dto.ReviewRowDto;
 import net.dsa.girigiri.domain.dto.ReviewerInfoDto;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.ReviewEntity;
@@ -40,6 +41,27 @@ public class StoreReviewService {
 	private final ReservationRepository reservationRepository;
 
 	private static final String RESERVATION_STATUS_PICKED = "picked";
+	// 추가됨 (2026-09-17) — 왜: 리뷰가 쌓일수록 화면이 세로로 한없이 길어진다는 피드백으로 페이지네이션
+	// 추가. 카드 하나가 답글 폼까지 포함해 꽤 크므로(테이블 행이 아니다) 슈퍼어드민 목록(10개)보다
+	// 작게 5개로 잡는다.
+	private static final int PAGE_SIZE = 5;
+
+	/** 화면에 그대로 넘기는 한 페이지 분량 — items(이번 페이지 리뷰)/page(0-base 현재 페이지)/totalPages. */
+	public record PagedReviews(List<ReviewRowDto> items, int page, int totalPages) {}
+
+	/**
+	 * 이미 다 불러온 리뷰 목록(ReviewService.getReviews, 강노은 담당)을 페이지 단위로 자른다.
+	 * 리뷰 개수가 이 프로젝트 규모에서 DB 레벨 페이징이 필요할 만큼 많지 않아서, 이미 메모리에 있는
+	 * 리스트를 그대로 자르는 쪽을 택했다 — Repository에 새 페이징 쿼리를 추가하지 않는다.
+	 */
+	public PagedReviews paginate(List<ReviewRowDto> all, int page) {
+		int totalPages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+		int safePage = Math.max(0, Math.min(page, totalPages - 1));
+		int from = safePage * PAGE_SIZE;
+		int to = Math.min(from + PAGE_SIZE, all.size());
+		List<ReviewRowDto> items = from >= all.size() ? List.of() : all.subList(from, to);
+		return new PagedReviews(items, safePage, totalPages);
+	}
 
 	@Transactional
 	public void reply(Long ownerId, Long reviewId, String content) {
