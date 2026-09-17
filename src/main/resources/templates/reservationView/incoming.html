@@ -16,11 +16,16 @@
 		있던 것처럼 언제든 들어갈 수 있는 진입점도 필요해서 여기 추가한다(아래 조건부 버튼은 그대로
 		둠 — 픽업 대기중인 걸 알고 바로 들어가는 지름길로 남겨도 나쁘지 않아서). -->
 	<div class="card" style="margin-bottom:var(--s-3)">
-		<a th:href="@{/reservation/settings}" class="u-primary u-bold" style="font-size:var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> 주문 마감 설정 (준비시간 · 마감시간)</a>
-		<div class="u-row" style="justify-content:space-between; margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak); font-size:var(--fs-xs)">
-			<a th:href="@{/reservation/pickup}" class="u-sub">QR 픽업 확인 ›</a>
-			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역 ›</a>
-			<a th:href="@{/reservation/store-cancel}" class="u-sub u-danger">매장 취소 ›</a>
+		<a th:href="@{/reservation/settings}" class="u-bold" style="font-size:var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> 주문 마감 설정 (준비시간 · 마감시간)</a>
+		<!-- 변경됨 (2026-09-17) — 3개를 justify-content:space-between으로 카드 양 끝까지 벌려놓으니
+			서로 관계없는 항목처럼 흩어져 보였다. 가운뎃점(·)으로 묶어 한 줄짜리 링크 목록처럼
+			왼쪽 정렬 — 시선이 한 곳에 모이고 "관련된 바로가기 모음"이라는 게 더 잘 읽힌다. -->
+		<div class="u-row" style="gap:var(--s-2); margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak); font-size:var(--fs-xs)">
+			<a th:href="@{/reservation/pickup}" class="u-sub">QR 픽업 확인</a>
+			<span class="u-mut">·</span>
+			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역</a>
+			<span class="u-mut">·</span>
+			<a th:href="@{/reservation/store-cancel}" class="u-danger">매장 취소</a>
 		</div>
 	</div>
 
