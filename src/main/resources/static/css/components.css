@@ -23,8 +23,8 @@
   padding: 15px var(--s-5);
   border-radius: var(--r-md);
   font-size: var(--fs-md);
-  font-weight: var(--fw-bold);
-  color: #fff;
+  font-weight: var(--fw-black);
+  color: var(--c-primary-on);
   background: var(--c-primary);
   transition: filter .15s ease;
 }
@@ -39,7 +39,9 @@
 .btn--google { background: var(--c-surface); color: var(--c-google-on); border: 1px solid var(--c-line); }
 .btn--line   { background: var(--c-line-brand); color: #fff; }
 .btn--sm     { padding: 8px var(--s-3); font-size: var(--fs-sm); border-radius: var(--r-sm); }
-.btn--ghost  { background: var(--c-bg); color: var(--c-text-sub); }
+/* 2026-09-17 리스킨 — background가 --c-bg(이제 크림)라 크림 배경 화면 위에서 버튼 경계가 안
+   보이던 문제 — 네이비 톤 테두리를 추가해 구분되게 한다. */
+.btn--ghost  { background: var(--c-bg); color: var(--c-text-sub); border: 1px solid var(--c-primary-border); }
 /* 추가됨 — 왜: 예약 취소 버튼이 화면마다 인라인 style="background:var(--c-danger)"로 따로
    처리돼 있어서 일부는 빨강, 일부는 기본색(초록)으로 제각각이었다. 공용 클래스로 빼서 재사용. */
 .btn--danger { background: var(--c-danger); }
@@ -56,6 +58,8 @@
 .card + .card { margin-top: var(--s-3); }
 
 /* ---------------- Chip (카테고리 필터 등) ---------------- */
+/* 2026-09-17 리스킨 — background가 --c-bg(크림)라 .app__main(이제 같은 크림) 위에서 경계가
+   안 보이던 문제 — 네이비 톤 테두리 추가. */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -64,10 +68,11 @@
   background: var(--c-bg);
   color: var(--c-text-sub);
   font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
+  border: 1px solid var(--c-line);
 }
-.chip.is-active { background: var(--c-primary); color: #fff; font-weight: var(--fw-bold); }
+.chip.is-active { background: var(--c-primary); color: var(--c-primary-on); font-weight: var(--fw-black); }
 .chip-row { display: flex; gap: var(--s-2); overflow-x: auto; }
 .chip-row::-webkit-scrollbar { display: none; }
 
@@ -157,7 +162,7 @@
 
 /* ---------------- Progress (목표 달성률) ---------------- */
 .progress { height: 14px; border-radius: var(--r-sm); background: var(--c-line-weak); overflow: hidden; }
-.progress__bar { height: 100%; border-radius: var(--r-sm); background: #22C55E; }
+.progress__bar { height: 100%; border-radius: var(--r-sm); background: var(--c-primary); }
 
 /* ---------------- Section title ---------------- */
 .section-title {
@@ -181,13 +186,15 @@
 .input:focus { outline: none; border-color: var(--c-primary); }
 .input::placeholder { color: var(--c-text-mut); }
 
-/* 검색창 */
+/* 검색창 — 2026-09-17 리스킨: background가 --c-bg(크림)라 .app__main 위에서 안 보이던 문제,
+   네이비 톤 테두리 추가. */
 .search {
   display: flex; align-items: center; gap: var(--s-2);
   padding: 12px var(--s-4);
   background: var(--c-bg);
   border-radius: var(--r-md);
   color: var(--c-text-mut);
+  border: 1px solid var(--c-line);
 }
 
 /* ---------------- List row (내역/예약) ---------------- */

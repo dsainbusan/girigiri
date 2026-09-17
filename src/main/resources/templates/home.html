@@ -18,14 +18,14 @@
 	<style>
 		#splash-screen{position:fixed;inset:0;z-index:999;overflow:hidden;background:linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
 		#splash-screen::before,#splash-screen::after{content:'';position:absolute;border-radius:50%;pointer-events:none;}
-		#splash-screen::before{width:260px;height:260px;top:-90px;right:-70px;background:radial-gradient(circle, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 70%);}
+		#splash-screen::before{width:260px;height:260px;top:-90px;right:-70px;background:radial-gradient(circle, rgba(249,240,227,.14) 0%, rgba(249,240,227,0) 70%);}
 		#splash-screen::after{width:220px;height:220px;bottom:-70px;left:-60px;background:radial-gradient(circle, rgba(0,0,0,.12) 0%, rgba(0,0,0,0) 70%);}
-		#splash-badge{position:relative;width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;margin-bottom:var(--s-4);box-shadow:0 12px 28px rgba(0,0,0,.18);animation:splash-pop .5s cubic-bezier(.34,1.56,.64,1) both;}
-		#splash-badge::before{content:'';position:absolute;inset:-14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);animation:splash-ping 1.8s ease-out infinite;}
-		#splash-badge svg{width:44px;height:44px;color:#fff;}
-		#splash-title{position:relative;color:#fff;font-size:27px;font-weight:900;margin:0;letter-spacing:-0.02em;opacity:0;animation:splash-rise .5s ease .15s forwards;}
-		#splash-desc{position:relative;color:rgba(255,255,255,.85);font-size:13px;margin-top:8px;opacity:0;animation:splash-rise .5s ease .3s forwards;}
-		#splash-cta{position:relative;display:inline-flex;align-items:center;gap:6px;margin-top:var(--s-6);padding:13px 26px;border-radius:999px;background:#fff;color:var(--c-primary-strong);font-size:var(--fs-md);font-weight:var(--fw-bold);box-shadow:0 8px 20px rgba(0,0,0,.16);opacity:0;animation:splash-rise .5s ease .45s forwards;transition:filter .15s ease;}
+		#splash-badge{position:relative;width:88px;height:88px;border-radius:50%;background:rgba(249,240,227,.16);display:flex;align-items:center;justify-content:center;margin-bottom:var(--s-4);box-shadow:0 12px 28px rgba(0,0,0,.18);animation:splash-pop .5s cubic-bezier(.34,1.56,.64,1) both;}
+		#splash-badge::before{content:'';position:absolute;inset:-14px;border-radius:50%;border:2px solid rgba(249,240,227,.35);animation:splash-ping 1.8s ease-out infinite;}
+		#splash-badge svg{width:44px;height:44px;color:var(--c-primary-weak);}
+		#splash-title{position:relative;color:var(--c-primary-weak);font-size:27px;font-weight:900;margin:0;letter-spacing:-0.02em;opacity:0;animation:splash-rise .5s ease .15s forwards;}
+		#splash-desc{position:relative;color:rgba(249,240,227,.85);font-size:13px;margin-top:8px;opacity:0;animation:splash-rise .5s ease .3s forwards;}
+		#splash-cta{position:relative;display:inline-flex;align-items:center;gap:6px;margin-top:var(--s-6);padding:13px 26px;border-radius:999px;background:var(--c-primary-weak);color:var(--c-primary-strong);font-size:var(--fs-md);font-weight:var(--fw-bold);box-shadow:0 8px 20px rgba(0,0,0,.16);opacity:0;animation:splash-rise .5s ease .45s forwards;transition:filter .15s ease;}
 		#splash-cta:active{filter:brightness(.95);}
 		#splash-cta svg{width:16px;height:16px;color:var(--c-primary-strong);}
 		@keyframes splash-pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
@@ -82,7 +82,7 @@
 	     참고. -->
 
 	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
-	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;"></div>
+	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;border:1px solid var(--c-line);"></div>
 
 	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)"><svg class="icon" style="width:16px;height:16px"><use href="#i-search"/></svg> <span>베이커리, 반찬, 도시락 검색</span></a>
 
@@ -204,14 +204,16 @@
 
 			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
 
-			// 커스텀 마커 (2026-09-16, 디자인 리팩토링) — 카카오맵 기본 빨간 물방울 핀 그대로 쓰고
-			// 있었다("지도 API 튜토리얼 그대로"인 느낌의 흔한 원인). 브랜드 그린(--c-primary: #15803D)
-			// 톤의 핀 모양 SVG를 data URI로 만들어 씀 — 이미지 파일을 새로 추가할 필요 없이 마커
-			// 하나로 재사용(store마다 새로 안 만듦).
+			// 커스텀 마커 (2026-09-16, 디자인 리팩토링 / 2026-09-17 네이비 리스킨) — 카카오맵 기본
+			// 빨간 물방울 핀 그대로 쓰고 있었다("지도 API 튜토리얼 그대로"인 느낌의 흔한 원인).
+			// 브랜드 컬러(--c-primary: #012A8C, 리스킨 전엔 그린 #15803D) 톤의 핀 모양 SVG를
+			// data URI로 만들어 씀 — 이미지 파일을 새로 추가할 필요 없이 마커 하나로 재사용
+			// (store마다 새로 안 만듦). CSS 변수를 못 쓰는 문맥(JS 문자열)이라 값이 하드코딩돼
+			// 있다 — tokens.css의 --c-primary를 바꾸면 여기도 같이 맞춰야 한다.
 			var markerImage = new kakao.maps.MarkerImage(
 				'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
 					'<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">' +
-					'<path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#15803D"/>' +
+					'<path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#012A8C"/>' +
 					'<circle cx="18" cy="18" r="7" fill="#fff"/>' +
 					'</svg>'
 				),

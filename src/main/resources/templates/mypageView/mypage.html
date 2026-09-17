@@ -14,7 +14,7 @@
 	<!-- 1. 프로필 헤더 카드 -->
 	<a th:href="@{/mypage/edit}" class="card" style="display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); text-decoration: none; color: inherit;">
 		<!-- 아바타 원형 (초록 배경 + 닉네임 첫 글자) -->
-		<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--c-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: var(--fw-black); flex-shrink: 0;">
+		<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--c-primary); color: var(--c-primary-on); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: var(--fw-black); flex-shrink: 0;">
 			<span th:text="${user != null and user.nickname != null ? #strings.substring(user.nickname, 0, 1) : 'G'}">송</span>
 		</div>
 
@@ -41,14 +41,14 @@
 	</a>
 
 	<!-- 2. 이번 달 절약 카드 (초록색 배너) -->
-	<div style="background: var(--c-primary); color: #fff; border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.15);">
+	<div style="background: var(--c-primary); color: var(--c-primary-on); border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(1, 42, 140, 0.15);">
 		<div>
 			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
 			<div style="font-size: 24px; font-weight: var(--fw-black); margin-top: 2px;">
 				<span th:text="${#numbers.formatInteger(monthlySavings ?: 0, 0, 'COMMA')}">0</span><span>원</span>
 			</div>
 		</div>
-		<a th:href="@{/user/ledger}" style="background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+		<a th:href="@{/user/ledger}" style="background: rgba(249, 240, 227, 0.2); color: var(--c-primary-weak); padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
 			가계부 &rsaquo;
 		</a>
 	</div>

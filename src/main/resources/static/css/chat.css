@@ -18,7 +18,7 @@
 	height: 52px;
 	border-radius: 50%;
 	background: var(--c-primary);
-	color: #fff;
+	color: var(--c-primary-on);
 	border: none;
 	font-size: 24px;
 	line-height: 1;
@@ -102,7 +102,7 @@
 .chat-bubble--user {
 	align-self: flex-end;
 	background: var(--c-primary);
-	color: #fff;
+	color: var(--c-primary-on);
 }
 
 /* 빠른 질문(퀵 리플라이) 버튼 줄 (2026-09-15 추가) — 메시지 목록과 입력창 사이, 가로 스크롤 */
@@ -182,7 +182,7 @@
 
 .chat-panel__send-btn {
 	background: var(--c-primary);
-	color: #fff;
+	color: var(--c-primary-on);
 	border: none;
 	border-radius: var(--r-pill);
 	padding: 10px 16px;

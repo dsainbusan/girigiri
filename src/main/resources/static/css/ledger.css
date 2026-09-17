@@ -183,14 +183,14 @@
 .ledger-bar-chart__tooltip {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(4px);
   font-size: 10px; font-weight: var(--fw-bold); padding: 3px 6px; margin-bottom: 6px;
-  border-radius: var(--r-sm); background: #1f2937; color: #fff;
+  border-radius: var(--r-sm); background: var(--c-dark); color: var(--c-primary-weak);
   box-shadow: 0 3px 8px rgba(0,0,0,.2);
   white-space: nowrap; pointer-events: none; opacity: 0;
   transition: opacity .15s ease, transform .15s ease; z-index: 10;
 }
 .ledger-bar-chart__tooltip::after {
   content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  border-width: 3px; border-style: solid; border-color: #1f2937 transparent transparent transparent;
+  border-width: 3px; border-style: solid; border-color: var(--c-dark) transparent transparent transparent;
 }
 .ledger-bar-chart__col:hover .ledger-bar-chart__tooltip,
 .ledger-bar-chart__col:focus-visible .ledger-bar-chart__tooltip {
@@ -203,14 +203,14 @@
   border: 1px solid transparent;
 }
 .ledger-bar-chart__col.is-current .ledger-bar-chart__track {
-  border-color: var(--c-primary-border); background: #f0fdf4;
+  border-color: var(--c-primary-border); background: var(--c-primary-weak);
 }
 .ledger-bar-chart__fill {
   width: 100%; min-height: 2px; background: var(--c-primary); border-radius: var(--r-sm);
   transition: height .4s ease, background-color .15s ease;
 }
 .ledger-bar-chart__col.is-current .ledger-bar-chart__fill {
-  background: linear-gradient(180deg, #16a34a, #15803d);
+  background: linear-gradient(180deg, var(--c-primary), var(--c-primary-strong));
 }
 .ledger-bar-chart__col:hover .ledger-bar-chart__fill {
   background: var(--c-primary-strong);
@@ -227,7 +227,10 @@
 }
 
 /* ---------- 내보내기 (라벨 있는 버튼 2개 — 이전엔 작은 아이콘이라 눈에 안 띄었다) ---------- */
-/* ---------- 환경 기여도 배너 (히어로 카드 바로 아래, 항상 보임) ---------- */
+/* ---------- 환경 기여도 배너 (히어로 카드 바로 아래, 항상 보임) ----------
+   2026-09-17 네이비 리스킨에서 일부러 제외 — CO2/나무 절감처럼 "환경"을 뜻하는 곳은 브랜드
+   컬러(네이비)와 상관없이 그린이 훨씬 직관적이라 하드코딩 그린을 그대로 뒀다.
+   .ledger-share-card[data-category="환경"](아래)도 같은 이유로 그린 유지. */
 .ledger-eco-banner {
   margin-top: var(--s-3); padding: 10px var(--s-4); text-align: center;
   background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--r-md);
@@ -247,10 +250,13 @@
 .ledger-export-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
 .ledger-export-btn { flex: 1; text-align: center; text-decoration: none; }
 
-/* ---------- 세그먼트 탭 (내역/분석/목표/뱃지) ---------- */
+/* ---------- 세그먼트 탭 (내역/분석/목표/뱃지) ----------
+   2026-09-17 리스킨 — 카드 밖 페이지에 바로 놓여서 background(--c-bg)가 크림이 된 뒤로
+   .app__main과 같은 색이라 안 보였다 — 네이비 톤 테두리 추가. */
 .seg-tabs {
   display: flex; background: var(--c-bg); padding: 3px; border-radius: var(--r-md);
   margin: var(--s-4) 0 var(--s-3); gap: 3px;
+  border: 1px solid var(--c-primary-border);
 }
 .seg-tab {
   flex: 1; border: none; background: none; padding: 7px 0;
@@ -292,8 +298,8 @@
 }
 .ledger-history-chip:hover { border-color: var(--c-primary-border); color: var(--c-primary); }
 .ledger-history-chip.is-active {
-  background: var(--c-primary-strong); color: #fff; border-color: var(--c-primary-strong);
-  box-shadow: 0 1px 4px rgba(21,128,61,.2);
+  background: var(--c-primary-strong); color: var(--c-primary-on); border-color: var(--c-primary-strong);
+  box-shadow: 0 1px 4px rgba(1,42,140,.2);
 }
 
 .ledger-history-select-wrap {
@@ -455,7 +461,7 @@
 .ledger-badge-preview-next, .ledger-badge-preview-prev {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 20px; height: 20px; border-radius: 50%;
-  background: var(--c-primary-strong); color: #fff; border: none;
+  background: var(--c-primary-strong); color: var(--c-primary-on); border: none;
   font-size: 11px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,.15); transition: opacity .15s ease;
@@ -526,7 +532,7 @@
 .ledger-badge-filters-next, .ledger-badge-filters-prev {
   position: absolute; top: 0;
   width: 24px; height: 24px; border-radius: 50%;
-  background: var(--c-primary-strong); color: #fff; border: none;
+  background: var(--c-primary-strong); color: var(--c-primary-on); border: none;
   font-size: 13px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 4px rgba(0,0,0,.15); transition: opacity .15s ease;
@@ -558,8 +564,8 @@
 .ledger-badge-filter.is-active {
   background: var(--c-primary-strong);
   border-color: var(--c-primary-strong);
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(21, 128, 61, 0.25);
+  color: var(--c-primary-on);
+  box-shadow: 0 2px 6px rgba(1, 42, 140, 0.25);
 }
 
 /* 뱃지 그리드 & 카드 */

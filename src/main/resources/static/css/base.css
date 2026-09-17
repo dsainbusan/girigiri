@@ -14,7 +14,9 @@ body {
      올리면 제목과 구분이 안 될 정도로 뭉개진다 — 그 사이 단계로 새로 추가한 --fw-semibold 사용. */
   font-weight: var(--fw-semibold);
   color: var(--c-text);
-  background: var(--c-bg);
+  /* 2026-09-17 — 데스크톱 등 넓은 화면에서 420px 앱 영역(.app) 바깥으로 보이는 브라우저 배경은
+     흰색으로 고정. 앱 콘텐츠 자체의 배경(크림)은 .app__main이 따로 담당한다(layout.css 참고). */
+  background: var(--c-surface);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

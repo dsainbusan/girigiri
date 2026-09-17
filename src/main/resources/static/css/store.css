@@ -229,7 +229,7 @@ a.stat-card:hover .stat-card__go {
 
 /* ---------- POS 시뮬레이터 (시연용, 단말기 느낌) ---------- */
 .pos-sim__screen {
-  background: var(--c-dark); color: #e5e7eb;
+  background: var(--c-dark); color: var(--c-primary-weak);
   border-radius: var(--r-lg); padding: var(--s-4);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
@@ -659,4 +659,4 @@ a.stat-card:hover .stat-card__go {
   font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-sub);
   cursor: pointer;
 }
-.weekday input:checked + span { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.weekday input:checked + span { background: var(--c-primary); border-color: var(--c-primary); color: var(--c-primary-on); }
