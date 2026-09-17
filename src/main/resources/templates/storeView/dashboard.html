@@ -135,7 +135,8 @@
 	<!-- ============ 현황 (오늘 ↔ 최근 7일 토글) ============ -->
 	<div id="panel-stats" class="stat-panel is-hidden">
 	<div class="card" style="margin-top: var(--s-3)">
-		<div class="stat-toggle-tabs">
+		<!-- 밑줄 스타일(--underline) — 바로 위 "요약/통계" pill 탭과 구분되게 (2026-09-17) -->
+		<div class="stat-toggle-tabs stat-toggle-tabs--underline">
 			<button type="button" class="stat-toggle-tab is-active" data-target="panel-today">오늘</button>
 			<button type="button" class="stat-toggle-tab" data-target="panel-weekly">최근 7일</button>
 		</div>
