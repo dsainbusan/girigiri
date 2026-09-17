@@ -110,7 +110,11 @@ public class StoreProductController {
 		// 추가됨 (2026-09-17) — 품목명을 매번 직접 타이핑하지 않고, POS 카탈로그에 이미 있는 메뉴
 		// 중에서 골라 쓸 수 있게(선택하면 품목명·원가·사진 자동완성). POS 연동을 안 했거나 메뉴가
 		// 없으면 목록이 비어서 화면에서 "직접 입력"만 남는다 — 별도 분기 없이 자연스럽게 처리된다.
+		// posConnect.html "지금 직접 등록하기"(?menuItemId=)로 들어온 경우, select도 그 메뉴를
+		// 미리 선택된 상태로 보여줘야 한다 — 안 그러면 입력칸엔 이름이 채워져 있는데 select만
+		// "항목을 선택하세요" 플레이스홀더로 보이는 모순이 생긴다.
 		model.addAttribute("menuItems", posCatalogService.listMenu(ownerId));
+		model.addAttribute("selectedMenuItemId", menuItemId);
 
 		model.addAttribute("mode", "create");
 		model.addAttribute("isDraft", false);
