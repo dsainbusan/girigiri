@@ -63,7 +63,7 @@
 			</div>
 			<form th:id="'reply-edit-form-' + ${r.id}" th:attr="data-reopen-btn='reply-edit-btn-' + ${r.id}" hidden
 			      th:action="@{/store/reviews/{id}/reply(id=${r.id})}" method="post" style="margin-top: var(--s-2)">
-				<textarea name="content" class="input" rows="3" maxlength="500" required th:text="${r.replyContent}"></textarea>
+				<textarea name="content" class="input js-autogrow" rows="3" maxlength="500" required th:text="${r.replyContent}"></textarea>
 				<div class="u-row" style="gap: 6px; margin-top: var(--s-2)">
 					<button type="submit" class="btn btn--primary u-grow" style="padding: 8px 0; font-size: var(--fs-sm)">저장</button>
 					<button type="button" data-close-panel class="btn btn--outline u-grow" style="padding: 8px 0; font-size: var(--fs-sm)">취소</button>
@@ -73,11 +73,40 @@
 
 		<form th:unless="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}"
 		      th:action="@{/store/reviews/{id}/reply(id=${r.id})}" method="post" style="margin-top: var(--s-3)">
-			<textarea name="content" class="input" rows="2" maxlength="500" required
+			<textarea name="content" class="input js-autogrow" rows="2" maxlength="500" required
 			          placeholder="답글을 남겨보세요"></textarea>
 			<button type="submit" class="btn btn--outline btn--block" style="margin-top: var(--s-2); font-size: var(--fs-sm)">답글 등록</button>
 		</form>
 	</div>
+
+	<!-- 답글 입력창 자동 높이 조절 (2026-09-17) — 기본 textarea가 리사이즈 핸들로 한없이 커지는
+	     버그 수정. productForm.html의 상품 설명 입력칸과 같은 방식(js-autogrow, store.css에서
+	     resize:none + max-height:40vh 캡). 수정 폼은 처음엔 hidden이라 열릴 때(data-toggle-target
+	     클릭 시) 한 번 더 높이를 맞춰준다 — hidden 상태에서 scrollHeight가 0으로 잡히기 때문. -->
+	<script>
+		(function () {
+			function fit(el) {
+				el.style.height = 'auto';
+				el.style.height = el.scrollHeight + 'px';
+			}
+
+			document.querySelectorAll('.js-autogrow').forEach(function (el) {
+				el.addEventListener('input', function () { fit(el); });
+				fit(el);
+			});
+
+			// app.js의 문서 위임 클릭 핸들러가 hidden을 실제로 벗기는 건 이 버튼 자체의 클릭 리스너보다
+			// 나중(버블링 단계)에 일어난다 — 같은 틱에서 바로 fit()하면 아직 hidden이라 scrollHeight가
+			// 0으로 잡힌다. setTimeout(0)으로 한 틱 미뤄서 hidden이 풀린 뒤에 재기 재도록 한다.
+			document.querySelectorAll('[data-toggle-target]').forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var target = document.getElementById(btn.getAttribute('data-toggle-target'));
+					var textarea = target && target.querySelector('.js-autogrow');
+					if (textarea) { setTimeout(function () { fit(textarea); }, 0); }
+				});
+			});
+		})();
+	</script>
 </div>
 </body>
 </html>
