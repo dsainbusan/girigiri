@@ -17,15 +17,14 @@
 		둠 — 픽업 대기중인 걸 알고 바로 들어가는 지름길로 남겨도 나쁘지 않아서). -->
 	<div class="card" style="margin-bottom:var(--s-3)">
 		<a th:href="@{/reservation/settings}" class="u-bold" style="font-size:var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> 주문 마감 설정 (준비시간 · 마감시간)</a>
-		<!-- 변경됨 (2026-09-17) — 3개를 justify-content:space-between으로 카드 양 끝까지 벌려놓으니
-			서로 관계없는 항목처럼 흩어져 보였다. 가운뎃점(·)으로 묶어 한 줄짜리 링크 목록처럼
-			왼쪽 정렬 — 시선이 한 곳에 모이고 "관련된 바로가기 모음"이라는 게 더 잘 읽힌다. -->
-		<div class="u-row" style="gap:var(--s-2); margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak); font-size:var(--fs-xs)">
-			<a th:href="@{/reservation/pickup}" class="u-sub">QR 픽업 확인</a>
-			<span class="u-mut">·</span>
-			<a th:href="@{/reservation/completed}" class="u-sub">완료된 거래 내역</a>
-			<span class="u-mut">·</span>
-			<a th:href="@{/reservation/store-cancel}" class="u-danger">매장 취소</a>
+		<!-- 변경됨 (2026-09-17, 2차) — 텍스트 링크를 가운뎃점으로 묶었더니 왼쪽으로 쏠려 오른쪽이
+			비어 보인다는 피드백. 칩(pill) 버튼 3개로 바꿔서 카드 폭을 고르게 채우고 각각 누를 수
+			있는 영역이라는 것도 더 잘 드러나게 했다. 매장 취소만 위험 톤(danger-weak 배경 +
+			danger-strong 텍스트, 배지 컴포넌트와 같은 WCAG 대비 조합)으로 구분한다. -->
+		<div class="chip-row" style="margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak)">
+			<a th:href="@{/reservation/pickup}" class="chip">QR 픽업 확인</a>
+			<a th:href="@{/reservation/completed}" class="chip">완료된 거래 내역</a>
+			<a th:href="@{/reservation/store-cancel}" class="chip" style="background:var(--c-danger-weak); color:var(--c-danger-strong)">매장 취소</a>
 		</div>
 	</div>
 
