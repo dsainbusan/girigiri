@@ -6,6 +6,7 @@ import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.util.PortOneClient;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,6 +59,17 @@ class ReservationNoShowTest {
 	@MockitoBean
 	private PortOneClient portOneClient;
 
+	// 추가됨 (2026-09-17, 테스트 DB 공유 플레이키니스 수정) — 왜: 이 클래스는 processNoShows()가 내부적으로
+	// REQUIRES_NEW(독립 트랜잭션)를 쓰기 때문에 클래스 전체를 @Transactional로 감쌀 수 없다(감싸면
+	// REQUIRES_NEW 쪽에서 아직 커밋 안 된 테스트 셋업 데이터를 못 본다 — 다른 예약 테스트들과 다른 점).
+	// 그래서 이 테스트가 만드는 예약/결제/영수증은 진짜로 DB에 커밋된 채 남는데, 그대로 두면
+	// (특히 "오늘_주문한_예약은..." 쪽은 confirmed 상태로 영구히 남아서) 같은 실행에서 뒤에 도는
+	// 다른 테스트(예: ReservationListTest의 "진행중 탭엔 1건만" 가정)가 깨진다. 테스트가 만든 것만
+	// 정확히 지워서 원래 상태로 되돌린다.
+	private Long createdReservationId;
+	private Long createdProductId;
+	private int createdQuantity;
+
 	/** prepareReservation()+confirmPayment()를 목(mock) PortOne 결제 성공으로 이어붙여 confirmed 예약을 만든다. */
 	private ReservationEntity createConfirmedReservation(Long userId, Long productId, int quantity, LocalDateTime pickupTime) {
 		ReservationEntity prepared = reservationService.prepareReservation(userId, productId, quantity, pickupTime);
@@ -65,7 +77,26 @@ class ReservationNoShowTest {
 		when(portOneClient.verifyPayment(eq(payment.getMerchantUid()), anyInt()))
 				.thenReturn(PortOneClient.PortOneVerifyResult.success(
 						"test-tx-" + prepared.getId(), prepared.getTotalPrice(), "card", LocalDateTime.now()));
-		return reservationService.confirmPayment(prepared.getId(), payment.getMerchantUid());
+		ReservationEntity confirmed = reservationService.confirmPayment(prepared.getId(), payment.getMerchantUid());
+
+		createdReservationId = confirmed.getId();
+		createdProductId = productId;
+		createdQuantity = quantity;
+		return confirmed;
+	}
+
+	/** 이 테스트가 실제로 커밋해버린 예약/결제/영수증을 지우고 차감된 재고를 되돌려서, 다음 테스트에 영향이 안 가게 한다. */
+	@AfterEach
+	void cleanUpCommittedTestData() {
+		if (createdReservationId == null) {
+			return;
+		}
+		jdbcTemplate.update("DELETE FROM receipt WHERE reservation_id = ?", createdReservationId);
+		jdbcTemplate.update("DELETE FROM payment WHERE reservation_id = ?", createdReservationId);
+		jdbcTemplate.update("DELETE FROM reservation WHERE id = ?", createdReservationId);
+		jdbcTemplate.update(
+				"UPDATE product SET remaining_quantity = remaining_quantity + ? WHERE id = ?",
+				createdQuantity, createdProductId);
 	}
 
 	@Test

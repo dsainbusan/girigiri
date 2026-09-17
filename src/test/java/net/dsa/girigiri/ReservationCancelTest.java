@@ -11,6 +11,7 @@ import net.dsa.girigiri.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *      다시 테스트하려면 sample-data.sql을 재실행해서 초기화하세요.
  */
 @SpringBootTest
+@Transactional
 class ReservationCancelTest {
 
 	@Autowired
