@@ -40,18 +40,18 @@
 		<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
 	</a>
 
-	<!-- 2. 이번 달 절약 카드 (초록색 배너) -->
-	<div style="background: var(--c-primary); color: #fff; border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.15);">
+	<!-- 2. 이번 달 절약 카드 (초록색 배너) — 카드 안 작은 반투명 pill 버튼이 눈에 잘 안 띈다는
+	     피드백(2026-09-17)으로, 바로 위 프로필 카드/아래 매장 신뢰도 카드와 같은 패턴(카드 전체를
+	     링크로 감싸고 우측에 화살표)으로 통일 — 탭 영역도 훨씬 커진다. -->
+	<a th:href="@{/user/ledger}" style="background: var(--c-primary); color: #fff; border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.15); text-decoration: none;">
 		<div>
 			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
 			<div style="font-size: 24px; font-weight: var(--fw-black); margin-top: 2px;">
 				<span th:text="${#numbers.formatInteger(monthlySavings ?: 0, 0, 'COMMA')}">0</span><span>원</span>
 			</div>
 		</div>
-		<a th:href="@{/user/ledger}" style="background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
-			가계부 &rsaquo;
-		</a>
-	</div>
+		<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 2px;">가계부 &rsaquo;</span>
+	</a>
 
 	<!-- 2-1. 내 매장 신뢰도 카드 (2026-09-14 추가, 담당: 송채현) — 사장님 계정(매장 보유)한테만 보임.
 	     ReservationService.getStoreCancelStats(원래 있던 매장 취소율 계산)를 그대로 재사용한다.
