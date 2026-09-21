@@ -30,24 +30,26 @@ import java.util.stream.Collectors;
 public class SearchService {
 
 	private static final String STATUS_ACTIVE = "active";
-	private static final LocalTime EVENING_WINDOW_START = LocalTime.of(18, 0);
-	private static final LocalTime LATE_WINDOW_START = LocalTime.of(21, 0);
 
 	private final ProductRepository productRepository;
 	private final StoreRepository storeRepository;
 
 	/**
-	 * @param keyword      상품명/매장명/카테고리 부분일치(대소문자 무시). null/빈값이면 전체.
-	 * @param sort         "discount"(할인율순, 기본) | "price"(가격 낮은순) | "closing"(마감임박순) | "distance"(거리순)
-	 * @param priceBucket  "under5000" | "5000to10000" | "over10000" | null(전체)
-	 * @param pickupBucket "now"(지금 바로 주문 가능) | "evening"(픽업마감 18~21시) | "late"(픽업마감 21시~) | null(전체) —
-	 *                     매장이 lastPickupTime을 아직 설정 안 했으면(null) "evening"/"late"는 판단 불가라 제외하고,
-	 *                     "now"는 PickupAvailabilityUtil 관례대로 항상 주문 가능 취급한다.
-	 * @param userLat      사용자 위도(브라우저 Geolocation). null이면 거리 계산 생략 — "distance" 정렬을 요청해도
-	 *                     할인율순으로 대체된다(sortComparator 참고).
-	 * @param userLng      사용자 경도.
+	 * @param keyword    상품명/매장명/카테고리 부분일치(대소문자 무시). null/빈값이면 전체.
+	 * @param sort       "discount"(할인율순, 기본) | "price"(가격 낮은순) | "closing"(마감임박순) | "distance"(거리순)
+	 * @param priceMin   할인가 하한(원). null이면 하한 없음.
+	 * @param priceMax   할인가 상한(원). null이면 상한 없음.
+	 * @param pickupNow  true면 "지금 주문해도 오늘 픽업 가능한 매장"만(PickupAvailabilityUtil 기준, 실시간 판단) —
+	 *                   아래 pickupFrom/pickupTo 범위와 AND로 함께 적용된다(둘 다 지정하면 둘 다 만족해야 함).
+	 * @param pickupFrom 픽업 마감시간(시, 0~24) 하한. null이면 하한 없음. 매장이 lastPickupTime을 아직 설정 안
+	 *                   했으면(null) from/to 중 하나라도 지정된 경우 판단 불가로 제외한다.
+	 * @param pickupTo   픽업 마감시간(시, 0~24) 상한(미만). null이면 상한 없음.
+	 * @param userLat    사용자 위도(브라우저 Geolocation). null이면 거리 계산 생략 — "distance" 정렬을 요청해도
+	 *                   할인율순으로 대체된다(sortComparator 참고).
+	 * @param userLng    사용자 경도.
 	 */
-	public List<StoreCardDto> search(String keyword, String sort, String priceBucket, String pickupBucket,
+	public List<StoreCardDto> search(String keyword, String sort, Integer priceMin, Integer priceMax,
+									  Boolean pickupNow, Integer pickupFrom, Integer pickupTo,
 									  Set<Long> likedStoreIds, Double userLat, Double userLng) {
 		Map<Long, StoreEntity> storesById = storeRepository.findAll().stream()
 				.filter(s -> !StoreEntity.STATUS_SUSPENDED.equals(s.getStatus()))
@@ -60,8 +62,8 @@ public class SearchService {
 				.filter(p -> p.getRemainingQuantity() != null && p.getRemainingQuantity() > 0)
 				.filter(p -> storesById.containsKey(p.getStoreId()))
 				.filter(p -> matchesKeyword(p, storesById.get(p.getStoreId()), kw))
-				.filter(p -> matchesPriceBucket(p, priceBucket))
-				.filter(p -> matchesPickupBucket(storesById.get(p.getStoreId()), pickupBucket))
+				.filter(p -> matchesPriceRange(p, priceMin, priceMax))
+				.filter(p -> matchesPickup(storesById.get(p.getStoreId()), pickupNow, pickupFrom, pickupTo))
 				.sorted(sortComparator(sort, storesById, userLat, userLng))
 				.toList();
 
@@ -83,40 +85,48 @@ public class SearchService {
 		return value != null && value.toLowerCase().contains(kw);
 	}
 
-	private boolean matchesPriceBucket(ProductEntity product, String priceBucket) {
-		if (priceBucket == null || priceBucket.isBlank()) {
+	private boolean matchesPriceRange(ProductEntity product, Integer priceMin, Integer priceMax) {
+		if (priceMin == null && priceMax == null) {
 			return true;
 		}
 		Integer price = product.getDiscountedPrice();
 		if (price == null) {
 			return false;
 		}
-		return switch (priceBucket) {
-			case "under5000" -> price <= 5000;
-			case "5000to10000" -> price > 5000 && price <= 10000;
-			case "over10000" -> price > 10000;
-			default -> true;
-		};
+		if (priceMin != null && price < priceMin) {
+			return false;
+		}
+		if (priceMax != null && price > priceMax) {
+			return false;
+		}
+		return true;
 	}
 
-	private boolean matchesPickupBucket(StoreEntity store, String pickupBucket) {
-		if (pickupBucket == null || pickupBucket.isBlank() || store == null) {
+	private boolean matchesPickup(StoreEntity store, Boolean pickupNow, Integer pickupFrom, Integer pickupTo) {
+		if (store == null) {
 			return true;
 		}
-		LocalTime lastPickupTime = store.getLastPickupTime();
-		if ("now".equals(pickupBucket)) {
+		if (Boolean.TRUE.equals(pickupNow)) {
 			int prepTimeMinutes = store.getPrepTimeMinutes() != null
 					? store.getPrepTimeMinutes() : PickupAvailabilityUtil.DEFAULT_PREP_TIME_MINUTES;
-			return PickupAvailabilityUtil.canOrderNow(LocalDateTime.now(), lastPickupTime, prepTimeMinutes);
+			if (!PickupAvailabilityUtil.canOrderNow(LocalDateTime.now(), store.getLastPickupTime(), prepTimeMinutes)) {
+				return false;
+			}
 		}
-		if (lastPickupTime == null) {
-			return false;   // "evening"/"late"는 매장이 마감시간을 설정해야 판단 가능
+		if (pickupFrom != null || pickupTo != null) {
+			LocalTime lastPickupTime = store.getLastPickupTime();
+			if (lastPickupTime == null) {
+				return false;   // 마감시간을 매장이 아직 설정 안 했으면 시간대 범위 판단 불가
+			}
+			int hour = lastPickupTime.getHour();
+			if (pickupFrom != null && hour < pickupFrom) {
+				return false;
+			}
+			if (pickupTo != null && hour >= pickupTo) {
+				return false;
+			}
 		}
-		return switch (pickupBucket) {
-			case "evening" -> !lastPickupTime.isBefore(EVENING_WINDOW_START) && lastPickupTime.isBefore(LATE_WINDOW_START);
-			case "late" -> !lastPickupTime.isBefore(LATE_WINDOW_START);
-			default -> true;
-		};
+		return true;
 	}
 
 	private Comparator<ProductEntity> sortComparator(String sort, Map<Long, StoreEntity> storesById,

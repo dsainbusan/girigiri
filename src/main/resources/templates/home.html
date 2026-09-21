@@ -252,9 +252,10 @@
 	<script>
 		(function () {
 			var filterBar = document.getElementById('category-filter');
-			var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
 			var loadMoreBtn = document.getElementById('store-load-more');
-			if (cardWrappers.length === 0) return;
+			// 강노은: 카드가 0개(마감세일 중인 가게 없음)일 때도 칩은 눌리게 해야 한다 — 예전엔
+			// cardWrappers.length === 0이면 리스너 자체를 안 붙여서 클릭이 씹혔다. 필터바 유무만 본다.
+			if (!filterBar) return;
 
 			var PAGE_SIZE = 5;
 			var currentFilter = 'all';
@@ -262,6 +263,7 @@
 
 			function render() {
 				var visibleCount = 0;
+				var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
 				cardWrappers.forEach(function (wrapper) {
 					var matches = currentFilter === 'all' || wrapper.dataset.category === currentFilter;
 					if (!matches) {
@@ -312,7 +314,9 @@
 		(function () {
 			if (!window.EventSource) return;
 			var source = new EventSource('/user/alerts/stream');
-			source.addEventListener('notification', function (e) {
+			// 강노은 (2026-09-21): 배지는 "안읽은 개수"가 바뀌면 언제든(새 알림이든 읽음 처리든) 맞춰줘야
+			// 하니 unread-count를 구독한다 — "진짜 새 알림"만 알려주는 new-notification과는 다른 용도.
+			source.addEventListener('unread-count', function (e) {
 				var count = parseInt(e.data, 10) || 0;
 				var bell = document.getElementById('alert-bell');
 				var dot = document.getElementById('alert-dot');

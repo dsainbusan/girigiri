@@ -174,6 +174,58 @@
 .bottomnav__ico { font-size: 18px; line-height: 1; }
 .bottomnav__item.is-active { color: var(--c-primary); font-weight: var(--fw-bold); }
 
+/* 하단 탭바 중앙 QR 스캔 플로팅 버튼 (점주 전용) */
+.bottomnav__item--fab {
+  position: relative;
+  text-decoration: none;
+}
+.bottomnav__fab-circle {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3.5px solid var(--c-surface);
+  box-shadow: 0 4px 14px rgba(15, 43, 140, 0.32);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease;
+  z-index: 2;
+}
+.bottomnav__fab-ico {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+.bottomnav__fab-label {
+  margin-top: auto;
+  margin-bottom: 10px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-mut);
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.bottomnav__item--fab:hover .bottomnav__fab-circle {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 43, 140, 0.45);
+}
+.bottomnav__item--fab:active .bottomnav__fab-circle {
+  transform: translateX(-50%) scale(0.93);
+}
+.bottomnav__item--fab.is-active .bottomnav__fab-circle {
+  background: #193db3;
+  box-shadow: 0 0 0 2px var(--c-primary), 0 6px 18px rgba(15, 43, 140, 0.45);
+}
+.bottomnav__item--fab.is-active .bottomnav__fab-label {
+  color: var(--c-primary);
+}
+
 /* ---------- 하단 고정 CTA (상품상세 등) ---------- */
 /* 변경됨 (2026-08-21) — 왜: sticky는 .app 컨테이너 높이(내용이 짧으면 min-height로 늘어난 빈
    공간까지)를 기준으로 흐름 위치가 정해져서, 내용이 짧은 화면(체크아웃 등)에서 버튼이 실제 보이는

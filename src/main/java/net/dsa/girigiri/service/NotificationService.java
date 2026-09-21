@@ -96,8 +96,13 @@ public class NotificationService {
 		if (notification == null || !userId.equals(notification.getUserId())) {
 			return null;
 		}
-		notification.setRead(true);
-		sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
+		// 변경됨 (강노은, 2026-09-21) — 왜: 이미 읽은 알림을 다시 클릭해도 무조건 push하고 있어서,
+		// 실제로는 안읽은 개수가 안 바뀌었는데도 알림함이 SSE 이벤트를 받아 "새 알림 도착" 배너를
+		// 잘못 띄우는 원인 중 하나였다. 실제로 read 상태가 바뀔 때만 push한다.
+		if (!notification.isRead()) {
+			notification.setRead(true);
+			sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
+		}
 		return notification.getLinkUrl();
 	}
 
@@ -135,7 +140,9 @@ public class NotificationService {
 				.linkUrl(linkUrl)
 				.sourceKey(sourceKey)
 				.build());
-		sseEmitterRegistry.pushUnreadCount(userId, getUnreadCount(userId));
+		// 변경됨 (강노은, 2026-09-21) — 진짜 새 알림이 생긴 경우라 pushNewNotification()으로
+		// (markRead/markAllRead와 달리) "new-notification" 이벤트도 함께 보낸다.
+		sseEmitterRegistry.pushNewNotification(userId, getUnreadCount(userId));
 	}
 
 	// 변경됨 (2026-09-08, 코드 감사) — @Transactional이 없어서 findByUserId(없음) → save()가 원자적이지

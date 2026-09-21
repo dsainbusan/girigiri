@@ -11,12 +11,18 @@
 <nav th:fragment="bottomNav(active)" class="bottomnav">
   <!-- 아이콘 교체 (2026-09-16, 디자인 리팩토링) — 유니코드 기호(■📦🔔◐⌂♥▤ 등)를 SVG 아이콘으로.
        모든 화면에서 반복되는 자리라 레버리지가 가장 큰 교체 지점. -->
-  <th:block th:if="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner'}">
+  <th:block th:if="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner' or active == 'pickup'}">
     <a class="bottomnav__item" th:classappend="${active=='dashboard'} ? ' is-active'" th:href="@{/store/dashboard}">
       <svg class="icon bottomnav__ico"><use href="#i-dashboard"/></svg><span>대시보드</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='products'} ? ' is-active'" th:href="@{/store/products}">
       <svg class="icon bottomnav__ico"><use href="#i-box"/></svg><span>재고관리</span>
+    </a>
+    <a class="bottomnav__item bottomnav__item--fab" th:classappend="${active=='pickup'} ? ' is-active'" th:href="@{/reservation/pickup}" title="QR 픽업 스캔">
+      <span class="bottomnav__fab-circle">
+        <svg class="icon bottomnav__fab-ico"><use href="#i-camera"/></svg>
+      </span>
+      <span class="bottomnav__fab-label">QR 스캔</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='incoming'} ? ' is-active'" th:href="@{/reservation/incoming}">
       <svg class="icon bottomnav__ico"><use href="#i-bell"/></svg><span>예약확인</span>
@@ -25,7 +31,7 @@
       <svg class="icon bottomnav__ico"><use href="#i-user"/></svg><span>마이</span>
     </a>
   </th:block>
-  <th:block th:unless="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner'}">
+  <th:block th:unless="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner' or active == 'pickup'}">
     <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/app}">
       <svg class="icon bottomnav__ico"><use href="#i-home"/></svg><span>홈</span>
     </a>
