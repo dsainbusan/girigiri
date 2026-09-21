@@ -668,6 +668,7 @@ a.stat-card:hover .stat-card__go {
 .stock-item__status--selling { background: var(--c-primary-weak); color: var(--c-primary); }
 .stock-item__status--soldout { background: var(--c-danger-weak); color: var(--c-danger); }
 .stock-item__status--closed  { background: var(--c-bg); color: var(--c-text-sub); }
+.stock-item__status--waiting { background: var(--c-accent-weak); color: var(--c-accent-strong); }
 
 /* 액션 버튼 줄 — 항목이 <a class="btn"> 이거나 <form><button class="btn"> 라 섞여 있어서,
    "직접 자식은 1/3씩" + "form 안 버튼은 form을 꽉 채움"을 flex로만 일관되게 처리한다.

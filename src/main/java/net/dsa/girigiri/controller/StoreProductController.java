@@ -96,6 +96,8 @@ public class StoreProductController {
 		model.addAttribute("posDraftPromptLabel",
 				store.getPosDraftPromptTime() == null ? null : store.getPosDraftPromptTime().format(TIME_FMT));
 		model.addAttribute("hasActiveTemplate", storeProductService.hasActiveTemplate(store.getId()));
+		// "판매 대기" — 초안이 만들어지기 전의 POS 실시간 재고 메뉴(2026-09-21). POS 연동 매장만.
+		model.addAttribute("pendingMenus", posConnected ? posCatalogService.listPendingMenus(store) : List.of());
 
 		// 마감 10분 전을 넘기면 초안 [바로 올리기]를 닫는다 (손님이 예약·픽업할 시간이 없어서).
 		model.addAttribute("canPublishDrafts", StoreHoursUtil.canPublishNow(

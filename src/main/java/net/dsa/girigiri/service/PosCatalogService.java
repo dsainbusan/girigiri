@@ -1,6 +1,7 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.PendingMenuDto;
 import net.dsa.girigiri.domain.dto.PosMenuItemDto;
 import net.dsa.girigiri.domain.dto.PosStockDto;
 import net.dsa.girigiri.domain.entity.MenuItemEntity;
@@ -9,6 +10,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.MenuItemRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.http.HttpStatus;
@@ -190,6 +192,40 @@ public class PosCatalogService {
 		StoreEntity store = requireStore(ownerId);
 		store.setPosDraftPromptTime(time == null || time.isBlank() ? null : LocalTime.parse(time.trim()));
 		storeRepository.save(store);
+	}
+
+	/**
+	 * 재고 관리 화면 "판매 대기" 목록 (2026-09-21) — 아직 초안이 안 만들어진, POS 실시간 재고 메뉴.
+	 * generateDraftsFromStock과 같은 조건(앱 판매 켬 + 재고 > 0 + 오늘 이 메뉴로 만든 상품이 아직 없음)이라
+	 * 정해진 시각이 되면 여기 있던 메뉴가 그대로 "발행 대기" 초안으로 넘어간다. 할인율·할인가는 "지금 올린다면"
+	 * 기준의 예상값이다(마감까지 남은 시간에 따라 바뀜).
+	 */
+	public List<PendingMenuDto> listPendingMenus(StoreEntity store) {
+		LocalDate today = LocalDate.now();
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt();
+		Set<Long> menuIdsToday = productRepository.findByStoreId(store.getId()).stream()
+				.filter(p -> p.getMenuItemId() != null && p.getRegisteredAt() != null
+						&& p.getRegisteredAt().toLocalDate().equals(today))
+				.map(ProductEntity::getMenuItemId)
+				.collect(Collectors.toSet());
+
+		return menuItemRepository.findByStoreIdOrderByNameAsc(store.getId()).stream()
+				.filter(m -> m.isAppSaleEnabled() && m.getStockQuantity() != null && m.getStockQuantity() > 0
+						&& !menuIdsToday.contains(m.getId()))
+				.map(m -> {
+					int rate = DiscountRateCalculator.effectiveRate(m.getDiscountRate(), closeAt);
+					int saleQty = m.getAppSaleQuantity() != null
+							? Math.min(m.getStockQuantity(), m.getAppSaleQuantity())
+							: m.getStockQuantity();
+					return new PendingMenuDto(
+							m.getId(), m.getName(), m.getImageUrl(),
+							CategoryDisplayUtil.thumbEmoji(store.getCategory()),
+							CategoryDisplayUtil.thumbColor(store.getCategory()),
+							m.getStockQuantity(), saleQty, m.getOriginalPrice(),
+							rate, DiscountRateCalculator.applyDiscount(m.getOriginalPrice(), rate),
+							m.getDiscountRate() != null);
+				})
+				.toList();
 	}
 
 	/**
