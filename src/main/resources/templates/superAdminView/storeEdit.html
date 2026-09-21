@@ -126,8 +126,11 @@
     <button type="submit" class="btn btn--primary btn--block mt-24">저장</button>
   </form>
 
-  <div id="postcodeOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center">
-    <div style="background:var(--white);border-radius:8px;overflow:hidden;width:90%;max-width:420px">
+  <!-- role="dialog"/aria-modal — 스크린리더가 배경 폼과 분리된 대화상자로 인식하게 한다.
+       뒷배경 딤 처리·z-index·모서리 반경을 하드코딩하던 걸 토큰으로 뺐다(2026-09-21 UI/UX 감사). -->
+  <div id="postcodeOverlay" role="dialog" aria-modal="true" aria-label="매장 주소 검색"
+       style="display:none;position:fixed;inset:0;background:var(--overlay-scrim);z-index:var(--z-modal);align-items:center;justify-content:center">
+    <div style="background:var(--white);border-radius:var(--radius-md);overflow:hidden;width:90%;max-width:420px">
       <div style="display:flex;justify-content:flex-end;padding:4px 4px 0">
         <button type="button" id="postcodeCloseBtn" class="btn btn--ghost btn--sm">닫기</button>
       </div>
@@ -138,9 +141,13 @@
   <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   <script>
     /* 카카오맵 SDK와 무관하게 독립적으로 동작해야 한다 — 지도 SDK가 실패/지연되더라도 주소 검색은
-       그대로 되어야 하므로, 아래 kakao.maps.load(...) 블록 안에 넣지 않고 별도로 뺐다. */
+       그대로 되어야 하므로, 아래 kakao.maps.load(...) 블록 안에 넣지 않고 별도로 뺐다.
+       열릴 때 닫기 버튼으로 포커스를 옮기고 Esc로 닫을 수 있게 한다(2026-09-21 UI/UX 감사) —
+       다음 위젯은 iframe이라 내부까지 포커스 트랩을 걸 수는 없지만, 최소한 열자마자 배경 폼으로
+       포커스가 새지 않게 한다. */
     var postcodeOverlay = document.getElementById('postcodeOverlay');
     var postcodeLayer = document.getElementById('postcodeLayer');
+    var postcodeCloseBtn = document.getElementById('postcodeCloseBtn');
     var postcode = new daum.Postcode({
       oncomplete: function (data) {
         var addr = data.roadAddress || data.jibunAddress;
@@ -161,6 +168,10 @@
       postcodeOverlay.style.display = 'flex';
       postcodeLayer.innerHTML = '';
       postcode.embed(postcodeLayer);
+      postcodeCloseBtn.focus();
+    });
+    postcodeOverlay.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') postcodeOverlay.style.display = 'none';
     });
     document.getElementById('postcodeCloseBtn').addEventListener('click', function () {
       postcodeOverlay.style.display = 'none';

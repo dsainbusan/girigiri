@@ -51,6 +51,11 @@
 
   --font-sans: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont,
                "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+
+  /* 추가됨 (2026-09-21, 주소 검색 모달 UI/UX 감사) — 모달 뒷배경 딤 처리와 z-index를
+     storeEdit.html에서 하드코딩(rgba(0,0,0,.45), z-index:200)하던 걸 토큰으로 뺐다. */
+  --overlay-scrim: rgba(0, 0, 0, .45);
+  --z-modal: 200;
 }
 
 /* ---------- 2. 리셋 / 베이스 ----------
