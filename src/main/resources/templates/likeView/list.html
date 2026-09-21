@@ -10,7 +10,8 @@
 	</div>
 
 	<div style="display:flex;flex-direction:column;gap:10px">
-		<div th:each="s : ${likedStores}" class="store-card" th:style="${s.onSale} ? '' : 'opacity:.6'">
+		<a th:each="s : ${likedStores}" class="store-card" th:style="${s.onSale} ? '' : 'opacity:.6'"
+		   th:href="@{/user/stores/{storeId}(storeId=${s.storeId})}">
 			<span class="store-card__thumb" th:style="'background:' + ${s.thumbColor}" th:text="${s.thumbText}">빵</span>
 			<span class="store-card__body">
 				<span class="store-card__top">
@@ -26,7 +27,7 @@
 				<span th:if="${s.onSale}" class="store-card__left" th:text="'⏱ ' + ${s.leftLabel}">⏱ 마감까지 42분</span>
 				<span th:unless="${s.onSale}" class="u-mut" style="font-size:12px;margin-top:2px" th:text="${s.offSaleText}">지금은 세일 중이 아니에요</span>
 			</span>
-		</div>
+		</a>
 
 		<p th:if="${#lists.isEmpty(likedStores)}" class="u-sub">아직 찜한 가게가 없어요.<br>마음에 드는 가게의 하트를 눌러보세요.</p>
 	</div>
