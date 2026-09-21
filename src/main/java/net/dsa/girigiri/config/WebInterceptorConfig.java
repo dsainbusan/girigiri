@@ -1,6 +1,7 @@
 package net.dsa.girigiri.config;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.security.AdminScopeInterceptor;
 import net.dsa.girigiri.security.LoginRequiredInterceptor;
 import net.dsa.girigiri.security.ProfileCompletionInterceptor;
 import net.dsa.girigiri.security.ViewModeSyncInterceptor;
@@ -22,9 +23,15 @@ public class WebInterceptorConfig implements WebMvcConfigurer {
 	private final ViewModeSyncInterceptor viewModeSyncInterceptor;
 	private final LoginRequiredInterceptor loginRequiredInterceptor;
 	private final ProfileCompletionInterceptor profileCompletionInterceptor;
+	private final AdminScopeInterceptor adminScopeInterceptor;
 
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
+		// 추가됨 (2026-09-21) — 운영자(ADMIN)가 유저/점주 화면에 URL로 직접 들어오는 걸 막는다.
+		// ViewModeSyncInterceptor와 같은 경로 집합(유저/점주 앱 화면 전체)에 건다 — 여기가
+		// "유저·매장이 보는 화면"의 실질적인 정의라 그대로 재사용.
+		registry.addInterceptor(adminScopeInterceptor)
+				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/app");
 		registry.addInterceptor(viewModeSyncInterceptor)
 				.addPathPatterns("/store/**", "/reservation/**", "/mypage/**", "/user/**", "/app");
 		registry.addInterceptor(loginRequiredInterceptor)
