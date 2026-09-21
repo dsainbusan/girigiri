@@ -11,6 +11,12 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>기리기리 — 동네 가게 마감 임박 음식 긴급 구제</title>
 	<meta name="description" content="우리 동네 마감 세일 음식을 지도에서 찾고 합리적인 가격에 구매하세요. 사장님껜 폐기 손실을 줄여드립니다.">
+	<!-- 2026-09-21 추가 — common/layout.html과 같은 이유: tokens.css의 --font-base가 선언한
+	     "Noto Sans KR"을 실제로 불러오는 곳이 없어서 항상 시스템 폰트로 폴백했다. 이 페이지는
+	     common/layout을 안 쓰는 독립 문서라 여기서도 따로 로드해야 한다. -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 	<link rel="stylesheet" th:href="@{/css/tokens.css}">
 	<link rel="stylesheet" th:href="@{/css/marketing.css}">
 </head>

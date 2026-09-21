@@ -28,6 +28,14 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title th:text="${title} ?: 'ギリギリ'">ギリギリ</title>
+  <!-- 2026-09-21 추가 — 왜: tokens.css의 --font-base가 1순위로 "Noto Sans KR"을 선언해뒀는데
+       정작 이 폰트를 실제로 불러오는 곳이 어디에도 없어서, 모든 기기가 항상 시스템 기본 폰트로
+       폴백하고 있었다(맥은 산 프란시스코, 윈도우는 맑은 고딕 등 — 기기마다 다르게 보임).
+       Google Fonts에서 실제로 로드해서 선언한 폰트가 진짜로 적용되게 한다. --fw-* 토큰이 쓰는
+       굵기(400/500/600/700/900)만 필요한 만큼 받는다. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" th:href="@{/css/tokens.css}">
   <link rel="stylesheet" th:href="@{/css/base.css}">
   <link rel="stylesheet" th:href="@{/css/layout.css}">
