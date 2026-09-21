@@ -5,10 +5,10 @@
 <!--/*
 	점주 메인 작업 화면 — "오늘의 구제" (WBS 3.0, 2026-08-26 김태훈→문창호 인계).
 	2026-08-27 통합형 IA로 재편 + 우선순위 재배열: POS 자동 연동이 메인.
-	화면 순서 = 점주가 매일 하는 일 순서:
+	화면 순서 (2026-09-21 개편):
 	  1) POS 상태 한 줄 (연동됐으면 요약만, 안 됐으면 큰 안내)
-	  2) 발행 대기 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
-	  3) 판매 중 목록 (훑어보기 + 가끔 품절/수정)
+	  2) 판매 중 — 오늘 실제로 팔고 있는 상품 (비면 한 줄)
+	  3) 판매 대기 — POS 실시간 재고 + 발행 대기 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
 	  4) 보조: 직접 등록 / 템플릿(POS 없을 때) / 대시보드
 	제거: 품목 검색 폼(컨트롤러가 q를 안 받던 죽은 기능 + 목록이 짧아 불필요).
 */-->
@@ -42,113 +42,12 @@
 		</div>
 	</div>
 
-	<!-- 2. 판매 대기 (2026-09-21) — 오늘 아직 판매가 시작되지 않은 재고. 두 단계다:
-	       ① POS 재고 — POS가 실시간으로 알려주는 재고(초안 만들어지기 전)
-	       ② 발행 대기 — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
-	     wait-section/selling-section은 아래 스크립트가 주기적으로 서버 화면으로 통째 갈아끼워
-	     POS 재고 숫자와 예상 할인율이 실시간처럼 갱신된다. -->
-	<div id="wait-section">
-	<div th:if="${posConnected or !#lists.isEmpty(drafts)}" class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
-		<span class="u-bold" style="font-size: var(--fs-sm)">판매 대기</span>
-		<span class="u-sub" style="font-size: var(--fs-xs)"
-		      th:text="'발행 대기 ' + ${#lists.size(drafts)} + ' · POS 재고 ' + ${#lists.size(pendingMenus)}">발행 대기 1 · POS 재고 3</span>
-	</div>
-	<p th:if="${posConnected}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)">
-		POS 재고는 실시간으로 반영돼요. 정해진 시각이 되면 <b>발행 대기</b>로 올라오고, [바로 올리기]를 눌러야 판매가 시작돼요.
-	</p>
-
-	<!-- 발행 대기: "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계 -->
-	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
-		<p class="u-bold" style="margin-bottom: 2px"><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 오늘의 구제 — 발행 대기</p>
-		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
-		   th:text="${canPublishDrafts}
-		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
-		            : '마감이 임박해서 오늘은 등록이 닫혔어요. 남은 건 매장에서 직접 처리해 주세요.'">
-			마감 10분 전까지 올릴 수 있어요.
-		</p>
-		<div th:each="d : ${drafts}" class="stock-item" style="border-color: var(--c-primary-border); background: var(--c-primary-weak);">
-			<div class="stock-item__head">
-				<div class="stock-item__thumb" th:style="${d.imageUrl == null ? 'background:' + d.thumbColor : null}">
-					<img th:if="${d.imageUrl != null}" th:src="${d.imageUrl}" th:alt="${d.name}">
-					<span th:unless="${d.imageUrl != null}" th:text="${d.thumbEmoji}">🥐</span>
-				</div>
-				<div class="stock-item__body">
-					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
-						<span class="stock-item__name" th:text="${d.name}">오늘의 마감 빵 세트</span>
-						<span class="draft-src"
-						      th:text="${d.source == 'pos' ? 'POS 재고' : (d.source == 'template' ? '템플릿' : '직접')}">POS 재고</span>
-					</div>
-					<div class="price" style="margin-top: 2px">
-						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
-						<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
-						      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
-						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
-						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
-					</div>
-					<span class="stock-item__meta" th:text="${d.quantity} + '개로 준비됐어요'">3개로 준비됐어요</span>
-				</div>
-			</div>
-			<div class="stock-item__actions">
-				<form th:if="${canPublishDrafts}" th:action="@{/store/products/{id}/publish(id=${d.id})}" method="post">
-					<button type="submit" class="btn btn--sm">바로 올리기</button>
-				</form>
-				<span th:unless="${canPublishDrafts}" class="btn btn--sm btn--outline is-disabled">⏳ 등록 마감</span>
-				<a th:href="@{/store/products/{id}/edit(id=${d.id})}" class="btn btn--sm btn--outline">수정</a>
-				<form th:action="@{/store/products/{id}/discard(id=${d.id})}" method="post"
-				      data-confirm="오늘은 이 상품을 안 올릴까요?">
-					<button type="submit" class="btn btn--sm btn--outline">오늘 안 함</button>
-				</form>
-			</div>
-		</div>
-	</div>
-
-	<!-- POS 재고: 초안이 만들어지기 전 단계 — 메뉴별 현재 재고와 "지금 올린다면" 예상 가격 -->
-	<div th:if="${!#lists.isEmpty(pendingMenus)}" style="margin-bottom: var(--s-4)">
-		<p class="u-bold" style="font-size: var(--fs-sm); margin-bottom: 2px">POS 재고</p>
-		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
-		   th:text="${posDraftPromptLabel != null} ? '매일 ' + ${posDraftPromptLabel} + '에 발행 대기로 올라와요. 가격은 마감이 가까울수록 내려가요.' : '발행 시각이 아직 설정되지 않았어요. POS 설정에서 정해 주세요.'">
-			매일 20:00에 발행 대기로 올라와요.
-		</p>
-		<ul>
-			<li th:each="m : ${pendingMenus}" class="stock-item">
-				<div class="stock-item__head">
-					<div class="stock-item__thumb" th:style="${m.imageUrl == null ? 'background:' + m.thumbColor : null}">
-						<img th:if="${m.imageUrl != null}" th:src="${m.imageUrl}" th:alt="${m.name}">
-						<span th:unless="${m.imageUrl != null}" th:text="${m.thumbEmoji}">🥐</span>
-					</div>
-					<div class="stock-item__body">
-						<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
-							<span class="stock-item__name" th:text="${m.name}">단팥빵</span>
-							<span class="stock-item__status stock-item__status--waiting">판매 대기</span>
-						</div>
-						<div class="price" style="margin-top: 2px">
-							<span class="badge badge--discount" th:text="'-' + ${m.expectedRate} + '%'">-20%</span>
-							<span class="discount-basis" th:classappend="${m.manualRate} ? ' is-custom' : ' is-auto'"
-							      th:text="${m.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
-							<span class="price__orig" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">2,800원</span>
-							<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(m.expectedPrice, 0, 'COMMA')} + '원'">2,240원</span>
-						</div>
-						<span class="stock-item__meta"
-						      th:text="'POS 재고 ' + ${m.stockQuantity} + '개' + (${m.saleQuantity} != ${m.stockQuantity} ? ' · 앱 판매 최대 ' + ${m.saleQuantity} + '개' : '')">POS 재고 21개</span>
-					</div>
-				</div>
-			</li>
-		</ul>
-	</div>
-
-	<!-- 대기 중인 게 없을 때 안내 -->
-	<p th:if="${posConnected and #lists.isEmpty(drafts) and #lists.isEmpty(pendingMenus)}"
-	   class="u-sub u-center" style="margin-bottom: var(--s-4); line-height: 1.7">
-		판매 대기 중인 재고가 없어요.<br>
-		<a th:href="@{/store/pos}" style="text-decoration: underline">POS 설정</a>에서 앱 판매를 켠 메뉴에 재고가 생기면 여기에 보여요.
-	</p>
-	</div><!-- /wait-section -->
-
-	<!-- 3. 판매 중 목록 -->
-	<div id="selling-section">
-	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-3)">
+	<!-- 2. 판매 중 목록 (2026-09-21 — 판매 대기보다 위로. 지금 팔고 있는 게 가장 중요하고, 비어 있을 땐
+	     한 줄만 차지하니 위에 둬도 부담이 없다.) -->
+	<div id="selling-section" style="margin-bottom: var(--s-5)">
+	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
 		<span class="u-bold" style="font-size: var(--fs-sm)">판매 중</span>
-		<span class="u-sub" style="font-size: var(--fs-xs)"
+		<span th:if="${totalCount > 0}" class="u-sub" style="font-size: var(--fs-xs)"
 		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
 	</div>
 	<!-- 할인율 안내 (2026-09-21) — 동적 가격: "자동 조정" 상품은 마감까지 남은 시간(3시간 초과 -20% ·
@@ -158,11 +57,10 @@
 		<b>자동 조정</b> 상품은 마감이 가까워질수록 할인율이 올라가요(3시간 전 -30%, 1시간 전 -50%). <b>직접 지정</b> 상품은 정한 할인율을 유지해요.
 	</p>
 
-	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
-	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
-	<div th:if="${totalCount == 0}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+	<!-- 비어 있을 땐 카드 대신 한 줄 — 판매 중을 맨 위에 둬도 자리를 거의 안 차지하게(2026-09-21). -->
+	<p th:if="${totalCount == 0}" class="u-sub" style="font-size: var(--fs-sm)">
 		오늘 판매 중인 상품이 없어요
-	</div>
+	</p>
 
 	<ul>
 		<th:block th:each="item, st : ${items}">
@@ -214,6 +112,104 @@
 		</th:block>
 	</ul>
 	</div><!-- /selling-section -->
+
+	<!-- 3. 판매 대기 (2026-09-21) — 오늘 아직 판매가 시작되지 않은 재고. 두 단계다:
+	       ① 재고 목록 — POS가 실시간으로 알려주는 재고(초안 만들어지기 전). 카드 안에 "판매 대기" 칩은
+	          섹션 제목과 중복이라 두지 않는다.
+	       ② 발행 대기 — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
+	     wait-section/selling-section은 아래 스크립트가 주기적으로 서버 화면으로 통째 갈아끼워
+	     POS 재고 숫자와 예상 할인율이 실시간처럼 갱신된다. -->
+	<div id="wait-section">
+	<div th:if="${posConnected or !#lists.isEmpty(drafts)}" class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
+		<span class="u-bold" style="font-size: var(--fs-sm)">판매 대기</span>
+		<span class="u-sub" style="font-size: var(--fs-xs)"
+		      th:text="'전체 ' + (${#lists.size(drafts)} + ${#lists.size(pendingMenus)}) + '개'">전체 4개</span>
+	</div>
+	<p th:if="${posConnected}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)"
+	   th:text="${posDraftPromptLabel != null}
+	            ? '재고는 POS에서 실시간으로 반영돼요. 매일 ' + ${posDraftPromptLabel} + '에 올릴 수 있는 상태(발행 대기)가 되고, [바로 올리기]를 눌러야 판매가 시작돼요. 가격은 마감이 가까울수록 내려가요.'
+	            : '재고는 POS에서 실시간으로 반영돼요. 발행 시각이 아직 설정되지 않았어요. POS 설정에서 정해 주세요.'">
+		재고는 POS에서 실시간으로 반영돼요.
+	</p>
+
+	<!-- 발행 대기: "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계 -->
+	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
+		<p class="u-bold" style="margin-bottom: 2px"><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 오늘의 구제 — 발행 대기</p>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
+		   th:text="${canPublishDrafts}
+		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
+		            : '마감이 임박해서 오늘은 등록이 닫혔어요. 남은 건 매장에서 직접 처리해 주세요.'">
+			마감 10분 전까지 올릴 수 있어요.
+		</p>
+		<div th:each="d : ${drafts}" class="stock-item" style="border-color: var(--c-primary-border); background: var(--c-primary-weak);">
+			<div class="stock-item__head">
+				<div class="stock-item__thumb" th:style="${d.imageUrl == null ? 'background:' + d.thumbColor : null}">
+					<img th:if="${d.imageUrl != null}" th:src="${d.imageUrl}" th:alt="${d.name}">
+					<span th:unless="${d.imageUrl != null}" th:text="${d.thumbEmoji}">🥐</span>
+				</div>
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${d.name}">오늘의 마감 빵 세트</span>
+						<span class="draft-src"
+						      th:text="${d.source == 'pos' ? 'POS 재고' : (d.source == 'template' ? '템플릿' : '직접')}">POS 재고</span>
+					</div>
+					<div class="price" style="margin-top: 2px">
+						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+						<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
+						      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
+						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
+						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
+					</div>
+					<span class="stock-item__meta" th:text="${d.quantity} + '개로 준비됐어요'">3개로 준비됐어요</span>
+				</div>
+			</div>
+			<div class="stock-item__actions">
+				<form th:if="${canPublishDrafts}" th:action="@{/store/products/{id}/publish(id=${d.id})}" method="post">
+					<button type="submit" class="btn btn--sm">바로 올리기</button>
+				</form>
+				<span th:unless="${canPublishDrafts}" class="btn btn--sm btn--outline is-disabled">⏳ 등록 마감</span>
+				<a th:href="@{/store/products/{id}/edit(id=${d.id})}" class="btn btn--sm btn--outline">수정</a>
+				<form th:action="@{/store/products/{id}/discard(id=${d.id})}" method="post"
+				      data-confirm="오늘은 이 상품을 안 올릴까요?">
+					<button type="submit" class="btn btn--sm btn--outline">오늘 안 함</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- 재고 목록: 초안이 만들어지기 전 단계 — 메뉴별 현재 재고와 "지금 올린다면" 예상 가격 -->
+	<div th:if="${!#lists.isEmpty(pendingMenus)}" style="margin-bottom: var(--s-4)">
+		<ul>
+			<li th:each="m : ${pendingMenus}" class="stock-item">
+				<div class="stock-item__head">
+					<div class="stock-item__thumb" th:style="${m.imageUrl == null ? 'background:' + m.thumbColor : null}">
+						<img th:if="${m.imageUrl != null}" th:src="${m.imageUrl}" th:alt="${m.name}">
+						<span th:unless="${m.imageUrl != null}" th:text="${m.thumbEmoji}">🥐</span>
+					</div>
+					<div class="stock-item__body">
+						<span class="stock-item__name" th:text="${m.name}">단팥빵</span>
+						<div class="price" style="margin-top: 2px">
+							<span class="badge badge--discount" th:text="'-' + ${m.expectedRate} + '%'">-20%</span>
+							<span class="discount-basis" th:classappend="${m.manualRate} ? ' is-custom' : ' is-auto'"
+							      th:text="${m.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
+							<span class="price__orig" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">2,800원</span>
+							<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(m.expectedPrice, 0, 'COMMA')} + '원'">2,240원</span>
+						</div>
+						<span class="stock-item__meta"
+						      th:text="'재고 ' + ${m.stockQuantity} + '개' + (${m.saleQuantity} != ${m.stockQuantity} ? ' · 앱 판매 최대 ' + ${m.saleQuantity} + '개' : '')">재고 21개</span>
+					</div>
+				</div>
+			</li>
+		</ul>
+	</div>
+
+	<!-- 대기 중인 게 없을 때 안내 -->
+	<p th:if="${posConnected and #lists.isEmpty(drafts) and #lists.isEmpty(pendingMenus)}"
+	   class="u-sub u-center" style="margin-bottom: var(--s-4); line-height: 1.7">
+		대기 중인 재고가 없어요.<br>
+		<a th:href="@{/store/pos}" style="text-decoration: underline">POS 설정</a>에서 앱 판매를 켠 메뉴에 재고가 생기면 여기에 보여요.
+	</p>
+	</div><!-- /wait-section -->
 
 	<!-- 4. 보조 수단 — 작은 링크. 템플릿 링크는 POS 미연동이거나 이미 템플릿을 쓰는 경우만.
 	     (대시보드로는 상단바 뒤로가기 버튼으로 이동) -->
