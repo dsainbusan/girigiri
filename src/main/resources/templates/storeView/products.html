@@ -5,10 +5,10 @@
 <!--/*
 	점주 메인 작업 화면 — "오늘의 구제" (WBS 3.0, 2026-08-26 김태훈→문창호 인계).
 	2026-08-27 통합형 IA로 재편 + 우선순위 재배열: POS 자동 연동이 메인.
-	화면 순서 = 점주가 매일 하는 일 순서:
+	화면 순서 (2026-09-21 개편):
 	  1) POS 상태 한 줄 (연동됐으면 요약만, 안 됐으면 큰 안내)
-	  2) 발행 대기 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
-	  3) 판매 중 목록 (훑어보기 + 가끔 품절/수정)
+	  2) 판매 중 — 오늘 실제로 팔고 있는 상품 (비면 한 줄)
+	  3) 판매 대기 — POS 실시간 재고 + 올릴 시간이 된 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
 	  4) 보조: 직접 등록 / 템플릿(POS 없을 때) / 대시보드
 	제거: 품목 검색 폼(컨트롤러가 q를 안 받던 죽은 기능 + 목록이 짧아 불필요).
 */-->
@@ -16,7 +16,7 @@
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<p class="u-primary u-bold" th:if="${param.drafted != null and param.drafted[0] != '0'}" style="margin-bottom: var(--s-3)"
-	   th:text="'POS 재고로 ' + ${param.drafted[0]} + '개 메뉴를 발행 대기에 올렸어요.'">POS 재고로 5개 메뉴를 발행 대기에 올렸어요.</p>
+	   th:text="'POS 재고로 ' + ${param.drafted[0]} + '개 메뉴를 판매 대기에 올렸어요.'">POS 재고로 5개 메뉴를 판매 대기에 올렸어요.</p>
 	<p class="u-sub" th:if="${param.drafted != null and param.drafted[0] == '0'}" style="margin-bottom: var(--s-3)">
 		새로 올릴 재고가 없어요 (앱 판매 켠 메뉴가 없거나, 재고 0이거나, 오늘 이미 올렸어요).
 	</p>
@@ -42,9 +42,101 @@
 		</div>
 	</div>
 
-	<!-- 2. 발행 대기: "오늘의 구제" 자동 초안 — 이 화면의 핵심 -->
+	<!-- 2. 판매 중 목록 (2026-09-21 — 판매 대기보다 위로. 지금 팔고 있는 게 가장 중요하고, 비어 있을 땐
+	     한 줄만 차지하니 위에 둬도 부담이 없다.) -->
+	<div id="selling-section" style="margin-bottom: var(--s-5)">
+	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
+		<span class="u-bold" style="font-size: var(--fs-sm)">판매 중</span>
+		<span th:if="${totalCount > 0}" class="u-sub" style="font-size: var(--fs-xs)"
+		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
+	</div>
+	<!-- 할인율 안내 (2026-09-21) — 동적 가격: "자동 조정" 상품은 마감까지 남은 시간(3시간 초과 -20% ·
+	     1~3시간 -30% · 1시간 이내 -50%)에 따라 할인율이 올라가고, "직접 지정" 상품은 점주가 정한 값이
+	     하한으로 유지된다. -->
+	<p th:if="${totalCount > 0}" class="u-mut" style="font-size: var(--fs-xs); margin: calc(-1 * var(--s-2)) 0 var(--s-3)">
+		<b>자동 조정</b> 상품은 마감이 가까워질수록 할인율이 올라가요(3시간 전 -30%, 1시간 전 -50%). <b>직접 지정</b> 상품은 정한 할인율을 유지해요.
+	</p>
+
+	<!-- 비어 있을 땐 카드 대신 한 줄 — 판매 중을 맨 위에 둬도 자리를 거의 안 차지하게(2026-09-21). -->
+	<p th:if="${totalCount == 0}" class="u-sub" style="font-size: var(--fs-sm)">
+		오늘 판매 중인 상품이 없어요
+	</p>
+
+	<ul>
+		<th:block th:each="item, st : ${items}">
+		<!-- 마감된 상품 구간 시작 표시 — items는 컨트롤러에서 마감 상품이 맨 뒤로 정렬돼 있다. -->
+		<li th:if="${item.statusVariant == 'closed' and (st.first or items[st.index - 1].statusVariant != 'closed')}"
+		    class="stock-divider">
+			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'오늘 마감된 상품 ' + ${closedCount} + '개'">오늘 마감된 상품 3개</span>
+			<span class="u-mut" style="font-size: var(--fs-xs)">마감 시간이 지나 오늘 판매가 끝난 상품이에요. 지난 판매 내역은 리포트에서 볼 수 있어요.</span>
+		</li>
+		<li class="stock-item" th:classappend="${item.statusVariant == 'soldout' or item.statusVariant == 'closed'} ? ' is-dim'">
+			<div class="stock-item__head">
+				<div class="stock-item__thumb" th:style="${item.imageUrl == null ? 'background:' + item.thumbColor : null}">
+					<img th:if="${item.imageUrl != null}" th:src="${item.imageUrl}" th:alt="${item.name}">
+					<span th:unless="${item.imageUrl != null}" th:text="${item.thumbEmoji}">🥐</span>
+				</div>
+				<div class="stock-item__body">
+					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+						<span class="stock-item__name" th:text="${item.name}">오늘의 모둠빵 세트</span>
+						<!-- 상태 칩 + "⋯" 메뉴 (2026-09-21) — 수정/삭제 버튼 두 개를 카드에서 빼고 이 버튼 하나로 모았다.
+						     누르면 아래 바텀시트(#stock-sheet)가 열린다. 카드가 10초마다 통째로 교체되므로 클릭은
+						     문서 위임으로 처리하고, 수정/삭제 주소는 버튼의 data-*에 실어 둔다. -->
+						<div class="stock-item__side">
+							<span class="stock-item__status" th:classappend="' stock-item__status--' + ${item.statusVariant}"
+							      th:text="${item.statusLabel}">판매중</span>
+							<button type="button" class="stock-item__more" data-stock-menu
+							        th:attr="aria-label=${item.name + ' 메뉴 열기'},data-id=${item.id},data-name=${item.name},data-edit-url=@{/store/products/{id}/edit(id=${item.id})},data-delete-url=@{/store/products/{id}/delete(id=${item.id})}"
+							        th:data-soldout-url="${item.statusVariant == 'selling'} ? @{/store/products/{id}/soldout(id=${item.id})} : null"
+							        th:data-resume-url="${item.manualSoldOut} ? @{/store/products/{id}/resume(id=${item.id})} : null"
+							        aria-haspopup="dialog">
+								<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+									<circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<div class="price" style="margin-top: 2px">
+						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
+						<span class="discount-basis" th:if="${item.statusVariant != 'closed'}"
+						      th:classappend="${item.manualRate} ? ' is-custom' : ' is-auto'"
+						      th:text="${item.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
+						<span class="price__orig" th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
+						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
+					</div>
+					<span class="stock-item__meta"
+					      th:text="'재고 ' + ${item.remainingQuantity} + ' / ' + ${item.quantity} + '개 · ' + ${item.registeredLabel}">재고 3 / 10개 · 오늘 14:20 등록</span>
+				</div>
+			</div>
+
+			<!-- 수정·삭제·품절·판매 재개는 전부 위 "⋯" 메뉴로 옮겼다(2026-09-21). 카드 하단엔 버튼이 없다. -->
+		</li>
+		</th:block>
+	</ul>
+	</div><!-- /selling-section -->
+
+	<!-- 3. 판매 대기 (2026-09-21) — 오늘 아직 판매가 시작되지 않은 재고. 두 단계다:
+	       ① 재고 목록 — POS가 실시간으로 알려주는 재고(초안 만들어지기 전). 카드 안에 "판매 대기" 칩은
+	          섹션 제목과 중복이라 두지 않는다.
+	       ② 초안(draft) — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
+	     wait-section/selling-section은 아래 스크립트가 주기적으로 서버 화면으로 통째 갈아끼워
+	     POS 재고 숫자와 예상 할인율이 실시간처럼 갱신된다. -->
+	<div id="wait-section">
+	<div th:if="${posConnected or !#lists.isEmpty(drafts)}" class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
+		<span class="u-bold" style="font-size: var(--fs-sm)">판매 대기</span>
+		<span class="u-sub" style="font-size: var(--fs-xs)"
+		      th:text="'전체 ' + (${#lists.size(drafts)} + ${#lists.size(pendingMenus)}) + '개'">전체 4개</span>
+	</div>
+	<p th:if="${posConnected}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)"
+	   th:text="${posDraftPromptLabel != null}
+	            ? '재고는 POS에서 실시간으로 반영돼요. 매일 ' + ${posDraftPromptLabel} + '이 되면 [바로 올리기]를 할 수 있고, 눌러야 판매가 시작돼요. 가격은 마감이 가까울수록 내려가요.'
+	            : '재고는 POS에서 실시간으로 반영돼요. 발행 시각이 아직 설정되지 않았어요. POS 설정에서 정해 주세요.'">
+		재고는 POS에서 실시간으로 반영돼요.
+	</p>
+
+	<!-- 올릴 시간이 된 "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계. 섹션 제목이 이미
+	     "판매 대기"라서(2026-09-21 표기 통일) 박스에 제목을 따로 달지 않는다. -->
 	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
-		<p class="u-bold" style="margin-bottom: 2px"><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 오늘의 구제 — 발행 대기</p>
 		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
 		   th:text="${canPublishDrafts}
 		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
@@ -65,6 +157,8 @@
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+						<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
+						      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
 						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
 						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
 					</div>
@@ -85,63 +179,90 @@
 		</div>
 	</div>
 
-	<!-- 초안이 없을 때: 연동 + 시각설정이 됐으면 "곧 올라와요" 안내 -->
-	<p th:if="${#lists.isEmpty(drafts) and posConnected and posDraftPromptLabel != null}"
+	<!-- 재고 목록: 초안이 만들어지기 전 단계 — 메뉴별 현재 재고와 "지금 올린다면" 예상 가격 -->
+	<div th:if="${!#lists.isEmpty(pendingMenus)}" style="margin-bottom: var(--s-4)">
+		<ul>
+			<li th:each="m : ${pendingMenus}" class="stock-item">
+				<div class="stock-item__head">
+					<div class="stock-item__thumb" th:style="${m.imageUrl == null ? 'background:' + m.thumbColor : null}">
+						<img th:if="${m.imageUrl != null}" th:src="${m.imageUrl}" th:alt="${m.name}">
+						<span th:unless="${m.imageUrl != null}" th:text="${m.thumbEmoji}">🥐</span>
+					</div>
+					<div class="stock-item__body">
+						<span class="stock-item__name" th:text="${m.name}">단팥빵</span>
+						<div class="price" style="margin-top: 2px">
+							<span class="badge badge--discount" th:text="'-' + ${m.expectedRate} + '%'">-20%</span>
+							<span class="discount-basis" th:classappend="${m.manualRate} ? ' is-custom' : ' is-auto'"
+							      th:text="${m.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
+							<span class="price__orig" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">2,800원</span>
+							<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(m.expectedPrice, 0, 'COMMA')} + '원'">2,240원</span>
+						</div>
+						<span class="stock-item__meta"
+						      th:text="'재고 ' + ${m.stockQuantity} + '개' + (${m.saleQuantity} != ${m.stockQuantity} ? ' · 앱 판매 최대 ' + ${m.saleQuantity} + '개' : '')">재고 21개</span>
+					</div>
+				</div>
+			</li>
+		</ul>
+	</div>
+
+	<!-- 대기 중인 게 없을 때 안내 -->
+	<p th:if="${posConnected and #lists.isEmpty(drafts) and #lists.isEmpty(pendingMenus)}"
 	   class="u-sub u-center" style="margin-bottom: var(--s-4); line-height: 1.7">
-		오늘 <b th:text="${posDraftPromptLabel}">20:00</b> 무렵 남은 재고가 여기 <b>발행 대기</b>로 올라와요.
+		대기 중인 재고가 없어요.<br>
+		<a th:href="@{/store/pos}" style="text-decoration: underline">POS 설정</a>에서 앱 판매를 켠 메뉴에 재고가 생기면 여기에 보여요.
 	</p>
+	</div><!-- /wait-section -->
 
-	<!-- 3. 판매 중 목록 -->
-	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-3)">
-		<span class="u-bold" style="font-size: var(--fs-sm)">판매 중</span>
-		<span class="u-sub" style="font-size: var(--fs-xs)"
-		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
+	<!-- 상품 "⋯" 메뉴 바텀시트 + 삭제 확인 다이얼로그 (2026-09-21).
+	     #selling-section 밖에 둔다 — 그 안은 10초마다 서버 화면으로 통째 교체되기 때문. 열 때 눌린 버튼의
+	     data-*(상품명·수정/삭제 주소)를 스크립트가 들고 있다가 채운다. 삭제는 기존 POST 엔드포인트를 숨김 폼으로
+	     그대로 호출한다(서버 로직 변경 없음). -->
+	<div id="stock-sheet" class="stock-sheet is-hidden" role="dialog" aria-modal="true" aria-labelledby="stock-sheet-name">
+		<div class="stock-sheet__backdrop" data-sheet-close></div>
+		<div class="stock-sheet__panel">
+			<div class="stock-sheet__handle" aria-hidden="true"></div>
+			<p id="stock-sheet-name" class="stock-sheet__name"></p>
+			<a id="stock-sheet-edit" class="stock-sheet__row" href="#">
+				<svg class="icon" aria-hidden="true"><use href="#i-pencil"/></svg>
+				<span>수정</span>
+			</a>
+			<!-- 품절/판매 재개 — 카드 상태에 따라 하나만 보인다(스크립트가 is-hidden을 토글). 판매 중이면 "품절",
+			     사장님이 직접 품절 처리한 상품이면 "판매 재개". 둘 다 아니면(자연 품절·마감) 행 자체가 없다. -->
+			<button type="button" id="stock-sheet-soldout" class="stock-sheet__row is-hidden">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+					<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>
+				</svg>
+				<span>품절 처리</span>
+			</button>
+			<button type="button" id="stock-sheet-resume" class="stock-sheet__row is-hidden">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+					<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/>
+				</svg>
+				<span>판매 재개</span>
+			</button>
+			<button type="button" id="stock-sheet-delete" class="stock-sheet__row stock-sheet__row--danger">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+					<path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd"/>
+				</svg>
+				<span>삭제</span>
+			</button>
+			<button type="button" class="stock-sheet__close" data-sheet-close>닫기</button>
+		</div>
 	</div>
 
-	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
-	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
-	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 판매 중인 상품이 없어요
+	<div id="stock-dialog" class="stock-dialog is-hidden" role="alertdialog" aria-modal="true"
+	     aria-labelledby="stock-dialog-title" aria-describedby="stock-dialog-desc">
+		<div class="stock-dialog__backdrop" data-dialog-close></div>
+		<div class="stock-dialog__panel">
+			<h3 id="stock-dialog-title" class="stock-dialog__title">이 상품을 삭제할까요?</h3>
+			<p id="stock-dialog-desc" class="stock-dialog__desc"></p>
+			<div class="stock-dialog__actions">
+				<button type="button" class="stock-dialog__btn stock-dialog__btn--cancel" data-dialog-close>취소</button>
+				<button type="button" id="stock-dialog-confirm" class="stock-dialog__btn stock-dialog__btn--danger">삭제</button>
+			</div>
+		</div>
 	</div>
-
-	<ul>
-		<li th:each="item : ${items}" class="stock-item" th:classappend="${item.statusVariant == 'soldout'} ? ' is-dim'">
-			<div class="stock-item__head">
-				<div class="stock-item__thumb" th:style="${item.imageUrl == null ? 'background:' + item.thumbColor : null}">
-					<img th:if="${item.imageUrl != null}" th:src="${item.imageUrl}" th:alt="${item.name}">
-					<span th:unless="${item.imageUrl != null}" th:text="${item.thumbEmoji}">🥐</span>
-				</div>
-				<div class="stock-item__body">
-					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
-						<span class="stock-item__name" th:text="${item.name}">오늘의 모둠빵 세트</span>
-						<span class="stock-item__status" th:classappend="' stock-item__status--' + ${item.statusVariant}"
-						      th:text="${item.statusLabel}">판매중</span>
-					</div>
-					<div class="price" style="margin-top: 2px">
-						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
-						<span class="price__orig" th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
-						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
-					</div>
-					<span class="stock-item__meta"
-					      th:text="'재고 ' + ${item.remainingQuantity} + ' / ' + ${item.quantity} + '개 · ' + ${item.registeredLabel}">재고 3 / 10개 · 오늘 14:20 등록</span>
-				</div>
-			</div>
-
-			<div class="stock-item__actions">
-				<form th:if="${item.statusVariant == 'selling'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
-					<button type="submit" class="btn btn--sm btn--outline">품절</button>
-				</form>
-				<form th:if="${item.manualSoldOut}" th:action="@{/store/products/{id}/resume(id=${item.id})}" method="post">
-					<button type="submit" class="btn btn--sm btn--outline">판매 재개</button>
-				</form>
-				<a th:href="@{/store/products/{id}/edit(id=${item.id})}" class="btn btn--sm btn--outline">수정</a>
-				<form th:action="@{/store/products/{id}/delete(id=${item.id})}" method="post"
-				      data-confirm="이 상품을 삭제할까요? 되돌릴 수 없어요.">
-					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
-				</form>
-			</div>
-		</li>
-	</ul>
+	<form id="stock-delete-form" method="post" hidden></form>
 
 	<!-- 4. 보조 수단 — 작은 링크. 템플릿 링크는 POS 미연동이거나 이미 템플릿을 쓰는 경우만.
 	     (대시보드로는 상단바 뒤로가기 버튼으로 이동) -->
@@ -160,6 +281,165 @@
 		if (!back) return;
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
+
+	<!-- 실시간 갱신 (2026-09-21) — POS가 재고를 보내거나 손님이 예약하면 DB가 바뀌는데 이 화면은 열 때
+	     한 번만 읽는다. 10초마다 같은 주소를 다시 받아서 판매 대기/판매 중 영역만 갈아끼운다(새 API 없이
+	     서버가 그려주는 화면을 그대로 재사용). 탭이 가려져 있으면 쉬고, 그 영역 안에 포커스가 있으면
+	     건너뛴다(누르던 버튼이 사라지는 걸 막기 위해). -->
+	<script th:inline="none">
+	(function () {
+		var IDS = ['wait-section', 'selling-section'];
+		setInterval(function () {
+			if (document.hidden) { return; }
+			// "⋯" 시트/삭제 다이얼로그가 열려 있으면 뒤 화면을 갈아끼우지 않는다.
+			if (document.querySelector('.stock-sheet:not(.is-hidden), .stock-dialog:not(.is-hidden)')) { return; }
+			var active = document.activeElement;
+			if (active && active.closest && active.closest('#wait-section, #selling-section')) { return; }
+			fetch(location.pathname, { credentials: 'same-origin' })
+				.then(function (res) { return res.ok ? res.text() : null; })
+				.then(function (html) {
+					if (!html) { return; }
+					var doc = new DOMParser().parseFromString(html, 'text/html');
+					IDS.forEach(function (id) {
+						var fresh = doc.getElementById(id);
+						var cur = document.getElementById(id);
+						if (fresh && cur && fresh.innerHTML !== cur.innerHTML) { cur.innerHTML = fresh.innerHTML; }
+					});
+				})
+				.catch(function () { /* 네트워크 오류는 다음 주기에 다시 */ });
+		}, 10000);
+	})();
+	</script>
+
+	<!-- 상품 "⋯" 메뉴 바텀시트 + 삭제 확인 다이얼로그 동작 (2026-09-21).
+	     - 버튼은 10초마다 교체되는 영역 안에 있어서 문서 위임으로 받는다.
+	     - 시트/다이얼로그는 ESC·배경 클릭으로 닫히고, 다이얼로그가 위에 있으면 ESC는 다이얼로그만 닫는다.
+	     - 삭제는 기존 POST 엔드포인트를 숨김 폼으로 호출하고(성공하면 서버가 목록으로 리다이렉트 → 새로고침),
+	       요청 중엔 확인 버튼을 잠가 중복 클릭을 막는다. -->
+	<script th:inline="none">
+	(function () {
+		var sheet = document.getElementById('stock-sheet');
+		var dialog = document.getElementById('stock-dialog');
+		var form = document.getElementById('stock-delete-form');
+		if (!sheet || !dialog || !form) { return; }
+		var sheetName = document.getElementById('stock-sheet-name');
+		var editLink = document.getElementById('stock-sheet-edit');
+		var deleteRow = document.getElementById('stock-sheet-delete');
+		var soldoutRow = document.getElementById('stock-sheet-soldout');
+		var resumeRow = document.getElementById('stock-sheet-resume');
+		var dialogDesc = document.getElementById('stock-dialog-desc');
+		var confirmBtn = document.getElementById('stock-dialog-confirm');
+
+		var current = null;       // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl }
+		var lastTrigger = null;   // 닫을 때 포커스를 돌려줄 "⋯" 버튼
+		var submitting = false;
+
+		function isOpen(el) { return !el.classList.contains('is-hidden'); }
+		function syncScrollLock() { document.body.style.overflow = (isOpen(sheet) || isOpen(dialog)) ? 'hidden' : ''; }
+
+		function openSheet(trigger) {
+			current = {
+				id: trigger.getAttribute('data-id'),
+				name: trigger.getAttribute('data-name') || '',
+				editUrl: trigger.getAttribute('data-edit-url'),
+				deleteUrl: trigger.getAttribute('data-delete-url'),
+				soldoutUrl: trigger.getAttribute('data-soldout-url'),   // 판매 중일 때만 있음
+				resumeUrl: trigger.getAttribute('data-resume-url')      // 직접 품절 처리한 상품일 때만 있음
+			};
+			lastTrigger = trigger;
+			sheetName.textContent = current.name;
+			editLink.setAttribute('href', current.editUrl);
+			soldoutRow.classList.toggle('is-hidden', !current.soldoutUrl);
+			resumeRow.classList.toggle('is-hidden', !current.resumeUrl);
+			soldoutRow.disabled = false;
+			resumeRow.disabled = false;
+			sheet.classList.remove('is-hidden');
+			syncScrollLock();
+			editLink.focus();
+		}
+		function closeSheet() {
+			sheet.classList.add('is-hidden');
+			syncScrollLock();
+			// 카드가 갱신으로 교체됐을 수 있어서, 원래 버튼이 아직 문서에 있을 때만 포커스를 돌려준다.
+			if (lastTrigger && document.contains(lastTrigger)) { lastTrigger.focus(); }
+		}
+		function openDialog() {
+			dialogDesc.textContent = '\'' + current.name + '\'가 재고 목록에서 사라져요. 삭제한 상품은 되돌릴 수 없어요.';
+			dialog.classList.remove('is-hidden');
+			syncScrollLock();
+			dialog.querySelector('.stock-dialog__btn--cancel').focus();   // 삭제가 기본 포커스가 되지 않게
+		}
+		function closeDialog() {
+			if (submitting) { return; }
+			dialog.classList.add('is-hidden');
+			syncScrollLock();
+			deleteRow.focus();
+		}
+
+		document.addEventListener('click', function (e) {
+			var trigger = e.target.closest('[data-stock-menu]');
+			if (trigger) { openSheet(trigger); return; }
+			if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
+			if (e.target.closest('[data-dialog-close]')) { closeDialog(); return; }
+		});
+
+		deleteRow.addEventListener('click', openDialog);
+
+		// 품절 처리 / 판매 재개 — 확인창 없이 바로 기존 POST를 호출한다(예전 카드 버튼과 같은 동작).
+		// 요청 중엔 두 행을 잠가 중복 클릭을 막는다.
+		function submitStatusChange(url) {
+			if (submitting || !url) { return; }
+			submitting = true;
+			soldoutRow.disabled = true;
+			resumeRow.disabled = true;
+			form.setAttribute('action', url);
+			form.submit();
+		}
+		soldoutRow.addEventListener('click', function () { submitStatusChange(current && current.soldoutUrl); });
+		resumeRow.addEventListener('click', function () { submitStatusChange(current && current.resumeUrl); });
+
+		// 삭제 후 브라우저 "뒤로"로 이 화면이 캐시에서 복원되면 잠긴 버튼과 열린 레이어가 그대로 남는다 — 초기화.
+		window.addEventListener('pageshow', function (e) {
+			if (!e.persisted) { return; }
+			submitting = false;
+			confirmBtn.disabled = false;
+			confirmBtn.textContent = '삭제';
+			soldoutRow.disabled = false;
+			resumeRow.disabled = false;
+			sheet.classList.add('is-hidden');
+			dialog.classList.add('is-hidden');
+			syncScrollLock();
+		});
+
+		confirmBtn.addEventListener('click', function () {
+			if (submitting || !current) { return; }
+			submitting = true;
+			confirmBtn.disabled = true;
+			confirmBtn.textContent = '삭제 중…';
+			form.setAttribute('action', current.deleteUrl);
+			form.submit();
+		});
+
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') {
+				if (isOpen(dialog)) { closeDialog(); }
+				else if (isOpen(sheet)) { closeSheet(); }
+				return;
+			}
+			if (e.key !== 'Tab') { return; }
+			// 열린 레이어 안에서만 Tab 순환(포커스가 뒤 화면으로 새지 않게).
+			var layer = isOpen(dialog) ? dialog : (isOpen(sheet) ? sheet : null);
+			if (!layer) { return; }
+			var items = Array.prototype.filter.call(
+				layer.querySelectorAll('a[href], button:not([disabled])'),
+				function (el) { return el.offsetParent !== null; });
+			if (!items.length) { return; }
+			var first = items[0], last = items[items.length - 1];
+			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+		});
 	})();
 	</script>
 </div>

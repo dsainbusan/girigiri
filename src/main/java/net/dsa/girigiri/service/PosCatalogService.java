@@ -1,6 +1,7 @@
 package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.PendingMenuDto;
 import net.dsa.girigiri.domain.dto.PosMenuItemDto;
 import net.dsa.girigiri.domain.dto.PosStockDto;
 import net.dsa.girigiri.domain.entity.MenuItemEntity;
@@ -9,6 +10,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.MenuItemRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.http.HttpStatus;
@@ -193,6 +195,40 @@ public class PosCatalogService {
 	}
 
 	/**
+	 * 재고 관리 화면 "판매 대기" 목록 (2026-09-21) — 아직 초안이 안 만들어진, POS 실시간 재고 메뉴.
+	 * generateDraftsFromStock과 같은 조건(앱 판매 켬 + 재고 > 0 + 오늘 이 메뉴로 만든 상품이 아직 없음)이라
+	 * 정해진 시각이 되면 여기 있던 메뉴가 그대로 "발행 대기" 초안으로 넘어간다. 할인율·할인가는 "지금 올린다면"
+	 * 기준의 예상값이다(마감까지 남은 시간에 따라 바뀜).
+	 */
+	public List<PendingMenuDto> listPendingMenus(StoreEntity store) {
+		LocalDate today = LocalDate.now();
+		LocalDateTime closeAt = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt();
+		Set<Long> menuIdsToday = productRepository.findByStoreId(store.getId()).stream()
+				.filter(p -> p.getMenuItemId() != null && p.getRegisteredAt() != null
+						&& p.getRegisteredAt().toLocalDate().equals(today))
+				.map(ProductEntity::getMenuItemId)
+				.collect(Collectors.toSet());
+
+		return menuItemRepository.findByStoreIdOrderByNameAsc(store.getId()).stream()
+				.filter(m -> m.isAppSaleEnabled() && m.getStockQuantity() != null && m.getStockQuantity() > 0
+						&& !menuIdsToday.contains(m.getId()))
+				.map(m -> {
+					int rate = DiscountRateCalculator.effectiveRate(m.getDiscountRate(), closeAt);
+					int saleQty = m.getAppSaleQuantity() != null
+							? Math.min(m.getStockQuantity(), m.getAppSaleQuantity())
+							: m.getStockQuantity();
+					return new PendingMenuDto(
+							m.getId(), m.getName(), m.getImageUrl(),
+							CategoryDisplayUtil.thumbEmoji(store.getCategory()),
+							CategoryDisplayUtil.thumbColor(store.getCategory()),
+							m.getStockQuantity(), saleQty, m.getOriginalPrice(),
+							rate, DiscountRateCalculator.applyDiscount(m.getOriginalPrice(), rate),
+							m.getDiscountRate() != null);
+				})
+				.toList();
+	}
+
+	/**
 	 * "지금 남은 재고로 초안 만들기" — 스케줄러(정해진 시각)와 시뮬레이터 버튼이 공유.
 	 * appSaleEnabled 이고 재고 > 0 인 메뉴마다 ProductEntity(status='draft')를 만든다.
 	 * 오늘 이미 그 메뉴로 만든 상품(draft/active/skipped)이 있으면 건너뛴다(dedup).
@@ -221,9 +257,10 @@ public class PosCatalogService {
 			if (alreadyToday) {
 				continue;
 			}
-			// 할인가는 "만들 때 한 번" 확정하고 이후 자동으로 안 바꾼다 (2026-08-27 팀 결정: A안).
-			// 시간이 지나 마감이 가까워져도 이 상품 가격은 그대로 — 손님/점주 모두 예측 가능하게.
-			// 더 깊은 할인을 원하면 점주가 pos_draft_prompt_time을 마감에 더 가깝게 잡으면 된다.
+			// 변경됨 (2026-09-21) — 예전엔 "만들 때 한 번 확정하고 이후 안 바꾼다"(2026-08-27 팀 결정 A안)였는데,
+			// 서비스 취지(마감이 가까울수록 더 싸게)에 맞게 동적 가격으로 바꿨다. 지금 값은 초기값이고,
+			// ListingDraftScheduler.refreshDynamicPrices가 마감까지 남은 시간에 맞춰 계속 다시 계산한다.
+			// 메뉴에 점주가 지정한 할인율(m.getDiscountRate)이 있으면 초안에도 그대로 이어받아 "직접 지정"이 된다.
 			int rate = DiscountRateCalculator.effectiveRate(m.getDiscountRate(), closeAt);
 			int discounted = DiscountRateCalculator.applyDiscount(m.getOriginalPrice(), rate);
 			// 앱 판매 수량 상한이 있으면 그만큼만 (재고가 더 적으면 재고만큼).
@@ -236,6 +273,7 @@ public class PosCatalogService {
 					.name(m.getName())
 					.originalPrice(m.getOriginalPrice())
 					.discountedPrice(discounted)
+					.ownerDiscountRate(m.getDiscountRate())
 					.quantity(qty)
 					.remainingQuantity(qty)
 					.imageUrl(m.getImageUrl())

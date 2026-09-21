@@ -40,6 +40,9 @@ import java.util.Map;
  *   - expireStaleDrafts:        발행 안 된 초안 → skipped
  *   - expireStaleActiveProducts: 마감 지난 판매중(active) → expired (손님 화면/카운트가 실제와 어긋나지 않게)
  *   - purgeOldSkipped:          지난 날 skipped 행 삭제 (그날 dedup 끝나면 쓸모없음)
+ *
+ * 변경됨 (2026-09-21) — refreshDynamicPrices: 오늘 상품의 할인가를 마감까지 남은 시간에 맞춰 매 스캔 갱신
+ * (동적 가격. 예전 "등록 시점 고정" 팀 A안 폐기).
  */
 @Slf4j
 @Service
@@ -61,6 +64,7 @@ public class ListingDraftScheduler {
 	public void scan() {
 		expireStaleDrafts();
 		expireStaleActiveProducts();
+		refreshDynamicPrices();
 		purgeOldSkipped();
 		scanTemplates();
 		scanPosStockSnapshots();
@@ -131,6 +135,41 @@ public class ListingDraftScheduler {
 		}
 		if (expired > 0) {
 			log.info("마감 지난 판매중 상품 만료: {}건", expired);
+		}
+	}
+
+	// --- 동적 가격 갱신 (2026-09-21) ----------------------------------
+	// 오늘 등록된 초안/판매중/직접 품절 상품의 할인가를 "지금 마감까지 남은 시간" 기준으로 다시 계산한다
+	// (3시간 초과 -20% · 1~3시간 -30% · 1시간 이내 -50%). 점주가 직접 지정한 할인율(ownerDiscountRate)은
+	// 하한으로 유지된다(effectiveRate). 홈/검색/상세/예약이 전부 discountedPrice 하나를 읽으므로 여기만
+	// 바꾸면 되고, 이미 만들어진 예약의 총액은 예약 생성 시점에 확정돼 있어 영향받지 않는다.
+	// 값이 안 바뀌면 save하지 않아서 대부분의 스캔은 조회만 한다.
+	private void refreshDynamicPrices() {
+		LocalDate today = LocalDate.now();
+		Map<Long, LocalDateTime> closeAtByStore = new HashMap<>();
+
+		int updated = 0;
+		for (String status : List.of("draft", "active", "sold")) {
+			for (ProductEntity p : productRepository.findByStatus(status)) {
+				if (p.getRegisteredAt() == null || !p.getRegisteredAt().toLocalDate().equals(today)
+						|| p.getOriginalPrice() == null) {
+					continue;
+				}
+				LocalDateTime closeAt = closeAtByStore.computeIfAbsent(p.getStoreId(), sid ->
+						storeRepository.findById(sid)
+								.map(s -> StoreHoursUtil.parse(s.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES).closeAt())
+								.orElse(null));
+				int rate = DiscountRateCalculator.effectiveRate(p.getOwnerDiscountRate(), closeAt);
+				int price = DiscountRateCalculator.applyDiscount(p.getOriginalPrice(), rate);
+				if (!Integer.valueOf(price).equals(p.getDiscountedPrice())) {
+					p.setDiscountedPrice(price);
+					productRepository.save(p);
+					updated++;
+				}
+			}
+		}
+		if (updated > 0) {
+			log.info("동적 가격 갱신(마감까지 남은 시간 기준): {}건", updated);
 		}
 	}
 

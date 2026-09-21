@@ -12,7 +12,6 @@ import net.dsa.girigiri.service.PosCatalogService;
 import net.dsa.girigiri.service.ProductService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreProductService;
-import net.dsa.girigiri.util.DiscountRateCalculator;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -68,14 +69,23 @@ public class StoreProductController {
 				.filter(p -> "draft".equals(p.getStatus()))
 				.map(p -> productService.toStockItem(p, category))
 				.toList();
+		// 이 화면은 "오늘의 구제" — 오늘 올릴 상품과 오늘 판매 중인 재고를 보는 곳이라 오늘 등록된 상품만 보여준다
+		// (2026-09-21). "오늘의 구제 상품은 그날 장사용"(ListingDraftScheduler)이라 지난 날 상품은 이미 판매가
+		// 끝난 기록이고, 그 이력은 판매/폐기 리포트·정산에서 본다. 오늘 마감 시간이 지나 끝난 상품은 오늘 재고
+		// 현황의 일부라 남겨서 맨 아래 별도 구간으로 보낸다(sorted는 안정 정렬이라 각 구간 안의 순서는 그대로).
+		LocalDate today = LocalDate.now();
 		List<StockItemDto> items = all.stream()
 				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
+				.filter(p -> p.getRegisteredAt() != null && p.getRegisteredAt().toLocalDate().equals(today))
 				.map(p -> productService.toStockItem(p, category))
+				.sorted(Comparator.comparing(i -> "closed".equals(i.statusVariant())))
 				.toList();
+		long closedCount = items.stream().filter(i -> "closed".equals(i.statusVariant())).count();
 
 		model.addAttribute("drafts", drafts);
 		model.addAttribute("items", items);
-		model.addAttribute("totalCount", items.size());
+		model.addAttribute("totalCount", items.size() - closedCount);
+		model.addAttribute("closedCount", closedCount);
 		model.addAttribute("sellingCount", items.stream().filter(i -> "selling".equals(i.statusVariant())).count());
 		model.addAttribute("soldOutCount", items.stream().filter(i -> "soldout".equals(i.statusVariant())).count());
 
@@ -86,6 +96,8 @@ public class StoreProductController {
 		model.addAttribute("posDraftPromptLabel",
 				store.getPosDraftPromptTime() == null ? null : store.getPosDraftPromptTime().format(TIME_FMT));
 		model.addAttribute("hasActiveTemplate", storeProductService.hasActiveTemplate(store.getId()));
+		// "판매 대기" — 초안이 만들어지기 전의 POS 실시간 재고 메뉴(2026-09-21). POS 연동 매장만.
+		model.addAttribute("pendingMenus", posConnected ? posCatalogService.listPendingMenus(store) : List.of());
 
 		// 마감 10분 전을 넘기면 초안 [바로 올리기]를 닫는다 (손님이 예약·픽업할 시간이 없어서).
 		model.addAttribute("canPublishDrafts", StoreHoursUtil.canPublishNow(
@@ -147,18 +159,11 @@ public class StoreProductController {
 		form.setQuantity(product.getQuantity());
 		form.setDescription(product.getDescription());
 		form.setCurrentImageUrl(product.getImageUrl());
-		// 할인율은 따로 저장 안 하므로 원가·할인가로 역산한다. 단 "지금 자동값보다 큰 값"(=점주가 일부러
-		// 더 깎은 값)일 때만 채워서 유지하고, 그 이하면 비워둔다 — 예전 자동값이 현재 자동값보다 낮아
-		// 저장이 거부되는 걸 막기 위해(비어 있으면 저장 시 현재 자동값으로 재계산).
-		StoreEntity ownStore = storeAccessService.findMyStore(ownerId).orElse(null);
-		if (ownStore != null && product.getOriginalPrice() != null && product.getOriginalPrice() > 0
-				&& product.getDiscountedPrice() != null) {
-			int rate = (int) Math.round(100.0 * (product.getOriginalPrice() - product.getDiscountedPrice()) / product.getOriginalPrice());
-			int autoRate = DiscountRateCalculator.calculateRate(
-					StoreHoursUtil.parse(ownStore.getOperatingHours(), 60).closeAt());
-			if (rate > autoRate) {
-				form.setDiscountRate(String.valueOf(rate));
-			}
+		// 점주가 직접 지정한 할인율이 있으면(ownerDiscountRate) 그 값을 채워서 유지하고, 없으면(자동) 비워둔다 —
+		// 비어 있으면 저장 시 현재 자동값으로 다시 계산된다. (2026-09-21 — 예전엔 가격에서 역산해 "자동값보다 큰
+		// 값이면 직접 지정"으로 추측했는데, 동적 가격이 되면서 자동값도 계속 바뀌어 추측이 안 맞는다.)
+		if (product.getOwnerDiscountRate() != null) {
+			form.setDiscountRate(String.valueOf(product.getOwnerDiscountRate()));
 		}
 
 		model.addAttribute("mode", "edit");

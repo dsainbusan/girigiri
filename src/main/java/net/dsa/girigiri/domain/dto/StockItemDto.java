@@ -25,6 +25,7 @@ public record StockItemDto(
 		String statusVariant,
 		boolean manualSoldOut,
 		int discountRate,
+		boolean manualRate,        // 점주가 할인율을 직접 지정했으면 true("직접 지정"), 아니면 마감 시간 기준 "자동 조정"
 		int originalPrice,
 		int discountedPrice,
 		int remainingQuantity,

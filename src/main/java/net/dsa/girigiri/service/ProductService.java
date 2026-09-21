@@ -83,6 +83,7 @@ public class ProductService {
 				.name(form.getName().trim())
 				.originalPrice(form.getOriginalPrice())
 				.discountedPrice(calcDiscountedPrice(store, form.getOriginalPrice(), ownerRate))
+				.ownerDiscountRate(ownerRate)
 				.quantity(form.getQuantity())
 				.remainingQuantity(form.getQuantity())
 				.description(blankToNull(form.getDescription()))
@@ -113,6 +114,7 @@ public class ProductService {
 		product.setName(form.getName().trim());
 		product.setOriginalPrice(form.getOriginalPrice());
 		product.setDiscountedPrice(calcDiscountedPrice(store, form.getOriginalPrice(), ownerRate));
+		product.setOwnerDiscountRate(ownerRate);
 		// 수량을 늘리면 남은 재고도 같은 만큼 늘린다 (이미 팔린 분은 유지).
 		product.setRemainingQuantity(form.getQuantity() - soldQuantity);
 		product.setQuantity(form.getQuantity());
@@ -156,6 +158,9 @@ public class ProductService {
 		if (!StoreHoursUtil.canPublishNow(closeAt)) {
 			return false;
 		}
+		// 초안은 만들어진 뒤 시간이 흘렀을 수 있어서, 올리는 이 순간의 마감 기준 가격으로 다시 맞춘다.
+		product.setDiscountedPrice(DiscountRateCalculator.applyDiscount(product.getOriginalPrice(),
+				DiscountRateCalculator.effectiveRate(product.getOwnerDiscountRate(), closeAt)));
 		product.setStatus("active");
 		productRepository.save(product);
 		return true;
@@ -347,6 +352,7 @@ public class ProductService {
 				statusVariant,
 				"sold".equals(p.getStatus()),   // manualSoldOut — 사장님이 직접 품절 처리한 것
 				discountRate,
+				p.getOwnerDiscountRate() != null,
 				nz(p.getOriginalPrice()),
 				nz(p.getDiscountedPrice()),
 				nz(p.getRemainingQuantity()),

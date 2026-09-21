@@ -31,8 +31,17 @@ public class ProductEntity {
 	@Column(name = "original_price", nullable = false)
 	private Integer originalPrice;
 
+	// 현재 적용가. 자동 상품은 ListingDraftScheduler.refreshDynamicPrices가 마감까지 남은 시간에 맞춰
+	// 1분마다 다시 계산해서 덮어쓴다(2026-09-21 동적 가격 — 팀 A안 "등록 시점 고정" 폐기). 홈/검색/상세/예약이
+	// 전부 이 값 하나를 읽으므로 그쪽은 손대지 않아도 된다. 예약 총액은 예약 생성 시점에 확정된다.
 	@Column(name = "discounted_price", nullable = false)
 	private Integer discountedPrice;
+
+	// 점주가 직접 정한 할인율(%). null이면 "자동" — 마감이 가까워질수록 올라간다. 값이 있으면 그 값을
+	// 하한으로 쓴다(DiscountRateCalculator.effectiveRate: 자동값이 이보다 커지면 자동값). 화면의
+	// "자동 조정 / 직접 지정" 표시도 이 값으로 정확히 구분한다.
+	@Column(name = "owner_discount_rate")
+	private Integer ownerDiscountRate;
 
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
