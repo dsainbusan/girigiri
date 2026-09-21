@@ -97,15 +97,28 @@
 		<span class="u-sub" style="font-size: var(--fs-xs)"
 		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
 	</div>
+	<!-- 할인율 안내 (2026-09-21) — 할인율은 상품을 올린 그 시점의 마감까지 남은 시간(3시간 초과 -20% ·
+	     1~3시간 -30% · 1시간 이내 -50%)으로 한 번 정해지고 이후 바뀌지 않는다. 같은 시각에 올린 상품끼리
+	     할인율이 같은 게 정상이라는 걸 화면에서 알려준다. -->
+	<p th:if="${totalCount > 0}" class="u-mut" style="font-size: var(--fs-xs); margin: calc(-1 * var(--s-2)) 0 var(--s-3)">
+		할인율은 상품을 올린 시점의 마감까지 남은 시간으로 정해져요. 올린 뒤에는 바뀌지 않아요.
+	</p>
 
 	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
 	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
-	<div th:if="${#lists.isEmpty(items)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
+	<div th:if="${totalCount == 0}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
 		아직 판매 중인 상품이 없어요
 	</div>
 
 	<ul>
-		<li th:each="item : ${items}" class="stock-item" th:classappend="${item.statusVariant == 'soldout'} ? ' is-dim'">
+		<th:block th:each="item, st : ${items}">
+		<!-- 마감된 상품 구간 시작 표시 — items는 컨트롤러에서 마감 상품이 맨 뒤로 정렬돼 있다. -->
+		<li th:if="${item.statusVariant == 'closed' and (st.first or items[st.index - 1].statusVariant != 'closed')}"
+		    class="stock-divider">
+			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'마감된 상품 ' + ${closedCount} + '개'">마감된 상품 3개</span>
+			<span class="u-mut" style="font-size: var(--fs-xs)">등록 당시 할인율이 그대로 남아 있어요.</span>
+		</li>
+		<li class="stock-item" th:classappend="${item.statusVariant == 'soldout' or item.statusVariant == 'closed'} ? ' is-dim'">
 			<div class="stock-item__head">
 				<div class="stock-item__thumb" th:style="${item.imageUrl == null ? 'background:' + item.thumbColor : null}">
 					<img th:if="${item.imageUrl != null}" th:src="${item.imageUrl}" th:alt="${item.name}">
@@ -141,6 +154,7 @@
 				</form>
 			</div>
 		</li>
+		</th:block>
 	</ul>
 
 	<!-- 4. 보조 수단 — 작은 링크. 템플릿 링크는 POS 미연동이거나 이미 템플릿을 쓰는 경우만.

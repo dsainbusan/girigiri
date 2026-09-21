@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -68,14 +69,21 @@ public class StoreProductController {
 				.filter(p -> "draft".equals(p.getStatus()))
 				.map(p -> productService.toStockItem(p, category))
 				.toList();
+		// 마감된(expired) 상품은 "판매 중" 목록에서 빼서 맨 아래 별도 구간으로 보낸다(2026-09-21) — 예전 날짜에
+		// 등록된 상품이 섞여 있으면 할인율이 제각각으로 보여서(할인율은 등록 시점의 마감까지 남은 시간으로 한 번
+		// 정해지고 이후 재계산되지 않는다) 오늘 판매 중인 상품끼리의 할인율 비교가 안 됐다. sorted는 안정 정렬이라
+		// 각 구간 안의 기존 순서는 그대로다.
 		List<StockItemDto> items = all.stream()
 				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
 				.map(p -> productService.toStockItem(p, category))
+				.sorted(Comparator.comparing(i -> "closed".equals(i.statusVariant())))
 				.toList();
+		long closedCount = items.stream().filter(i -> "closed".equals(i.statusVariant())).count();
 
 		model.addAttribute("drafts", drafts);
 		model.addAttribute("items", items);
-		model.addAttribute("totalCount", items.size());
+		model.addAttribute("totalCount", items.size() - closedCount);
+		model.addAttribute("closedCount", closedCount);
 		model.addAttribute("sellingCount", items.stream().filter(i -> "selling".equals(i.statusVariant())).count());
 		model.addAttribute("soldOutCount", items.stream().filter(i -> "soldout".equals(i.statusVariant())).count());
 
