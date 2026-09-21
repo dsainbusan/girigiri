@@ -36,7 +36,7 @@
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
-			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 발행 대기 <b th:text="${draftPendingCount}">3</b>건</span>
+			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 판매 대기 <b th:text="${draftPendingCount}">3</b>건</span>
 			<span class="todo-banner__go">›</span>
 		</a>
 		<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">

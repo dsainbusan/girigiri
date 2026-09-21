@@ -8,7 +8,7 @@
 	화면 순서 (2026-09-21 개편):
 	  1) POS 상태 한 줄 (연동됐으면 요약만, 안 됐으면 큰 안내)
 	  2) 판매 중 — 오늘 실제로 팔고 있는 상품 (비면 한 줄)
-	  3) 판매 대기 — POS 실시간 재고 + 발행 대기 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
+	  3) 판매 대기 — POS 실시간 재고 + 올릴 시간이 된 초안 → [바로 올리기]  ← 매일 하는 핵심 작업
 	  4) 보조: 직접 등록 / 템플릿(POS 없을 때) / 대시보드
 	제거: 품목 검색 폼(컨트롤러가 q를 안 받던 죽은 기능 + 목록이 짧아 불필요).
 */-->
@@ -16,7 +16,7 @@
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<p class="u-primary u-bold" th:if="${param.drafted != null and param.drafted[0] != '0'}" style="margin-bottom: var(--s-3)"
-	   th:text="'POS 재고로 ' + ${param.drafted[0]} + '개 메뉴를 발행 대기에 올렸어요.'">POS 재고로 5개 메뉴를 발행 대기에 올렸어요.</p>
+	   th:text="'POS 재고로 ' + ${param.drafted[0]} + '개 메뉴를 판매 대기에 올렸어요.'">POS 재고로 5개 메뉴를 판매 대기에 올렸어요.</p>
 	<p class="u-sub" th:if="${param.drafted != null and param.drafted[0] == '0'}" style="margin-bottom: var(--s-3)">
 		새로 올릴 재고가 없어요 (앱 판매 켠 메뉴가 없거나, 재고 0이거나, 오늘 이미 올렸어요).
 	</p>
@@ -116,7 +116,7 @@
 	<!-- 3. 판매 대기 (2026-09-21) — 오늘 아직 판매가 시작되지 않은 재고. 두 단계다:
 	       ① 재고 목록 — POS가 실시간으로 알려주는 재고(초안 만들어지기 전). 카드 안에 "판매 대기" 칩은
 	          섹션 제목과 중복이라 두지 않는다.
-	       ② 발행 대기 — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
+	       ② 초안(draft) — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
 	     wait-section/selling-section은 아래 스크립트가 주기적으로 서버 화면으로 통째 갈아끼워
 	     POS 재고 숫자와 예상 할인율이 실시간처럼 갱신된다. -->
 	<div id="wait-section">
@@ -127,14 +127,14 @@
 	</div>
 	<p th:if="${posConnected}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)"
 	   th:text="${posDraftPromptLabel != null}
-	            ? '재고는 POS에서 실시간으로 반영돼요. 매일 ' + ${posDraftPromptLabel} + '에 올릴 수 있는 상태(발행 대기)가 되고, [바로 올리기]를 눌러야 판매가 시작돼요. 가격은 마감이 가까울수록 내려가요.'
+	            ? '재고는 POS에서 실시간으로 반영돼요. 매일 ' + ${posDraftPromptLabel} + '이 되면 [바로 올리기]를 할 수 있고, 눌러야 판매가 시작돼요. 가격은 마감이 가까울수록 내려가요.'
 	            : '재고는 POS에서 실시간으로 반영돼요. 발행 시각이 아직 설정되지 않았어요. POS 설정에서 정해 주세요.'">
 		재고는 POS에서 실시간으로 반영돼요.
 	</p>
 
-	<!-- 발행 대기: "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계 -->
+	<!-- 올릴 시간이 된 "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계. 섹션 제목이 이미
+	     "판매 대기"라서(2026-09-21 표기 통일) 박스에 제목을 따로 달지 않는다. -->
 	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
-		<p class="u-bold" style="margin-bottom: 2px"><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 오늘의 구제 — 발행 대기</p>
 		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
 		   th:text="${canPublishDrafts}
 		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
