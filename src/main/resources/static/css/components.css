@@ -30,7 +30,11 @@
 }
 .btn:active { filter: brightness(.94); }
 .btn--block  { display: flex; width: 100%; }
-.btn--accent { background: var(--c-accent); }
+/* 2026-09-21 UI/UX 감사 — 기본 .btn 텍스트(--c-primary-on, 크림)를 그대로 물려받으면
+   주황/빨강 배경 위에서 각각 2.47:1 / 3.31:1로 WCAG AA(4.5:1) 미달이었다(.btn--danger는
+   예약 취소 등 실제 화면에서 쓰임). 두 배경 다 밝은 채도라 크림보다 --c-text(짙은 색)가
+   맞다 — 계산해보니 6.08:1 / 4.53:1로 통과. */
+.btn--accent { background: var(--c-accent); color: var(--c-text); }
 .btn--dark   { background: var(--c-dark); }
 .btn--outline{ background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line); }
 .btn--kakao  { background: var(--c-kakao); color: var(--c-kakao-on); }
@@ -44,7 +48,7 @@
 .btn--ghost  { background: var(--c-bg); color: var(--c-text-sub); border: 1px solid var(--c-primary-border); }
 /* 추가됨 — 왜: 예약 취소 버튼이 화면마다 인라인 style="background:var(--c-danger)"로 따로
    처리돼 있어서 일부는 빨강, 일부는 기본색(초록)으로 제각각이었다. 공용 클래스로 빼서 재사용. */
-.btn--danger { background: var(--c-danger); }
+.btn--danger { background: var(--c-danger); color: var(--c-text); }
 
 /* ---------------- Card ---------------- */
 .card {
@@ -90,7 +94,11 @@
 }
 /* 색상 대비 수정 (2026-09-16, UI/UX 검토) — 배경(-weak)은 그대로 두고, 텍스트만 -strong 토큰으로
    진하게 바꿔 WCAG AA(4.5:1)를 만족시킨다. badge--success는 이미 4.79:1로 통과라 그대로 둔다. */
-.badge--discount { background: var(--c-danger-weak); color: var(--c-danger-strong); }
+/* 2026-09-21 UI/UX 감사 — "할인"에 danger(위험/폐기용 빨강)를 쓰고 있었다. tokens.css의
+   --c-accent 정의("마감임박 / 할인 주황")와도 안 맞고, 카드 안에서 찜(빨강)·마감임박(빨강)까지
+   합쳐 빨강이 3번 겹쳐 보였다 — 원래 의도대로 accent로 되돌린다(대비 4.88:1, 기존 검증된 조합
+   그대로 재사용). */
+.badge--discount { background: var(--c-accent-weak); color: var(--c-accent-strong); }
 .badge--success  { background: var(--c-primary-weak); color: var(--c-primary); }
 .badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent-strong); }
 .badge--info     { background: var(--c-info-weak);    color: var(--c-info-strong); }
@@ -125,7 +133,9 @@
 }
 .store-card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .store-card__top  { display: flex; align-items: center; gap: var(--s-2); }
-.store-card__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
+/* 2026-09-21 UI/UX 감사 — 카드 하나에 bold 이상이 4개(가게명·배지·마감임박·가격)라 위계가
+   없었다. 가격(.price__sale, black)만 카드의 진짜 강조점으로 남기고 나머지는 한 단계씩 낮춘다. */
+.store-card__name { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 .store-card__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
 /* 터치 타겟 확대 (2026-09-16, UI/UX 검토) — 아이콘은 18px인데 padding/hit area가 전혀 없어서
    실제 클릭 가능 영역도 18px 안팎이었다(권장 40~44px에 크게 못 미침). 시각적 위치·크기는 그대로
@@ -136,7 +146,7 @@
    "긴급"으로 보여서 정작 진짜 임박한(.is-urgent) 카드가 안 튄다. 기본은 차분한 보조 텍스트로
    낮추고, 실제로 얼마 안 남았을 때만(store.urgent, 백엔드 계산값) 빨간색으로 튀게 한다 —
    "전부 급함"이 아니라 "이것만 진짜 급함"이 전달되도록. */
-.store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
+.store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); }
 .store-card__left.is-urgent { color: var(--c-danger); }
 
 /* ---------------- Banner (절약 강조 등) ---------------- */
