@@ -158,6 +158,7 @@ public class SearchService {
 				.thumbText(product.getName() == null || product.getName().isBlank()
 						? "?" : product.getName().substring(0, 1))
 				.thumbColor(thumbColor(store.getCategory()))
+				.imageUrl(store.getImageUrl())
 				.name(store.getStoreName())
 				.category(store.getCategory())
 				.distance(distance)

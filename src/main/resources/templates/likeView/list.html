@@ -12,7 +12,10 @@
 	<div style="display:flex;flex-direction:column;gap:10px">
 		<a th:each="s : ${likedStores}" class="store-card" th:style="${s.onSale} ? '' : 'opacity:.6'"
 		   th:href="@{/user/stores/{storeId}(storeId=${s.storeId})}">
-			<span class="store-card__thumb" th:style="'background:' + ${s.thumbColor}" th:text="${s.thumbText}">빵</span>
+			<span class="store-card__thumb" th:if="${s.imageUrl == null}" th:style="'background:' + ${s.thumbColor}" th:text="${s.thumbText}">빵</span>
+			<span class="store-card__thumb" th:if="${s.imageUrl != null}">
+				<img th:src="${s.imageUrl}" th:alt="${s.name}">
+			</span>
 			<span class="store-card__body">
 				<span class="store-card__top">
 					<span class="store-card__name" th:text="${s.name}">가게명</span>

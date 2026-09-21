@@ -94,12 +94,12 @@ public class LikeService {
 
 		if (product == null) {
 			return new LikedStoreDto(store.getId(), store.getStoreName(), store.getCategory(),
-					thumbText, thumbColor, false, null, null, null, "지금은 세일 중이 아니에요");
+					thumbText, thumbColor, store.getImageUrl(), false, null, null, null, "지금은 세일 중이 아니에요");
 		}
 
 		StoreHoursUtil.ClosingInfo closingInfo = StoreHoursUtil.parse(store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES);
 		return new LikedStoreDto(store.getId(), store.getStoreName(), store.getCategory(),
-				thumbText, thumbColor, true,
+				thumbText, thumbColor, store.getImageUrl(), true,
 				"-" + discountRate(product) + "%", formatWon(product.getDiscountedPrice()),
 				closingInfo.label(), null);
 	}

@@ -10,6 +10,7 @@ public record LikedStoreDto(
 		String category,
 		String thumbText,
 		String thumbColor,
+		String imageUrl,
 		boolean onSale,
 		String discountRate,
 		String salePrice,

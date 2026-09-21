@@ -20,6 +20,7 @@ public class StoreCardDto {
 	private Long storeId;         // 매장 id (찜하기 버튼용 — id와 별개)
 	private String thumbText;
 	private String thumbColor;
+	private String imageUrl;      // 가게 사진 (2026-09-21 추가) — null이면 thumbText/thumbColor 아바타로 대체
 	private String name;          // 매장명
 	private String category;
 	private String distance;      // "1.2km" 형태 — 사용자 좌표 없으면 빈 값(DistanceUtil.label 참고).

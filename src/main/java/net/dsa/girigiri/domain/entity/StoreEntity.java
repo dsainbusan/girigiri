@@ -53,6 +53,11 @@ public class StoreEntity {
 	@Column(name = "operating_hours", length = 100)
 	private String operatingHours;
 
+	// 추가됨 (2026-09-21) — 왜: 홈/찜/가게상세 카드가 전부 "가게명 첫 글자 + 카테고리색" 아바타뿐이라
+	// 실제 사진이 없었다. product의 image_url과 같은 방식(null이면 화면에서 아바타로 대체)으로 둔다.
+	@Column(name = "image_url", length = 255)
+	private String imageUrl;
+
 	// 추가됨 (2026-08-21) — 왜: "떨이 서비스는 당일 판매·당일 픽업" 컨셉에 맞춰 픽업 시간을 손님이
 	// 직접 고르지 않고, 매장이 한 번만 설정해두면 시스템이 "현재시간 + 준비시간 <= 마지막 픽업시간"으로
 	// 자동 계산해서 주문 가능 여부/예상 픽업 시각을 판단하는 구조로 바꿨다 (PickupAvailabilityUtil 참고).

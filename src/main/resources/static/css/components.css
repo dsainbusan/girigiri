@@ -128,9 +128,14 @@
   flex: 0 0 auto;
   width: 76px; height: 76px;
   border-radius: var(--r-md);
+  overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   font-size: 30px; font-weight: var(--fw-black); color: #fff;
 }
+/* 가게 사진(store.imageUrl) — 2026-09-21 추가. store.css의 .stock-item__thumb img와 같은 이유로
+   font-size:0 + 투명 텍스트를 같이 줘서, 이미지가 깨졌을 때 alt 텍스트(가게명)가 76px 박스 안에서
+   줄바꿈되며 구겨 보이는 것을 막는다. */
+.store-card__thumb img { width: 100%; height: 100%; object-fit: cover; font-size: 0; color: transparent; }
 .store-card__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .store-card__top  { display: flex; align-items: center; gap: var(--s-2); }
 /* 2026-09-21 UI/UX 감사 — 카드 하나에 bold 이상이 4개(가게명·배지·마감임박·가격)라 위계가

@@ -17,8 +17,11 @@
 		</div>
 
 		<a th:if="${store != null}" th:href="@{/user/stores/{id}(id=${store.id})}" class="store-card" style="margin-top:14px;padding:10px">
-			<span class="store-card__thumb" style="width:44px;height:44px;background:var(--c-accent);font-size:16px"
+			<span class="store-card__thumb" th:if="${store.imageUrl == null}" style="width:44px;height:44px;background:var(--c-accent);font-size:16px"
 			      th:text="${store.storeName.substring(0,1)}">빵</span>
+			<span class="store-card__thumb" th:if="${store.imageUrl != null}" style="width:44px;height:44px">
+				<img th:src="${store.imageUrl}" th:alt="${store.storeName}">
+			</span>
 			<span class="store-card__body" style="gap:2px">
 				<span class="store-card__name" style="font-size:13px" th:text="${store.storeName}">광안리 베이커리</span>
 				<span class="u-mut" style="font-size:11px" th:text="'★' + ${avgRating} + ' (' + ${reviewCount} + ')'">★4.6 (12)</span>
