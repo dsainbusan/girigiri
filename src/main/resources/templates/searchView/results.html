@@ -3,14 +3,19 @@
       th:replace="~{common/layout :: layout('검색 결과', ~{:: #content}, 'home', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/search.css}">
 
 	<form th:action="@{/user/search}" method="get" class="search" style="margin-bottom:var(--s-3)">
 		<span><svg class="icon"><use href="#i-search"/></svg></span>
 		<input type="text" name="q" th:value="${keyword}" placeholder="베이커리, 반찬, 도시락 검색"
 		       style="border:none;background:transparent;outline:none;width:100%;font-size:var(--fs-md);color:var(--c-text)">
 		<input type="hidden" name="sort" th:value="${sort}">
-		<input type="hidden" name="price" th:value="${price}">
-		<input type="hidden" name="pickup" th:value="${pickup}">
+		<!--/* 강노은: 키워드를 새로 검색해도 지금 걸려있는 가격대/픽업시간 필터는 유지되게 그대로 실어 보낸다. */-->
+		<input type="hidden" name="priceMin" th:value="${priceMin}">
+		<input type="hidden" name="priceMax" th:value="${priceMax}">
+		<input type="hidden" name="pickupNow" th:value="${pickupNow}">
+		<input type="hidden" name="pickupFrom" th:value="${pickupFrom}">
+		<input type="hidden" name="pickupTo" th:value="${pickupTo}">
 		<input type="hidden" name="lat" th:value="${lat}">
 		<input type="hidden" name="lng" th:value="${lng}">
 	</form>
@@ -29,49 +34,78 @@
 	<div class="u-row" style="justify-content:space-between">
 		<div class="u-row" style="gap:6px;flex-wrap:wrap">
 			<a class="chip" th:classappend="${sort == null or sort == 'discount'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='discount', price=${price}, pickup=${pickup}, lat=${lat}, lng=${lng})}">할인율순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='discount', priceMin=${priceMin}, priceMax=${priceMax}, pickupNow=${pickupNow}, pickupFrom=${pickupFrom}, pickupTo=${pickupTo}, lat=${lat}, lng=${lng})}">할인율순</a>
 			<a class="chip" th:classappend="${sort == 'price'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='price', price=${price}, pickup=${pickup}, lat=${lat}, lng=${lng})}">가격낮은순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='price', priceMin=${priceMin}, priceMax=${priceMax}, pickupNow=${pickupNow}, pickupFrom=${pickupFrom}, pickupTo=${pickupTo}, lat=${lat}, lng=${lng})}">가격낮은순</a>
 			<a class="chip" th:classappend="${sort == 'closing'} ? ' is-active'"
-			   th:href="@{/user/search(q=${keyword}, sort='closing', price=${price}, pickup=${pickup}, lat=${lat}, lng=${lng})}">마감임박순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='closing', priceMin=${priceMin}, priceMax=${priceMax}, pickupNow=${pickupNow}, pickupFrom=${pickupFrom}, pickupTo=${pickupTo}, lat=${lat}, lng=${lng})}">마감임박순</a>
 			<!--/* 강노은: 좌표가 아직 없으면 클릭 시 JS가 위치 권한을 먼저 확인/요청하고(girigiriRequestLocation,
 			     app.js), 받은 좌표를 붙여서 다시 이 링크로 이동한다 — data-has-coords로 두 케이스를 구분한다. */-->
 			<a class="chip" id="sort-distance-chip" th:classappend="${sort == 'distance'} ? ' is-active'"
 			   th:attr="data-has-coords=${lat != null and lng != null}"
-			   th:href="@{/user/search(q=${keyword}, sort='distance', price=${price}, pickup=${pickup}, lat=${lat}, lng=${lng})}">거리순</a>
+			   th:href="@{/user/search(q=${keyword}, sort='distance', priceMin=${priceMin}, priceMax=${priceMax}, pickupNow=${pickupNow}, pickupFrom=${pickupFrom}, pickupTo=${pickupTo}, lat=${lat}, lng=${lng})}">거리순</a>
 			<button type="button" class="chip" id="filter-toggle-btn"
-			        th:classappend="${(price != null and !#strings.isEmpty(price)) or (pickup != null and !#strings.isEmpty(pickup))} ? ' is-active'">필터 ▾</button>
+			        th:classappend="${(priceMin != null and priceMin > 0) or (priceMax != null and priceMax < 20000) or (pickupNow != null and pickupNow) or (pickupFrom != null and pickupFrom > 0) or (pickupTo != null and pickupTo < 24)} ? ' is-active'">필터 ▾</button>
 		</div>
 		<span class="u-mut" style="font-size:12px" th:text="${resultCount} + '개 결과'">18개 결과</span>
 	</div>
 
+	<!--/* 강노은 (2026-09-21 개편): 가격대/픽업시간 프리셋 버킷 버튼을 없애고 드래그 슬라이더 +
+	     직접입력으로 바꿨다. 버튼을 누르는 즉시 적용/닫힘 되던 것도 피드백으로 바꿈 — 슬라이더/입력값은
+	     "필터 적용"을 눌러야 실제로 반영되고, 그 전까진 패널이 계속 열려 있다(예전엔 클릭 한 번에
+	     바로 페이지 이동 + 패널이 닫혀서 여러 조건을 한 번에 맞추기 불편했다). */-->
 	<div class="card" id="filter-panel" style="display:none;margin-top:var(--s-3)">
-		<div class="field" style="margin-bottom:16px">
+		<div class="field" style="margin-bottom:20px">
 			<label class="field__label">가격대</label>
-			<div class="u-row" style="gap:8px;flex-wrap:wrap">
-				<a class="chip" th:classappend="${price == 'under5000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='under5000', pickup=${pickup}, lat=${lat}, lng=${lng})}">5천원 이하</a>
-				<a class="chip" th:classappend="${price == '5000to10000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='5000to10000', pickup=${pickup}, lat=${lat}, lng=${lng})}">5천~1만원</a>
-				<a class="chip" th:classappend="${price == 'over10000'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price='over10000', pickup=${pickup}, lat=${lat}, lng=${lng})}">1만원 이상</a>
+			<div class="range-slider" id="price-range-slider" data-range-slider data-min="0" data-max="20000" data-step="500">
+				<div class="range-slider__track"></div>
+				<div class="range-slider__fill" data-range-fill></div>
+				<input type="range" min="0" max="20000" step="500" data-range-thumb-min
+				       th:value="${priceMin ?: 0}" aria-label="최소 가격">
+				<input type="range" min="0" max="20000" step="500" data-range-thumb-max
+				       th:value="${priceMax ?: 20000}" aria-label="최대 가격">
+			</div>
+			<div class="range-inputs" id="price-range-inputs">
+				<input type="number" class="input" data-range-input-min min="0" max="20000" step="500"
+				       th:value="${priceMin ?: 0}" aria-label="최소 가격 직접입력">
+				<span class="range-inputs__unit">원 ~</span>
+				<input type="number" class="input" data-range-input-max min="0" max="20000" step="500"
+				       th:value="${priceMax ?: 20000}" aria-label="최대 가격 직접입력">
+				<span class="range-inputs__unit">원</span>
 			</div>
 		</div>
 		<div class="field">
 			<!--/* 강노은: StoreEntity.lastPickupTime/prepTimeMinutes(송채현이 예약 로직용으로 추가한 필드)를
-			     재사용해 판단한다 — 매장이 아직 마지막 픽업시간을 설정 안 했으면 "저녁/마감임박" 버킷에서는
-			     제외된다(SearchService.matchesPickupBucket 참고). */-->
+			     재사용해 판단한다 — 매장이 아직 마지막 픽업시간을 설정 안 했으면 시간대 범위 판단 불가로
+			     제외된다(SearchService.matchesPickup 참고). "지금 바로"는 실시간 판단이라 슬라이더로
+			     표현이 안 돼서 체크박스로 따로 두고, 켜져 있으면 아래 시간대 범위와 AND로 같이 적용한다. */-->
 			<label class="field__label">픽업 가능 시간</label>
-			<div class="u-row" style="gap:8px;flex-wrap:wrap">
-				<a class="chip" th:classappend="${pickup == 'now'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price=${price}, pickup='now', lat=${lat}, lng=${lng})}">지금 바로</a>
-				<a class="chip" th:classappend="${pickup == 'evening'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price=${price}, pickup='evening', lat=${lat}, lng=${lng})}">저녁 18~21시</a>
-				<a class="chip" th:classappend="${pickup == 'late'} ? ' is-active'"
-				   th:href="@{/user/search(q=${keyword}, sort=${sort}, price=${price}, pickup='late', lat=${lat}, lng=${lng})}">마감임박 21시~</a>
+			<label class="u-row" style="gap:8px;margin:8px 0 14px;cursor:pointer">
+				<input type="checkbox" id="pickup-now-check" th:checked="${pickupNow != null and pickupNow}">
+				<span>지금 바로 주문 가능한 곳만</span>
+			</label>
+			<div class="range-slider" id="pickup-range-slider" data-range-slider data-min="0" data-max="24" data-step="1">
+				<div class="range-slider__track"></div>
+				<div class="range-slider__fill" data-range-fill></div>
+				<input type="range" min="0" max="24" step="1" data-range-thumb-min
+				       th:value="${pickupFrom ?: 0}" aria-label="픽업 마감 시작 시간">
+				<input type="range" min="0" max="24" step="1" data-range-thumb-max
+				       th:value="${pickupTo ?: 24}" aria-label="픽업 마감 끝 시간">
+			</div>
+			<div class="range-inputs" id="pickup-range-inputs">
+				<input type="number" class="input" data-range-input-min min="0" max="24" step="1"
+				       th:value="${pickupFrom ?: 0}" aria-label="픽업 마감 시작 시간 직접입력">
+				<span class="range-inputs__unit">시 ~</span>
+				<input type="number" class="input" data-range-input-max min="0" max="24" step="1"
+				       th:value="${pickupTo ?: 24}" aria-label="픽업 마감 끝 시간 직접입력">
+				<span class="range-inputs__unit">시</span>
 			</div>
 		</div>
-		<a th:href="@{/user/search(q=${keyword})}" class="btn btn--outline btn--block" style="color:var(--c-text-sub);margin-top:16px">필터 초기화</a>
+		<div class="u-row" style="gap:8px;margin-top:20px">
+			<a class="btn btn--outline u-grow" style="color:var(--c-text-sub)"
+			   th:href="@{/user/search(q=${keyword}, sort=${sort}, lat=${lat}, lng=${lng})}">필터 초기화</a>
+			<button type="button" class="btn u-grow" id="filter-apply-btn">필터 적용</button>
+		</div>
 	</div>
 
 	<div style="display:flex;flex-direction:column;gap:12px;margin-top:var(--s-3)">
@@ -91,6 +125,121 @@
 			});
 		})();
 
+		/* 강노은 (2026-09-21): 가격대/픽업시간 듀얼 슬라이더 — 겹쳐진 <input type=range> 2개(최소/최대)를
+		   서로 역전되지 않게(min이 max를 못 넘게) 맞추고, 숫자 직접입력 칸·트랙 채움(fill)까지 양방향으로
+		   동기화한다. 컨테이너 단위로 초기화해서 가격대/픽업시간 두 슬라이더에 그대로 재사용한다. */
+		(function () {
+			document.querySelectorAll('[data-range-slider]').forEach(function (container) {
+				var min = Number(container.dataset.min);
+				var max = Number(container.dataset.max);
+				var thumbMin = container.querySelector('[data-range-thumb-min]');
+				var thumbMax = container.querySelector('[data-range-thumb-max]');
+				var fill = container.querySelector('[data-range-fill]');
+				// 슬라이더(.range-slider)와 숫자입력(.range-inputs)은 같은 .field 안 형제 요소다.
+				var inputsRow = container.parentElement.querySelector('.range-inputs');
+				var inputMin = inputsRow ? inputsRow.querySelector('[data-range-input-min]') : null;
+				var inputMax = inputsRow ? inputsRow.querySelector('[data-range-input-max]') : null;
+				if (!thumbMin || !thumbMax) return;
+
+				function clampToRange(raw, lo, hi) {
+					var n = Number(raw);
+					if (isNaN(n)) return lo;
+					return Math.min(hi, Math.max(lo, n));
+				}
+
+				function render() {
+					var lo = Number(thumbMin.value);
+					var hi = Number(thumbMax.value);
+					if (inputMin) inputMin.value = lo;
+					if (inputMax) inputMax.value = hi;
+					if (fill) {
+						var pctLo = ((lo - min) / (max - min)) * 100;
+						var pctHi = ((hi - min) / (max - min)) * 100;
+						fill.style.left = pctLo + '%';
+						fill.style.width = Math.max(0, pctHi - pctLo) + '%';
+					}
+				}
+
+				thumbMin.addEventListener('input', function () {
+					if (Number(thumbMin.value) > Number(thumbMax.value)) thumbMin.value = thumbMax.value;
+					render();
+				});
+				thumbMax.addEventListener('input', function () {
+					if (Number(thumbMax.value) < Number(thumbMin.value)) thumbMax.value = thumbMin.value;
+					render();
+				});
+				if (inputMin) {
+					inputMin.addEventListener('change', function () {
+						var v = clampToRange(inputMin.value, min, max);
+						if (v > Number(thumbMax.value)) v = Number(thumbMax.value);
+						thumbMin.value = v;
+						render();
+					});
+				}
+				if (inputMax) {
+					inputMax.addEventListener('change', function () {
+						var v = clampToRange(inputMax.value, min, max);
+						if (v < Number(thumbMin.value)) v = Number(thumbMin.value);
+						thumbMax.value = v;
+						render();
+					});
+				}
+
+				render();
+			});
+		})();
+
+		/* 강노은 (2026-09-21): "필터 적용" — 슬라이더/체크박스 값을 읽어서 현재 URL(q/sort/lat/lng는
+		   그대로 두고) 위에 필터 파라미터만 얹어 이동한다. 슬라이더를 끝까지 안 건드린 쪽(최소=0,
+		   최대=슬라이더 상한)은 "제한 없음"이라는 뜻이라 아예 파라미터를 안 보낸다 — 안 그러면 예를 들어
+		   가격 슬라이더를 한 번도 안 만졌는데 priceMax=20000이 그대로 전송돼서 2만원 넘는 상품이
+		   전부 걸러지는 문제가 생긴다. */
+		(function () {
+			var applyBtn = document.getElementById('filter-apply-btn');
+			if (!applyBtn) return;
+
+			applyBtn.addEventListener('click', function () {
+				var priceMinInput = document.querySelector('#price-range-inputs [data-range-input-min]');
+				var priceMaxInput = document.querySelector('#price-range-inputs [data-range-input-max]');
+				var pickupFromInput = document.querySelector('#pickup-range-inputs [data-range-input-min]');
+				var pickupToInput = document.querySelector('#pickup-range-inputs [data-range-input-max]');
+				var pickupNowCheck = document.getElementById('pickup-now-check');
+
+				var params = new URLSearchParams(window.location.search);
+				params.delete('priceMin');
+				params.delete('priceMax');
+				params.delete('pickupNow');
+				params.delete('pickupFrom');
+				params.delete('pickupTo');
+
+				if (priceMinInput && Number(priceMinInput.value) > 0) params.set('priceMin', priceMinInput.value);
+				if (priceMaxInput && Number(priceMaxInput.value) < 20000) params.set('priceMax', priceMaxInput.value);
+				if (pickupFromInput && Number(pickupFromInput.value) > 0) params.set('pickupFrom', pickupFromInput.value);
+				if (pickupToInput && Number(pickupToInput.value) < 24) params.set('pickupTo', pickupToInput.value);
+				if (pickupNowCheck && pickupNowCheck.checked) params.set('pickupNow', 'true');
+
+				// 강노은: 아래 일반 링크 replace 처리와 동일한 이유 — 필터 적용도 "같은 페이지 안 조건
+				// 변경"이라 history.back() 한 번에 검색 페이지를 나가도록 replace를 쓴다.
+				window.location.replace(window.location.pathname + '?' + params.toString());
+			});
+		})();
+
+		/* 강노은: 정렬/가격대/픽업시간/필터초기화 링크는 전부 이 페이지 안에서 조건만 바꾸는
+		   이동이라, 일반 <a href> 그대로 두면 클릭할 때마다 브라우저 히스토리에 새 항목이 쌓인다.
+		   그러면 뒤로가기가 "검색 페이지 진입 전"이 아니라 "버튼 클릭 전"으로만 돌아가서 헷갈린다는
+		   피드백을 받았다 — pushState 대신 replaceState 효과를 주는 location.replace()로 현재
+		   히스토리 항목을 덮어써서, 몇 번을 눌러도 히스토리엔 이 페이지 진입 시점 1개만 남게 한다.
+		   (거리순 칩은 위치 권한 요청이 끼어드는 별도 흐름이라 자기 리스너에서 따로 처리 — 여기선 제외.) */
+		(function () {
+			document.querySelectorAll('#content a[href^="/user/search"]').forEach(function (a) {
+				if (a.id === 'sort-distance-chip') return;
+				a.addEventListener('click', function (e) {
+					e.preventDefault();
+					window.location.replace(a.href);
+				});
+			});
+		})();
+
 		/* 강노은: "거리순" 클릭 시 좌표가 없으면 위치 권한부터 물어보고, 받은 좌표를 붙여 다시 이동한다.
 		   이미 좌표가 URL에 있으면(다른 정렬/필터로 이동했다가 돌아온 경우) 그냥 링크대로 이동한다.
 		   차단돼 있으면 alert() 대신 배너로 "어디서 풀 수 있는지"까지 안내한다 — 예전엔 "브라우저
@@ -107,8 +256,13 @@
 			}
 
 			chip.addEventListener('click', function (e) {
-				if (chip.dataset.hasCoords === 'true') return;
 				e.preventDefault();
+				// 강노은: 위 일반 링크 replace 처리와 동일한 이유 — 좌표가 이미 있어 바로 이동하는
+				// 경우도 history.back() 한 번에 검색 페이지를 나가도록 replace를 쓴다.
+				if (chip.dataset.hasCoords === 'true') {
+					window.location.replace(chip.href);
+					return;
+				}
 				if (banner) banner.style.display = 'none';
 
 				var originalText = chip.textContent;
@@ -118,7 +272,7 @@
 					var url = new URL(chip.href, window.location.origin);
 					url.searchParams.set('lat', pos.coords.latitude);
 					url.searchParams.set('lng', pos.coords.longitude);
-					window.location.href = url.toString();
+					window.location.replace(url.toString());
 				}, function (reason) {
 					chip.textContent = originalText;
 					// 'unavailable'(GPS 응답 지연/실패)은 권한 문제가 아니라 배너 없이 버튼만 원복한다.

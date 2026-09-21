@@ -1,0 +1,98 @@
+/* =====================================================================
+   검색 결과 화면 전용 스타일 (강노은)
+   ---------------------------------------------------------------------
+   추가됨 (2026-09-21) — 왜: 가격대/픽업 가능 시간 필터를 프리셋 버튼(칩) 대신
+   드래그 가능한 듀얼 슬라이더 + 직접입력으로 바꾸면서 필요해진 컴포넌트.
+   슬라이더는 이 화면에서만 쓰므로 components.css(공통 오너: 송보미)를 건드리지
+   않고 도메인 전용 파일로 분리한다 (팀 컨벤션: "페이지 전용 스타일은 static/css/<도메인>.css").
+   색·간격은 전부 tokens.css 변수만 사용.
+   ===================================================================== */
+
+.range-slider {
+	position: relative;
+	height: 28px;
+	margin-top: var(--s-2);
+}
+
+.range-slider__track {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	right: 0;
+	height: 4px;
+	transform: translateY(-50%);
+	background: var(--c-line);
+	border-radius: var(--r-pill);
+}
+
+.range-slider__fill {
+	position: absolute;
+	top: 50%;
+	height: 4px;
+	transform: translateY(-50%);
+	background: var(--c-primary);
+	border-radius: var(--r-pill);
+}
+
+/* 슬라이더 안에 <input type="range"> 두 개를 겹쳐서 각자 한쪽 값을 맡는다(흔한 듀얼 슬라이더 트릭) —
+   트랙(위 __track/__fill)은 이 두 range로 직접 그리고, 브라우저 기본 트랙은 투명 처리해서 숨긴다.
+   pointer-events는 기본 none으로 막아뒀다가 썸(::thumb)에서만 auto로 풀어야, 두 슬라이더가 겹친
+   상태에서도 각자의 동그란 손잡이만 클릭/드래그되고 트랙 전체가 클릭을 가로채지 않는다. */
+.range-slider input[type="range"] {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	width: 100%;
+	margin: 0;
+	transform: translateY(-50%);
+	-webkit-appearance: none;
+	appearance: none;
+	background: transparent;
+	pointer-events: none;
+}
+
+.range-slider input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
+.range-slider input[type="range"]::-moz-range-track { background: transparent; }
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--c-primary);
+	border: 3px solid var(--c-surface);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--c-primary);
+	border: 3px solid var(--c-surface);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+/* 숫자 직접입력 쌍(최소~최대) — .field 안 .input을 가로로 나란히 두는 배치만 이 파일에서 보강. */
+.range-inputs {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	margin-top: var(--s-2);
+}
+
+.range-inputs .input {
+	text-align: center;
+	padding: 10px var(--s-2);
+}
+
+.range-inputs__unit {
+	color: var(--c-text-mut);
+	font-size: var(--fs-sm);
+	white-space: nowrap;
+}

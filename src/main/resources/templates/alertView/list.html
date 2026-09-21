@@ -36,12 +36,16 @@
 	</div>
 
 	<!--/* 강노은: 이 화면을 보고 있는 동안 새 알림이 오면(SSE) 바로 목록을 새로고침하는 대신,
-	     스크롤 위치가 튀지 않게 눌러서 새로고침하는 배너만 살짝 띄운다. */-->
+	     스크롤 위치가 튀지 않게 눌러서 새로고침하는 배너만 살짝 띄운다.
+	     변경됨 (2026-09-21) — 왜: 예전엔 "notification" 이벤트(읽음 처리해도 같이 밀려옴)를 그대로
+	     구독해서, 이미 읽은 알림을 다시 클릭하기만 해도 "새 알림이 도착했어요" 배너가 잘못 떴다.
+	     실시간으로 "진짜 새 알림"이 생겼을 때만 보내는 new-notification 이벤트로 바꿔서, 이 페이지
+	     안에서의 클릭(읽음 처리)으로는 더 이상 안 뜨고 실제 실시간 도착에만 뜨게 한다. */-->
 	<script>
 		(function () {
 			if (!window.EventSource) return;
 			var source = new EventSource('/user/alerts/stream');
-			source.addEventListener('notification', function () {
+			source.addEventListener('new-notification', function () {
 				if (document.getElementById('live-refresh-banner')) return;
 				var banner = document.createElement('a');
 				banner.id = 'live-refresh-banner';

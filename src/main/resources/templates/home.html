@@ -246,8 +246,7 @@
 	<script>
 		(function () {
 			var filterBar = document.getElementById('category-filter');
-			var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
-			if (!filterBar || cardWrappers.length === 0) return;
+			if (!filterBar) return;
 
 			filterBar.addEventListener('click', function (event) {
 				var chip = event.target.closest('.chip');
@@ -256,6 +255,10 @@
 				filterBar.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });
 				chip.classList.add('is-active');
 
+				// 강노은: 카드가 0개(마감세일 중인 가게 없음)일 때도 칩은 눌리게 해야 한다 —
+				// 예전엔 cardWrappers.length === 0이면 리스너 자체를 안 붙여서 클릭이 씹혔다.
+				// querySelectorAll은 매 클릭마다 다시 조회 — 카드 목록이 없으면 그냥 빈 NodeList로 아무 것도 안 함.
+				var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
 				var filter = chip.dataset.filter;
 				cardWrappers.forEach(function (wrapper) {
 					var match = filter === 'all' || wrapper.dataset.category === filter;
@@ -272,7 +275,9 @@
 		(function () {
 			if (!window.EventSource) return;
 			var source = new EventSource('/user/alerts/stream');
-			source.addEventListener('notification', function (e) {
+			// 강노은 (2026-09-21): 배지는 "안읽은 개수"가 바뀌면 언제든(새 알림이든 읽음 처리든) 맞춰줘야
+			// 하니 unread-count를 구독한다 — "진짜 새 알림"만 알려주는 new-notification과는 다른 용도.
+			source.addEventListener('unread-count', function (e) {
 				var count = parseInt(e.data, 10) || 0;
 				var bell = document.getElementById('alert-bell');
 				var dot = document.getElementById('alert-dot');

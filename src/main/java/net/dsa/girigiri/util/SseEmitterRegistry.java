@@ -38,15 +38,34 @@ public class SseEmitterRegistry {
 		return emitter;
 	}
 
-	/** 새 알림이 생기거나 읽음 처리가 됐을 때 — 최신 안읽음 개수를 실시간으로 밀어준다. */
+	/**
+	 * 변경됨 (강노은, 2026-09-21) — 왜: 읽음 처리(markRead/markAllRead)도 "새 알림이 생겼을 때"와
+	 * 똑같이 "notification" 이벤트로 밀어주고 있어서, 알림함에서 이미 읽은 알림을 다시 클릭하기만
+	 * 해도(=안읽은 개수는 그대로인데 push는 여전히 발생) 클라이언트가 "새 알림 도착" 배너를 잘못
+	 * 띄우는 문제가 있었다. "배지 숫자만 갱신하면 되는 경우"(읽음 처리)와 "진짜 새 알림이 왔다는
+	 * 걸 알려야 하는 경우"(생성)를 이벤트 이름으로 분리한다 — 배지 갱신(home.html)은 아래 두
+	 * 메서드 다 걸려있는 "unread-count"만 구독하고, "새 알림 도착" 배너(alertView/list.html)는
+	 * pushNewNotification()에서만 같이 보내는 "new-notification"을 구독한다.
+	 */
 	public void pushUnreadCount(Long userId, int unreadCount) {
+		send(userId, "unread-count", unreadCount);
+	}
+
+	/** 진짜 새 알림이 저장됐을 때 — 배지 갱신용 unread-count와 함께, "새 알림 도착" 배너를 띄울
+	 *  new-notification 이벤트도 같이 보낸다. */
+	public void pushNewNotification(Long userId, int unreadCount) {
+		send(userId, "unread-count", unreadCount);
+		send(userId, "new-notification", unreadCount);
+	}
+
+	private void send(Long userId, String eventName, int data) {
 		List<SseEmitter> emitters = emittersByUserId.get(userId);
 		if (emitters == null || emitters.isEmpty()) {
 			return;
 		}
 		for (SseEmitter emitter : List.copyOf(emitters)) {
 			try {
-				emitter.send(SseEmitter.event().name("notification").data(unreadCount));
+				emitter.send(SseEmitter.event().name(eventName).data(data));
 			} catch (IOException e) {
 				emitters.remove(emitter);
 			}
