@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -68,12 +69,14 @@ public class StoreProductController {
 				.filter(p -> "draft".equals(p.getStatus()))
 				.map(p -> productService.toStockItem(p, category))
 				.toList();
-		// 마감된(expired) 상품은 "판매 중" 목록에서 빼서 맨 아래 별도 구간으로 보낸다(2026-09-21) — 예전 날짜에
-		// 등록된 상품이 섞여 있으면 할인율이 제각각으로 보여서(할인율은 등록 시점의 마감까지 남은 시간으로 한 번
-		// 정해지고 이후 재계산되지 않는다) 오늘 판매 중인 상품끼리의 할인율 비교가 안 됐다. sorted는 안정 정렬이라
-		// 각 구간 안의 기존 순서는 그대로다.
+		// 이 화면은 "오늘의 구제" — 오늘 올릴 상품과 오늘 판매 중인 재고를 보는 곳이라 오늘 등록된 상품만 보여준다
+		// (2026-09-21). "오늘의 구제 상품은 그날 장사용"(ListingDraftScheduler)이라 지난 날 상품은 이미 판매가
+		// 끝난 기록이고, 그 이력은 판매/폐기 리포트·정산에서 본다. 오늘 마감 시간이 지나 끝난 상품은 오늘 재고
+		// 현황의 일부라 남겨서 맨 아래 별도 구간으로 보낸다(sorted는 안정 정렬이라 각 구간 안의 순서는 그대로).
+		LocalDate today = LocalDate.now();
 		List<StockItemDto> items = all.stream()
 				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
+				.filter(p -> p.getRegisteredAt() != null && p.getRegisteredAt().toLocalDate().equals(today))
 				.map(p -> productService.toStockItem(p, category))
 				.sorted(Comparator.comparing(i -> "closed".equals(i.statusVariant())))
 				.toList();

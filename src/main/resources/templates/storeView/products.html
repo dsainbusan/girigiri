@@ -109,7 +109,7 @@
 	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
 	     보이는 상태라 "어떻게 올리는지"까지 다시 설명할 필요가 없다. -->
 	<div th:if="${totalCount == 0}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 판매 중인 상품이 없어요
+		오늘 판매 중인 상품이 없어요
 	</div>
 
 	<ul>
@@ -117,8 +117,8 @@
 		<!-- 마감된 상품 구간 시작 표시 — items는 컨트롤러에서 마감 상품이 맨 뒤로 정렬돼 있다. -->
 		<li th:if="${item.statusVariant == 'closed' and (st.first or items[st.index - 1].statusVariant != 'closed')}"
 		    class="stock-divider">
-			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'판매 종료 ' + ${closedCount} + '개'">판매 종료 3개</span>
-			<span class="u-mut" style="font-size: var(--fs-xs)">그날 마감이 지나 판매가 끝난 상품이에요. 할인율은 마지막 적용값이에요.</span>
+			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'오늘 마감된 상품 ' + ${closedCount} + '개'">오늘 마감된 상품 3개</span>
+			<span class="u-mut" style="font-size: var(--fs-xs)">마감 시간이 지나 오늘 판매가 끝난 상품이에요. 지난 판매 내역은 리포트에서 볼 수 있어요.</span>
 		</li>
 		<li class="stock-item" th:classappend="${item.statusVariant == 'soldout' or item.statusVariant == 'closed'} ? ' is-dim'">
 			<div class="stock-item__head">
