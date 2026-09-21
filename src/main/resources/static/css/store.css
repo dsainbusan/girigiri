@@ -278,36 +278,11 @@ a.stat-card:hover .stat-card__go {
 .pos-sim__brand { font-size: var(--fs-md); font-weight: var(--fw-black); letter-spacing: .02em; }
 .pos-sim__note { font-size: var(--fs-xs); color: #9ca3af; margin-top: var(--s-2); line-height: 1.6; }
 .pos-sim__note code { background: rgba(255,255,255,.1); padding: 1px 4px; border-radius: 4px; }
-/* ---------- 대시보드: 정산 예정액 CTA 카드 ---------- */
-.settlement-cta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  margin-top: var(--s-4);
-  background: var(--c-primary-weak);
-  border: 1px solid var(--c-primary-border);
-  text-decoration: none;
-}
-.settlement-cta__label {
-  display: block;
-  font-size: var(--fs-xs);
-  color: var(--c-text-sub);
-}
-.settlement-cta__value {
-  display: block;
-  margin-top: 2px;
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-bold);
-  color: var(--c-primary-strong);
-}
-.settlement-cta__go {
-  flex-shrink: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  color: var(--c-primary);
-  white-space: nowrap;
-}
+/* ---------- 대시보드: 정산 예정액 / 리뷰 관리 stat-card 변형 (2026-09-21) ----------
+   예전 .settlement-cta(파란 테두리 + 텍스트 링크)는 위 4개 지표 카드와 모양이 달라 삭제하고, 같은 stat-card로 통일했다.
+   정산 금액은 브랜드 색으로 살짝 강조하고(nowrap — 금액이 길어도 두 줄로 안 꺾이게), 리뷰 별점의 ★은 강조색. */
+.stat-card__value--money { color: var(--c-primary); white-space: nowrap; letter-spacing: -.02em; }
+.stat-card__star { color: var(--c-accent); }
 
 /* ---------- 매장 정산서 헤더 (연한 초록 틴트 패널 — 상단바 네이비와 연속돼 보이지 않게) ---------- */
 .settle-doc {

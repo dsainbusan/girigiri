@@ -98,32 +98,33 @@
 			<span class="stat-card__value stat-card__value--hours" th:text="${operatingHoursMain} ?: ${operatingHours}">09:00 ~ 21:00</span>
 			<span class="stat-card__delta u-mut" th:text="${operatingHoursSub} ?: '영업시간 · 위치 · 카테고리'">마감 세일 20:00~</span>
 		</a>
-	</div>
 
-	<!-- 정산 예정액 — "돈 받는 것"이 제일 중요해서 토글 뒤에 숨기지 않고 지표 그리드 바로 밑에 노출.
-	     숫자를 바로 보여주니 요약이자 진입 버튼 역할을 겸한다. -->
-	<a th:href="@{/store/settlement(period='month')}" class="card settlement-cta">
-		<span>
-			<span class="settlement-cta__label">이번 달 정산 예정액</span>
-			<span class="settlement-cta__value" th:text="${settlementPayout}">286,400원</span>
-		</span>
-		<span class="settlement-cta__go">정산 내역 보기 ›</span>
-	</a>
-
-	<!-- 리뷰 관리 (WBS 3.0 "문의 답변/리뷰 답글", 김태훈 인수분 → 문창호 2026-09-17) —
-	     정산 카드 바로 밑에 붙는 두 번째 CTA라, 위 stat-card·settlement-cta와 같은 "라벨 위 + 값 아래"
-	     2줄 구조로 맞춰서 이 카드만 밋밋한 한 줄짜리로 튀지 않게 했다. -->
-	<a th:href="@{/store/reviews}" class="card"
-	   style="margin-top: var(--s-3); padding: var(--s-3) var(--s-4); display:flex; align-items:center; justify-content:space-between;">
-		<span>
-			<span style="display:block; font-size: var(--fs-xs); color: var(--c-text-sub); font-weight: var(--fw-bold);">리뷰 관리</span>
-			<span style="display:block; margin-top: 2px; font-size: var(--fs-md); font-weight: var(--fw-bold);">
-				⭐ <span th:text="${#numbers.formatDecimal(reviewAverageRating, 1, 1)}">4.5</span>
-				<span class="u-mut" style="font-size: var(--fs-xs); font-weight: var(--fw-medium);" th:text="'(' + ${reviewCount} + '개)'">(12개)</span>
+		<!-- 정산 예정액 / 리뷰 관리 (2026-09-21) — 예전엔 이 둘이 그리드 밖에서 각자 다른 모양(파란 테두리 +
+		     텍스트 링크 / 테두리 없는 카드)이라 위 4개와 어울리지 않았다. 같은 stat-card로 그리드에 넣어 2열 3행으로
+		     통일. 정산은 "돈 받는 것"이 제일 중요해서 토글 뒤에 숨기지 않고 지표 옆에 그대로 두고, 값만 브랜드
+		     색(네이비)으로 살짝 강조한다. -->
+		<a th:href="@{/store/settlement(period='month')}" class="stat-card" title="이번 달 정산 내역 보기">
+			<div class="stat-card__head">
+				<span class="stat-card__label">정산 예정액</span>
+				<span class="stat-card__go">›</span>
+			</div>
+			<span class="stat-card__value stat-card__value--money" th:text="${settlementPayout}">286,400원</span>
+			<span class="stat-card__delta u-mut">이번 달</span>
+		</a>
+		<!-- 리뷰 관리 (WBS 3.0 "문의 답변/리뷰 답글", 김태훈 인수분 → 문창호 2026-09-17) -->
+		<a th:href="@{/store/reviews}" class="stat-card" title="리뷰 보기 및 답글 남기기">
+			<div class="stat-card__head">
+				<span class="stat-card__label">리뷰 관리</span>
+				<span class="stat-card__go">›</span>
+			</div>
+			<span class="stat-card__value">
+				<span class="stat-card__star" th:if="${reviewCount > 0}">★</span>
+				<span th:text="${reviewCount > 0} ? ${#numbers.formatDecimal(reviewAverageRating, 1, 1)} : '-'">4.5</span>
 			</span>
-		</span>
-		<span class="u-mut" style="font-size: 18px; font-weight: var(--fw-bold);">›</span>
-	</a>
+			<span class="stat-card__delta u-mut"
+			      th:text="${reviewCount > 0} ? ('리뷰 ' + ${reviewCount} + '개') : '아직 리뷰가 없어요'">리뷰 12개</span>
+		</a>
+	</div>
 
 	<!-- 2026-09-17 — "주문·픽업 바로가기" 카드 삭제. "새 예약 확인"은 위 "픽업 예약" 지표카드 및
 		처리할 일 배너(새 예약 N건)와 완전히 중복, QR 픽업 확인/완료된 거래 내역/매장 취소는
