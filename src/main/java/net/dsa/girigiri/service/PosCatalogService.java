@@ -221,9 +221,10 @@ public class PosCatalogService {
 			if (alreadyToday) {
 				continue;
 			}
-			// 할인가는 "만들 때 한 번" 확정하고 이후 자동으로 안 바꾼다 (2026-08-27 팀 결정: A안).
-			// 시간이 지나 마감이 가까워져도 이 상품 가격은 그대로 — 손님/점주 모두 예측 가능하게.
-			// 더 깊은 할인을 원하면 점주가 pos_draft_prompt_time을 마감에 더 가깝게 잡으면 된다.
+			// 변경됨 (2026-09-21) — 예전엔 "만들 때 한 번 확정하고 이후 안 바꾼다"(2026-08-27 팀 결정 A안)였는데,
+			// 서비스 취지(마감이 가까울수록 더 싸게)에 맞게 동적 가격으로 바꿨다. 지금 값은 초기값이고,
+			// ListingDraftScheduler.refreshDynamicPrices가 마감까지 남은 시간에 맞춰 계속 다시 계산한다.
+			// 메뉴에 점주가 지정한 할인율(m.getDiscountRate)이 있으면 초안에도 그대로 이어받아 "직접 지정"이 된다.
 			int rate = DiscountRateCalculator.effectiveRate(m.getDiscountRate(), closeAt);
 			int discounted = DiscountRateCalculator.applyDiscount(m.getOriginalPrice(), rate);
 			// 앱 판매 수량 상한이 있으면 그만큼만 (재고가 더 적으면 재고만큼).
@@ -236,6 +237,7 @@ public class PosCatalogService {
 					.name(m.getName())
 					.originalPrice(m.getOriginalPrice())
 					.discountedPrice(discounted)
+					.ownerDiscountRate(m.getDiscountRate())
 					.quantity(qty)
 					.remainingQuantity(qty)
 					.imageUrl(m.getImageUrl())

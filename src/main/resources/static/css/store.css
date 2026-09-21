@@ -653,6 +653,11 @@ a.stat-card:hover .stat-card__go {
 .stock-item__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .stock-item__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
 
+/* 할인율 출처 표시 (2026-09-21) — "자동 조정"(마감 시간에 따라 변함)은 조용히, "직접 지정"(점주가 고정)은 눈에 띄게. */
+.discount-basis { font-size: var(--fs-xs); font-weight: var(--fw-bold); white-space: nowrap; }
+.discount-basis.is-auto { color: var(--c-text-sub); }
+.discount-basis.is-custom { color: var(--c-primary); }
+
 /* 마감된 상품 구간 구분선 (2026-09-21) — 판매 중 목록 아래에서 지난 상품을 갈라 보여준다. */
 .stock-divider { display: flex; flex-direction: column; gap: 2px; padding: var(--s-4) 0 var(--s-2); border-top: 1px solid var(--c-line); margin-top: var(--s-2); }
 .stock-item.is-dim .stock-item__thumb,

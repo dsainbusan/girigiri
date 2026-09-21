@@ -65,6 +65,8 @@
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+						<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
+						      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
 						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
 						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
 					</div>
@@ -97,11 +99,11 @@
 		<span class="u-sub" style="font-size: var(--fs-xs)"
 		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
 	</div>
-	<!-- 할인율 안내 (2026-09-21) — 할인율은 상품을 올린 그 시점의 마감까지 남은 시간(3시간 초과 -20% ·
-	     1~3시간 -30% · 1시간 이내 -50%)으로 한 번 정해지고 이후 바뀌지 않는다. 같은 시각에 올린 상품끼리
-	     할인율이 같은 게 정상이라는 걸 화면에서 알려준다. -->
+	<!-- 할인율 안내 (2026-09-21) — 동적 가격: "자동 조정" 상품은 마감까지 남은 시간(3시간 초과 -20% ·
+	     1~3시간 -30% · 1시간 이내 -50%)에 따라 할인율이 올라가고, "직접 지정" 상품은 점주가 정한 값이
+	     하한으로 유지된다. -->
 	<p th:if="${totalCount > 0}" class="u-mut" style="font-size: var(--fs-xs); margin: calc(-1 * var(--s-2)) 0 var(--s-3)">
-		할인율은 상품을 올린 시점의 마감까지 남은 시간으로 정해져요. 올린 뒤에는 바뀌지 않아요.
+		<b>자동 조정</b> 상품은 마감이 가까워질수록 할인율이 올라가요(3시간 전 -30%, 1시간 전 -50%). <b>직접 지정</b> 상품은 정한 할인율을 유지해요.
 	</p>
 
 	<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 두 줄 설명을 한 줄로. 발행 대기 섹션이 바로 위에
@@ -115,8 +117,8 @@
 		<!-- 마감된 상품 구간 시작 표시 — items는 컨트롤러에서 마감 상품이 맨 뒤로 정렬돼 있다. -->
 		<li th:if="${item.statusVariant == 'closed' and (st.first or items[st.index - 1].statusVariant != 'closed')}"
 		    class="stock-divider">
-			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'마감된 상품 ' + ${closedCount} + '개'">마감된 상품 3개</span>
-			<span class="u-mut" style="font-size: var(--fs-xs)">등록 당시 할인율이 그대로 남아 있어요.</span>
+			<span class="u-bold" style="font-size: var(--fs-sm)" th:text="'판매 종료 ' + ${closedCount} + '개'">판매 종료 3개</span>
+			<span class="u-mut" style="font-size: var(--fs-xs)">그날 마감이 지나 판매가 끝난 상품이에요. 할인율은 마지막 적용값이에요.</span>
 		</li>
 		<li class="stock-item" th:classappend="${item.statusVariant == 'soldout' or item.statusVariant == 'closed'} ? ' is-dim'">
 			<div class="stock-item__head">
@@ -132,6 +134,9 @@
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
+						<span class="discount-basis" th:if="${item.statusVariant != 'closed'}"
+						      th:classappend="${item.manualRate} ? ' is-custom' : ' is-auto'"
+						      th:text="${item.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
 						<span class="price__orig" th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
 						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
 					</div>
