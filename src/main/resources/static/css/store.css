@@ -680,12 +680,12 @@ a.stat-card:hover .stat-card__go {
 .stock-item__del { color: var(--c-danger); }
 
 /* ---------- 사진 업로더 (등록/수정 폼) ---------- */
-/* 2026-09-21 — 가로 전체 폭 4:3(화면 절반 가까이)이라 너무 크다는 피드백으로 120px 정사각형 썸네일로
-   줄였다. 목록 카드의 상품 썸네일(정사각형)과 같은 비율이라 올린 사진이 목록에서 보일 모양 그대로 미리 보인다.
-   상품 등록/수정과 자동 등록 템플릿 폼이 같이 쓴다. */
+/* 2026-09-21 — 가로 전체 폭 4:3(화면 절반 가까이)이라 너무 크다는 피드백으로 줄였고, 120px은 너무
+   작아서 160px 정사각형으로 조정했다. 목록 카드의 상품 썸네일(정사각형)과 같은 비율이라 올린 사진이
+   목록에서 보일 모양 그대로 미리 보인다. 상품 등록/수정과 자동 등록 템플릿 폼이 같이 쓴다. */
 .uploader {
   position: relative; display: flex; align-items: center; justify-content: center;
-  width: 120px; aspect-ratio: 1 / 1;
+  width: 160px; aspect-ratio: 1 / 1;
   border: 1px dashed var(--c-line); border-radius: var(--r-md);
   background: var(--c-bg); overflow: hidden; cursor: pointer; text-align: center;
 }
