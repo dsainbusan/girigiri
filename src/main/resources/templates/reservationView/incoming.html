@@ -65,11 +65,11 @@
 	<div class="stat-toggle-tabs">
 		<button type="button" class="stat-toggle-tab is-active" data-target="panel-new-orders">
 			새 주문
-			<span th:if="${!#lists.isEmpty(incoming)}" class="badge" style="background:var(--c-accent); color:#fff; margin-left:4px" th:text="${#lists.size(incoming)}">2</span>
+			<span th:if="${!#lists.isEmpty(incoming)}" class="badge badge--discount" style="margin-left:4px" th:text="${#lists.size(incoming)}">2</span>
 		</button>
 		<button type="button" class="stat-toggle-tab" data-target="panel-waiting-pickup">
 			픽업 대기중
-			<span th:if="${!#lists.isEmpty(ready)}" class="badge" style="background:var(--c-accent); color:#fff; margin-left:4px" th:text="${#lists.size(ready)}">1</span>
+			<span th:if="${!#lists.isEmpty(ready)}" class="badge badge--discount" style="margin-left:4px" th:text="${#lists.size(ready)}">1</span>
 		</button>
 	</div>
 

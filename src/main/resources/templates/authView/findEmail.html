@@ -54,7 +54,7 @@
 		<div class="field">
 			<label class="field__label" for="phone">휴대폰 번호</label>
 			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
-			       placeholder="010-1234-5678" maxlength="13" required>
+			       placeholder="010-1234-5678" pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" maxlength="13" required>
 		</div>
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-5)">이메일 찾기</button>
 	</form>

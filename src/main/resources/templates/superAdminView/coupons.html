@@ -73,7 +73,7 @@
             </form>
             <form th:action="@{/superadmin/coupons/{id}/delete(id=${c.id})}" method="post" style="display:inline"
                   onsubmit="return confirm('이 캠페인을 삭제할까요?')">
-              <button type="submit" class="btn btn--sm btn--ghost"><svg class="icon"><use href="#i-trash"/></svg></button>
+              <button type="submit" class="btn btn--sm btn--ghost" aria-label="캠페인 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
             </form>
           </td>
         </tr>
