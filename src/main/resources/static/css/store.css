@@ -652,12 +652,6 @@ a.stat-card:hover .stat-card__go {
 .stock-item__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .stock-item__name { font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .stock-item__meta { font-size: var(--fs-xs); color: var(--c-text-mut); }
-
-/* 할인율 출처 표시 (2026-09-21) — 재고 카드마다 할인율이 제각각이라 "자동 단계(20/30/50)인지
-   점주가 직접 정한 값인지"를 배지 옆에 작게 보여준다. 자동은 조용히, 직접은 눈에 띄게. */
-.discount-basis { font-size: var(--fs-xs); font-weight: var(--fw-bold); white-space: nowrap; }
-.discount-basis.is-auto { color: var(--c-text-sub); }
-.discount-basis.is-custom { color: var(--c-primary); }
 .stock-item.is-dim .stock-item__thumb,
 .stock-item.is-dim .price { opacity: 0.5; }
 
