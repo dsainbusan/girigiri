@@ -679,6 +679,84 @@ a.stat-card:hover .stat-card__go {
 .stock-item__actions .btn { white-space: nowrap; padding-left: 4px; padding-right: 4px; }
 .stock-item__del { color: var(--c-danger); }
 
+/* ---------- 상품 카드 "⋯" 메뉴 + 바텀시트 + 삭제 확인 다이얼로그 (2026-09-21) ----------
+   카드마다 수정/삭제 버튼 두 개가 같은 비중으로 붙어 삭제 오탭 위험이 컸다 → 우측 상단 "⋯" 하나로 모으고
+   시트에서 고르게 했다. 빨강은 토큰만 쓴다: 아이콘·테두리는 --c-danger, 글씨·삭제 버튼 배경은 한 톤 진한
+   --c-danger-strong(흰 글씨 대비 확보). */
+.stock-item__side { display: flex; align-items: center; gap: var(--s-1); flex: none; }
+/* 터치 영역은 44x44지만 음수 마진으로 카드 헤더 높이는 키우지 않는다. */
+.stock-item__more {
+  width: 44px; height: 44px; margin: -10px -10px -10px 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: var(--r-pill);
+  color: var(--c-text-sub); cursor: pointer;
+}
+.stock-item__more:hover { background: var(--c-bg); color: var(--c-text); }
+.stock-item__more:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+
+.stock-sheet, .stock-dialog { position: fixed; inset: 0; z-index: 1000; display: flex; }
+.stock-sheet.is-hidden, .stock-dialog.is-hidden { display: none; }
+.stock-sheet { align-items: flex-end; justify-content: center; }
+.stock-dialog { align-items: center; justify-content: center; padding: var(--s-4); }
+.stock-sheet__backdrop, .stock-dialog__backdrop {
+  position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5);
+  animation: stockFadeIn .2s ease-out;
+}
+
+.stock-sheet__panel {
+  position: relative; width: 100%; max-width: var(--app-max);
+  background: var(--c-surface); border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: var(--s-2) var(--s-4) calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+  animation: stockSlideUp .25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stock-sheet__handle { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--c-line); margin: var(--s-2) auto var(--s-3); }
+.stock-sheet__name {
+  text-align: center; font-size: var(--fs-sm); color: var(--c-text-sub);
+  margin-bottom: var(--s-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stock-sheet__row {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; height: 56px; padding: 0 var(--s-2);
+  background: none; border: none; color: var(--c-text); text-decoration: none; text-align: left;
+  font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-semibold); cursor: pointer;
+}
+.stock-sheet__row + .stock-sheet__row { border-top: 1px solid var(--c-line); }
+.stock-sheet__row .icon, .stock-sheet__row > svg { width: 20px; height: 20px; flex: none; }
+.stock-sheet__row:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; border-radius: var(--r-md); }
+.stock-sheet__row--danger > svg { color: var(--c-danger); }
+.stock-sheet__row--danger > span { color: var(--c-danger-strong); }
+.stock-sheet__close {
+  width: 100%; height: 48px; margin-top: var(--s-3);
+  background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-md);
+  color: var(--c-text); font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-bold); cursor: pointer;
+}
+.stock-sheet__close:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
+.stock-dialog__panel {
+  position: relative; width: 100%; max-width: 340px;
+  background: var(--c-surface); border-radius: var(--r-xl); padding: var(--s-5);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  animation: stockPopIn .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stock-dialog__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.stock-dialog__desc { margin-top: var(--s-2); font-size: var(--fs-sm); color: var(--c-text-sub); line-height: 1.6; word-break: keep-all; }
+.stock-dialog__actions { display: flex; gap: var(--s-2); margin-top: var(--s-5); }
+.stock-dialog__btn {
+  flex: 1 1 0; min-width: 0; height: 48px; border-radius: var(--r-md);
+  font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-bold); cursor: pointer;
+}
+.stock-dialog__btn--cancel { background: var(--c-surface); border: 1px solid var(--c-line); color: var(--c-text); }
+.stock-dialog__btn--danger { background: var(--c-danger-strong); border: 1px solid var(--c-danger-strong); color: var(--c-surface); }
+.stock-dialog__btn:disabled { opacity: 0.6; cursor: default; }
+.stock-dialog__btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
+@keyframes stockFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes stockSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes stockPopIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .stock-sheet__backdrop, .stock-dialog__backdrop, .stock-sheet__panel, .stock-dialog__panel { animation: none; }
+}
+
 /* ---------- 사진 업로더 (등록/수정 폼) ---------- */
 /* 2026-09-21 — 가로 전체 폭 4:3(화면 절반 가까이)이라 너무 크다는 피드백으로 줄였고, 120px은 너무
    작아서 160px 정사각형으로 조정했다. 목록 카드의 상품 썸네일(정사각형)과 같은 비율이라 올린 사진이

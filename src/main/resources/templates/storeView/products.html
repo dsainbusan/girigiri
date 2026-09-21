@@ -79,8 +79,20 @@
 				<div class="stock-item__body">
 					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
 						<span class="stock-item__name" th:text="${item.name}">오늘의 모둠빵 세트</span>
-						<span class="stock-item__status" th:classappend="' stock-item__status--' + ${item.statusVariant}"
-						      th:text="${item.statusLabel}">판매중</span>
+						<!-- 상태 칩 + "⋯" 메뉴 (2026-09-21) — 수정/삭제 버튼 두 개를 카드에서 빼고 이 버튼 하나로 모았다.
+						     누르면 아래 바텀시트(#stock-sheet)가 열린다. 카드가 10초마다 통째로 교체되므로 클릭은
+						     문서 위임으로 처리하고, 수정/삭제 주소는 버튼의 data-*에 실어 둔다. -->
+						<div class="stock-item__side">
+							<span class="stock-item__status" th:classappend="' stock-item__status--' + ${item.statusVariant}"
+							      th:text="${item.statusLabel}">판매중</span>
+							<button type="button" class="stock-item__more" data-stock-menu
+							        th:attr="aria-label=${item.name + ' 메뉴 열기'},data-id=${item.id},data-name=${item.name},data-edit-url=@{/store/products/{id}/edit(id=${item.id})},data-delete-url=@{/store/products/{id}/delete(id=${item.id})}"
+							        aria-haspopup="dialog">
+								<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+									<circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+								</svg>
+							</button>
+						</div>
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
@@ -95,17 +107,14 @@
 				</div>
 			</div>
 
-			<div class="stock-item__actions">
+			<!-- 수정/삭제는 위 "⋯" 메뉴로 옮겼다. 품절/판매 재개는 자주 쓰는 상태 전환이라 카드에 남기고,
+			     둘 다 해당 없는 카드(마감 등)는 빈 영역을 그리지 않는다. -->
+			<div class="stock-item__actions" th:if="${item.statusVariant == 'selling' or item.manualSoldOut}">
 				<form th:if="${item.statusVariant == 'selling'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
 					<button type="submit" class="btn btn--sm btn--outline">품절</button>
 				</form>
 				<form th:if="${item.manualSoldOut}" th:action="@{/store/products/{id}/resume(id=${item.id})}" method="post">
 					<button type="submit" class="btn btn--sm btn--outline">판매 재개</button>
-				</form>
-				<a th:href="@{/store/products/{id}/edit(id=${item.id})}" class="btn btn--sm btn--outline">수정</a>
-				<form th:action="@{/store/products/{id}/delete(id=${item.id})}" method="post"
-				      data-confirm="이 상품을 삭제할까요? 되돌릴 수 없어요.">
-					<button type="submit" class="btn btn--sm btn--outline stock-item__del">삭제</button>
 				</form>
 			</div>
 		</li>
@@ -211,6 +220,43 @@
 	</p>
 	</div><!-- /wait-section -->
 
+	<!-- 상품 "⋯" 메뉴 바텀시트 + 삭제 확인 다이얼로그 (2026-09-21).
+	     #selling-section 밖에 둔다 — 그 안은 10초마다 서버 화면으로 통째 교체되기 때문. 열 때 눌린 버튼의
+	     data-*(상품명·수정/삭제 주소)를 스크립트가 들고 있다가 채운다. 삭제는 기존 POST 엔드포인트를 숨김 폼으로
+	     그대로 호출한다(서버 로직 변경 없음). -->
+	<div id="stock-sheet" class="stock-sheet is-hidden" role="dialog" aria-modal="true" aria-labelledby="stock-sheet-name">
+		<div class="stock-sheet__backdrop" data-sheet-close></div>
+		<div class="stock-sheet__panel">
+			<div class="stock-sheet__handle" aria-hidden="true"></div>
+			<p id="stock-sheet-name" class="stock-sheet__name"></p>
+			<a id="stock-sheet-edit" class="stock-sheet__row" href="#">
+				<svg class="icon" aria-hidden="true"><use href="#i-pencil"/></svg>
+				<span>수정</span>
+			</a>
+			<button type="button" id="stock-sheet-delete" class="stock-sheet__row stock-sheet__row--danger">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+					<path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd"/>
+				</svg>
+				<span>삭제</span>
+			</button>
+			<button type="button" class="stock-sheet__close" data-sheet-close>닫기</button>
+		</div>
+	</div>
+
+	<div id="stock-dialog" class="stock-dialog is-hidden" role="alertdialog" aria-modal="true"
+	     aria-labelledby="stock-dialog-title" aria-describedby="stock-dialog-desc">
+		<div class="stock-dialog__backdrop" data-dialog-close></div>
+		<div class="stock-dialog__panel">
+			<h3 id="stock-dialog-title" class="stock-dialog__title">이 상품을 삭제할까요?</h3>
+			<p id="stock-dialog-desc" class="stock-dialog__desc"></p>
+			<div class="stock-dialog__actions">
+				<button type="button" class="stock-dialog__btn stock-dialog__btn--cancel" data-dialog-close>취소</button>
+				<button type="button" id="stock-dialog-confirm" class="stock-dialog__btn stock-dialog__btn--danger">삭제</button>
+			</div>
+		</div>
+	</div>
+	<form id="stock-delete-form" method="post" hidden></form>
+
 	<!-- 4. 보조 수단 — 작은 링크. 템플릿 링크는 POS 미연동이거나 이미 템플릿을 쓰는 경우만.
 	     (대시보드로는 상단바 뒤로가기 버튼으로 이동) -->
 	<div class="u-row" style="justify-content: center; gap: var(--s-4); margin-top: var(--s-5); flex-wrap: wrap">
@@ -240,6 +286,8 @@
 		var IDS = ['wait-section', 'selling-section'];
 		setInterval(function () {
 			if (document.hidden) { return; }
+			// "⋯" 시트/삭제 다이얼로그가 열려 있으면 뒤 화면을 갈아끼우지 않는다.
+			if (document.querySelector('.stock-sheet:not(.is-hidden), .stock-dialog:not(.is-hidden)')) { return; }
 			var active = document.activeElement;
 			if (active && active.closest && active.closest('#wait-section, #selling-section')) { return; }
 			fetch(location.pathname, { credentials: 'same-origin' })
@@ -255,6 +303,113 @@
 				})
 				.catch(function () { /* 네트워크 오류는 다음 주기에 다시 */ });
 		}, 10000);
+	})();
+	</script>
+
+	<!-- 상품 "⋯" 메뉴 바텀시트 + 삭제 확인 다이얼로그 동작 (2026-09-21).
+	     - 버튼은 10초마다 교체되는 영역 안에 있어서 문서 위임으로 받는다.
+	     - 시트/다이얼로그는 ESC·배경 클릭으로 닫히고, 다이얼로그가 위에 있으면 ESC는 다이얼로그만 닫는다.
+	     - 삭제는 기존 POST 엔드포인트를 숨김 폼으로 호출하고(성공하면 서버가 목록으로 리다이렉트 → 새로고침),
+	       요청 중엔 확인 버튼을 잠가 중복 클릭을 막는다. -->
+	<script th:inline="none">
+	(function () {
+		var sheet = document.getElementById('stock-sheet');
+		var dialog = document.getElementById('stock-dialog');
+		var form = document.getElementById('stock-delete-form');
+		if (!sheet || !dialog || !form) { return; }
+		var sheetName = document.getElementById('stock-sheet-name');
+		var editLink = document.getElementById('stock-sheet-edit');
+		var deleteRow = document.getElementById('stock-sheet-delete');
+		var dialogDesc = document.getElementById('stock-dialog-desc');
+		var confirmBtn = document.getElementById('stock-dialog-confirm');
+
+		var current = null;       // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl }
+		var lastTrigger = null;   // 닫을 때 포커스를 돌려줄 "⋯" 버튼
+		var submitting = false;
+
+		function isOpen(el) { return !el.classList.contains('is-hidden'); }
+		function syncScrollLock() { document.body.style.overflow = (isOpen(sheet) || isOpen(dialog)) ? 'hidden' : ''; }
+
+		function openSheet(trigger) {
+			current = {
+				id: trigger.getAttribute('data-id'),
+				name: trigger.getAttribute('data-name') || '',
+				editUrl: trigger.getAttribute('data-edit-url'),
+				deleteUrl: trigger.getAttribute('data-delete-url')
+			};
+			lastTrigger = trigger;
+			sheetName.textContent = current.name;
+			editLink.setAttribute('href', current.editUrl);
+			sheet.classList.remove('is-hidden');
+			syncScrollLock();
+			editLink.focus();
+		}
+		function closeSheet() {
+			sheet.classList.add('is-hidden');
+			syncScrollLock();
+			// 카드가 갱신으로 교체됐을 수 있어서, 원래 버튼이 아직 문서에 있을 때만 포커스를 돌려준다.
+			if (lastTrigger && document.contains(lastTrigger)) { lastTrigger.focus(); }
+		}
+		function openDialog() {
+			dialogDesc.textContent = '\'' + current.name + '\'가 재고 목록에서 사라져요. 삭제한 상품은 되돌릴 수 없어요.';
+			dialog.classList.remove('is-hidden');
+			syncScrollLock();
+			dialog.querySelector('.stock-dialog__btn--cancel').focus();   // 삭제가 기본 포커스가 되지 않게
+		}
+		function closeDialog() {
+			if (submitting) { return; }
+			dialog.classList.add('is-hidden');
+			syncScrollLock();
+			deleteRow.focus();
+		}
+
+		document.addEventListener('click', function (e) {
+			var trigger = e.target.closest('[data-stock-menu]');
+			if (trigger) { openSheet(trigger); return; }
+			if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
+			if (e.target.closest('[data-dialog-close]')) { closeDialog(); return; }
+		});
+
+		deleteRow.addEventListener('click', openDialog);
+
+		// 삭제 후 브라우저 "뒤로"로 이 화면이 캐시에서 복원되면 잠긴 버튼과 열린 레이어가 그대로 남는다 — 초기화.
+		window.addEventListener('pageshow', function (e) {
+			if (!e.persisted) { return; }
+			submitting = false;
+			confirmBtn.disabled = false;
+			confirmBtn.textContent = '삭제';
+			sheet.classList.add('is-hidden');
+			dialog.classList.add('is-hidden');
+			syncScrollLock();
+		});
+
+		confirmBtn.addEventListener('click', function () {
+			if (submitting || !current) { return; }
+			submitting = true;
+			confirmBtn.disabled = true;
+			confirmBtn.textContent = '삭제 중…';
+			form.setAttribute('action', current.deleteUrl);
+			form.submit();
+		});
+
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') {
+				if (isOpen(dialog)) { closeDialog(); }
+				else if (isOpen(sheet)) { closeSheet(); }
+				return;
+			}
+			if (e.key !== 'Tab') { return; }
+			// 열린 레이어 안에서만 Tab 순환(포커스가 뒤 화면으로 새지 않게).
+			var layer = isOpen(dialog) ? dialog : (isOpen(sheet) ? sheet : null);
+			if (!layer) { return; }
+			var items = Array.prototype.filter.call(
+				layer.querySelectorAll('a[href], button:not([disabled])'),
+				function (el) { return el.offsetParent !== null; });
+			if (!items.length) { return; }
+			var first = items[0], last = items[items.length - 1];
+			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+		});
 	})();
 	</script>
 </div>
