@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, 'dashboard', true, '점주 모드', null)}">
+      th:replace="~{common/layout :: layout(${storeName}, ~{:: #content}, 'dashboard', true, ${!isClosed ? '🟢 영업중' : '영업 마감'}, null)}">
 <body>
 <!--/*
 	점주 대시보드
@@ -23,127 +23,164 @@
 	나눴다. 안에 있던 "오늘 ↔ 최근 7일" 토글과 같은 .stat-toggle-tabs 컴포넌트를 그대로 재사용 —
 	이미 여러 그룹을 각자 독립적으로 처리하도록 짜여 있어서(아래 스크립트) JS는 안 건드려도 된다.
 */-->
-<div id="content" th:fragment="content" class="page">
+<div id="content" th:fragment="content" class="page page--dashboard">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<!-- 처리할 일 배너 — 항상 최상단. 각 줄 0건이면 숨김. -->
-	<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
-		<!-- 문구 트리밍 (2026-09-16, 디자인 리팩토링) — 왜: 완결된 문장(~해야 ~할 수 있어요) 대신
-		     라벨형으로 줄였다. 행 자체가 클릭 가능하고 화살표(›)가 있어 "누르면 더 볼 수 있다"는
-		     맥락은 이미 전달되므로, 여기서 결과까지 설명할 필요가 없다. -->
-		<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
-			<span><svg class="icon" style="width:14px;height:14px"><use href="#i-warning"/></svg> 정산 계좌 등록 필요</span>
-			<span class="todo-banner__go">›</span>
-		</a>
-		<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
-			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 판매 대기 <b th:text="${draftPendingCount}">3</b>건</span>
-			<span class="todo-banner__go">›</span>
-		</a>
-		<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">
-			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 <b th:text="${incomingReservationCount}">2</b>건</span>
-			<span class="todo-banner__go">›</span>
-		</a>
-		<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
-			<span><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> POS 자동 등록 설정</span>
-			<span class="todo-banner__go">›</span>
-		</a>
-	</div>
-
-	<div class="u-row" style="justify-content: space-between; align-items: center; margin-bottom: var(--s-4)">
-		<span class="u-sub" style="font-size: var(--fs-sm); font-weight: var(--fw-bold);" th:text="${todayLabel}">8월 30일 토요일</span>
-		<span class="pill" th:classappend="${!isClosed} ? ' pill--done' : ''"
-		      th:text="${!isClosed ? '🟢 영업중' : '영업 마감'}">영업중</span>
-	</div>
-
-	<!-- 요약 / 통계 최상위 탭 -->
-	<div class="stat-toggle-tabs">
-		<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">요약</button>
-		<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계</button>
-	</div>
-
-	<div id="panel-overview" class="stat-panel">
-
-	<!-- 핵심 지표 2x2 — 4대 주요 업무 바로가기 액션 카드 -->
-	<div class="stat-grid">
-		<a th:href="@{/store/sales-report}" class="stat-card" title="매출 리포트 보기">
-			<div class="stat-card__head">
-				<span class="stat-card__label">오늘 매출</span>
-				<span class="stat-card__go">›</span>
+	<!-- ================= 1. 상단 딥 네이비 그라데이션 히어로 ================= -->
+	<section class="dash-hero">
+		<!-- 메인 매출 하이라이트 (날짜 + 오늘 매출 + 증감율) -->
+		<div class="dash-hero__balance-box">
+			<div class="dash-hero__date-label" th:text="${todayLabel}">8월 30일 토요일</div>
+			<div class="dash-hero__balance-label">오늘의 매출</div>
+			<div class="dash-hero__balance-amount" th:text="${todaySales}">286,400원</div>
+			<div class="dash-hero__balance-delta" th:classappend="' ' + ${salesDeltaClass}">
+				<span th:text="${salesDelta}">▲ 어제 대비 +18%</span>
 			</div>
-			<span class="stat-card__value" th:text="${todaySales}">286,400원</span>
-			<span class="stat-card__delta" th:classappend="' ' + ${salesDeltaClass}" th:text="${salesDelta}">▲ 어제 대비 +18%</span>
-		</a>
-		<a th:href="@{/store/products}" class="stat-card" title="오늘의 구제 등록/관리">
-			<div class="stat-card__head">
-				<span class="stat-card__label">오늘의 구제</span>
-				<span class="stat-card__go">›</span>
-			</div>
-			<span class="stat-card__value" th:text="${soldCount} + ' / ' + ${totalQuantity} + '개'">18 / 24개</span>
-			<span class="stat-card__delta u-accent" th:text="${idleCount} + '개 판매중 (' + ${sellingNowCount} + '종)'">7개 판매중 (2종)</span>
-		</a>
-		<a th:href="@{/reservation/incoming}" class="stat-card" title="예약 확인 및 픽업">
-			<div class="stat-card__head">
-				<span class="stat-card__label">픽업 예약</span>
-				<span class="stat-card__go">›</span>
-			</div>
-			<span class="stat-card__value" th:text="${reservationWaiting} + '건'">5건</span>
-			<span class="stat-card__delta u-mut"
-			      th:text="${reservationCancelled > 0} ? ('대기 ' + ${reservationWaiting} + ' · 완료 ' + ${reservationDone} + ' · 취소 ' + ${reservationCancelled}) : ('대기 ' + ${reservationWaiting} + ' · 완료 ' + ${reservationDone})">대기 2 · 완료 3</span>
-		</a>
-		<a th:href="@{/store/edit}" class="stat-card" title="매장 정보 및 영업시간 수정">
-			<div class="stat-card__head">
-				<span class="stat-card__label">매장 정보 관리</span>
-				<span class="stat-card__go">›</span>
-			</div>
-			<span class="stat-card__value stat-card__value--hours" th:text="${operatingHoursMain} ?: ${operatingHours}">09:00 ~ 21:00</span>
-			<span class="stat-card__delta u-mut" th:text="${operatingHoursSub} ?: '영업시간 · 위치 · 카테고리'">마감 세일 20:00~</span>
-		</a>
-
-		<!-- 정산 예정액 / 리뷰 관리 (2026-09-21) — 예전엔 이 둘이 그리드 밖에서 각자 다른 모양(파란 테두리 +
-		     텍스트 링크 / 테두리 없는 카드)이라 위 4개와 어울리지 않았다. 같은 stat-card로 그리드에 넣어 2열 3행으로
-		     통일. 정산은 "돈 받는 것"이 제일 중요해서 토글 뒤에 숨기지 않고 지표 옆에 그대로 두고, 값만 브랜드
-		     색(네이비)으로 살짝 강조한다. -->
-		<a th:href="@{/store/settlement(period='month')}" class="stat-card" title="이번 달 정산 내역 보기">
-			<div class="stat-card__head">
-				<span class="stat-card__label">정산 예정액</span>
-				<span class="stat-card__go">›</span>
-			</div>
-			<span class="stat-card__value stat-card__value--money" th:text="${settlementPayout}">286,400원</span>
-			<span class="stat-card__delta u-mut">이번 달</span>
-		</a>
-		<!-- 리뷰 관리 (WBS 3.0 "문의 답변/리뷰 답글", 김태훈 인수분 → 문창호 2026-09-17) -->
-		<a th:href="@{/store/reviews}" class="stat-card" title="리뷰 보기 및 답글 남기기">
-			<div class="stat-card__head">
-				<span class="stat-card__label">리뷰 관리</span>
-				<span class="stat-card__go">›</span>
-			</div>
-			<span class="stat-card__value">
-				<span class="stat-card__star" th:if="${reviewCount > 0}">★</span>
-				<span th:text="${reviewCount > 0} ? ${#numbers.formatDecimal(reviewAverageRating, 1, 1)} : '-'">4.5</span>
-			</span>
-			<span class="stat-card__delta u-mut"
-			      th:text="${reviewCount > 0} ? ('리뷰 ' + ${reviewCount} + '개') : '아직 리뷰가 없어요'">리뷰 12개</span>
-		</a>
-	</div>
-
-	<!-- 2026-09-17 — "주문·픽업 바로가기" 카드 삭제. "새 예약 확인"은 위 "픽업 예약" 지표카드 및
-		처리할 일 배너(새 예약 N건)와 완전히 중복, QR 픽업 확인/완료된 거래 내역/매장 취소는
-		/reservation/incoming 상단 유틸리티 카드로 옮겼다 — 잃는 기능 없음. -->
-
-	</div>
-	<!-- /panel-overview -->
-
-	<!-- ============ 현황 (오늘 ↔ 최근 7일 토글) ============ -->
-	<div id="panel-stats" class="stat-panel is-hidden">
-	<div class="card" style="margin-top: var(--s-3)">
-		<!-- 밑줄 스타일(--underline) — 바로 위 "요약/통계" pill 탭과 구분되게 (2026-09-17) -->
-		<div class="stat-toggle-tabs stat-toggle-tabs--underline">
-			<button type="button" class="stat-toggle-tab is-active" data-target="panel-today">오늘</button>
-			<button type="button" class="stat-toggle-tab" data-target="panel-weekly">최근 7일</button>
 		</div>
 
-		<!-- 패널: 오늘 -->
-		<div id="panel-today" class="stat-panel">
+		<!-- 실시간 운영 스탯 바 (계기판 2분할 형태: 판매중 재고 / 대기 예약) -->
+		<div class="dash-hero__stat-bar">
+			<a th:href="@{/store/products}" class="dash-hero__stat-col" title="재고관리 바로가기">
+				<span class="dash-hero__stat-name">판매중 재고</span>
+				<span class="dash-hero__stat-num"><span th:text="${idleCount}">0</span><small>개</small></span>
+				<span class="dash-hero__stat-sub" th:text="${sellingNowCount} + '종 판매중'">0종 판매중</span>
+			</a>
+			<div class="dash-hero__stat-divider"></div>
+			<a th:href="@{/reservation/incoming}" class="dash-hero__stat-col" title="예약확인 바로가기">
+				<span class="dash-hero__stat-name">대기 예약</span>
+				<span class="dash-hero__stat-num" th:classappend="${reservationWaiting > 0} ? ' u-accent-num' : ''"><span th:text="${reservationWaiting}">0</span><small>건</small></span>
+				<span class="dash-hero__stat-sub" th:text="'완료 ' + ${reservationDone} + '건'">완료 0건</span>
+			</a>
+		</div>
+	</section>
+
+	<!-- ================= 2. 둥근 서피스 바디 시트 (Rounded Top Body) ================= -->
+	<section class="dash-sheet">
+
+		<!-- 최상위 탭: 업무 요약 ↔ 통계 분석 (한 스크롤에 과도한 정보 방지) -->
+		<div class="dash-tabs-wrap">
+			<div class="stat-toggle-tabs">
+				<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">업무 요약</button>
+				<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계 분석</button>
+			</div>
+		</div>
+
+		<!-- ================= 탭 1: 업무 요약 ================= -->
+		<div id="panel-overview" class="stat-panel">
+
+			<!-- 처리할 일 알림 배너 (항상 우선 표시. 건수 없으면 숨김) -->
+			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner" style="margin-bottom: var(--s-3)">
+				<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
+					<span><svg class="icon" style="width:14px;height:14px"><use href="#i-warning"/></svg> 정산 계좌 등록 필요</span>
+					<span class="todo-banner__go">›</span>
+				</a>
+				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
+					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 판매 대기 <b th:text="${draftPendingCount}">3</b>건</span>
+					<span class="todo-banner__go">›</span>
+				</a>
+				<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">
+					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 <b th:text="${incomingReservationCount}">2</b>건</span>
+					<span class="todo-banner__go">›</span>
+				</a>
+				<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
+					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> POS 자동 등록 설정</span>
+					<span class="todo-banner__go">›</span>
+				</a>
+			</div>
+
+			<!-- 매장 관리 그리드 (하단 탭바에 없는 매장 운영 기능 8개) -->
+			<div class="dash-section-head">
+				<h3 class="dash-section-title">매장 관리</h3>
+				<span class="dash-section-more">8개 기능</span>
+			</div>
+
+			<div class="dash-menu-grid">
+				<!-- 1. 정산 관리 -->
+				<a th:href="@{/store/settlement(period='month')}" class="dash-menu-cell" title="이번 달 정산 내역">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-money"/></svg>
+					</div>
+					<span class="dash-menu-text">정산 관리</span>
+					<span class="dash-menu-sub" th:text="${settlementPayout}">33,212원</span>
+				</a>
+
+				<!-- 2. 매장 정보 -->
+				<a th:href="@{/store/edit}" class="dash-menu-cell" title="매장 정보 및 영업시간 설정">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-settings"/></svg>
+					</div>
+					<span class="dash-menu-text">매장 정보</span>
+					<span class="dash-menu-sub" th:text="${operatingHoursMain} ?: '영업시간'">09:00~</span>
+				</a>
+
+				<!-- 3. 리뷰 관리 -->
+				<a th:href="@{/store/reviews}" class="dash-menu-cell" title="리뷰 보기 및 답글 남기기">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-star"/></svg>
+					</div>
+					<span class="dash-menu-text">리뷰 관리</span>
+					<span class="dash-menu-sub" th:text="${reviewCount > 0 ? ('★ ' + #numbers.formatDecimal(reviewAverageRating, 1, 1)) : '신규'}">★ 3.3</span>
+				</a>
+
+				<!-- 4. POS 연동 -->
+				<a th:href="@{/store/pos}" class="dash-menu-cell" title="POS 자동 등록 설정">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-desktop"/></svg>
+					</div>
+					<span class="dash-menu-text">POS 연동</span>
+					<span class="dash-menu-sub" th:text="${needsAutomationSetup ? '설정 필요' : '연동 완료'}">설정</span>
+				</a>
+
+				<!-- 5. 매출 리포트 -->
+				<a th:href="@{/store/sales-report}" class="dash-menu-cell" title="매출 리포트 다운로드">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-ledger"/></svg>
+					</div>
+					<span class="dash-menu-text">매출 리포트</span>
+					<span class="dash-menu-sub">Excel · PDF</span>
+				</a>
+
+				<!-- 6. 공지사항 -->
+				<a th:href="@{/store/notices}" class="dash-menu-cell" title="점주 공지사항 및 운영 안내">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-megaphone"/></svg>
+					</div>
+					<span class="dash-menu-text">공지사항</span>
+					<span class="dash-menu-sub">운영 안내</span>
+				</a>
+
+				<!-- 7. 손님 모드 -->
+				<a th:href="@{/}" class="dash-menu-cell" title="손님 시점으로 화면 둘러보기">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-home"/></svg>
+					</div>
+					<span class="dash-menu-text">손님 모드</span>
+					<span class="dash-menu-sub">둘러보기</span>
+				</a>
+
+				<!-- 8. 점주 계정 -->
+				<a th:href="@{/mypage}" class="dash-menu-cell" title="마이페이지 및 계정 정보">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-user"/></svg>
+					</div>
+					<span class="dash-menu-text">점주 계정</span>
+					<span class="dash-menu-sub">내 정보</span>
+				</a>
+			</div>
+		</div>
+		<!-- /panel-overview -->
+
+		<!-- ================= 탭 2: 통계 분석 ================= -->
+		<div id="panel-stats" class="stat-panel is-hidden">
+			<!-- 요약(오늘 판매 현황 도넛) / 통계(최근 7일 막대 차트) 카드 -->
+			<div class="card" style="box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05); border-radius: 18px;">
+				<div class="stat-toggle-tabs stat-toggle-tabs--underline" style="margin-bottom: var(--s-3)">
+					<button type="button" class="stat-toggle-tab is-active" data-target="panel-today">오늘 판매 현황</button>
+					<button type="button" class="stat-toggle-tab" data-target="panel-weekly">최근 7일 통계</button>
+				</div>
+
+				<!-- 패널: 오늘 -->
+				<div id="panel-today" class="stat-panel">
 			<!-- 마감 전 -->
 			<div th:if="${!isClosed}">
 				<div class="u-row" style="justify-content: space-between; align-items: flex-start;">
@@ -305,14 +342,18 @@
 			</a>
 		</div>
 	</div>
+	<!-- /card -->
 	</div>
 	<!-- /panel-stats -->
 
-	<!-- 점주 모드엔 하단 탭바·마이페이지가 없어서 로그아웃 진입점을 하단에 둔다. -->
-	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-4); margin-bottom: var(--s-4)">
+	<!-- 점주 모드 로그아웃 진입점 -->
+	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-5); margin-bottom: var(--s-2)">
 		<button type="submit" class="btn btn--outline btn--block u-mut"
-		        style="font-size: var(--fs-sm); border-color: var(--c-line)">로그아웃</button>
+		        style="font-size: var(--fs-sm); border-color: var(--c-line); background: var(--c-surface)">로그아웃</button>
 	</form>
+
+	</section>
+	<!-- /dash-sheet -->
 
 	<!-- 탭 토글(현황: 오늘/최근7일, 주문·픽업: 주문/픽업) · 상단바 뒤로 버튼 숨김 · 구제율 목표 수정 -->
 	<script th:inline="none">
