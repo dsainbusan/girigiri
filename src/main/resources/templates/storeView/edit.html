@@ -82,8 +82,9 @@
 		<!-- 3. 매장 대표 연락처 -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="phone">매장 대표 전화번호 <span class="u-accent">*</span></label>
-			<input class="input" type="tel" id="phone" name="phone"
-			       th:value="${store.phone}" placeholder="예: 051-123-4567 또는 010-1234-5678" required maxlength="30">
+			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+			       th:value="${store.phone}" placeholder="예: 051-123-4567 또는 010-1234-5678"
+			       pattern="(02-\d{3,4}-\d{4}|0[1-9]\d-\d{3,4}-\d{4})" required maxlength="13">
 		</div>
 
 		<!-- 4. 영업시간 및 마감 세일 안내 -->
@@ -229,6 +230,28 @@
 		if (!back) return;
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
+
+	<!-- 매장 대표 전화번호 — 입력하는 대로 하이픈 자동 삽입(authView/ownerApply.html과 동일 로직).
+	     "02"로 시작하면 지역번호 2자리, 아니면 3자리로 보고 뒤 4자리를 항상 마지막 블록으로 뺀다. -->
+	<script th:inline="none">
+	(function () {
+		var phoneInput = document.getElementById('phone');
+		if (!phoneInput) return;
+		phoneInput.addEventListener('input', function () {
+			var d = phoneInput.value.replace(/\D/g, '');
+			var frontLen = d.slice(0, 2) === '02' ? 2 : 3;
+			d = d.slice(0, frontLen === 2 ? 10 : 11);
+			var out = d;
+			if (d.length > frontLen) {
+				var midEnd = d.length - 4;
+				out = midEnd <= frontLen
+					? d.slice(0, frontLen) + '-' + d.slice(frontLen)
+					: d.slice(0, frontLen) + '-' + d.slice(frontLen, midEnd) + '-' + d.slice(midEnd);
+			}
+			phoneInput.value = out;
+		});
 	})();
 	</script>
 

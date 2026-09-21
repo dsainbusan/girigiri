@@ -15,6 +15,7 @@ import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.StoreHoursUtil;
+import net.dsa.girigiri.util.StorePhoneUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -218,7 +219,8 @@ public class StoreService {
 	}
 
 	public boolean isEditValid(String category, String phone) {
-		return !(category == null || category.isBlank() || phone == null || phone.isBlank());
+		return !(category == null || category.isBlank() || phone == null || phone.isBlank())
+				&& StorePhoneUtil.isValid(phone);
 	}
 
 	public boolean isEditValid(String category, String phone, String operatingHours) {

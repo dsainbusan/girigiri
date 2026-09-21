@@ -35,8 +35,8 @@
 		<!-- 2. 사업자 등록번호 -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="businessNumber">사업자 등록번호 <span class="u-accent">*</span></label>
-			<input class="input" type="text" id="businessNumber" name="businessNumber"
-			       placeholder="예: 123-45-67890" required maxlength="30">
+			<input class="input" type="text" id="businessNumber" name="businessNumber" inputmode="numeric"
+			       placeholder="예: 123-45-67890" pattern="\d{3}-\d{2}-\d{5}" required maxlength="12">
 		</div>
 
 		<!-- 3. 매장 카테고리 -->
@@ -54,18 +54,24 @@
 			</select>
 		</div>
 
-		<!-- 4. 매장 주소 -->
+		<!-- 4. 매장 주소 — 다음 우편번호 서비스(api 키 불필요·무료)로 검색해서 채운다.
+		     new daum.Postcode({...}).open()(팝업 창)은 브라우저 팝업 차단에 걸려서, 대신 .embed()로
+		     페이지 안 오버레이(#postcodeOverlay)에 그려 넣는다 — superAdminView/storeEdit.html과 동일 패턴. -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="address">매장 주소 <span class="u-accent">*</span></label>
-			<input class="input" type="text" id="address" name="address"
-			       placeholder="예: 부산광역시 수영구 광안로 123 1층" required maxlength="200">
+			<div class="u-row">
+				<input class="input u-grow" type="text" id="address" name="address"
+				       placeholder="주소 검색으로 채우거나 직접 입력" required maxlength="200">
+				<button type="button" id="addressSearchBtn" class="btn btn--outline btn--sm">주소 검색</button>
+			</div>
 		</div>
 
 		<!-- 5. 매장 대표 연락처 -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="phone">매장 대표 전화번호 <span class="u-accent">*</span></label>
-			<input class="input" type="tel" id="phone" name="phone"
-			       placeholder="예: 051-123-4567 또는 010-1234-5678" required maxlength="30">
+			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+			       placeholder="예: 051-123-4567 또는 010-1234-5678"
+			       pattern="(02-\d{3,4}-\d{4}|0[1-9]\d-\d{3,4}-\d{4})" required maxlength="13">
 		</div>
 
 		<!-- 6. 영업시간 및 마감 세일 안내 -->
@@ -106,6 +112,96 @@
 		<!-- 제출 버튼 -->
 		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">입점 신청서 제출하기</button>
 	</form>
+
+	<!-- role="dialog"/aria-modal — 스크린리더가 배경 폼과 분리된 대화상자로 인식하게 한다.
+	     btn--ghost(크림 배경, 앱 배경용)는 이 흰 모달 카드 위에서 붕 떠 보여서 btn--outline으로 바꿨다. -->
+	<div id="postcodeOverlay" role="dialog" aria-modal="true" aria-label="매장 주소 검색"
+	     style="display:none;position:fixed;inset:0;background:var(--overlay-scrim);z-index:var(--z-modal);align-items:center;justify-content:center">
+		<div style="background:var(--c-surface);border-radius:var(--r-md);overflow:hidden;width:90%;max-width:420px">
+			<div class="u-row" style="justify-content:flex-end;padding:4px 4px 0">
+				<button type="button" id="postcodeCloseBtn" class="btn btn--outline btn--sm">닫기</button>
+			</div>
+			<div id="postcodeLayer" style="width:100%;height:450px"></div>
+		</div>
+	</div>
+
+	<!-- 매장 주소 검색 (다음 우편번호 서비스) — 카카오맵 SDK 없이 독립적으로 동작한다.
+	     열릴 때 닫기 버튼으로 포커스를 옮기고 Esc로 닫을 수 있게 한다 — 다음 위젯은 iframe이라
+	     내부까지 포커스 트랩을 걸 수는 없지만, 최소한 열자마자 배경 폼으로 포커스가 새지 않게 한다. -->
+	<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+	<script th:inline="none">
+	(function () {
+		var overlay = document.getElementById('postcodeOverlay');
+		var layer = document.getElementById('postcodeLayer');
+		var searchBtn = document.getElementById('addressSearchBtn');
+		var closeBtn = document.getElementById('postcodeCloseBtn');
+		if (!overlay || !layer || !searchBtn || !closeBtn) return;
+
+		var postcode = new daum.Postcode({
+			oncomplete: function (data) {
+				var addressInput = document.getElementById('address');
+				addressInput.value = data.roadAddress || data.jibunAddress;
+				closeOverlay();
+				addressInput.focus();
+			},
+			width: '100%',
+			height: '100%'
+		});
+
+		function openOverlay() {
+			overlay.style.display = 'flex';
+			layer.innerHTML = '';
+			postcode.embed(layer);
+			closeBtn.focus();
+		}
+
+		function closeOverlay() {
+			overlay.style.display = 'none';
+		}
+
+		searchBtn.addEventListener('click', openOverlay);
+		closeBtn.addEventListener('click', closeOverlay);
+		overlay.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') closeOverlay();
+		});
+	})();
+	</script>
+
+	<!-- 사업자 등록번호(3-2-5 고정) / 매장 대표 전화번호(지역번호 02는 2자리, 그 외는 3자리) —
+	     입력하는 대로 하이픈 자동 삽입. 사업자번호는 항상 10자리 고정이라 규칙이 단순하지만,
+	     전화번호는 안내문구(051-123-4567 / 010-1234-5678)처럼 지역번호·휴대폰이 섞여 있어
+	     "02"로 시작하면 2자리, 아니면 3자리 앞자리로 보고 뒤 4자리를 항상 마지막 블록으로 뺀다. -->
+	<script th:inline="none">
+	(function () {
+		var bizInput = document.getElementById('businessNumber');
+		if (bizInput) {
+			bizInput.addEventListener('input', function () {
+				var d = bizInput.value.replace(/\D/g, '').slice(0, 10);
+				var out = d;
+				if (d.length > 5) out = d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5);
+				else if (d.length > 3) out = d.slice(0, 3) + '-' + d.slice(3);
+				bizInput.value = out;
+			});
+		}
+
+		var phoneInput = document.getElementById('phone');
+		if (phoneInput) {
+			phoneInput.addEventListener('input', function () {
+				var d = phoneInput.value.replace(/\D/g, '');
+				var frontLen = d.slice(0, 2) === '02' ? 2 : 3;
+				d = d.slice(0, frontLen === 2 ? 10 : 11);
+				var out = d;
+				if (d.length > frontLen) {
+					var midEnd = d.length - 4;
+					out = midEnd <= frontLen
+						? d.slice(0, frontLen) + '-' + d.slice(frontLen)
+						: d.slice(0, frontLen) + '-' + d.slice(frontLen, midEnd) + '-' + d.slice(midEnd);
+				}
+				phoneInput.value = out;
+			});
+		}
+	})();
+	</script>
 
 	<!-- 영업시간 구조화 입력 및 hidden 값 동기화 -->
 	<script th:inline="none">

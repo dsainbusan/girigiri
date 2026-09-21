@@ -5,8 +5,10 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.BusinessNumberUtil;
 import net.dsa.girigiri.util.PhoneUtil;
 import net.dsa.girigiri.util.StoreHoursUtil;
+import net.dsa.girigiri.util.StorePhoneUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -197,7 +199,9 @@ public class AuthService {
 				businessNumber == null || businessNumber.isBlank() ||
 				category == null || category.isBlank() ||
 				address == null || address.isBlank() ||
-				phone == null || phone.isBlank());
+				phone == null || phone.isBlank())
+				&& BusinessNumberUtil.isValid(businessNumber)
+				&& StorePhoneUtil.isValid(phone);
 	}
 
 	public boolean isOwnerApplyValid(String storeName, String businessNumber, String category,
