@@ -87,6 +87,8 @@
 							      th:text="${item.statusLabel}">판매중</span>
 							<button type="button" class="stock-item__more" data-stock-menu
 							        th:attr="aria-label=${item.name + ' 메뉴 열기'},data-id=${item.id},data-name=${item.name},data-edit-url=@{/store/products/{id}/edit(id=${item.id})},data-delete-url=@{/store/products/{id}/delete(id=${item.id})}"
+							        th:data-soldout-url="${item.statusVariant == 'selling'} ? @{/store/products/{id}/soldout(id=${item.id})} : null"
+							        th:data-resume-url="${item.manualSoldOut} ? @{/store/products/{id}/resume(id=${item.id})} : null"
 							        aria-haspopup="dialog">
 								<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
 									<circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
@@ -107,16 +109,7 @@
 				</div>
 			</div>
 
-			<!-- 수정/삭제는 위 "⋯" 메뉴로 옮겼다. 품절/판매 재개는 자주 쓰는 상태 전환이라 카드에 남기고,
-			     둘 다 해당 없는 카드(마감 등)는 빈 영역을 그리지 않는다. -->
-			<div class="stock-item__actions" th:if="${item.statusVariant == 'selling' or item.manualSoldOut}">
-				<form th:if="${item.statusVariant == 'selling'}" th:action="@{/store/products/{id}/soldout(id=${item.id})}" method="post">
-					<button type="submit" class="btn btn--sm btn--outline">품절</button>
-				</form>
-				<form th:if="${item.manualSoldOut}" th:action="@{/store/products/{id}/resume(id=${item.id})}" method="post">
-					<button type="submit" class="btn btn--sm btn--outline">판매 재개</button>
-				</form>
-			</div>
+			<!-- 수정·삭제·품절·판매 재개는 전부 위 "⋯" 메뉴로 옮겼다(2026-09-21). 카드 하단엔 버튼이 없다. -->
 		</li>
 		</th:block>
 	</ul>
@@ -233,6 +226,20 @@
 				<svg class="icon" aria-hidden="true"><use href="#i-pencil"/></svg>
 				<span>수정</span>
 			</a>
+			<!-- 품절/판매 재개 — 카드 상태에 따라 하나만 보인다(스크립트가 is-hidden을 토글). 판매 중이면 "품절",
+			     사장님이 직접 품절 처리한 상품이면 "판매 재개". 둘 다 아니면(자연 품절·마감) 행 자체가 없다. -->
+			<button type="button" id="stock-sheet-soldout" class="stock-sheet__row is-hidden">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+					<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>
+				</svg>
+				<span>품절 처리</span>
+			</button>
+			<button type="button" id="stock-sheet-resume" class="stock-sheet__row is-hidden">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+					<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/>
+				</svg>
+				<span>판매 재개</span>
+			</button>
 			<button type="button" id="stock-sheet-delete" class="stock-sheet__row stock-sheet__row--danger">
 				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
 					<path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd"/>
@@ -320,6 +327,8 @@
 		var sheetName = document.getElementById('stock-sheet-name');
 		var editLink = document.getElementById('stock-sheet-edit');
 		var deleteRow = document.getElementById('stock-sheet-delete');
+		var soldoutRow = document.getElementById('stock-sheet-soldout');
+		var resumeRow = document.getElementById('stock-sheet-resume');
 		var dialogDesc = document.getElementById('stock-dialog-desc');
 		var confirmBtn = document.getElementById('stock-dialog-confirm');
 
@@ -335,11 +344,17 @@
 				id: trigger.getAttribute('data-id'),
 				name: trigger.getAttribute('data-name') || '',
 				editUrl: trigger.getAttribute('data-edit-url'),
-				deleteUrl: trigger.getAttribute('data-delete-url')
+				deleteUrl: trigger.getAttribute('data-delete-url'),
+				soldoutUrl: trigger.getAttribute('data-soldout-url'),   // 판매 중일 때만 있음
+				resumeUrl: trigger.getAttribute('data-resume-url')      // 직접 품절 처리한 상품일 때만 있음
 			};
 			lastTrigger = trigger;
 			sheetName.textContent = current.name;
 			editLink.setAttribute('href', current.editUrl);
+			soldoutRow.classList.toggle('is-hidden', !current.soldoutUrl);
+			resumeRow.classList.toggle('is-hidden', !current.resumeUrl);
+			soldoutRow.disabled = false;
+			resumeRow.disabled = false;
 			sheet.classList.remove('is-hidden');
 			syncScrollLock();
 			editLink.focus();
@@ -372,12 +387,27 @@
 
 		deleteRow.addEventListener('click', openDialog);
 
+		// 품절 처리 / 판매 재개 — 확인창 없이 바로 기존 POST를 호출한다(예전 카드 버튼과 같은 동작).
+		// 요청 중엔 두 행을 잠가 중복 클릭을 막는다.
+		function submitStatusChange(url) {
+			if (submitting || !url) { return; }
+			submitting = true;
+			soldoutRow.disabled = true;
+			resumeRow.disabled = true;
+			form.setAttribute('action', url);
+			form.submit();
+		}
+		soldoutRow.addEventListener('click', function () { submitStatusChange(current && current.soldoutUrl); });
+		resumeRow.addEventListener('click', function () { submitStatusChange(current && current.resumeUrl); });
+
 		// 삭제 후 브라우저 "뒤로"로 이 화면이 캐시에서 복원되면 잠긴 버튼과 열린 레이어가 그대로 남는다 — 초기화.
 		window.addEventListener('pageshow', function (e) {
 			if (!e.persisted) { return; }
 			submitting = false;
 			confirmBtn.disabled = false;
 			confirmBtn.textContent = '삭제';
+			soldoutRow.disabled = false;
+			resumeRow.disabled = false;
 			sheet.classList.add('is-hidden');
 			dialog.classList.add('is-hidden');
 			syncScrollLock();
