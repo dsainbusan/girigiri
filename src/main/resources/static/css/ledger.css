@@ -231,10 +231,14 @@
    2026-09-17 네이비 리스킨에서 일부러 제외 — CO2/나무 절감처럼 "환경"을 뜻하는 곳은 브랜드
    컬러(네이비)와 상관없이 그린이 훨씬 직관적이라 하드코딩 그린을 그대로 뒀다.
    .ledger-share-card[data-category="환경"](아래)도 같은 이유로 그린 유지. */
+/* 2026-09-21 — 색이 안 맞는다는 피드백. 그린 리스킨 전 팔레트(Tailwind emerald, 차가운 민트
+   톤)를 그대로 남겨뒀던 곳이라 크림/네이비 위주의 지금 화면과 온도감이 어긋나 보였다 — "환경"
+   의미상 그린은 유지하되(ledger.css 위쪽 주석 참고), 톤을 따뜻한 세이지/올리브 그린으로
+   바꿔서 나머지 화면과 같은 온기 안에 들어오게 했다(대비 7.45:1, 기존 7.29:1과 동급 유지). */
 .ledger-eco-banner {
   margin-top: var(--s-3); padding: 10px var(--s-4); text-align: center;
-  background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--r-md);
-  font-size: var(--fs-sm); color: #065f46;
+  background: #EEF2E1; border: 1px solid #C7D4A8; border-radius: var(--r-md);
+  font-size: var(--fs-sm); color: #3F5323;
 }
 .ledger-eco-banner strong { font-weight: var(--fw-black); }
 .ledger-eco-banner__tree { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
