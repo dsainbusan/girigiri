@@ -42,9 +42,12 @@
 					우리 동네 가게의 마감 세일 음식을 지도에서 바로 찾고 합리적인 가격에 구매하세요.
 					사장님께는 그날 팔지 못하면 그대로 버려질 재고를, 폐기 대신 <em style="font-style:normal;color:var(--c-primary-strong);font-weight:800">판매</em>로 바꿔드립니다.
 				</p>
+				<!-- 2026-09-21 UI/UX 검토 — 히어로 CTA가 "서비스 이용하기"(소비자)와 "입점 신청"(사장님)
+				     둘이라 첫 화면에서 방문자가 뭘 눌러야 할지 갈렸다. 사장님 동선은 이미 네비게이션의
+				     "사장님이신가요?" 링크와 아래 #owners 섹션(실제 CTA 2개)이 맡고 있어서 중복 —
+				     히어로는 메인 타겟(소비자) 전환 하나에만 집중하도록 정리. -->
 				<div class="mkt-hero__actions">
 					<a th:href="@{/app}" class="mkt-btn mkt-btn--primary">서비스 이용하기 →</a>
-					<a th:href="@{/auth/owner-apply}" class="mkt-hero__owner-link">사장님이신가요? 입점 신청하기</a>
 				</div>
 			</div>
 

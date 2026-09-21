@@ -163,14 +163,6 @@ body.mkt {
 	gap: 20px;
 	flex-wrap: wrap;
 }
-.mkt-hero__owner-link {
-	font-weight: 700;
-	font-size: 15px;
-	color: #4A4438;
-	border-bottom: 1.5px solid #D9D2C4;
-	padding-bottom: 2px;
-}
-.mkt-hero__owner-link:hover { color: var(--c-primary-strong); border-color: var(--c-primary-strong); }
 
 /* 히어로 우측 목업 — 실제 스크린샷 대신 지도+카드 UI를 흉내낸 장식용 카드 */
 .mkt-mock {
@@ -265,7 +257,7 @@ body.mkt {
 	letter-spacing: -0.02em;
 	margin: 0 0 12px;
 }
-.mkt-section__head p { color: #8A8371; font-size: 16px; line-height: 1.6; margin: 0; }
+.mkt-section__head p { color: #5C5545; font-size: 16px; line-height: 1.6; margin: 0; }
 
 /* ---------------- Stats ---------------- */
 .mkt-stats {
@@ -289,7 +281,7 @@ body.mkt {
 	font-variant-numeric: tabular-nums;
 }
 .mkt-stat__label { margin-top: 8px; font-size: 15px; font-weight: 700; color: #4A4438; }
-.mkt-stat__sub { margin-top: 4px; font-size: 13px; color: #B5AD9C; }
+.mkt-stat__sub { margin-top: 4px; font-size: 13px; color: #7D735E; }
 
 /* ---------------- Steps ---------------- */
 .mkt-steps {
@@ -322,7 +314,7 @@ body.mkt {
 }
 .mkt-step__icon svg { width: 24px; height: 24px; }
 .mkt-step h3 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
-.mkt-step p { font-size: 14.5px; color: #8A8371; line-height: 1.6; margin: 0; }
+.mkt-step p { font-size: 14.5px; color: #5C5545; line-height: 1.6; margin: 0; }
 
 /* ---------------- Owner CTA banner ---------------- */
 .mkt-owner {
@@ -357,7 +349,7 @@ body.mkt {
 	flex-wrap: wrap;
 }
 .mkt-footer__brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; }
-.mkt-footer__desc { margin-top: 10px; font-size: 13.5px; color: #B5AD9C; max-width: 320px; line-height: 1.6; }
+.mkt-footer__desc { margin-top: 10px; font-size: 13.5px; color: #7D735E; max-width: 320px; line-height: 1.6; }
 .mkt-footer__links { display: flex; gap: 28px; font-size: 14px; font-weight: 700; color: #6B6354; }
 .mkt-footer__links a:hover { color: var(--c-primary-strong); }
 .mkt-footer__meta { margin-top: 32px; padding-top: 24px; border-top: 1px solid #F6F0E3; font-size: 12.5px; color: #D9D2C4; }

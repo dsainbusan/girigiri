@@ -76,14 +76,17 @@
 .chip-row { display: flex; gap: var(--s-2); overflow-x: auto; }
 .chip-row::-webkit-scrollbar { display: none; }
 
-/* ---------------- Badge (할인율/상태) ---------------- */
+/* ---------------- Badge (할인율/상태) ----------------
+   2026-09-21 UI/UX 검토 — black(900)이라 같은 카드 위 가격(.price__sale, 역시 black)이랑
+   똑같은 굵기로 경쟁했다. 배지는 보조 라벨이니 bold로 한 단계 내려서, 카드의 진짜 강조점인
+   가격만 black으로 남긴다(위계 = 굵기 단계 차이로 만드는 것이지, 다 굵게 만드는 게 아니다). */
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 3px var(--s-2);
   border-radius: var(--r-sm);
   font-size: var(--fs-xs);
-  font-weight: var(--fw-black);
+  font-weight: var(--fw-bold);
 }
 /* 색상 대비 수정 (2026-09-16, UI/UX 검토) — 배경(-weak)은 그대로 두고, 텍스트만 -strong 토큰으로
    진하게 바꿔 WCAG AA(4.5:1)를 만족시킨다. badge--success는 이미 4.79:1로 통과라 그대로 둔다. */
@@ -129,7 +132,11 @@
    두고 padding + 음수 margin(왼쪽만 auto 유지, 카드 오른쪽 정렬 유지)으로 히트 영역만 넓힌다. */
 .store-card__like { margin: -12px -12px -12px auto; padding: 12px; font-size: 18px; color: var(--c-line); line-height: 1; }
 .store-card__like.is-liked { color: var(--c-danger); }
-.store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-accent); }
+/* 2026-09-21 UI/UX 검토 — 기본 상태를 주황(--c-accent)으로 칠하면 세일 중인 카드 전부가
+   "긴급"으로 보여서 정작 진짜 임박한(.is-urgent) 카드가 안 튄다. 기본은 차분한 보조 텍스트로
+   낮추고, 실제로 얼마 안 남았을 때만(store.urgent, 백엔드 계산값) 빨간색으로 튀게 한다 —
+   "전부 급함"이 아니라 "이것만 진짜 급함"이 전달되도록. */
+.store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
 .store-card__left.is-urgent { color: var(--c-danger); }
 
 /* ---------------- Banner (절약 강조 등) ---------------- */
