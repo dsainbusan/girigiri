@@ -65,6 +65,11 @@
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+						<span class="discount-basis"
+						      th:with="auto=${T(net.dsa.girigiri.util.DiscountRateCalculator).isAutoRate(d.discountRate)}"
+						      th:classappend="${auto} ? ' is-auto' : ' is-custom'"
+						      th:text="${auto} ? '자동' : '직접'"
+						      th:title="${auto} ? '마감 시간 기준 자동 할인 단계(20/30/50%)예요' : '자동 단계와 다르게 직접 정한 할인율이에요'">자동</span>
 						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
 						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
 					</div>
@@ -119,6 +124,11 @@
 					</div>
 					<div class="price" style="margin-top: 2px">
 						<span class="badge badge--discount" th:text="'-' + ${item.discountRate} + '%'">-30%</span>
+						<span class="discount-basis"
+						      th:with="auto=${T(net.dsa.girigiri.util.DiscountRateCalculator).isAutoRate(item.discountRate)}"
+						      th:classappend="${auto} ? ' is-auto' : ' is-custom'"
+						      th:text="${auto} ? '자동' : '직접'"
+						      th:title="${auto} ? '마감 시간 기준 자동 할인 단계(20/30/50%)예요' : '자동 단계와 다르게 직접 정한 할인율이에요'">자동</span>
 						<span class="price__orig" th:text="${#numbers.formatInteger(item.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
 						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(item.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
 					</div>

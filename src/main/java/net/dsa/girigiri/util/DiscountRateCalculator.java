@@ -39,6 +39,15 @@ public final class DiscountRateCalculator {
 	}
 
 	/**
+	 * 화면 표시용 — 이 할인율이 자동 단계(20/30/50) 중 하나인지. 할인율은 저장하지 않고 가격에서
+	 * 역산하므로(fromPrices) "자동으로 잡힌 값인지 점주가 직접 정한 값인지"는 시간대와 무관하게 값만으로
+	 * 판정한다. 점주가 우연히 자동 단계와 같은 값을 골랐다면 어차피 결과가 같아 "자동"으로 보여도 무방하다.
+	 */
+	public static boolean isAutoRate(int rate) {
+		return rate == DEFAULT_RATE || rate == MID_RATE || rate == URGENT_RATE;
+	}
+
+	/**
 	 * 점주가 지정한 할인율(ownerRate)을 실제 적용값으로 정규화한다.
 	 * - null이면 자동값
 	 * - 자동값보다 낮으면 자동값으로 끌어올림 ("덜 깎기" 금지)
