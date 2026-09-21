@@ -124,6 +124,11 @@
 		<p th:if="${#lists.isEmpty(storeCards)}" class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
 	</div>
 
+	<!--/* 페이지네이션 (2026-09-21) — "가게가 많아지면 스크롤도 길어진다"는 피드백. 카테고리
+	     필터가 이미 클라이언트 사이드(위 스크립트)라 서버 페이지네이션 대신 같은 방식으로 맞췄다:
+	     처음엔 5개만 보여주고 "더보기"를 누르면 5개씩 더 펼친다. 필터를 바꾸면 펼침 개수도 초기화된다. */-->
+	<button type="button" id="store-load-more" class="btn btn--outline btn--block" style="margin-top:var(--s-3);display:none">더보기</button>
+
 	<!--/* 강노은: 개인화 추천 섹션 (WBS 4.0 탐색·검색, 맨 마지막으로 미뤄뒀던 항목).
 	     구매 이력(픽업 완료)에서 가장 많이 산 카테고리를 뽑아 추천하고, 이력이 없는 신규 유저는
 	     RecommendationService가 "지금 인기있는 마감세일"로 폴백해준다 — 추천 카드가 하나도 없을
@@ -247,21 +252,49 @@
 		(function () {
 			var filterBar = document.getElementById('category-filter');
 			var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
-			if (!filterBar || cardWrappers.length === 0) return;
+			var loadMoreBtn = document.getElementById('store-load-more');
+			if (cardWrappers.length === 0) return;
 
-			filterBar.addEventListener('click', function (event) {
-				var chip = event.target.closest('.chip');
-				if (!chip) return;
+			var PAGE_SIZE = 5;
+			var currentFilter = 'all';
+			var revealed = PAGE_SIZE;
 
-				filterBar.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });
-				chip.classList.add('is-active');
-
-				var filter = chip.dataset.filter;
+			function render() {
+				var visibleCount = 0;
 				cardWrappers.forEach(function (wrapper) {
-					var match = filter === 'all' || wrapper.dataset.category === filter;
-					wrapper.style.display = match ? '' : 'none';
+					var matches = currentFilter === 'all' || wrapper.dataset.category === currentFilter;
+					if (!matches) {
+						wrapper.style.display = 'none';
+						return;
+					}
+					visibleCount++;
+					wrapper.style.display = visibleCount <= revealed ? '' : 'none';
 				});
-			});
+				if (loadMoreBtn) loadMoreBtn.style.display = visibleCount > revealed ? '' : 'none';
+			}
+
+			if (filterBar) {
+				filterBar.addEventListener('click', function (event) {
+					var chip = event.target.closest('.chip');
+					if (!chip) return;
+
+					filterBar.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });
+					chip.classList.add('is-active');
+
+					currentFilter = chip.dataset.filter;
+					revealed = PAGE_SIZE;
+					render();
+				});
+			}
+
+			if (loadMoreBtn) {
+				loadMoreBtn.addEventListener('click', function () {
+					revealed += PAGE_SIZE;
+					render();
+				});
+			}
+
+			render();
 		})();
 	</script>
 
