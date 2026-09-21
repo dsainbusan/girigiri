@@ -69,22 +69,65 @@
 		<div id="panel-overview" class="stat-panel">
 
 			<!-- 처리할 일 알림 배너 (항상 우선 표시. 건수 없으면 숨김) -->
-			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner" style="margin-bottom: var(--s-3)">
-				<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__row">
-					<span><svg class="icon" style="width:14px;height:14px"><use href="#i-warning"/></svg> 정산 계좌 등록 필요</span>
-					<span class="todo-banner__go">›</span>
+			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+				<!-- 1. 오늘의 구제 판매 대기 (19시 등 마감세일 시각 자동 생성된 초안) -->
+				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__card todo-banner__card--accent" title="판매 대기 상품 확인">
+					<div class="todo-banner__icon">
+						<svg class="icon"><use href="#i-box"/></svg>
+					</div>
+					<div class="todo-banner__body">
+						<div class="todo-banner__title">오늘의 구제 판매 대기</div>
+						<div class="todo-banner__desc">초안 검토 후 바로 올릴 수 있어요</div>
+					</div>
+					<div class="todo-banner__action">
+						<span class="todo-banner__badge" th:text="${draftPendingCount} + '건'">3건</span>
+						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+					</div>
 				</a>
-				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__row">
-					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-box"/></svg> 판매 대기 <b th:text="${draftPendingCount}">3</b>건</span>
-					<span class="todo-banner__go">›</span>
+
+				<!-- 2. 새 픽업 예약 알림 -->
+				<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__card todo-banner__card--primary" title="새 예약 확인">
+					<div class="todo-banner__icon">
+						<svg class="icon"><use href="#i-bell"/></svg>
+					</div>
+					<div class="todo-banner__body">
+						<div class="todo-banner__title">새로운 픽업 예약</div>
+						<div class="todo-banner__desc">손님이 픽업을 기다리고 있어요</div>
+					</div>
+					<div class="todo-banner__action">
+						<span class="todo-banner__badge todo-banner__badge--primary" th:text="${incomingReservationCount} + '건'">2건</span>
+						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+					</div>
 				</a>
-				<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__row">
-					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-bell"/></svg> 새 예약 <b th:text="${incomingReservationCount}">2</b>건</span>
-					<span class="todo-banner__go">›</span>
+
+				<!-- 3. 정산 계좌 등록 필요 -->
+				<a th:if="${needsBankAccount}" th:href="@{/store/edit}" class="todo-banner__card todo-banner__card--warning" title="정산 계좌 등록">
+					<div class="todo-banner__icon">
+						<svg class="icon"><use href="#i-warning"/></svg>
+					</div>
+					<div class="todo-banner__body">
+						<div class="todo-banner__title">정산 계좌 등록 필요</div>
+						<div class="todo-banner__desc">계좌를 등록해야 정산금이 입금돼요</div>
+					</div>
+					<div class="todo-banner__action">
+						<span class="todo-banner__badge todo-banner__badge--warning">등록</span>
+						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+					</div>
 				</a>
-				<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__row">
-					<span><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> POS 자동 등록 설정</span>
-					<span class="todo-banner__go">›</span>
+
+				<!-- 4. POS 자동 등록 설정 -->
+				<a th:if="${needsAutomationSetup}" th:href="@{/store/pos}" class="todo-banner__card" title="POS 연동 설정">
+					<div class="todo-banner__icon">
+						<svg class="icon"><use href="#i-desktop"/></svg>
+					</div>
+					<div class="todo-banner__body">
+						<div class="todo-banner__title">POS 자동 등록 설정</div>
+						<div class="todo-banner__desc">마감 시 재고를 자동으로 올려보세요</div>
+					</div>
+					<div class="todo-banner__action">
+						<span class="todo-banner__badge">설정</span>
+						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+					</div>
 				</a>
 			</div>
 
@@ -104,34 +147,7 @@
 					<span class="dash-menu-sub" th:text="${settlementPayout}">33,212원</span>
 				</a>
 
-				<!-- 2. 매장 정보 -->
-				<a th:href="@{/store/edit}" class="dash-menu-cell" title="매장 정보 및 영업시간 설정">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-settings"/></svg>
-					</div>
-					<span class="dash-menu-text">매장 정보</span>
-					<span class="dash-menu-sub" th:text="${operatingHoursMain} ?: '영업시간'">09:00~</span>
-				</a>
-
-				<!-- 3. 리뷰 관리 -->
-				<a th:href="@{/store/reviews}" class="dash-menu-cell" title="리뷰 보기 및 답글 남기기">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-star"/></svg>
-					</div>
-					<span class="dash-menu-text">리뷰 관리</span>
-					<span class="dash-menu-sub" th:text="${reviewCount > 0 ? ('★ ' + #numbers.formatDecimal(reviewAverageRating, 1, 1)) : '신규'}">★ 3.3</span>
-				</a>
-
-				<!-- 4. POS 연동 -->
-				<a th:href="@{/store/pos}" class="dash-menu-cell" title="POS 자동 등록 설정">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-desktop"/></svg>
-					</div>
-					<span class="dash-menu-text">POS 연동</span>
-					<span class="dash-menu-sub" th:text="${needsAutomationSetup ? '설정 필요' : '연동 완료'}">설정</span>
-				</a>
-
-				<!-- 5. 매출 리포트 -->
+				<!-- 2. 매출 리포트 -->
 				<a th:href="@{/store/sales-report}" class="dash-menu-cell" title="매출 리포트 다운로드">
 					<div class="dash-menu-icon">
 						<svg class="icon"><use href="#i-ledger"/></svg>
@@ -140,31 +156,58 @@
 					<span class="dash-menu-sub">Excel · PDF</span>
 				</a>
 
-				<!-- 6. 공지사항 -->
-				<a th:href="@{/store/notices}" class="dash-menu-cell" title="점주 공지사항 및 운영 안내">
+				<!-- 3. 완료 내역 -->
+				<a th:href="@{/reservation/completed}" class="dash-menu-cell" title="픽업 완료된 거래 내역">
 					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-megaphone"/></svg>
+						<svg class="icon"><use href="#i-document"/></svg>
 					</div>
-					<span class="dash-menu-text">공지사항</span>
-					<span class="dash-menu-sub">운영 안내</span>
+					<span class="dash-menu-text">완료 내역</span>
+					<span class="dash-menu-sub">거래 영수증</span>
 				</a>
 
-				<!-- 7. 손님 모드 -->
-				<a th:href="@{/}" class="dash-menu-cell" title="손님 시점으로 화면 둘러보기">
+				<!-- 4. 상품 템플릿 -->
+				<a th:href="@{/store/templates}" class="dash-menu-cell" title="자주 등록하는 마감 상품 템플릿">
 					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-home"/></svg>
+						<svg class="icon"><use href="#i-pencil"/></svg>
 					</div>
-					<span class="dash-menu-text">손님 모드</span>
-					<span class="dash-menu-sub">둘러보기</span>
+					<span class="dash-menu-text">상품 템플릿</span>
+					<span class="dash-menu-sub">원클릭 등록</span>
 				</a>
 
-				<!-- 8. 점주 계정 -->
-				<a th:href="@{/mypage}" class="dash-menu-cell" title="마이페이지 및 계정 정보">
+				<!-- 5. 매장 정보 -->
+				<a th:href="@{/store/edit}" class="dash-menu-cell" title="매장 정보 및 영업시간 설정">
 					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-user"/></svg>
+						<svg class="icon"><use href="#i-storefront"/></svg>
 					</div>
-					<span class="dash-menu-text">점주 계정</span>
-					<span class="dash-menu-sub">내 정보</span>
+					<span class="dash-menu-text">매장 정보</span>
+					<span class="dash-menu-sub" th:text="${operatingHoursMain} ?: '영업시간'">09:00~</span>
+				</a>
+
+				<!-- 6. 픽업 설정 -->
+				<a th:href="@{/reservation/settings}" class="dash-menu-cell" title="손님 픽업 준비시간 및 마감시각 설정">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-settings"/></svg>
+					</div>
+					<span class="dash-menu-text">픽업 설정</span>
+					<span class="dash-menu-sub">준비 · 마감</span>
+				</a>
+
+				<!-- 7. 리뷰 관리 -->
+				<a th:href="@{/store/reviews}" class="dash-menu-cell" title="리뷰 보기 및 답글 남기기">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-star"/></svg>
+					</div>
+					<span class="dash-menu-text">리뷰 관리</span>
+					<span class="dash-menu-sub" th:text="${reviewCount > 0 ? ('★ ' + #numbers.formatDecimal(reviewAverageRating, 1, 1)) : '신규'}">★ 3.3</span>
+				</a>
+
+				<!-- 8. POS 연동 -->
+				<a th:href="@{/store/pos}" class="dash-menu-cell" title="POS 자동 등록 설정">
+					<div class="dash-menu-icon">
+						<svg class="icon"><use href="#i-desktop"/></svg>
+					</div>
+					<span class="dash-menu-text">POS 연동</span>
+					<span class="dash-menu-sub" th:text="${needsAutomationSetup ? '설정 필요' : '연동 완료'}">설정</span>
 				</a>
 			</div>
 		</div>

@@ -207,22 +207,138 @@ a.stat-card:hover .stat-card__go--gear {
 .bar-chart__label { font-size: 10px; color: var(--c-text-mut); margin-top: var(--s-1); }
 .bar-chart__label.is-today { color: var(--c-text); font-weight: var(--fw-bold); }
 
-/* ---------- 대시보드 "처리할 일" 배너 ---------- */
+/* ---------- 대시보드 "처리할 일" 배너 (핀테크 푸시 알림 카드) ---------- */
 .todo-banner {
-  border: 1px solid var(--c-primary-border);
-  border-radius: var(--r-lg);
-  background: var(--c-primary-weak);
-  overflow: hidden;
-  margin-bottom: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
 }
+
+/* 기존 단순 행 호환 (.settlement.html 등) */
 .todo-banner__row {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--s-3) var(--s-4);
-  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary-strong);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-primary-strong);
+  background: var(--c-primary-weak);
+  border: 1px solid var(--c-primary-border);
+  border-radius: var(--r-md);
+  text-decoration: none;
 }
-.todo-banner__row + .todo-banner__row { border-top: 1px solid var(--c-primary-border); }
 .todo-banner__row b { color: var(--c-primary); }
 .todo-banner__go { font-size: var(--fs-lg); color: var(--c-primary); }
+
+/* 신규 프리미엄 알림 카드 (.todo-banner__card) */
+.todo-banner__card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 13px 16px;
+  background: var(--c-surface);
+  border: 1px solid rgba(15, 43, 140, 0.09);
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.todo-banner__card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--c-primary);
+  border-radius: 4px 0 0 4px;
+}
+.todo-banner__card--accent::before {
+  background: var(--c-accent); /* 마감 임박/초안 오렌지 */
+}
+.todo-banner__card--warning::before {
+  background: #F59E0B; /* 주의 앰버 */
+}
+.todo-banner__card:active {
+  transform: scale(0.98);
+}
+.todo-banner__card:hover {
+  border-color: rgba(15, 43, 140, 0.2);
+  box-shadow: 0 6px 18px rgba(15, 43, 140, 0.09);
+}
+.todo-banner__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.todo-banner__card--accent .todo-banner__icon {
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--c-accent);
+}
+.todo-banner__card--warning .todo-banner__icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: #D97706;
+}
+.todo-banner__icon .icon {
+  width: 19px;
+  height: 19px;
+}
+.todo-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+.todo-banner__title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  line-height: 1.25;
+}
+.todo-banner__desc {
+  font-size: var(--fs-xs);
+  color: var(--c-text-sub);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+.todo-banner__action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.todo-banner__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--c-accent);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+}
+.todo-banner__badge--primary {
+  background: rgba(15, 43, 140, 0.1);
+  color: var(--c-primary);
+}
+.todo-banner__badge--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+}
+.todo-banner__arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--c-text-mut);
+}
 
 /* ---------- "오늘의 구제" 상단 POS 상태 스트립 ---------- */
 .pos-strip {
