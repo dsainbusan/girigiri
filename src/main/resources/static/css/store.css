@@ -1195,3 +1195,135 @@ a.stat-card:hover .stat-card__go--gear {
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* =====================================================================
+   대시보드 "통계 분석" 탭 — A안 카드 분리형 (2026-09-22)
+   업무 요약 탭의 섹션 제목(.dash-section-*)·알림 카드(.todo-banner__card)를 그대로 재사용하고, 여기선 흰 카드와
+   차트/범례/지표만 새로 정의한다. .donut/.bar-chart는 매출 리포트 화면과 같이 쓰는 컴포넌트라 전부
+   .dash-stats 안으로 한정한다(리포트 화면은 그대로).
+   색·그림자·테두리는 토큰만 쓴다: 그림자는 --shadow-card, 테두리는 --c-primary-mid를 40%로 섞은 값.
+   글씨 색은 옅은 네이비/주황/빨강을 쓰지 않는다(채움·점·아이콘에만) — 크림/흰 배경 위 대비 확보.
+   ===================================================================== */
+.dash-stats { --plot-h: 110px; --label-h: 22px; }
+
+/* 하위 토글(밑줄형): 높이 44px, 선택 시 3px 네이비 밑줄. 비선택 글씨는 크림 위 대비가 낮은 --c-text-mut 대신 --c-text-sub. */
+.dash-stats__tabs { margin-bottom: var(--s-4); }
+.dash-stats__tabs .stat-toggle-tab {
+  min-height: 44px; padding: 0; font-size: var(--fs-sm);
+  color: var(--c-text-sub); border-bottom: 3px solid transparent;
+}
+.dash-stats__tabs .stat-toggle-tab.is-active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+.dash-stats__tabs .stat-toggle-tab:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+
+/* 섹션 제목 옆 보조 텍스트: 업무 요약(11px, 흐린 색)보다 크고 진하게 — 통계 숫자 옆이라 읽혀야 한다. */
+.dash-stats .dash-section-more { font-size: var(--fs-sm); color: var(--c-text-sub); }
+.dash-legend-inline { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--c-text-sub); }
+.dash-legend-inline .tally__dot + .tally__dot { margin-left: var(--s-2); }
+
+.dash-card {
+  background: var(--c-surface);
+  border: 1px solid color-mix(in srgb, var(--c-primary-mid) 40%, transparent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+/* 알약 행 */
+.dash-pills { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+.dash-pill { display: inline-flex; align-items: center; gap: 4px; }
+.dash-pill svg { width: 13px; height: 13px; flex: none; }
+/* 목표 수정 연필: 터치 영역 44px, 음수 마진으로 행 높이는 알약 기준 유지 */
+.dash-icon-btn {
+  width: 44px; height: 44px; margin: -10px -10px -10px -6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: var(--r-pill);
+  color: var(--c-text-sub); cursor: pointer;
+}
+.dash-icon-btn .icon { width: 16px; height: 16px; }
+.dash-icon-btn:hover { background: var(--c-bg); color: var(--c-primary); }
+.dash-icon-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+
+/* 도넛: 가운데 정렬, 카드 폭에 맞게 살짝 키우고 안쪽 글씨를 읽히게 */
+.dash-donut { display: flex; justify-content: center; margin: var(--s-4) 0 var(--s-3); }
+.dash-stats .donut { width: 148px; height: 148px; }
+.dash-stats .donut::after { inset: 20px; }
+.dash-stats .donut__label,
+.dash-stats .donut__note { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+/* 범례 3칸 / 2행 */
+.dash-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.dash-legend__cell {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s-2) 0; border-radius: var(--r-md); background: var(--c-bg);
+}
+.dash-legend__name { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
+.dash-legend__num { font-size: var(--fs-lg); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; }
+.dash-legend__num small { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); margin-left: 2px; }
+.dash-legend--rows { display: flex; flex-direction: column; gap: var(--s-2); }
+.dash-legend__row {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
+}
+.dash-legend__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dash-legend__text b { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.dash-legend__text small { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+.dash-note {
+  display: flex; justify-content: space-between; gap: var(--s-2);
+  margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line);
+  font-size: var(--fs-xs); color: var(--c-text-sub);
+}
+.dash-note strong { color: var(--c-text); }
+
+/* 절감 효과 3열 */
+.dash-metrics { display: flex; gap: var(--s-2); }
+.dash-metric { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.dash-metric__icon {
+  width: 36px; height: 36px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c-bg); color: var(--c-primary);
+}
+.dash-metric__icon .icon { width: 18px; height: 18px; }
+.dash-metric__value { font-size: var(--fs-md); font-weight: var(--fw-black); white-space: nowrap; letter-spacing: -.02em; }
+.dash-metric__label { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+/* 하단 리포트 링크(알림 카드 재사용) — 카드들 아래 간격만 */
+.dash-report-link { margin-bottom: var(--s-2); }
+
+/* 최근 7일 막대 차트: y축 눈금 + 가로 눈금선 + 버튼 막대 */
+.dash-chart { margin-top: 0; }
+.dash-chart__plot { display: grid; grid-template-columns: 28px 1fr; padding-top: 8px; }
+.dash-chart__axis, .dash-chart__area { position: relative; height: calc(var(--plot-h) + var(--label-h)); }
+.dash-chart__axis span {
+  position: absolute; right: 6px; transform: translateY(50%);
+  font-size: var(--fs-xs); line-height: 1; color: var(--c-text-sub); font-variant-numeric: tabular-nums;
+}
+.dash-chart__axis .is-zero { bottom: var(--label-h); }
+.dash-chart__axis .is-mid  { bottom: calc(var(--label-h) + var(--plot-h) / 2); }
+.dash-chart__axis .is-max  { bottom: calc(var(--label-h) + var(--plot-h)); }
+.dash-chart__line { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--c-line-weak); }
+.dash-chart__line--zero { bottom: var(--label-h); border-top: 1px solid var(--c-line); }
+.dash-chart__line--mid  { bottom: calc(var(--label-h) + var(--plot-h) / 2); }
+.dash-chart__line--max  { bottom: calc(var(--label-h) + var(--plot-h)); }
+.dash-chart .bar-chart { position: relative; height: 100%; gap: 0; }
+/* 막대는 <button> — 기본 버튼 모양을 지우고 세로 전체를 터치 영역으로 쓴다(폭은 7등분). */
+.dash-chart .bar-chart__col { min-width: 0; padding: 0; background: none; border: 0; font: inherit; color: inherit; }
+.dash-chart .bar-chart__col:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; border-radius: var(--r-sm); }
+.dash-chart .bar-chart__track { margin-top: 0; background: transparent; }
+.dash-chart .bar-chart__label {
+  margin-top: 0; height: var(--label-h); display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-xs); color: var(--c-text-sub);
+}
+/* 오늘: 날짜는 네이비 알약, 막대는 외곽선 */
+/* 알약 높이 18px + 위아래 2px = 다른 열의 라벨 높이(--label-h 22px)와 같아서 막대 바닥선이 어긋나지 않는다. */
+.dash-chart .bar-chart__label.is-today {
+  height: 18px; margin: 2px 0; padding: 0 7px; align-self: center;
+  border-radius: var(--r-pill); background: var(--c-primary); color: var(--c-primary-on); font-weight: var(--fw-bold);
+}
+.dash-chart .bar-chart__col.is-today .bar-chart__fill { outline: 2px solid var(--c-primary); outline-offset: 1px; }
+/* 오늘 값이 0이면 막대가 없어서 외곽선이 작은 빈 상자처럼 보인다 — 그때는 끈다. */
+.dash-chart .bar-chart__col.is-today[data-total="0"] .bar-chart__fill { outline: none; }
+.dash-chart .bar-chart__hint { margin: var(--s-3) 0 0; font-size: var(--fs-xs); color: var(--c-text-sub); }
+.dash-chart .bar-chart__hint.is-active { color: var(--c-text); }
+.dash-chart__total { margin: var(--s-2) 0 0; text-align: center; font-size: var(--fs-xs); color: var(--c-text-sub); }
+
