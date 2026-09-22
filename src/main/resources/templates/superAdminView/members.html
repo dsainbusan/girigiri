@@ -119,8 +119,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr th:if="${#lists.isEmpty(pagedUsers)}">
+        <!-- 변경됨 (2026-09-22, UI/UX 감사) — stores.html과 같은 이유: "정지 회원" 탭이 비었을
+             때만 이 문구가 맞다. "전체/일반/점주" 탭이나 검색 결과가 비었을 때 뜨면 사실과 달라
+             "탭을 잘못 봤나?"로 원인을 오귀인시킨다는 지적 — 탭에 따라 문구를 나눴다. -->
+        <tr th:if="${#lists.isEmpty(pagedUsers) and filter == 'SUSPENDED'}">
           <td colspan="8" class="table-empty">정지된 회원이 없습니다.</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(pagedUsers) and filter != 'SUSPENDED'}">
+          <td colspan="8" class="table-empty">조회된 회원이 없습니다.</td>
         </tr>
         <tr class="row-clickable" th:each="u : ${pagedUsers}" th:attr="data-href=@{/superadmin/members/{id}(id=${u.id}, q=${q}, filter=${filter}, page=${page})}">
           <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${u.id}" form="bulk-form"></td>
@@ -163,13 +169,20 @@
     <a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/members(q=${q}, filter=${filter}, page=${page + 1})}">&rsaquo;</a>
   </div>
 
+  <!-- 행 클릭 시 상세 이동 스크립트는 common/layout-admin.html로 공용화했다(2026-09-22, UI/UX 감사). -->
   <script th:inline="none">
-    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('a, button, input, form')) return;
-        window.location.href = row.dataset.href;
+    // 추가됨 (2026-09-22, UI/UX 감사) — 개별 행 액션(정지·탈퇴)엔 confirm()이 있는데 피해 범위가
+    // 더 큰 일괄 액션엔 없었다. 두 버튼이 form="bulk-form"으로 같은 폼을 공유해 formaction으로
+    // 갈리므로, 제출을 누른 버튼(submitter)이 정지 쪽일 때만 확인창을 띄운다.
+    var bulkForm = document.getElementById('bulk-form');
+    if (bulkForm) {
+      bulkForm.addEventListener('submit', function (e) {
+        var action = e.submitter && e.submitter.getAttribute('formaction');
+        if (action && action.indexOf('bulk-suspend') !== -1 && !confirm('선택한 회원을 정지할까요?')) {
+          e.preventDefault();
+        }
       });
-    });
+    }
   </script>
 
 </div>

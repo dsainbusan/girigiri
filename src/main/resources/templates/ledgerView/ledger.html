@@ -80,6 +80,7 @@
 		<div id="hero-amount-btn" class="ledger-hero__amount" role="button" tabindex="0" title="눌러서 이번 달 내역 보기">
 			<span id="hero-amount-value" th:data-amount="${data.thisMonthSaved}"
 			      th:text="${#numbers.formatInteger(data.thisMonthSaved, 0, 'COMMA')} + '원'">42,300원</span>
+			<span class="ledger-hero__chevron" aria-hidden="true">›</span>
 		</div>
 		<div class="ledger-hero__delta"
 		     th:if="${data.deltaPercent != null}"
@@ -95,13 +96,14 @@
 		     탭으로 이동한다(아래 스크립트, jumpToHistoryTab/jumpToCategoryTab). */-->
 		<div class="ledger-hero__row">
 			<div id="hero-total-btn" class="ledger-hero__stat" role="button" tabindex="0" title="눌러서 전체 내역 보기">
-				<span class="ledger-hero__stat-label">누적 절약</span>
+				<span class="ledger-hero__stat-label">누적 절약<span class="ledger-hero__chevron" aria-hidden="true">›</span></span>
 				<span class="ledger-hero__stat-value" th:text="${#numbers.formatInteger(data.totalSaved, 0, 'COMMA')} + '원'">184,200원</span>
 			</div>
 			<div id="hero-rate-btn" class="ledger-hero__stat" role="button" tabindex="0" title="눌러서 카테고리별 분석 보기">
 				<span class="ledger-hero__stat-label">
 					절약률
 					<button type="button" id="rescue-rate-info-btn" class="ledger-info-btn" aria-label="절약률 설명 보기">ⓘ</button>
+					<span class="ledger-hero__chevron" aria-hidden="true">›</span>
 				</span>
 				<span class="ledger-hero__stat-value" th:text="${data.rescueRatePercent} + '%'">38%</span>
 			</div>
@@ -228,7 +230,10 @@
 		</div>
 
 		<p id="history-month-empty" class="ledger-empty is-hidden">선택한 기간에 구제 내역이 없어요.</p>
-		<p th:if="${#lists.isEmpty(data.history)}" class="ledger-empty">아직 구제 내역이 없어요. 마감세일 상품을 찾아보세요!</p>
+		<div th:if="${#lists.isEmpty(data.history)}" class="ledger-empty">
+			<p>아직 구제 내역이 없어요. 마감세일 상품을 찾아보세요!</p>
+			<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">홈</a>
+		</div>
 
 		<!-- 구매·절약 내역 카드 리스트 -->
 		<div class="ledger-history-list">

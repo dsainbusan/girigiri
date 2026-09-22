@@ -61,8 +61,11 @@
           <td th:text="${c.reporterName}">신고자</td>
           <td th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
           <td th:text="${c.resolvedAt != null} ? ${#temporals.format(c.resolvedAt, 'yyyy-MM-dd')} : '-'">-</td>
-          <td>
-            <span class="badge badge--neutral" th:if="${c.status == 'PENDING'}">대기</span>
+          <!-- 변경됨 (2026-09-22, UI/UX 감사) — 대기 목록에 경과일수가 없어서 오래 방치된 신고가
+               새 신고 사이에 파묻혔다. 3일 이상 대기 중이면 배지를 danger로 올리고 경과일을 보여준다. -->
+          <td th:with="daysWaiting=${T(java.time.temporal.ChronoUnit).DAYS.between(c.createdAt, #temporals.createNowLocalDateTime())}">
+            <span class="badge badge--danger" th:if="${c.status == 'PENDING' and daysWaiting >= 3}" th:text="${daysWaiting} + '일째 대기'">3일째 대기</span>
+            <span class="badge badge--neutral" th:if="${c.status == 'PENDING' and daysWaiting < 3}">대기</span>
             <span class="badge badge--success" th:unless="${c.status == 'PENDING'}">처리완료</span>
           </td>
         </tr>
@@ -142,14 +145,6 @@
     <a th:classappend="${page >= userInquiriesTotalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/reports(tab='user', page=${page + 1})}">&rsaquo;</a>
   </div>
 
-  <script th:inline="none">
-    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('a, button, input, form')) return;
-        window.location.href = row.dataset.href;
-      });
-    });
-  </script>
 
 </div>
 </body>

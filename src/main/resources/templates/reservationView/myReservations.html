@@ -55,17 +55,22 @@
 			<button type="submit" class="btn btn--outline btn--block">예약 취소</button>
 		</form>
 
-		<!-- 추가됨 (2026-09-08) — 어느 탭이든(진행중/픽업완료/노쇼·취소) 신고할 수 있게 뒀다.
-			 신고 사유가 될 만한 문제(픽업 응대, 노쇼 처리 오류 등)가 상태와 무관하게 생길 수 있어서
-			 특정 탭으로 제한하지 않았다. -->
-		<a th:href="@{/reservation/{id}/report(id=${r.reservationId})}"
-		   class="btn btn--ghost btn--block" style="margin-top:var(--s-2)">신고하기</a>
+		<!-- 변경됨 (2026-09-22, UI/UX 감사) — 영수증·취소·신고·문의 4개가 전부 btn--block으로
+			 같은 시각적 무게를 가져서 위계가 안 보인다는 지적. 신고/문의는 부가 액션이라 텍스트
+			 링크로 격하하고 한 줄에 나란히 뒀다 — 주 액션(영수증/취소)만 버튼으로 남긴다. -->
+		<div class="u-row" style="justify-content:center;gap:var(--s-4);margin-top:var(--s-3)">
+			<!-- 추가됨 (2026-09-08) — 어느 탭이든(진행중/픽업완료/노쇼·취소) 신고할 수 있게 뒀다.
+				 신고 사유가 될 만한 문제(픽업 응대, 노쇼 처리 오류 등)가 상태와 무관하게 생길 수 있어서
+				 특정 탭으로 제한하지 않았다. -->
+			<a th:href="@{/reservation/{id}/report(id=${r.reservationId})}"
+			   class="u-primary" style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">신고하기</a>
 
-		<!-- 추가됨 (2026-09-08) — 신고(문제 제기)와 별개로, 단순 질문도 있을 수 있어서
-			 문의 게시판(InquiryController)의 기존 "가게에 문의하기" 흐름을 예약 단위로도 열었다.
-			 reservationId를 실어 보내면 InquiryService가 storeId를 자동으로 채운다. -->
-		<a th:href="@{/user/inquiries/new(reservationId=${r.reservationId})}"
-		   class="btn btn--ghost btn--block" style="margin-top:var(--s-2)">이 주문 문의하기</a>
+			<!-- 추가됨 (2026-09-08) — 신고(문제 제기)와 별개로, 단순 질문도 있을 수 있어서
+				 문의 게시판(InquiryController)의 기존 "가게에 문의하기" 흐름을 예약 단위로도 열었다.
+				 reservationId를 실어 보내면 InquiryService가 storeId를 자동으로 채운다. -->
+			<a th:href="@{/user/inquiries/new(reservationId=${r.reservationId})}"
+			   class="u-primary" style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">이 주문 문의하기</a>
+		</div>
 	</div>
 
 	<!-- 강노은: 상단 '<' 버튼이 공용 헤더 기본값인 history.back()이라, 진행중→픽업완료→노쇼·취소

@@ -45,7 +45,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		UserEntity user = principal.getUser();
 
 		HttpSession session = request.getSession();
-		String targetUrl = AuthSessionInitializer.initSessionAndGetTargetUrl(session, user);
+		String targetUrl = AuthSessionInitializer.initSessionAndGetTargetUrl(request, session, user);
 
 		clearAuthenticationAttributes(request);
 		getRedirectStrategy().sendRedirect(request, response, targetUrl);

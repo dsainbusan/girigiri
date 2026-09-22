@@ -121,7 +121,10 @@
 		<div th:each="card : ${storeCards}" th:attr="data-category=${card.category}">
 			<div th:replace="~{common/components :: storeCard(${card}, true)}"></div>
 		</div>
-		<p th:if="${#lists.isEmpty(storeCards)}" class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
+		<div th:if="${#lists.isEmpty(storeCards)}">
+			<p class="u-sub">지금 마감세일 중인 가게가 없어요.</p>
+			<a th:href="@{/user/search}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">검색으로 둘러보기</a>
+		</div>
 	</div>
 
 	<!--/* 페이지네이션 (2026-09-21) — "가게가 많아지면 스크롤도 길어진다"는 피드백. 카테고리

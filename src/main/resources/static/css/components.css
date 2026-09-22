@@ -102,6 +102,9 @@
 .badge--success  { background: var(--c-primary-weak); color: var(--c-primary); }
 .badge--accent   { background: var(--c-accent-weak);  color: var(--c-accent-strong); }
 .badge--info     { background: var(--c-info-weak);    color: var(--c-info-strong); }
+/* 추가됨 (2026-09-22, UI/UX 감사) — 실패/경고 상태(예: GPS 위치 확인 불가)가 badge--discount(주황,
+   "할인" 의미)를 빌려 쓰고 있었다. "주황=할인"이라는 학습된 의미를 지키려면 실패엔 이 variant가 필요. */
+.badge--danger   { background: var(--c-danger-weak);  color: var(--c-danger-strong); }
 
 /* .field(flex-direction:column)의 직계 자식 배지(signup.html/mypageView edit.html의 GPS 상태 배지)만
    align-self:flex-start를 준다 — 기본 align-items:stretch 때문에 부모 폭까지 늘어나던 문제. 처음엔

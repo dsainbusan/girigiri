@@ -59,11 +59,9 @@
 
 		<!-- 최상위 탭: 업무 요약 ↔ 통계 분석 (한 스크롤에 과도한 정보 방지) -->
 		<div class="dash-tabs-wrap">
-			<div class="stat-toggle-tabs" role="tablist" aria-label="대시보드 보기">
-				<button type="button" role="tab" class="stat-toggle-tab is-active" data-target="panel-overview"
-				        aria-selected="true" aria-controls="panel-overview">업무 요약</button>
-				<button type="button" role="tab" class="stat-toggle-tab" data-target="panel-stats"
-				        aria-selected="false" aria-controls="panel-stats">통계 분석</button>
+			<div class="stat-toggle-tabs">
+				<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">업무 요약</button>
+				<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계 분석</button>
 			</div>
 		</div>
 
@@ -73,7 +71,7 @@
 			<!-- 처리할 일 알림 배너 (항상 우선 표시. 건수 없으면 숨김) -->
 			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
 				<!-- 1. 오늘의 구제 판매 대기 (19시 등 마감세일 시각 자동 생성된 초안) -->
-				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__card todo-banner__card--accent" title="판매 대기 상품 확인">
+				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__card" title="판매 대기 상품 확인">
 					<div class="todo-banner__icon">
 						<svg class="icon"><use href="#i-box"/></svg>
 					</div>
@@ -88,7 +86,7 @@
 				</a>
 
 				<!-- 2. 새 픽업 예약 알림 -->
-				<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__card todo-banner__card--primary" title="새 예약 확인">
+				<a th:if="${incomingReservationCount > 0}" th:href="@{/reservation/incoming}" class="todo-banner__card" title="새 예약 확인">
 					<div class="todo-banner__icon">
 						<svg class="icon"><use href="#i-bell"/></svg>
 					</div>
@@ -97,7 +95,7 @@
 						<div class="todo-banner__desc">손님이 픽업을 기다리고 있어요</div>
 					</div>
 					<div class="todo-banner__action">
-						<span class="todo-banner__badge todo-banner__badge--primary" th:text="${incomingReservationCount} + '건'">2건</span>
+						<span class="todo-banner__badge" th:text="${incomingReservationCount} + '건'">2건</span>
 						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
 					</div>
 				</a>
@@ -468,29 +466,6 @@
 					if (panels[i]) { panels[i].classList.remove('is-hidden'); }
 				});
 			});
-		});
-
-		// 1-0. 최근 7일 y축 눈금 — 각 막대의 data-total(판매+폐기)로 최댓값을 구해 위/중간 눈금을 채운다.
-		//      중간 눈금은 최댓값이 짝수일 때만 보인다(홀수면 정확한 절반 값이 소수라 눈금선만 두고 숫자는 뺀다).
-		document.querySelectorAll('.dash-chart').forEach(function (chart) {
-			var max = 0;
-			chart.querySelectorAll('.bar-chart__col[data-total]').forEach(function (col) {
-				max = Math.max(max, parseInt(col.getAttribute('data-total'), 10) || 0);
-			});
-			var top = chart.querySelector('.dash-chart__axis .is-max');
-			var mid = chart.querySelector('.dash-chart__axis .is-mid');
-			if (max > 0 && top) { top.textContent = max; top.classList.remove('is-hidden'); }
-			if (max > 0 && max % 2 === 0 && mid) { mid.textContent = max / 2; mid.classList.remove('is-hidden'); }
-		});
-
-		// 1-1. 최근 7일 막대의 aria-pressed — 선택 표시(.is-selected)와 하단 안내 갱신은 app.js의 문서 클릭
-		//      핸들러가 하므로, 여기선 그 클래스 변화를 지켜보고 접근성 속성만 맞춘다(핸들러 실행 순서에 안 기댐).
-		document.querySelectorAll('.dash-chart .bar-chart').forEach(function (chart) {
-			new MutationObserver(function () {
-				chart.querySelectorAll('.bar-chart__col').forEach(function (col) {
-					col.setAttribute('aria-pressed', col.classList.contains('is-selected') ? 'true' : 'false');
-				});
-			}).observe(chart, { attributes: true, attributeFilter: ['class'], subtree: true });
 		});
 
 		// 2. 구제율 목표 수정

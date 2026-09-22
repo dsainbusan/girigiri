@@ -23,7 +23,7 @@
 			<div class="u-row" style="gap: var(--s-2); flex-wrap: wrap; align-items: center;">
 				<h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold);" th:text="${user != null ? user.nickname : '로그인이 필요합니다'}">송보미</h2>
 				<span th:if="${user != null and user.representativeBadge != null and T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).isPresent()}"
-				      class="badge" style="font-size: 10px; font-weight: var(--fw-bold); background: #fef3c7; color: #92400e; border: 1px solid #fde68a;"
+				      class="badge" style="font-size: 10px; font-weight: var(--fw-bold); background: var(--c-badge-rep); color: var(--c-badge-rep-on); border: 1px solid var(--c-badge-rep-border);"
 				      th:text="${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().icon} + ' ' + ${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().name}">
 					🦸 골목길 구조대
 				</span>

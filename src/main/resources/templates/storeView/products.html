@@ -134,49 +134,64 @@
 		재고는 POS에서 실시간으로 반영돼요.
 	</p>
 
-	<!-- 올릴 시간이 된 "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계. 섹션 제목이 이미
-	     "판매 대기"라서(2026-09-21 표기 통일) 박스에 제목을 따로 달지 않는다. -->
-	<div th:if="${!#lists.isEmpty(drafts)}" class="draft-box" style="margin-bottom: var(--s-4)">
-		<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
-		   th:text="${canPublishDrafts}
-		            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
-		            : '마감이 임박해서 오늘은 등록이 닫혔어요. 남은 건 매장에서 직접 처리해 주세요.'">
-			마감 10분 전까지 올릴 수 있어요.
-		</p>
-		<div th:each="d : ${drafts}" class="stock-item" style="border-color: var(--c-primary-border); background: var(--c-primary-weak);">
-			<div class="stock-item__head">
-				<div class="stock-item__thumb" th:style="${d.imageUrl == null ? 'background:' + d.thumbColor : null}">
-					<img th:if="${d.imageUrl != null}" th:src="${d.imageUrl}" th:alt="${d.name}">
-					<span th:unless="${d.imageUrl != null}" th:text="${d.thumbEmoji}">🥐</span>
-				</div>
-				<div class="stock-item__body">
-					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
-						<span class="stock-item__name" th:text="${d.name}">오늘의 마감 빵 세트</span>
-						<span class="draft-src"
-						      th:text="${d.source == 'pos' ? 'POS 재고' : (d.source == 'template' ? '템플릿' : '직접')}">POS 재고</span>
-					</div>
-					<div class="price" style="margin-top: 2px">
-						<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
-						<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
-						      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
-						<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
-						<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
-					</div>
-					<span class="stock-item__meta" th:text="${d.quantity} + '개로 준비됐어요'">3개로 준비됐어요</span>
-				</div>
-			</div>
-			<div class="stock-item__actions">
-				<form th:if="${canPublishDrafts}" th:action="@{/store/products/{id}/publish(id=${d.id})}" method="post">
-					<button type="submit" class="btn btn--sm">바로 올리기</button>
-				</form>
-				<span th:unless="${canPublishDrafts}" class="btn btn--sm btn--outline is-disabled">⏳ 등록 마감</span>
-				<a th:href="@{/store/products/{id}/edit(id=${d.id})}" class="btn btn--sm btn--outline">수정</a>
-				<form th:action="@{/store/products/{id}/discard(id=${d.id})}" method="post"
-				      data-confirm="오늘은 이 상품을 안 올릴까요?">
-					<button type="submit" class="btn btn--sm btn--outline">오늘 안 함</button>
-				</form>
-			</div>
+	<!-- 올릴 시간이 된 "오늘의 구제" 자동 초안 — 점주 동의(바로 올리기)를 기다리는 단계. -->
+	<div th:if="${!#lists.isEmpty(drafts)}" style="margin-bottom: var(--s-4)">
+		<div class="draft-banner" style="margin-bottom: var(--s-3)">
+			<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+			</svg>
+			<span th:text="${canPublishDrafts}
+			            ? '마감 ' + ${publishCutoffMinutes} + '분 전까지 [바로 올리기] 할 수 있어요.'
+			            : '마감이 임박해서 오늘은 등록이 닫혔어요. 남은 건 매장에서 직접 처리해 주세요.'">
+				마감 10분 전까지 [바로 올리기] 할 수 있어요.
+			</span>
 		</div>
+		<ul>
+			<li th:each="d : ${drafts}" class="stock-item">
+				<div class="stock-item__head">
+					<div class="stock-item__thumb" th:style="${d.imageUrl == null ? 'background:' + d.thumbColor : null}">
+						<img th:if="${d.imageUrl != null}" th:src="${d.imageUrl}" th:alt="${d.name}">
+						<span th:unless="${d.imageUrl != null}" th:text="${d.thumbEmoji}">🥐</span>
+					</div>
+					<div class="stock-item__body">
+						<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+							<span class="stock-item__name" th:text="${d.name}">오늘의 마감 빵 세트</span>
+							<div class="stock-item__side">
+								<span class="draft-src"
+								      th:classappend="${d.source == 'pos' ? ' draft-src--pos' : (d.source == 'template' ? ' draft-src--template' : ' draft-src--direct')}"
+								      th:text="${d.source == 'pos' ? 'POS 재고' : (d.source == 'template' ? '템플릿' : '직접')}">POS 재고</span>
+								<button type="button" class="btn-item-dismiss" data-discard-trigger
+								        th:attr="aria-label=${d.name + ' 오늘 판매 안 함'},data-name=${d.name},data-discard-url=@{/store/products/{id}/discard(id=${d.id})}">
+									<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+										<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+									</svg>
+								</button>
+							</div>
+						</div>
+						<div class="price" style="margin-top: 2px">
+							<span class="badge badge--discount" th:text="'-' + ${d.discountRate} + '%'">-30%</span>
+							<span class="discount-basis" th:classappend="${d.manualRate} ? ' is-custom' : ' is-auto'"
+							      th:text="${d.manualRate} ? '직접 지정' : '자동 조정'">자동 조정</span>
+							<span class="price__orig" th:text="${#numbers.formatInteger(d.originalPrice, 0, 'COMMA')} + '원'">12,000원</span>
+							<span class="price__sale" style="font-size: var(--fs-lg)" th:text="${#numbers.formatInteger(d.discountedPrice, 0, 'COMMA')} + '원'">8,400원</span>
+						</div>
+						<div class="stock-item__foot">
+							<span class="stock-item__meta" th:text="${d.quantity} + '개로 준비됐어요'">3개로 준비됐어요</span>
+							<div class="stock-item__foot-action" style="display: flex; align-items: center; gap: var(--s-1)">
+								<button type="button" class="btn btn--quick-edit" data-open-quick-edit
+								        th:attr="data-id=${d.id},data-name=${d.name},data-orig-price=${d.originalPrice},data-quantity=${d.quantity},data-discount-rate=${d.discountRate},data-manual-rate=${d.manualRate},data-update-url=@{/store/products/{id}(id=${d.id})},data-edit-url=@{/store/products/{id}/edit(id=${d.id})}">
+									수정
+								</button>
+								<form th:if="${canPublishDrafts}" th:action="@{/store/products/{id}/publish(id=${d.id})}" method="post" style="margin:0" data-publish-form>
+									<button type="submit" class="btn btn--publish">바로 올리기</button>
+								</form>
+								<span th:unless="${canPublishDrafts}" class="draft-cutoff-tag">⏳ 등록 마감</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</li>
+		</ul>
 	</div>
 
 	<!-- 재고 목록: 초안이 만들어지기 전 단계 — 메뉴별 현재 재고와 "지금 올린다면" 예상 가격 -->
@@ -189,7 +204,10 @@
 						<span th:unless="${m.imageUrl != null}" th:text="${m.thumbEmoji}">🥐</span>
 					</div>
 					<div class="stock-item__body">
-						<span class="stock-item__name" th:text="${m.name}">단팥빵</span>
+						<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
+							<span class="stock-item__name" th:text="${m.name}">단팥빵</span>
+							<span class="draft-src draft-src--pos">POS 재고</span>
+						</div>
 						<div class="price" style="margin-top: 2px">
 							<span class="badge badge--discount" th:text="'-' + ${m.expectedRate} + '%'">-20%</span>
 							<span class="discount-basis" th:classappend="${m.manualRate} ? ' is-custom' : ' is-auto'"
@@ -212,6 +230,100 @@
 		<a th:href="@{/store/pos}" style="text-decoration: underline">POS 설정</a>에서 앱 판매를 켠 메뉴에 재고가 생기면 여기에 보여요.
 	</p>
 	</div><!-- /wait-section -->
+
+	<!-- 간편 수정 바텀시트 팝업 (2026-09-21) — 판매 대기 상품을 페이지 이동 없이 수량·할인율 즉시 수정/발행 -->
+	<div id="quick-edit-sheet" class="stock-sheet is-hidden" role="dialog" aria-modal="true" aria-labelledby="quick-edit-title">
+		<div class="stock-sheet__backdrop" data-quick-edit-close></div>
+		<div class="stock-sheet__panel quick-edit-panel">
+			<div class="stock-sheet__handle" aria-hidden="true"></div>
+
+			<div class="quick-edit-header">
+				<div>
+					<h3 id="quick-edit-title" class="quick-edit-title">소금빵</h3>
+					<span class="quick-edit-sub">판매 정보 간편 수정</span>
+				</div>
+				<button type="button" class="quick-edit-close-btn" data-quick-edit-close aria-label="닫기">
+					<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+
+			<form id="quick-edit-form" method="post">
+				<input type="hidden" name="name" id="qe-name">
+				<input type="hidden" name="originalPrice" id="qe-originalPrice">
+				<input type="hidden" name="description" id="qe-description">
+				<input type="hidden" name="publishAfter" id="qe-publishAfter" value="false">
+
+				<!-- 1. 판매 수량 조절 -->
+				<div class="qe-field">
+					<label class="qe-label">판매 수량</label>
+					<div class="qe-stepper">
+						<button type="button" class="qe-stepper__btn" id="qe-qty-minus" aria-label="수량 감소">−</button>
+						<div class="qe-stepper__input-wrap">
+							<input type="number" id="qe-quantity" name="quantity" class="qe-stepper__input" min="1" max="999" required>
+							<span class="qe-stepper__unit">개</span>
+						</div>
+						<button type="button" class="qe-stepper__btn" id="qe-qty-plus" aria-label="수량 증가">＋</button>
+					</div>
+				</div>
+
+				<!-- 2. 할인율 설정 -->
+				<div class="qe-field" style="margin-top: var(--s-4)">
+					<label class="qe-label">할인율 설정</label>
+					<div class="qe-rate-toggle">
+						<label class="qe-rate-tab">
+							<input type="radio" name="qe-rate-mode" value="auto" id="qe-rate-auto-radio" checked>
+							<span class="qe-rate-tab__box">마감시간 자동</span>
+						</label>
+						<label class="qe-rate-tab">
+							<input type="radio" name="qe-rate-mode" value="custom" id="qe-rate-custom-radio">
+							<span class="qe-rate-tab__box">직접 지정</span>
+						</label>
+					</div>
+
+					<div id="qe-custom-rate-box" class="is-hidden" style="margin-top: var(--s-2)">
+						<div class="qe-chips">
+							<button type="button" class="qe-chip" data-rate="20">20%</button>
+							<button type="button" class="qe-chip" data-rate="30">30%</button>
+							<button type="button" class="qe-chip" data-rate="40">40%</button>
+							<button type="button" class="qe-chip" data-rate="50">50%</button>
+							<button type="button" class="qe-chip" data-rate="60">60%</button>
+							<button type="button" class="qe-chip" data-rate="70">70%</button>
+						</div>
+						<div class="u-row" style="align-items: center; gap: var(--s-2); margin-top: var(--s-2)">
+							<input type="number" id="qe-discountRate-input" class="input qe-rate-input" min="0" max="90" placeholder="직접 입력">
+							<span class="u-bold">%</span>
+						</div>
+					</div>
+					<input type="hidden" name="discountRate" id="qe-discountRate">
+				</div>
+
+				<!-- 실시간 예상 가격 안내 박스 -->
+				<div class="qe-price-preview">
+					<span class="u-sub" style="font-size: var(--fs-xs)">예상 판매가</span>
+					<div class="qe-price-row">
+						<span id="qe-prev-orig" class="price__orig">3,000원</span>
+						<span class="u-mut">→</span>
+						<span id="qe-prev-rate" class="badge badge--discount">-50%</span>
+						<span id="qe-prev-sale" class="price__sale" style="font-size: var(--fs-md)">1,500원</span>
+					</div>
+				</div>
+
+				<!-- 액션 버튼 2개: [수정 저장] & [저장 후 바로 올리기] -->
+				<div class="qe-actions">
+					<button type="button" id="qe-submit-save" class="btn btn--outline qe-btn">수정 저장</button>
+					<button type="button" id="qe-submit-publish" class="btn qe-btn qe-btn--publish">저장 후 바로 올리기</button>
+				</div>
+
+				<div class="u-center" style="margin-top: var(--s-3)">
+					<a id="qe-full-edit-link" href="#" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline">
+						사진·상세 설명 수정하기 &gt;
+					</a>
+				</div>
+			</form>
+		</div>
+	</div>
 
 	<!-- 상품 "⋯" 메뉴 바텀시트 + 삭제 확인 다이얼로그 (2026-09-21).
 	     #selling-section 밖에 둔다 — 그 안은 10초마다 서버 화면으로 통째 교체되기 때문. 열 때 눌린 버튼의
@@ -239,6 +351,12 @@
 					<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/>
 				</svg>
 				<span>판매 재개</span>
+			</button>
+			<button type="button" id="stock-sheet-discard" class="stock-sheet__row stock-sheet__row--danger is-hidden">
+				<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+				</svg>
+				<span>오늘 판매 안 함</span>
 			</button>
 			<button type="button" id="stock-sheet-delete" class="stock-sheet__row stock-sheet__row--danger">
 				<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
@@ -293,6 +411,7 @@
 		var IDS = ['wait-section', 'selling-section'];
 		setInterval(function () {
 			if (document.hidden) { return; }
+			if (window.__isPublishing && window.__isPublishing()) { return; }
 			// "⋯" 시트/삭제 다이얼로그가 열려 있으면 뒤 화면을 갈아끼우지 않는다.
 			if (document.querySelector('.stock-sheet:not(.is-hidden), .stock-dialog:not(.is-hidden)')) { return; }
 			var active = document.activeElement;
@@ -302,14 +421,333 @@
 				.then(function (html) {
 					if (!html) { return; }
 					var doc = new DOMParser().parseFromString(html, 'text/html');
+					var currentScroll = window.scrollY;
 					IDS.forEach(function (id) {
 						var fresh = doc.getElementById(id);
 						var cur = document.getElementById(id);
 						if (fresh && cur && fresh.innerHTML !== cur.innerHTML) { cur.innerHTML = fresh.innerHTML; }
 					});
+					window.scrollTo(0, currentScroll);
 				})
 				.catch(function () { /* 네트워크 오류는 다음 주기에 다시 */ });
 		}, 10000);
+	})();
+	</script>
+
+	<!-- [바로 올리기] 비동기 처리 & 스크롤 위치 고정 (2026-09-21)
+	     점주가 대기 상품들을 연속으로 "와다다" 올릴 때, 폼 제출로 인한 전체 페이지 새로고침과
+	     최상단 스크롤 튐을 원천 방지한다. fetch로 백그라운드 등록 후 wait/selling 섹션만 매끄럽게 동기화. -->
+	<script th:inline="none">
+	(function () {
+		var inFlight = 0;
+		var lastHtml = null;
+
+		function syncSections(html) {
+			if (!html) return;
+			var doc = new DOMParser().parseFromString(html, 'text/html');
+			var IDS = ['wait-section', 'selling-section'];
+			var currentScroll = window.scrollY;
+			IDS.forEach(function (id) {
+				var fresh = doc.getElementById(id);
+				var cur = document.getElementById(id);
+				if (fresh && cur && fresh.innerHTML !== cur.innerHTML) {
+					cur.innerHTML = fresh.innerHTML;
+				}
+			});
+			window.scrollTo(0, currentScroll);
+		}
+
+		window.__isPublishing = function () { return inFlight > 0; };
+
+		document.addEventListener('submit', function (e) {
+			var form = e.target.closest('form[data-publish-form]');
+			if (!form) return;
+			if (form.dataset.submitting === 'true') {
+				e.preventDefault();
+				return;
+			}
+			e.preventDefault();
+			form.dataset.submitting = 'true';
+
+			var btn = form.querySelector('button[type="submit"]');
+			var card = form.closest('.stock-item');
+			if (btn) {
+				btn.disabled = true;
+				btn.textContent = '올리는 중…';
+			}
+			if (card) {
+				card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+				card.style.opacity = '0.4';
+				card.style.pointerEvents = 'none';
+			}
+
+			inFlight++;
+
+			fetch(form.action, {
+				method: 'POST',
+				credentials: 'same-origin'
+			})
+			.then(function (res) {
+				if (!res.ok) throw new Error('등록 처리 실패');
+				return res.text();
+			})
+			.then(function (html) {
+				lastHtml = html;
+			})
+			.catch(function (err) {
+				console.error('바로 올리기 오류:', err);
+				form.dataset.submitting = 'false';
+				if (card) {
+					card.style.opacity = '';
+					card.style.pointerEvents = '';
+				}
+				if (btn) {
+					btn.disabled = false;
+					btn.textContent = '바로 올리기';
+				}
+			})
+			.finally(function () {
+				inFlight--;
+				if (inFlight === 0 && lastHtml) {
+					syncSections(lastHtml);
+					lastHtml = null;
+				}
+			});
+		});
+	})();
+	</script>
+
+	<!-- [간편 수정 바텀시트 팝업 동작] (2026-09-21)
+	     판매 대기 상품의 [수정] 클릭 시 페이지 이동 없이 수량·할인율을 즉시 수정/발행 -->
+	<script th:inline="none">
+	(function () {
+		var qeSheet = document.getElementById('quick-edit-sheet');
+		var qeForm = document.getElementById('quick-edit-form');
+		if (!qeSheet || !qeForm) return;
+
+		var qeTitle = document.getElementById('quick-edit-title');
+		var qeName = document.getElementById('qe-name');
+		var qeOrigPrice = document.getElementById('qe-originalPrice');
+		var qeQuantity = document.getElementById('qe-quantity');
+		var qeQtyMinus = document.getElementById('qe-qty-minus');
+		var qeQtyPlus = document.getElementById('qe-qty-plus');
+		var qeRateAutoRadio = document.getElementById('qe-rate-auto-radio');
+		var qeRateCustomRadio = document.getElementById('qe-rate-custom-radio');
+		var qeCustomRateBox = document.getElementById('qe-custom-rate-box');
+		var qeDiscountRate = document.getElementById('qe-discountRate');
+		var qeDiscountRateInput = document.getElementById('qe-discountRate-input');
+		var qePrevOrig = document.getElementById('qe-prev-orig');
+		var qePrevRate = document.getElementById('qe-prev-rate');
+		var qePrevSale = document.getElementById('qe-prev-sale');
+		var qeSubmitSave = document.getElementById('qe-submit-save');
+		var qeSubmitPublish = document.getElementById('qe-submit-publish');
+		var qePublishAfter = document.getElementById('qe-publishAfter');
+		var qeFullEditLink = document.getElementById('qe-full-edit-link');
+
+		var curProduct = null;
+		var lastTrigger = null;
+		var isSubmitting = false;
+
+		function isOpen(el) { return el && !el.classList.contains('is-hidden'); }
+		function syncScrollLock() {
+			var anyOpen = isOpen(qeSheet) ||
+			              isOpen(document.getElementById('stock-sheet')) ||
+			              isOpen(document.getElementById('stock-dialog'));
+			document.body.style.overflow = anyOpen ? 'hidden' : '';
+		}
+
+		function updatePreview() {
+			if (!curProduct) return;
+			var orig = curProduct.origPrice || 0;
+			var isAuto = qeRateAutoRadio.checked;
+			var rate = isAuto ? (curProduct.autoRate || 0) : (parseInt(qeDiscountRateInput.value, 10) || 0);
+			if (rate < 0) rate = 0;
+			if (rate > 90) rate = 90;
+
+			qePrevOrig.textContent = orig.toLocaleString() + '원';
+			qePrevRate.textContent = '-' + rate + '%';
+			var salePrice = Math.max(0, Math.round(orig * (100 - rate) / 100));
+			qePrevSale.textContent = salePrice.toLocaleString() + '원';
+		}
+
+		function openQuickEdit(trigger) {
+			lastTrigger = trigger;
+			curProduct = {
+				id: trigger.getAttribute('data-id'),
+				name: trigger.getAttribute('data-name') || '',
+				origPrice: parseInt(trigger.getAttribute('data-orig-price'), 10) || 0,
+				quantity: parseInt(trigger.getAttribute('data-quantity'), 10) || 1,
+				autoRate: parseInt(trigger.getAttribute('data-discount-rate'), 10) || 0,
+				manualRate: trigger.getAttribute('data-manual-rate') === 'true',
+				updateUrl: trigger.getAttribute('data-update-url'),
+				editUrl: trigger.getAttribute('data-edit-url')
+			};
+
+			qeTitle.textContent = curProduct.name;
+			qeName.value = curProduct.name;
+			qeOrigPrice.value = curProduct.origPrice;
+			qeQuantity.value = curProduct.quantity;
+			qeForm.setAttribute('action', curProduct.updateUrl);
+			qeFullEditLink.setAttribute('href', curProduct.editUrl);
+
+			if (curProduct.manualRate) {
+				qeRateCustomRadio.checked = true;
+				qeCustomRateBox.classList.remove('is-hidden');
+				qeDiscountRateInput.value = curProduct.autoRate || '';
+				qeDiscountRate.value = curProduct.autoRate || '';
+			} else {
+				qeRateAutoRadio.checked = true;
+				qeCustomRateBox.classList.add('is-hidden');
+				qeDiscountRateInput.value = '';
+				qeDiscountRate.value = '';
+			}
+
+			// 칩 활성화 상태 동기화
+			var chips = qeCustomRateBox.querySelectorAll('.qe-chip');
+			chips.forEach(function (c) {
+				c.classList.toggle('is-active', c.getAttribute('data-rate') === qeDiscountRateInput.value);
+			});
+
+			updatePreview();
+			qeSheet.classList.remove('is-hidden');
+			syncScrollLock();
+			qeQuantity.focus();
+		}
+
+		function closeQuickEdit() {
+			qeSheet.classList.add('is-hidden');
+			syncScrollLock();
+			if (lastTrigger && document.contains(lastTrigger)) {
+				lastTrigger.focus();
+			}
+		}
+
+		// 수량 증감
+		qeQtyMinus.addEventListener('click', function () {
+			var val = parseInt(qeQuantity.value, 10) || 1;
+			if (val > 1) {
+				qeQuantity.value = val - 1;
+			}
+		});
+		qeQtyPlus.addEventListener('click', function () {
+			var val = parseInt(qeQuantity.value, 10) || 1;
+			if (val < 999) {
+				qeQuantity.value = val + 1;
+			}
+		});
+
+		// 할인율 라디오 토글
+		qeRateAutoRadio.addEventListener('change', function () {
+			if (this.checked) {
+				qeCustomRateBox.classList.add('is-hidden');
+				qeDiscountRate.value = '';
+				updatePreview();
+			}
+		});
+		qeRateCustomRadio.addEventListener('change', function () {
+			if (this.checked) {
+				qeCustomRateBox.classList.remove('is-hidden');
+				if (!qeDiscountRateInput.value) {
+					qeDiscountRateInput.value = curProduct ? curProduct.autoRate : '30';
+				}
+				qeDiscountRate.value = qeDiscountRateInput.value;
+				updatePreview();
+			}
+		});
+
+		// 칩 클릭
+		qeCustomRateBox.addEventListener('click', function (e) {
+			var chip = e.target.closest('.qe-chip');
+			if (!chip) return;
+			var rate = chip.getAttribute('data-rate');
+			qeDiscountRateInput.value = rate;
+			qeDiscountRate.value = rate;
+			qeCustomRateBox.querySelectorAll('.qe-chip').forEach(function (c) {
+				c.classList.toggle('is-active', c === chip);
+			});
+			updatePreview();
+		});
+
+		// 직접 입력
+		qeDiscountRateInput.addEventListener('input', function () {
+			qeDiscountRate.value = this.value;
+			var val = this.value;
+			qeCustomRateBox.querySelectorAll('.qe-chip').forEach(function (c) {
+				c.classList.toggle('is-active', c.getAttribute('data-rate') === val);
+			});
+			updatePreview();
+		});
+
+		// 제출 공통
+		function submitQuickEdit(publish) {
+			if (isSubmitting || !curProduct) return;
+			isSubmitting = true;
+			qePublishAfter.value = publish ? 'true' : 'false';
+			var targetBtn = publish ? qeSubmitPublish : qeSubmitSave;
+			var originalText = targetBtn.textContent;
+			targetBtn.textContent = '처리 중…';
+			qeSubmitSave.disabled = true;
+			qeSubmitPublish.disabled = true;
+
+			var formData = new FormData(qeForm);
+
+			fetch(qeForm.action, {
+				method: 'POST',
+				body: formData,
+				credentials: 'same-origin'
+			})
+			.then(function (res) {
+				if (!res.ok) throw new Error('수정 처리 실패');
+				return res.text();
+			})
+			.then(function (html) {
+				var doc = new DOMParser().parseFromString(html, 'text/html');
+				var IDS = ['wait-section', 'selling-section'];
+				var currentScroll = window.scrollY;
+				IDS.forEach(function (id) {
+					var fresh = doc.getElementById(id);
+					var cur = document.getElementById(id);
+					if (fresh && cur) {
+						cur.innerHTML = fresh.innerHTML;
+					}
+				});
+				window.scrollTo(0, currentScroll);
+				closeQuickEdit();
+			})
+			.catch(function (err) {
+				console.error(err);
+				alert('수정 중 오류가 발생했습니다. 할인율이 마감시간 자동값보다 낮지 않은지 확인해 주세요.');
+			})
+			.finally(function () {
+				isSubmitting = false;
+				targetBtn.textContent = originalText;
+				qeSubmitSave.disabled = false;
+				qeSubmitPublish.disabled = false;
+			});
+		}
+
+		qeSubmitSave.addEventListener('click', function () { submitQuickEdit(false); });
+		qeSubmitPublish.addEventListener('click', function () { submitQuickEdit(true); });
+
+		// 문서 위임 클릭 (열기 & 닫기)
+		document.addEventListener('click', function (e) {
+			var trigger = e.target.closest('[data-open-quick-edit]');
+			if (trigger) {
+				openQuickEdit(trigger);
+				return;
+			}
+			if (e.target.closest('[data-quick-edit-close]')) {
+				closeQuickEdit();
+				return;
+			}
+		});
+
+		// ESC 키 닫기
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && isOpen(qeSheet)) {
+				closeQuickEdit();
+			}
+		});
 	})();
 	</script>
 
@@ -327,13 +765,16 @@
 		var sheetName = document.getElementById('stock-sheet-name');
 		var editLink = document.getElementById('stock-sheet-edit');
 		var deleteRow = document.getElementById('stock-sheet-delete');
+		var discardRow = document.getElementById('stock-sheet-discard');
 		var soldoutRow = document.getElementById('stock-sheet-soldout');
 		var resumeRow = document.getElementById('stock-sheet-resume');
+		var dialogTitle = document.getElementById('stock-dialog-title');
 		var dialogDesc = document.getElementById('stock-dialog-desc');
 		var confirmBtn = document.getElementById('stock-dialog-confirm');
 
-		var current = null;       // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl }
-		var lastTrigger = null;   // 닫을 때 포커스를 돌려줄 "⋯" 버튼
+		var current = null;          // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl, discardUrl, ... }
+		var currentActionUrl = null; // 다이얼로그 확인 시 전송할 POST 주소
+		var lastTrigger = null;      // 닫을 때 포커스를 돌려줄 "⋯" 버튼
 		var submitting = false;
 
 		function isOpen(el) { return !el.classList.contains('is-hidden'); }
@@ -345,6 +786,7 @@
 				name: trigger.getAttribute('data-name') || '',
 				editUrl: trigger.getAttribute('data-edit-url'),
 				deleteUrl: trigger.getAttribute('data-delete-url'),
+				discardUrl: trigger.getAttribute('data-discard-url'),   // 판매 대기 초안일 때 있음
 				soldoutUrl: trigger.getAttribute('data-soldout-url'),   // 판매 중일 때만 있음
 				resumeUrl: trigger.getAttribute('data-resume-url')      // 직접 품절 처리한 상품일 때만 있음
 			};
@@ -353,8 +795,14 @@
 			editLink.setAttribute('href', current.editUrl);
 			soldoutRow.classList.toggle('is-hidden', !current.soldoutUrl);
 			resumeRow.classList.toggle('is-hidden', !current.resumeUrl);
+			deleteRow.classList.toggle('is-hidden', !current.deleteUrl);
+			if (discardRow) {
+				discardRow.classList.toggle('is-hidden', !current.discardUrl);
+				discardRow.disabled = false;
+			}
 			soldoutRow.disabled = false;
 			resumeRow.disabled = false;
+			deleteRow.disabled = false;
 			sheet.classList.remove('is-hidden');
 			syncScrollLock();
 			editLink.focus();
@@ -365,27 +813,69 @@
 			// 카드가 갱신으로 교체됐을 수 있어서, 원래 버튼이 아직 문서에 있을 때만 포커스를 돌려준다.
 			if (lastTrigger && document.contains(lastTrigger)) { lastTrigger.focus(); }
 		}
-		function openDialog() {
+		function openDeleteDialog() {
+			closeSheet();
+			currentActionUrl = current.deleteUrl;
+			dialogTitle.textContent = '이 상품을 삭제할까요?';
 			dialogDesc.textContent = '\'' + current.name + '\'가 재고 목록에서 사라져요. 삭제한 상품은 되돌릴 수 없어요.';
+			confirmBtn.textContent = '삭제';
 			dialog.classList.remove('is-hidden');
 			syncScrollLock();
 			dialog.querySelector('.stock-dialog__btn--cancel').focus();   // 삭제가 기본 포커스가 되지 않게
 		}
-		function closeDialog() {
-			if (submitting) { return; }
+		function openDiscardDialog() {
+			closeSheet();
+			currentActionUrl = current.discardUrl;
+			dialogTitle.textContent = '오늘 판매를 안 할까요?';
+			dialogDesc.textContent = '\'' + current.name + '\'을(를) 오늘 판매 대기 목록에서 제외해요.';
+			confirmBtn.textContent = '오늘 안 함';
+			dialog.classList.remove('is-hidden');
+			syncScrollLock();
+			dialog.querySelector('.stock-dialog__btn--cancel').focus();
+		}
+		function closeDialog(force) {
+			if (submitting && !force) { return; }
 			dialog.classList.add('is-hidden');
 			syncScrollLock();
-			deleteRow.focus();
+			currentActionUrl = null;
+			current = null;
+			if (lastTrigger && document.contains(lastTrigger)) {
+				lastTrigger.focus();
+			}
+			lastTrigger = null;
 		}
 
 		document.addEventListener('click', function (e) {
+			// 판매 대기 카드의 ✕ (오늘 안 함) 버튼
+			var dismissTrigger = e.target.closest('[data-discard-trigger]');
+			if (dismissTrigger) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (submitting) { return; }
+				var name = dismissTrigger.getAttribute('data-name') || '';
+				var url = dismissTrigger.getAttribute('data-discard-url');
+				current = { name: name, discardUrl: url };
+				currentActionUrl = url;
+				lastTrigger = dismissTrigger;
+				dialogTitle.textContent = '오늘 판매를 안 할까요?';
+				dialogDesc.textContent = '\'' + name + '\'을(를) 오늘 판매 대기 목록에서 제외해요.';
+				confirmBtn.textContent = '오늘 안 함';
+				dialog.classList.remove('is-hidden');
+				syncScrollLock();
+				dialog.querySelector('.stock-dialog__btn--cancel').focus();
+				return;
+			}
+
 			var trigger = e.target.closest('[data-stock-menu]');
 			if (trigger) { openSheet(trigger); return; }
 			if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
 			if (e.target.closest('[data-dialog-close]')) { closeDialog(); return; }
 		});
 
-		deleteRow.addEventListener('click', openDialog);
+		deleteRow.addEventListener('click', openDeleteDialog);
+		if (discardRow) {
+			discardRow.addEventListener('click', openDiscardDialog);
+		}
 
 		// 품절 처리 / 판매 재개 — 확인창 없이 바로 기존 POST를 호출한다(예전 카드 버튼과 같은 동작).
 		// 요청 중엔 두 행을 잠가 중복 클릭을 막는다.
@@ -400,26 +890,66 @@
 		soldoutRow.addEventListener('click', function () { submitStatusChange(current && current.soldoutUrl); });
 		resumeRow.addEventListener('click', function () { submitStatusChange(current && current.resumeUrl); });
 
-		// 삭제 후 브라우저 "뒤로"로 이 화면이 캐시에서 복원되면 잠긴 버튼과 열린 레이어가 그대로 남는다 — 초기화.
+		// 브라우저 "뒤로"로 이 화면이 캐시에서 복원되면 잠긴 버튼과 열린 레이어가 그대로 남는다 — 초기화.
 		window.addEventListener('pageshow', function (e) {
 			if (!e.persisted) { return; }
 			submitting = false;
 			confirmBtn.disabled = false;
-			confirmBtn.textContent = '삭제';
+			confirmBtn.textContent = '확인';
 			soldoutRow.disabled = false;
 			resumeRow.disabled = false;
+			if (discardRow) { discardRow.disabled = false; }
 			sheet.classList.add('is-hidden');
 			dialog.classList.add('is-hidden');
 			syncScrollLock();
 		});
 
-		confirmBtn.addEventListener('click', function () {
-			if (submitting || !current) { return; }
+		confirmBtn.addEventListener('click', function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			if (submitting || !currentActionUrl) { return; }
 			submitting = true;
 			confirmBtn.disabled = true;
-			confirmBtn.textContent = '삭제 중…';
-			form.setAttribute('action', current.deleteUrl);
-			form.submit();
+			var originalBtnText = confirmBtn.textContent;
+			confirmBtn.textContent = '처리 중…';
+
+			var actionUrl = currentActionUrl;
+
+			fetch(actionUrl, {
+				method: 'POST',
+				credentials: 'same-origin'
+			})
+			.then(function (res) {
+				if (!res.ok) throw new Error('요청 실패');
+				return res.text();
+			})
+			.then(function (html) {
+				submitting = false;
+				closeDialog(true);
+
+				var doc = new DOMParser().parseFromString(html, 'text/html');
+				var IDS = ['wait-section', 'selling-section'];
+				var currentScroll = window.scrollY;
+				IDS.forEach(function (id) {
+					var fresh = doc.getElementById(id);
+					var cur = document.getElementById(id);
+					if (fresh && cur) {
+						cur.innerHTML = fresh.innerHTML;
+					}
+				});
+				window.scrollTo(0, currentScroll);
+			})
+			.catch(function () {
+				submitting = false;
+				closeDialog(true);
+				form.setAttribute('action', actionUrl);
+				form.submit();
+			})
+			.finally(function () {
+				submitting = false;
+				confirmBtn.disabled = false;
+				confirmBtn.textContent = originalBtnText || '확인';
+			});
 		});
 
 		document.addEventListener('keydown', function (e) {

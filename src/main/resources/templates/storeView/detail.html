@@ -12,10 +12,10 @@
      바로 봐야 하니 리뷰 탭을 기본으로 띄운다 — 안 그러면 완료 배너가 안 보이는 탭 뒤에 숨어버린다. */-->
 <div id="content" th:fragment="content" th:with="defaultTab=${reviewMessage != null ? 'review' : 'product'}">
 	<!-- 2026-09-21 추가 — store.imageUrl 있으면 실제 사진, 없으면 기존 카테고리색+이모지 배너로 폴백. -->
-	<div th:if="${store.imageUrl == null}" th:style="'height:120px;background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:44px'"
+	<div th:if="${store.imageUrl == null}" th:style="'height:var(--hero-h-sm);background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:44px'"
 	     th:text="${thumbEmoji}">🥐</div>
 	<img th:if="${store.imageUrl != null}" th:src="${store.imageUrl}" th:alt="${store.storeName}"
-	     style="width:100%;height:120px;object-fit:cover;display:block">
+	     style="width:100%;height:var(--hero-h-sm);object-fit:cover;display:block">
 
 	<div class="page">
 		<div class="u-row" style="justify-content:space-between">

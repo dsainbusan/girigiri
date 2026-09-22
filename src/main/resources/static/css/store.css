@@ -37,6 +37,18 @@
   color: var(--c-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
+/* 추가됨 (2026-09-22, UI/UX 감사) — "통계 분석" 탭 존재를 처음 오는 사장님에게 알리는 점.
+   한 번 누르면(dashboard.html의 stats-tab-btn 클릭 리스너) is-hidden이 붙어 사라진다. */
+.stat-toggle-tab__dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--c-accent); margin-left: 4px; vertical-align: super;
+  animation: statTabPulse 1.6s ease-in-out infinite;
+}
+.stat-toggle-tab__dot.is-hidden { display: none; }
+@keyframes statTabPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
 .stat-panel {
   animation: fadeIn 0.2s ease-in-out;
 }
@@ -257,9 +269,6 @@ a.stat-card:hover .stat-card__go--gear {
   background: var(--c-primary);
   border-radius: 4px 0 0 4px;
 }
-.todo-banner__card--accent::before {
-  background: var(--c-accent); /* 마감 임박/초안 오렌지 */
-}
 .todo-banner__card--warning::before {
   background: #F59E0B; /* 주의 앰버 */
 }
@@ -271,27 +280,23 @@ a.stat-card:hover .stat-card__go--gear {
   box-shadow: 0 6px 18px rgba(15, 43, 140, 0.09);
 }
 .todo-banner__icon {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
-  background: rgba(15, 43, 140, 0.08);
-  color: var(--c-primary);
+  background: var(--c-bg); /* #F6F0E3 웜 크림 베이지 */
+  color: var(--c-primary);  /* #0F2B8C 기리기리 딥 네이비 */
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-.todo-banner__card--accent .todo-banner__icon {
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--c-accent);
 }
 .todo-banner__card--warning .todo-banner__icon {
   background: rgba(245, 158, 11, 0.14);
   color: #D97706;
 }
 .todo-banner__icon .icon {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
 }
 .todo-banner__body {
   flex: 1;
@@ -318,17 +323,13 @@ a.stat-card:hover .stat-card__go--gear {
 .todo-banner__badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--c-accent);
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
   font-size: 12px;
   font-weight: var(--fw-bold);
   line-height: 1;
-}
-.todo-banner__badge--primary {
-  background: rgba(15, 43, 140, 0.1);
-  color: var(--c-primary);
 }
 .todo-banner__badge--warning {
   background: rgba(245, 158, 11, 0.15);
@@ -370,12 +371,30 @@ a.stat-card:hover .stat-card__go--gear {
   cursor: default;
 }
 
-/* 발행 대기 초안의 출처 뱃지 (POS 재고 / 템플릿 / 직접) */
+/* 발행 대기 초안의 출처 뱃지 (POS 재고 / 템플릿 / 직접) — 판매중 칩과 통일된 소프트 pill 뱃지 */
 .draft-src {
   flex-shrink: 0;
-  font-size: var(--fs-xs); color: var(--c-text-sub);
-  background: var(--c-surface); border: 1px solid var(--c-line);
-  border-radius: var(--r-sm); padding: 1px 6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-pill);
+  padding: 3px var(--s-2);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.draft-src--pos {
+  background: rgba(0, 21, 75, 0.06);
+  color: var(--c-primary);
+  border: 1px solid rgba(0, 21, 75, 0.12);
+}
+.draft-src--template {
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  border: 1px solid rgba(13, 148, 136, 0.18);
+}
+.draft-src--direct {
+  background: var(--c-bg);
+  color: var(--c-text-sub);
+  border: 1px solid var(--c-line);
 }
 
 /* POS 메뉴별 설정 — 라벨 붙은 할인율 / 앱 판매 수량 칸 */
@@ -794,6 +813,334 @@ a.stat-card:hover .stat-card__go--gear {
 .stock-item__more:hover { background: var(--c-bg); color: var(--c-text); }
 .stock-item__more:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 
+/* 판매 대기 카드 하단 액션 & 인포 배너 (2026-09-21) */
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: rgba(0, 21, 75, 0.04);
+  border: 1px solid rgba(0, 21, 75, 0.08);
+  border-radius: var(--r-md);
+  padding: 9px 12px;
+  font-size: var(--fs-xs);
+  color: var(--c-text-sub);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.draft-banner svg {
+  flex-shrink: 0;
+  color: var(--c-primary);
+}
+.stock-item__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  gap: var(--s-2);
+}
+.stock-item__foot-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.btn--publish {
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 21, 75, 0.15);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.3;
+}
+.btn--publish:hover {
+  background: #08216F;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 21, 75, 0.22);
+}
+.btn--publish:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 21, 75, 0.14);
+}
+.draft-cutoff-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-mut);
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+
+/* 판매 대기 카드 상단 제외 ✕ 버튼 */
+.btn-item-dismiss {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--r-pill);
+  color: var(--c-text-mut);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: -4px;
+}
+.btn-item-dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--c-danger);
+}
+
+/* 판매 대기 카드 하단 수정 버튼 */
+.btn--quick-edit {
+  background: var(--c-surface);
+  color: var(--c-text-sub);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  padding: 5px 12px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+.btn--quick-edit:hover {
+  background: var(--c-bg);
+  color: var(--c-text);
+  border-color: var(--c-primary-border);
+}
+
+/* =====================================================================
+   간편 수정 바텀시트 팝업 (Quick Edit Sheet)
+   ===================================================================== */
+.quick-edit-panel {
+  padding: var(--s-4) var(--s-4) calc(var(--s-5) + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.quick-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--s-4);
+}
+.quick-edit-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin: 0;
+}
+.quick-edit-sub {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+  margin-top: 2px;
+  display: block;
+}
+.quick-edit-close-btn {
+  background: none;
+  border: none;
+  color: var(--c-text-sub);
+  padding: 4px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quick-edit-close-btn:hover {
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.qe-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.qe-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+
+/* 수량 스텝퍼 */
+.qe-stepper {
+  display: flex;
+  align-items: center;
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  width: 100%;
+}
+.qe-stepper__btn {
+  width: 44px;
+  height: 40px;
+  border: none;
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.1s ease;
+}
+.qe-stepper__btn:active {
+  transform: scale(0.96);
+  background: var(--c-line-weak);
+}
+.qe-stepper__input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.qe-stepper__input {
+  width: 60px;
+  text-align: center;
+  border: none;
+  background: none;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  outline: none;
+  -moz-appearance: textfield;
+}
+.qe-stepper__input::-webkit-outer-spin-button,
+.qe-stepper__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qe-stepper__unit {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+}
+
+/* 할인율 세그먼트 토글 */
+.qe-rate-toggle {
+  display: flex;
+  background: var(--c-bg);
+  border-radius: var(--r-md);
+  padding: 3px;
+  gap: 3px;
+}
+.qe-rate-tab {
+  flex: 1;
+  cursor: pointer;
+}
+.qe-rate-tab input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.qe-rate-tab__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  transition: all 0.15s ease;
+}
+.qe-rate-tab input:checked + .qe-rate-tab__box {
+  background: var(--c-surface);
+  color: var(--c-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 직접 지정 할인 칩 및 인풋 */
+.qe-chips {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+}
+.qe-chip {
+  flex: 1 1 auto;
+  min-width: 48px;
+  padding: 6px 8px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.qe-chip:hover, .qe-chip.is-active {
+  border-color: var(--c-primary);
+  background: var(--c-primary-weak);
+  color: var(--c-primary);
+}
+.qe-rate-input {
+  width: 120px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  text-align: right;
+  font-weight: var(--fw-bold);
+}
+
+/* 실시간 가격 미리보기 박스 */
+.qe-price-preview {
+  margin-top: var(--s-4);
+  background: rgba(0, 21, 75, 0.03);
+  border: 1px dashed rgba(0, 21, 75, 0.12);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.qe-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+/* 액션 버튼 그룹 */
+.qe-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+.qe-btn {
+  flex: 1;
+  padding: 12px 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.qe-btn--publish {
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 21, 75, 0.18);
+}
+.qe-btn--publish:hover {
+  background: #08216F;
+}
+
 .stock-sheet, .stock-dialog { position: fixed; inset: 0; z-index: 1000; display: flex; }
 .stock-sheet.is-hidden, .stock-dialog.is-hidden { display: none; }
 .stock-sheet { align-items: flex-end; justify-content: center; }
@@ -874,9 +1221,7 @@ a.stat-card:hover .stat-card__go--gear {
 .js-autogrow { resize: none; overflow-y: auto; max-height: 40vh; }
 
 /* ---------- 오늘의 구제 자동 등록 (템플릿 / 발행 대기) ---------- */
-.draft-box { border: 1px solid var(--c-primary-border); border-radius: var(--r-lg); background: var(--c-surface); padding: var(--s-3); }
-.draft-box .stock-item { border: 0; padding: var(--s-2) 0 0; }
-.draft-box .stock-item + .stock-item { margin-top: var(--s-3); border-top: 1px dashed var(--c-primary-border); }
+.draft-box { display: flex; flex-direction: column; gap: var(--s-3); }
 
 /* 템플릿 폼 — 요일 선택 토글 */
 .weekday-row { display: flex; gap: var(--s-2); }
@@ -900,15 +1245,19 @@ a.stat-card:hover .stat-card__go--gear {
   background: var(--c-bg);
 }
 
-/* 대시보드 상단바와 히어로의 색상 일체화 (레퍼런스 이미지의 풀스크린 그라데이션 연출) */
+/* 대시보드 상단바와 히어로의 색상 일체화 (레퍼런스 이미지의 풀스크린 그라데이션 연출)
+   변경됨 (2026-09-22, UI/UX 감사) — #00154B/#08216F는 토큰에 없는 새 네이비였고(마지막 색만
+   --c-primary와 우연히 일치), 배지 그린도 리브랜딩 때 걷어낸 색을 하드코딩으로 되살린 것이었다.
+   시각 결과는 그대로 두고 토큰만 입혔다 — 그라데이션은 기존 --c-primary-strong/--c-primary
+   2단으로, 배지는 새로 추가한 --c-live-* 토큰으로. */
 .app:has(.page--dashboard) .topbar--dark {
-  background: #00154B;
+  background: var(--c-primary-strong);
   border-bottom: none;
 }
 .app:has(.page--dashboard) .topbar--dark .badge {
-  background: rgba(34, 197, 94, 0.2);
-  color: #86EFAC;
-  border: 1px solid rgba(134, 239, 172, 0.35);
+  background: var(--c-live-weak);
+  color: var(--c-live-on);
+  border: 1px solid var(--c-live-border);
   font-size: 11px;
   font-weight: var(--fw-bold);
   padding: 3px 9px;
@@ -917,8 +1266,8 @@ a.stat-card:hover .stat-card__go--gear {
 
 /* 1. 상단 딥 네이비 그라데이션 히어로 (프로필 중복 제거 후 매출 및 상태 중심) */
 .dash-hero {
-  background: linear-gradient(155deg, #00154B 0%, #08216F 45%, #0F2B8C 100%);
-  color: #FFFFFF;
+  background: linear-gradient(155deg, var(--c-primary-strong) 0%, var(--c-primary) 100%);
+  color: var(--c-surface);
   padding: var(--s-3) var(--s-5) var(--s-6);
   position: relative;
   overflow: hidden;
