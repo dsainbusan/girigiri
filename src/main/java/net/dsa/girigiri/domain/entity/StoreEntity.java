@@ -157,6 +157,16 @@ public class StoreEntity {
 	@Column(name = "reliability_banned", nullable = false)
 	private boolean reliabilityBanned = false;   // true면 영구정지(4회차 위반)
 
+	// 추가됨 (2026-09-22) — 왜: 환경설정 화면 "매장 관리" 섹션(OWNER 전용) 알림 토글. status 컬럼과 같은
+	// null-안전 패턴(위 STATUS_SUSPENDED 주석 참고) — ddl-auto=update로 컬럼만 새로 생겨서 기존 매장은
+	// NULL로 남는데, null/true는 "켜짐", false만 "꺼짐"으로 취급한다. 지금은 값을 저장만 하고, 실제
+	// 정산/자동 등록 알림 발송 로직이 이 값을 확인하도록 연결하지는 않았다(다음 과제).
+	@Column(name = "settlement_alert_enabled")
+	private Boolean settlementAlertEnabled;
+
+	@Column(name = "automation_alert_enabled")
+	private Boolean automationAlertEnabled;
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

@@ -113,9 +113,16 @@
 		</a>
 
 		<!-- 회원정보 수정 (구현 완료) -->
-		<a th:href="@{/mypage/edit}" class="list-menu-item" style="border-bottom: none;">
-			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-settings"/></svg></span>
+		<a th:href="@{/mypage/edit}" class="list-menu-item">
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-pencil"/></svg></span>
 			<span class="list-menu-item__title">회원정보 수정</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
+		<!-- 환경설정 (2026-09-22 추가) — 언어·알림 바로가기·계정·약관 동의를 모아둔 화면 -->
+		<a th:href="@{/user/settings}" class="list-menu-item" style="border-bottom: none;">
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-settings"/></svg></span>
+			<span class="list-menu-item__title">환경설정</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 	</div>

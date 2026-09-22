@@ -128,6 +128,12 @@ public class UserEntity {
 	@Column(name = "agreed_at")
 	private LocalDateTime agreedAt;
 
+	// 추가됨 (2026-09-22) — 왜: 환경설정 "언어 설정" 화면(WBS 6.1 인수 범위)의 선택값. ddl-auto=update로
+	// 컬럼만 새로 생겨서 기존 회원은 NULL로 남는데, null이면 "ko"(한국어)로 취급한다
+	// (net.dsa.girigiri.domain.Language.findByCode 참고) — 지금은 저장만 하고 실제 다국어 처리는 없다.
+	@Column(name = "language", length = 10)
+	private String language;
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

@@ -1,0 +1,42 @@
+/* 환경설정 화면 전용 (담당: 문창호, 2026-09-22) — B안(카드 분리형).
+   메뉴 리스트 행은 mypage.css의 .list-menu-item을 그대로 재사용하고(마이페이지와 같은 룩),
+   여기선 섹션 소제목·카드 간격, 토글 스위치, 언어 선택 행만 새로 정의한다. */
+
+.settings-section { margin-bottom: var(--s-5); }
+.settings-section:last-child { margin-bottom: 0; }
+.settings-section__title {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+	padding: 0 4px;
+	margin-bottom: var(--s-2);
+}
+/* mypage.html의 "메뉴 리스트 카드"와 같은 방식(padding:0 + overflow:hidden)으로 안의 list-menu-item
+   행이 카드 테두리까지 꽉 채우게 한다. */
+.settings-card { padding: 0; border-radius: var(--r-xl); overflow: hidden; }
+
+/* 토글이 오른쪽에 있는 행 — <form>이 곧 그 행이라 list-menu-item의 flex/padding/border를 그대로
+   물려받는다(form 자체엔 별도 스타일을 얹지 않는다). */
+form.list-menu-item--toggle { width: 100%; }
+
+/* 토글 스위치 — alertView/settings.html의 토글과 같은 44x26px 트랙 + 원 디자인이지만, 그 화면 것은
+   인라인 <style>이라 재사용할 수 없어서 그대로 복제했다(그 화면의 주석과 같은 이유 — 세 번째로
+   필요해지면 그때 공용 컴포넌트로 뺀다). */
+.settings-toggle { position: relative; display: inline-block; width: 44px; height: 26px; flex: none; }
+.settings-toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.settings-toggle__track { position: absolute; inset: 0; background: var(--c-line); border-radius: 999px; transition: background .15s ease; }
+.settings-toggle__track::before {
+	content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+	background: var(--c-surface); border-radius: 50%; transition: transform .15s ease;
+}
+.settings-toggle input:checked ~ .settings-toggle__track { background: var(--c-primary); }
+.settings-toggle input:checked ~ .settings-toggle__track::before { transform: translateX(18px); }
+.settings-toggle input:focus-visible ~ .settings-toggle__track { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
+/* 언어 선택 행 — <button>을 list-menu-item처럼 보이게 기본 버튼 스타일만 리셋 */
+.list-menu-item--radio {
+	width: 100%; background: none; border: none; border-bottom: 1px solid var(--c-line-weak);
+	font-family: inherit; cursor: pointer; text-align: left;
+}
+.list-menu-item--radio.is-selected .list-menu-item__title { color: var(--c-primary); font-weight: var(--fw-bold); }
+.settings-check { width: 20px; height: 20px; flex: none; color: var(--c-primary); }
