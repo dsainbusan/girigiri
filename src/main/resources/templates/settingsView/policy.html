@@ -13,6 +13,17 @@
 			※ (임시) 정식 <span th:text="${title}">이용약관</span> 문서로 교체 예정입니다.
 		</p>
 	</div>
+
+	<!-- 뒤로가기는 항상 환경설정으로 (환경설정에서 들어온 depth+1 화면). -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (back) {
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/user/settings'; });
+		}
+	})();
+	</script>
 </div>
 </body>
 </html>
