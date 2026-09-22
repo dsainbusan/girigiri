@@ -114,7 +114,7 @@
 				매장을 등록하고 마감 세일 음식을 판매해 보세요.<br>
 				신청 후 운영자 승인이 완료되면 점주 모드를 이용하실 수 있습니다.
 			</p>
-			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3);">
 				점주 입점 신청하기 &rsaquo;
 			</a>
 		</div>
@@ -129,7 +129,7 @@
 				<strong th:text="${store.storeName}">매장명</strong> 입점 신청서가 접수되었습니다.<br>
 				승인까지 최대 2~3일(영업일 기준)이 소요됩니다.
 			</p>
-			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3); background: #fff;">
+			<a th:href="@{/auth/owner-apply}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3);">
 				신청 정보 수정하기 &rsaquo;
 			</a>
 		</div>
@@ -177,7 +177,7 @@
 
 			document.getElementById('gpsRegionBtn').addEventListener('click', function () {
 				if (!navigator.geolocation) {
-					setGpsStatus('위치 확인 불가', 'discount');
+					setGpsStatus('위치 확인 불가', 'danger');
 					return;
 				}
 				setGpsStatus('확인 중', 'info');
@@ -189,11 +189,11 @@
 							regionInput.value = (shortenSido(addr.region_1depth_name) + ' ' + dong).trim();
 							setGpsStatus('위치 확인됨', 'success');
 						} else {
-							setGpsStatus('주소를 찾지 못함', 'discount');
+							setGpsStatus('주소를 찾지 못함', 'danger');
 						}
 					});
 				}, function () {
-					setGpsStatus('위치 확인 불가', 'discount');
+					setGpsStatus('위치 확인 불가', 'danger');
 				});
 			});
 		});

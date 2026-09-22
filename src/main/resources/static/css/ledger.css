@@ -112,6 +112,9 @@
 .ledger-hero__stat:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 .ledger-hero__stat-label { font-size: var(--fs-xs); color: var(--c-text-mut); display: flex; align-items: center; gap: 3px; }
 .ledger-hero__stat-value { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+/* 추가됨 (2026-09-22, UI/UX 감사) — 모바일 전용 앱이라 :hover 그림자만으로는 "누를 수 있음"이
+   안 보인다는 지적. hero-goal-btn의 기존 "42% ›" 패턴과 같은 화살표를 나머지 클릭 카드에도. */
+.ledger-hero__chevron { margin-left: auto; color: var(--c-text-mut); font-weight: var(--fw-bold); }
 
 .ledger-info-btn {
   display: inline-flex; align-items: center; justify-content: center;

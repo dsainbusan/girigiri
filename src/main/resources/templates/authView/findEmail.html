@@ -43,7 +43,8 @@
 
 	<!-- 결과: 계정 없음 -->
 	<p th:if="${result != null and not result.found}" class="u-danger" style="margin-top: var(--s-5)">
-		입력하신 번호로 가입된 계정이 없어요. 번호를 다시 확인하거나, 새로 가입해 주세요.
+		입력하신 번호로 가입된 계정이 없어요. 번호를 다시 확인하거나,
+		<a th:href="@{/auth/loginForm}" style="font-weight: var(--fw-bold)">새로 가입해 주세요</a>.
 	</p>
 
 	<!-- 입력 폼 (결과가 없을 때만) -->

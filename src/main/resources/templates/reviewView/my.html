@@ -95,7 +95,10 @@
 				</div>
 			</div>
 		</div>
-		<p th:if="${#lists.isEmpty(reviews)}" class="u-sub">아직 쓴 리뷰가 없어요. 다녀온 가게에 리뷰를 남겨보세요!</p>
+		<div th:if="${#lists.isEmpty(reviews)}">
+			<p class="u-sub">아직 쓴 리뷰가 없어요. 다녀온 가게에 리뷰를 남겨보세요!</p>
+			<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">홈</a>
+		</div>
 	</div>
 
 </div>

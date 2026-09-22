@@ -75,3 +75,11 @@ input, textarea, select {
 .u-grow { flex: 1 1 auto; }
 .u-mt-2 { margin-top: var(--s-2); }
 .u-mt-4 { margin-top: var(--s-4); }
+
+/* 추가됨 (2026-09-22, UI/UX 감사) — 커스텀 라디오/체크박스(예: signup.html 역할 선택 카드)를
+   display:none으로 숨기면 키보드 포커스·스크린리더 접근이 통째로 사라진다. 시각적으로만 숨기고
+   실제 입력 요소는 그대로 둬서 Tab/화살표/스페이스로 조작 가능하게 한다(표준 sr-only 패턴). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
