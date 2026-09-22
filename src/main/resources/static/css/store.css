@@ -1243,23 +1243,25 @@ a.stat-card:hover .stat-card__go--gear {
 .dash-icon-btn:hover { background: var(--c-bg); color: var(--c-primary); }
 .dash-icon-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 
-/* 도넛: 가운데 정렬, 카드 폭에 맞게 살짝 키우고 안쪽 글씨를 읽히게 */
-.dash-donut { display: flex; justify-content: center; margin: var(--s-4) 0 var(--s-3); }
-.dash-stats .donut { width: 148px; height: 148px; }
-.dash-stats .donut::after { inset: 20px; }
+/* 도넛 + 범례를 좌우로 (2026-09-22 스크롤 줄이기) — 예전엔 도넛 아래에 범례가 따로 쌓여 세로를 많이 먹었다.
+   도넛은 120px로 줄이고 안쪽 글씨를 읽히게 한다(안쪽 지름 88px). */
+.dash-overview { display: flex; align-items: center; gap: var(--s-4); margin: var(--s-3) 0 var(--s-3); }
+.dash-donut { flex: none; }
+.dash-stats .donut { width: 120px; height: 120px; }
+.dash-stats .donut::after { inset: 16px; }
+.dash-stats .donut__value { font-size: 24px; }
 .dash-stats .donut__label,
 .dash-stats .donut__note { font-size: var(--fs-xs); color: var(--c-text-sub); }
 
-/* 범례 3칸 / 2행 */
-.dash-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+/* 범례: 도넛 오른쪽 세로 목록 */
+.dash-legend { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
 .dash-legend__cell {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: var(--s-2) 0; border-radius: var(--r-md); background: var(--c-bg);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
 }
 .dash-legend__name { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
 .dash-legend__num { font-size: var(--fs-lg); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; }
 .dash-legend__num small { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); margin-left: 2px; }
-.dash-legend--rows { display: flex; flex-direction: column; gap: var(--s-2); }
 .dash-legend__row {
   display: flex; align-items: center; gap: var(--s-3);
   padding: var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
@@ -1287,8 +1289,21 @@ a.stat-card:hover .stat-card__go--gear {
 .dash-metric__value { font-size: var(--fs-md); font-weight: var(--fw-black); white-space: nowrap; letter-spacing: -.02em; }
 .dash-metric__label { font-size: var(--fs-xs); color: var(--c-text-sub); }
 
-/* 하단 리포트 링크(알림 카드 재사용) — 카드들 아래 간격만 */
-.dash-report-link { margin-bottom: var(--s-2); }
+/* 절감 효과 제목 줄 — 카드 안 구분선 아래. 오른쪽 "매출 리포트 ›"는 예전 리포트 버튼 카드를 대신하는 링크(업무 요약의
+   "매출 리포트" 메뉴와 중복이라 카드로 둘 이유가 없다). 터치 영역은 음수 마진으로 확보하고 행 높이는 유지한다. */
+.dash-subhead {
+  display: flex; align-items: baseline; gap: var(--s-2);
+  margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--c-line-weak);
+}
+.dash-subhead + .dash-metrics { margin-top: var(--s-3); }
+.dash-subhead__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.dash-subhead__sub { font-size: var(--fs-xs); color: var(--c-text-sub); }
+.dash-subhead__link {
+  margin-left: auto; padding: 12px 0 12px 12px; margin-top: -12px; margin-bottom: -12px;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary); text-decoration: none; white-space: nowrap;
+}
+.dash-subhead__link:hover { text-decoration: underline; }
+.dash-subhead__link:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; border-radius: var(--r-sm); }
 
 /* 최근 7일 막대 차트: y축 눈금 + 가로 눈금선 + 버튼 막대 */
 .dash-chart { margin-top: 0; }

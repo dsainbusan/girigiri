@@ -232,13 +232,16 @@
 			<!-- ===== 패널: 오늘 ===== -->
 			<div id="panel-today" class="stat-panel" role="tabpanel" aria-labelledby="tab-today">
 
-				<!-- 마감 전 -->
-				<th:block th:if="${!isClosed}">
-					<div class="dash-section-head">
-						<h3 class="dash-section-title">오늘 판매 현황</h3>
-						<span class="dash-section-more" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</span>
-					</div>
-					<div class="dash-card">
+				<!-- 스크롤 줄이기 (2026-09-22) — 도넛+범례 좌우 배치, 절감 효과를 같은 카드 안으로 합치고, 리포트 버튼 카드는
+				     절감 효과 제목 옆 링크로 옮겼다(업무 요약 탭의 "매출 리포트" 메뉴와 중복이라 카드로 둘 이유가 없다). -->
+				<div class="dash-section-head">
+					<h3 class="dash-section-title" th:text="${isClosed} ? '오늘 마감 결과' : '오늘 판매 현황'">오늘 판매 현황</h3>
+					<span class="dash-section-more" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</span>
+				</div>
+				<div class="dash-card">
+
+					<!-- 마감 전 -->
+					<th:block th:if="${!isClosed}">
 						<div class="dash-pills">
 							<span class="pill dash-pill">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -256,103 +259,96 @@
 							</button>
 						</div>
 
-						<div class="dash-donut">
-							<div class="donut" role="img"
-							     th:attr="aria-label='남음 ' + ${idleCount} + '개, ' + ${totalQuantity} + '개 중'"
-							     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutPickedPct} + '%, var(--c-primary-mid) ' + ${donutPickedPct} + '% ' + ${donutReservedCumPct} + '%, var(--c-idle) ' + ${donutReservedCumPct} + '% 100%)'">
-								<div class="donut__center">
-									<span class="donut__label">남음</span>
-									<span class="donut__value donut__value--idle"><span th:text="${idleCount}">3</span><small>개</small></span>
-									<span class="donut__note" th:text="${totalQuantity} + '개 중'">14개 중</span>
+						<div class="dash-overview">
+							<div class="dash-donut">
+								<div class="donut" role="img"
+								     th:attr="aria-label='남음 ' + ${idleCount} + '개, ' + ${totalQuantity} + '개 중'"
+								     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutPickedPct} + '%, var(--c-primary-mid) ' + ${donutPickedPct} + '% ' + ${donutReservedCumPct} + '%, var(--c-idle) ' + ${donutReservedCumPct} + '% 100%)'">
+									<div class="donut__center">
+										<span class="donut__label">남음</span>
+										<span class="donut__value donut__value--idle"><span th:text="${idleCount}">3</span><small>개</small></span>
+										<span class="donut__note" th:text="${totalQuantity} + '개 중'">14개 중</span>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						<ul class="dash-legend">
-							<li class="dash-legend__cell">
-								<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-primary)"></span>판매</span>
-								<span class="dash-legend__num"><span th:text="${pickedCount}">8</span><small>개</small></span>
-							</li>
-							<li class="dash-legend__cell">
-								<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-primary-mid)"></span>예약됨</span>
-								<span class="dash-legend__num"><span th:text="${reservedNotPickedCount}">3</span><small>개</small></span>
-							</li>
-							<li class="dash-legend__cell">
-								<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-idle)"></span>남음</span>
-								<span class="dash-legend__num"><span th:text="${idleCount}">3</span><small>개</small></span>
-							</li>
-						</ul>
+							<ul class="dash-legend">
+								<li class="dash-legend__cell">
+									<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-primary)"></span>판매</span>
+									<span class="dash-legend__num"><span th:text="${pickedCount}">8</span><small>개</small></span>
+								</li>
+								<li class="dash-legend__cell">
+									<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-primary-mid)"></span>예약됨</span>
+									<span class="dash-legend__num"><span th:text="${reservedNotPickedCount}">3</span><small>개</small></span>
+								</li>
+								<li class="dash-legend__cell">
+									<span class="dash-legend__name"><span class="tally__dot" style="background:var(--c-idle)"></span>남음</span>
+									<span class="dash-legend__num"><span th:text="${idleCount}">3</span><small>개</small></span>
+								</li>
+							</ul>
+						</div>
 
 						<div class="dash-note">
 							<span>마감 후 남은 수량은 폐기로 집계돼요</span>
 							<span>남은 <strong th:text="${idleCount} + '개'">3개</strong></span>
 						</div>
-					</div>
-				</th:block>
+					</th:block>
 
-				<!-- 마감 후 — 도넛/범례만 바꾸고, 알약 행과 "마감 후 남은 수량은…" 안내는 뺀다 -->
-				<th:block th:if="${isClosed}">
-					<div class="dash-section-head">
-						<h3 class="dash-section-title">오늘 마감 결과</h3>
-						<span class="dash-section-more" th:text="'등록 ' + ${totalQuantity} + '개'">등록 14개</span>
-					</div>
-					<div class="dash-card">
-						<div class="dash-donut">
-							<div class="donut" role="img"
-							     th:attr="aria-label='구제율 ' + ${rescueRate} + '%, ' + ${totalQuantity} + '개 중 ' + ${soldCount} + '개'"
-							     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutSoldCumPct} + '%, var(--c-danger) ' + ${donutSoldCumPct} + '% 100%)'">
-								<div class="donut__center">
-									<span class="donut__label">구제율</span>
-									<span class="donut__value donut__value--sold"><span th:text="${rescueRate}">79</span><small>%</small></span>
-									<span class="donut__note" th:text="${totalQuantity} + '개 중 ' + ${soldCount} + '개'">14개 중 11개</span>
+					<!-- 마감 후 — 도넛/범례만 바꾸고, 알약 행과 "마감 후 남은 수량은…" 안내는 뺀다 -->
+					<th:block th:if="${isClosed}">
+						<div class="dash-overview">
+							<div class="dash-donut">
+								<div class="donut" role="img"
+								     th:attr="aria-label='구제율 ' + ${rescueRate} + '%, ' + ${totalQuantity} + '개 중 ' + ${soldCount} + '개'"
+								     th:style="'background: conic-gradient(var(--c-primary) 0 ' + ${donutSoldCumPct} + '%, var(--c-danger) ' + ${donutSoldCumPct} + '% 100%)'">
+									<div class="donut__center">
+										<span class="donut__label">구제율</span>
+										<span class="donut__value donut__value--sold"><span th:text="${rescueRate}">79</span><small>%</small></span>
+										<span class="donut__note" th:text="${totalQuantity} + '개 중 ' + ${soldCount} + '개'">14개 중 11개</span>
+									</div>
 								</div>
 							</div>
+
+							<ul class="dash-legend dash-legend--rows">
+								<li class="dash-legend__row">
+									<span class="tally__dot" style="background:var(--c-primary)"></span>
+									<span class="dash-legend__text"><b>판매</b><small>할인 판매로 살린 음식</small></span>
+									<span class="dash-legend__num"><span th:text="${soldCount}">11</span><small>개</small></span>
+								</li>
+								<li class="dash-legend__row">
+									<span class="tally__dot" style="background:var(--c-danger)"></span>
+									<span class="dash-legend__text"><b>폐기</b><small>마감까지 안 팔린 음식</small></span>
+									<span class="dash-legend__num"><span th:text="${idleCount}">3</span><small>개</small></span>
+								</li>
+							</ul>
 						</div>
+					</th:block>
 
-						<ul class="dash-legend dash-legend--rows">
-							<li class="dash-legend__row">
-								<span class="tally__dot" style="background:var(--c-primary)"></span>
-								<span class="dash-legend__text"><b>판매</b><small>할인 판매로 살린 음식</small></span>
-								<span class="dash-legend__num"><span th:text="${soldCount}">11</span><small>개</small></span>
-							</li>
-							<li class="dash-legend__row">
-								<span class="tally__dot" style="background:var(--c-danger)"></span>
-								<span class="dash-legend__text"><b>폐기</b><small>마감까지 안 팔린 음식</small></span>
-								<span class="dash-legend__num"><span th:text="${idleCount}">3</span><small>개</small></span>
-							</li>
-						</ul>
+					<!-- 오늘 절감 효과 — 같은 카드 안. 리포트는 제목 옆 링크 -->
+					<div class="dash-subhead">
+						<h4 class="dash-subhead__title">오늘 절감 효과</h4>
+						<span class="dash-subhead__sub">오늘 기준</span>
+						<a th:href="@{/store/sales-report}" class="dash-subhead__link"
+						   title="매출 리포트 (Excel · PDF)" aria-label="매출 리포트 (Excel · PDF) 다운로드">매출 리포트 ›</a>
 					</div>
-				</th:block>
-
-				<!-- 오늘 절감 효과 -->
-				<div class="dash-section-head">
-					<h3 class="dash-section-title">오늘 절감 효과</h3>
-					<span class="dash-section-more">오늘 기준</span>
-				</div>
-				<div class="dash-card dash-metrics">
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></span>
-						<span class="dash-metric__value u-primary" th:text="${soldCount} + '개'">11개</span>
-						<span class="dash-metric__label">구한 음식</span>
-					</div>
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-money"/></svg></span>
-						<span class="dash-metric__value" th:text="${todaySales}">286,400원</span>
-						<span class="dash-metric__label">회수 매출</span>
-					</div>
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
-						<span class="dash-metric__value u-primary" th:text="${todayCo2Kg} + 'kg'">5.5kg</span>
-						<span class="dash-metric__label">CO₂ 절감</span>
+					<div class="dash-metrics">
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></span>
+							<span class="dash-metric__value u-primary" th:text="${soldCount} + '개'">11개</span>
+							<span class="dash-metric__label">구한 음식</span>
+						</div>
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-money"/></svg></span>
+							<span class="dash-metric__value" th:text="${todaySales}">286,400원</span>
+							<span class="dash-metric__label">회수 매출</span>
+						</div>
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
+							<span class="dash-metric__value u-primary" th:text="${todayCo2Kg} + 'kg'">5.5kg</span>
+							<span class="dash-metric__label">CO₂ 절감</span>
+						</div>
 					</div>
 				</div>
-
-				<!-- 리포트 — 알림 카드(.todo-banner__card) 스타일 재사용 -->
-				<a th:href="@{/store/sales-report}" class="todo-banner__card dash-report-link" title="매출 리포트 다운로드">
-					<div class="todo-banner__icon"><svg class="icon"><use href="#i-ledger"/></svg></div>
-					<div class="todo-banner__body"><div class="todo-banner__title">매출 리포트 (Excel · PDF)</div></div>
-					<div class="todo-banner__action"><svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg></div>
-				</a>
 			</div>
 
 			<!-- ===== 패널: 최근 7일 ===== -->
@@ -402,35 +398,32 @@
 					</div>
 					<p class="dash-chart__total"
 					   th:text="'판매 ' + ${weeklySoldTotal} + '개 · 폐기 ' + ${weeklyWasteTotal} + '개'">판매 42개 · 폐기 8개</p>
-				</div>
 
-				<div class="dash-section-head">
-					<h3 class="dash-section-title">최근 7일 절감 효과</h3>
-					<span class="dash-section-more">7일 누적</span>
+					<!-- 최근 7일 절감 효과 — 같은 카드 안. 리포트는 제목 옆 링크 -->
+					<div class="dash-subhead">
+						<h4 class="dash-subhead__title">최근 7일 절감 효과</h4>
+						<span class="dash-subhead__sub">7일 누적</span>
+						<a th:href="@{/store/sales-report(period='lastweek')}" class="dash-subhead__link"
+						   title="매출 리포트 (Excel · PDF)" aria-label="매출 리포트 (Excel · PDF) 다운로드">매출 리포트 ›</a>
+					</div>
+					<div class="dash-metrics">
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></span>
+							<span class="dash-metric__value u-primary" th:text="${weeklyRescuedCount} + '개'">18개</span>
+							<span class="dash-metric__label">구한 음식</span>
+						</div>
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-money"/></svg></span>
+							<span class="dash-metric__value" th:text="${weeklyRecoveredAmount}">92,400원</span>
+							<span class="dash-metric__label">회수 매출</span>
+						</div>
+						<div class="dash-metric">
+							<span class="dash-metric__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
+							<span class="dash-metric__value u-primary" th:text="${weeklyCo2Kg} + 'kg'">9.0kg</span>
+							<span class="dash-metric__label">CO₂ 절감</span>
+						</div>
+					</div>
 				</div>
-				<div class="dash-card dash-metrics">
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></span>
-						<span class="dash-metric__value u-primary" th:text="${weeklyRescuedCount} + '개'">18개</span>
-						<span class="dash-metric__label">구한 음식</span>
-					</div>
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-money"/></svg></span>
-						<span class="dash-metric__value" th:text="${weeklyRecoveredAmount}">92,400원</span>
-						<span class="dash-metric__label">회수 매출</span>
-					</div>
-					<div class="dash-metric">
-						<span class="dash-metric__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
-						<span class="dash-metric__value u-primary" th:text="${weeklyCo2Kg} + 'kg'">9.0kg</span>
-						<span class="dash-metric__label">CO₂ 절감</span>
-					</div>
-				</div>
-
-				<a th:href="@{/store/sales-report(period='lastweek')}" class="todo-banner__card dash-report-link" title="지난주 매출 리포트 다운로드">
-					<div class="todo-banner__icon"><svg class="icon"><use href="#i-ledger"/></svg></div>
-					<div class="todo-banner__body"><div class="todo-banner__title">매출 리포트 (Excel · PDF)</div></div>
-					<div class="todo-banner__action"><svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg></div>
-				</a>
 			</div>
 		</div>
 		<!-- /panel-stats -->
