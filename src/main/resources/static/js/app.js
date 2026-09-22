@@ -343,4 +343,19 @@
       });
     });
   })();
+
+  // 풀블리드 히어로(대시보드 / 매출리포트) 상단바 스크롤 시 반투명 블러 네이비(.is-scrolled) 전환
+  (function () {
+    var darkTopbar = document.querySelector('.topbar--dark');
+    if (!darkTopbar) return;
+    function checkScroll() {
+      if (window.scrollY > 20) {
+        darkTopbar.classList.add('is-scrolled');
+      } else {
+        darkTopbar.classList.remove('is-scrolled');
+      }
+    }
+    window.addEventListener('scroll', checkScroll, { passive: true });
+    checkScroll();
+  })();
 })();
