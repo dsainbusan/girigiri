@@ -56,7 +56,8 @@ public class AuthController {
 	 * 이메일 회원가입 폼 화면
 	 */
 	@GetMapping("/emailSignup")
-	public String emailSignupForm() {
+	public String emailSignupForm(@RequestParam(required = false) String email, Model model) {
+		model.addAttribute("email", email);
 		return "authView/emailSignup";
 	}
 
@@ -65,6 +66,10 @@ public class AuthController {
 	 * 화면(/auth/signup)으로 보낸다. 소셜 로그인의 최초 흐름과 동일하게 맞춘 것
 	 * (변경 2026-09-10 — 예전엔 로그인 화면으로 보내 사용자가 한 번 더 로그인하게 했다).
 	 * 최종 가입 완료(profileCompleted=true)는 /auth/signup 제출 시 이뤄진다.
+	 *
+	 * 추가됨 (2026-09-22, UI/UX 감사) — 실패해도 방금 입력한 이메일은 유지한다(비밀번호는 재입력
+	 * 유도가 맞아서 그대로 둔다). 계정이 아직 없어 signup.html처럼 DB에서 값을 다시 읽어올 수
+	 * 없어서 리다이렉트 쿼리로 들고 다닌다.
 	 */
 	@PostMapping("/emailSignup")
 	public String emailSignup(@RequestParam String email,
@@ -73,11 +78,12 @@ public class AuthController {
 	                          HttpServletRequest request,
 	                          HttpServletResponse response) {
 		AuthService.EmailSignupOutcome outcome = authService.emailSignup(email, password, passwordConfirm);
+		String encodedEmail = java.net.URLEncoder.encode(email, java.nio.charset.StandardCharsets.UTF_8);
 		return switch (outcome.status()) {
-			case INVALID_EMAIL -> "redirect:/auth/emailSignup?error=email";
-			case INVALID_PASSWORD -> "redirect:/auth/emailSignup?error=password";
-			case PASSWORD_MISMATCH -> "redirect:/auth/emailSignup?error=mismatch";
-			case DUPLICATE -> "redirect:/auth/emailSignup?error=duplicate";
+			case INVALID_EMAIL -> "redirect:/auth/emailSignup?error=email&email=" + encodedEmail;
+			case INVALID_PASSWORD -> "redirect:/auth/emailSignup?error=password&email=" + encodedEmail;
+			case PASSWORD_MISMATCH -> "redirect:/auth/emailSignup?error=mismatch&email=" + encodedEmail;
+			case DUPLICATE -> "redirect:/auth/emailSignup?error=duplicate&email=" + encodedEmail;
 			case SUCCESS -> "redirect:" + autoLoginAfterSignup(outcome.user(), request, response);
 		};
 	}
@@ -98,7 +104,7 @@ public class AuthController {
 		SecurityContextHolder.setContext(context);
 		SECURITY_CONTEXT_REPOSITORY.saveContext(context, request, response);
 
-		return AuthSessionInitializer.initSessionAndGetTargetUrl(request.getSession(true), user);
+		return AuthSessionInitializer.initSessionAndGetTargetUrl(request, request.getSession(true), user);
 	}
 
 	/**
