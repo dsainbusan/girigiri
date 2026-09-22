@@ -33,6 +33,12 @@ public class ViewModeSyncInterceptor implements HandlerInterceptor {
 				if (!"OWNER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "OWNER_MODE");
 				}
+			} else if (uri.equals("/mypage")) {
+				// 추가됨 (2026-09-22) — 왜: 대시보드(점주 모드)에서 "마이" 탭을 누르면 하단 탭바가
+				// /mypage 하나를 공유하는데, 여기서 무조건 USER_MODE로 되돌려버리면 컨트롤러가 받는
+				// 시점엔 이미 viewMode가 바뀌어 있어 "점주 모드에서 왔는지"를 알 방법이 없었다(마이페이지가
+				// 항상 유저용 화면·탭바로만 보이던 원인). /mypage 딱 이 경로만 지금 모드를 그대로 둔다 —
+				// /mypage/edit 등 하위 경로와 /user/**·/app은 그대로 USER_MODE로 맞춘다(아래 분기).
 			} else if (uri.startsWith("/mypage") || uri.startsWith("/user") || "/app".equals(uri)) {
 				if (!"USER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "USER_MODE");

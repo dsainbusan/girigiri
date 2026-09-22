@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('마이페이지', ~{:: #content}, 'my', false, '', null)}">
+      th:replace="~{common/layout :: layout('마이페이지', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'my'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/chat.css}">
@@ -9,6 +9,15 @@
 	<!--/*
 	  마이페이지 메인 화면
 	  담당: 문창호 (WBS 6.1 절약 가계부 · 마이페이지)
+
+	  변경됨 (2026-09-22) — 왜: 대시보드(점주 모드)에서 "마이" 탭을 눌러도 이 화면 하나를 그대로
+	  보여주는데, 하단 탭바가 항상 유저용으로 뜨고 찜한 가게·가계부처럼 점주 업무와 무관한 소비자
+	  메뉴가 섞여 있어 헷갈린다는 지적으로, session.viewMode(ViewModeSyncInterceptor가 /mypage만은
+	  건드리지 않아 여기선 실제 값을 볼 수 있다)를 기준으로 두 가지를 바꾼다:
+	  (1) 하단 탭바를 유저용/점주용으로 맞춰서 보여주고,
+	  (2) 점주 모드에서는 소비자 전용 메뉴(가계부 배너·예약 내역·찜한 가게·내가 쓴 리뷰)를 숨긴다
+	      — "내 매장 신뢰도" 카드처럼 이미 점주 전용인 것과 알림 설정·고객지원·회원정보수정·환경설정처럼
+	      공통인 것은 그대로 둔다.
 	*/-->
 
 	<!-- 1. 프로필 헤더 카드 -->
@@ -43,8 +52,9 @@
 	<!-- 2. 이번 달 절약 카드 (네이비 배너) — 카드 안 작은 반투명 pill 버튼이 눈에 잘 안 띈다는
 	     피드백(2026-09-17)으로, 바로 위 프로필 카드/아래 매장 신뢰도 카드와 같은 패턴(카드 전체를
 	     링크로 감싸고 우측에 화살표)으로 통일 — 탭 영역도 훨씬 커진다. 색은 네이비+크림 리스킨
-	     반영(흰색 대신 --c-primary-on, 그린 그림자 대신 네이비 그림자). -->
-	<a th:href="@{/user/ledger}" style="background: var(--c-primary); color: var(--c-primary-on); border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(1, 42, 140, 0.15); text-decoration: none;">
+	     반영(흰색 대신 --c-primary-on, 그린 그림자 대신 네이비 그림자).
+	     점주 모드에서는 숨김(2026-09-22) — 소비자 절약 실적이라 점주 업무 맥락과 안 맞는다. -->
+	<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/ledger}" style="background: var(--c-primary); color: var(--c-primary-on); border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(1, 42, 140, 0.15); text-decoration: none;">
 		<div>
 			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
 			<div style="font-size: 24px; font-weight: var(--fw-black); margin-top: 2px;">
@@ -76,22 +86,24 @@
 
 	<!-- 3. 메뉴 리스트 카드 -->
 	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+		<!-- 예약 내역 / 찜한 가게 / 내가 쓴 리뷰 — 전부 "손님으로서" 하는 활동이라 점주 모드에서는
+		     숨긴다(2026-09-22). 점주가 받은 예약·리뷰는 각각 /reservation/orders, /store/reviews에 따로 있다. -->
 		<!-- 예약 내역 — /reservation/my (진행중/픽업완료/노쇼·취소 탭, 영수증 PDF 보기 포함). 링크 누락돼 있던 걸 연결. -->
-		<a th:href="@{/reservation/my}" class="list-menu-item">
+		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/reservation/my}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-document"/></svg></span>
 			<span class="list-menu-item__title">예약 내역</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 찜한 가게 -->
-		<a th:href="@{/user/likes}" class="list-menu-item">
+		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/likes}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-heart"/></svg></span>
 			<span class="list-menu-item__title">찜한 가게</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 내가 쓴 리뷰 (구현 완료 — 강노은) -->
-		<a th:href="@{/user/reviews/my}" class="list-menu-item">
+		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/reviews/my}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-star"/></svg></span>
 			<span class="list-menu-item__title">내가 쓴 리뷰</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
@@ -130,12 +142,15 @@
 
 	<!-- 4-1. 점주 모드 전환 (2026-09-16 추가) — 상단바 모드 전환 버튼을 여기로 옮겨왔다(모든 화면
 	     상단바를 차지하는 대신, 유저 모드의 "홈"인 마이페이지 하단에서 전환). OWNER 계정에만 노출 —
-	     USER는 전환할 "점주 모드" 자체가 없다(common/header.html 예전 조건과 동일). -->
+	     USER는 전환할 "점주 모드" 자체가 없다(common/header.html 예전 조건과 동일).
+	     변경됨 (2026-09-22) — 왜: target이 항상 "owner"로 고정돼 있어서, 이미 점주 모드에서 대시보드
+	     "마이" 탭으로 들어온 경우에도 "점주 모드로"가 그대로 떠 있었다(누르면 대시보드로 돌아갈 뿐,
+	     "일반 모드로" 갈 방법이 이 화면엔 없었음). 지금 viewMode를 보고 라벨·target을 반대로 뒤집는다. -->
 	<form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-5)">
-		<input type="hidden" name="target" value="owner" />
+		<input type="hidden" name="target" th:value="${session.viewMode == 'OWNER_MODE'} ? 'user' : 'owner'" />
 		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
 			<span class="topbar__mode-icon" aria-hidden="true"><svg class="icon" style="width:14px;height:14px"><use href="#i-storefront"/></svg></span>
-			<span>점주 모드로</span>
+			<span th:text="${session.viewMode == 'OWNER_MODE'} ? '일반 모드로' : '점주 모드로'">점주 모드로</span>
 		</button>
 	</form>
 
