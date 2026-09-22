@@ -31,8 +31,8 @@
 			</a>
 			<nav class="mkt-nav__links">
 				<a href="#how-it-works">이용 방법</a>
-				<a href="#impact">임팩트</a>
-				<a href="#owners">사장님이신가요?</a>
+				<a href="#impact">우리가 만든 변화</a>
+				<a href="#owners">파트너 되기</a>
 			</nav>
 			<a th:href="@{/app}" class="mkt-btn mkt-btn--primary mkt-btn--sm">서비스 이용하기</a>
 		</div>
@@ -93,11 +93,39 @@
 		</div>
 	</section>
 
+	<!-- 함께하는 브랜드 — 로고 롤링(마퀴) 배너. 순수 CSS 애니메이션(translateX)으로 두 세트를
+	     이어 붙여 끊김 없이 반복시킨다(JS 불필요). aria-hidden — 로고 8개를 두 번 반복해서
+	     스크린리더가 같은 목록을 두 번 읽게 되는 걸 막는다(장식용 신뢰 배너, 핵심 정보 아님). -->
+	<section class="mkt-partners" aria-hidden="true">
+		<p class="mkt-partners__label">함께하는 브랜드</p>
+		<div class="mkt-marquee">
+			<div class="mkt-marquee__track">
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/paris-baguette.svg}" alt="파리바게뜨"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/tous-les-jours.jpg}" alt="뚜레쥬르"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/cu.svg}" alt="CU"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/gs25.svg}" alt="GS25"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/7eleven.svg}" alt="세븐일레븐"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/starbucks.svg}" alt="스타벅스"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/ediya.svg}" alt="이디야커피"></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/twosome.png}" alt="투썸플레이스"></span>
+				<!-- 아래는 위와 완전히 같은 세트(끊김 없는 반복용) -->
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/paris-baguette.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/tous-les-jours.jpg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/cu.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/gs25.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/7eleven.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/starbucks.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/ediya.svg}" alt=""></span>
+				<span class="mkt-marquee__item"><img th:src="@{/images/sponsors/twosome.png}" alt=""></span>
+			</div>
+		</div>
+	</section>
+
 	<!-- 임팩트 통계 -->
 	<section id="impact" class="mkt-section">
 		<div class="mkt__wrap">
 			<div class="mkt-section__head">
-				<div class="mkt-section__eyebrow">Impact</div>
+				<div class="mkt-section__eyebrow">우리가 만든 변화</div>
 				<h2>기리기리와 함께 달라지고 있어요</h2>
 				<p>버려질 뻔한 음식이 누군가의 한 끼가 됩니다.</p>
 			</div>
@@ -163,7 +191,7 @@
 		<div class="mkt__wrap">
 			<div class="mkt-owner">
 				<div>
-					<h2>사장님이신가요?<br>마감 재고를 손실 대신 매출로</h2>
+					<h2>파트너 되기<br>마감 재고를 손실 대신 매출로</h2>
 					<ul>
 						<li>
 							<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd"/></svg>
