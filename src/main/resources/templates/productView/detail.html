@@ -29,20 +29,17 @@
 			<span style="margin-left:auto;color:var(--c-text-mut)">›</span>
 		</a>
 
+		<!-- 수정됨 — info-row/info-row__ico가 컨슈머 CSS(components.css 등)에 정의돼 있지 않아
+		     아이콘과 텍스트가 flex로 안 묶이고 줄바꿈됐다. 이미 있는 u-row(flex+gap) 유틸로
+		     아이콘·라벨·값이 한 줄에 오게 고쳤다. -->
 		<div style="margin-top:6px">
-			<div class="info-row">
-				<span class="info-row__ico">🕘</span>
-				<div class="u-grow">
-					<b style="font-size:13px">픽업 가능 시간</b>
-					<span class="u-sub" style="font-size:13px" th:text="${#strings.isEmpty(pickupLabel)} ? '매장 영업시간 참고' : ${pickupLabel}">마감까지 2시간</span>
-				</div>
+			<div class="u-row">
+				<span>🕘</span>
+				<span style="font-size:13px"><b>픽업 가능 시간</b> <span class="u-sub" th:text="${#strings.isEmpty(pickupLabel)} ? '매장 영업시간 참고' : ${pickupLabel}">마감까지 2시간</span></span>
 			</div>
-			<div class="info-row">
-				<span class="info-row__ico"><svg class="icon"><use href="#i-box"/></svg></span>
-				<div class="u-grow">
-					<b style="font-size:13px">남은 수량</b>
-					<span class="u-sub" style="font-size:13px" th:text="${product.remainingQuantity} + '개'">3개</span>
-				</div>
+			<div class="u-row" style="margin-top:6px">
+				<svg class="icon"><use href="#i-box"/></svg>
+				<span style="font-size:13px"><b>남은 수량</b> <span class="u-sub" th:text="${product.remainingQuantity} + '개'">3개</span></span>
 			</div>
 		</div>
 
