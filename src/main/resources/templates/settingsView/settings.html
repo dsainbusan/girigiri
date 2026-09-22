@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('환경설정', ~{:: #content}, 'my', false, '', null)}">
+<body>
+<!--/*
+	마이페이지 하위 "환경설정" 화면 (2026-09-22, 문창호, WBS 6.1 인수 범위). B안(카드 분리형) —
+	섹션마다 작은 소제목 + 흰 카드. 메뉴 리스트 행은 mypage.css의 .list-menu-item을 그대로 재사용하고
+	(마이페이지와 같은 룩), 설명 줄·오른쪽 값·토글이 필요한 확장분만 이번에 mypage.css에 더했다.
+	토글(settings.css)은 alertView/settings.html의 토글과 같은 디자인이지만 그 화면 것은 인라인
+	스타일이라 재사용할 수 없어 새로 만들었다 — 그 화면은 건드리지 않았다.
+
+	"마케팅 정보 수신 동의"는 새 값이 아니라 회원가입 때 받은 동의(UserEntity.marketingAgreed)를
+	나중에 바꾸는 창구다. "정산 알림"/"매장 자동화 알림"은 이번에 새로 추가한 매장 설정값인데,
+	아직 실제 알림 발송 로직이 이 값을 확인하도록 연결돼 있지는 않다(저장만 된다) — 다음 과제.
+	비밀번호 변경/회원 탈퇴는 별도 화면이 없어 실제 기능이 있는 /mypage/edit로 함께 연결한다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/mypage.css}">
+	<link rel="stylesheet" th:href="@{/css/settings.css}">
+
+	<!-- 알림 -->
+	<div class="settings-section">
+		<p class="settings-section__title">알림</p>
+		<div class="card settings-card">
+			<a th:href="@{/user/alerts/settings}" class="list-menu-item" style="border-bottom: none;">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-bell"/></svg></span>
+				<span class="list-menu-item__body">
+					<span class="list-menu-item__title">알림 설정</span>
+					<span class="list-menu-item__desc">PUSH·찜한 가게 알림을 관리해요</span>
+				</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- 언어 -->
+	<div class="settings-section">
+		<p class="settings-section__title">언어</p>
+		<div class="card settings-card">
+			<a th:href="@{/user/settings/language}" class="list-menu-item" style="border-bottom: none;">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
+				<span class="list-menu-item__title">언어 설정</span>
+				<span class="list-menu-item__value" th:text="${settings.languageLabel}">한국어</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- 계정 — 비밀번호 변경/회원 탈퇴는 별도 화면이 없어 실제 기능이 있는 /mypage/edit로 함께 이동한다. -->
+	<div class="settings-section">
+		<p class="settings-section__title">계정</p>
+		<div class="card settings-card">
+			<a th:href="@{/mypage/edit}" class="list-menu-item">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-pencil"/></svg></span>
+				<span class="list-menu-item__title">회원정보 수정</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+			<a th:href="@{/mypage/edit}" class="list-menu-item">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-lock"/></svg></span>
+				<span class="list-menu-item__title">비밀번호 변경</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+			<a th:href="@{/mypage/edit}" class="list-menu-item list-menu-item--danger" style="border-bottom: none;">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-warning"/></svg></span>
+				<span class="list-menu-item__title">회원 탈퇴</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- 약관 및 동의 -->
+	<div class="settings-section">
+		<p class="settings-section__title">약관 및 동의</p>
+		<div class="card settings-card">
+			<form th:action="@{/user/settings/marketing}" method="post" class="list-menu-item list-menu-item--toggle">
+				<span class="list-menu-item__body">
+					<span class="list-menu-item__title">마케팅 정보 수신 동의</span>
+					<span class="list-menu-item__desc">이벤트·혜택 알림을 받아요</span>
+				</span>
+				<label class="settings-toggle">
+					<input type="checkbox" name="marketingAgreed" value="true" th:checked="${settings.marketingAgreed}"
+					       role="switch" th:attr="aria-checked=${settings.marketingAgreed}">
+					<span class="settings-toggle__track"></span>
+				</label>
+			</form>
+			<a th:href="@{/policy/terms}" class="list-menu-item">
+				<span class="list-menu-item__title">이용약관</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+			<a th:href="@{/policy/privacy}" class="list-menu-item" style="border-bottom: none;">
+				<span class="list-menu-item__title">개인정보처리방침</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</a>
+		</div>
+	</div>
+
+	<!-- 매장 관리 — OWNER 전용. 조건에 안 맞으면 섹션 자체(소제목+카드)를 렌더링하지 않는다. -->
+	<div class="settings-section" th:if="${settings.owner}">
+		<p class="settings-section__title">매장 관리</p>
+		<div class="card settings-card">
+			<form th:action="@{/user/settings/store-alerts/settlement}" method="post" class="list-menu-item list-menu-item--toggle">
+				<span class="list-menu-item__body">
+					<span class="list-menu-item__title">정산 알림</span>
+					<span class="list-menu-item__desc">정산 완료·실패를 알려드려요</span>
+				</span>
+				<label class="settings-toggle">
+					<input type="checkbox" name="enabled" value="true" th:checked="${settings.storeSettlementAlertEnabled}"
+					       role="switch" th:attr="aria-checked=${settings.storeSettlementAlertEnabled}">
+					<span class="settings-toggle__track"></span>
+				</label>
+			</form>
+			<form th:action="@{/user/settings/store-alerts/automation}" method="post"
+			      class="list-menu-item list-menu-item--toggle" style="border-bottom: none;">
+				<span class="list-menu-item__body">
+					<span class="list-menu-item__title">매장 자동화 알림</span>
+					<span class="list-menu-item__desc">POS 재고 자동 등록 결과를 알려드려요</span>
+				</span>
+				<label class="settings-toggle">
+					<input type="checkbox" name="enabled" value="true" th:checked="${settings.storeAutomationAlertEnabled}"
+					       role="switch" th:attr="aria-checked=${settings.storeAutomationAlertEnabled}">
+					<span class="settings-toggle__track"></span>
+				</label>
+			</form>
+		</div>
+	</div>
+
+	<!-- 뒤로가기는 어디서 들어왔든 항상 마이페이지로 (예: 언어 설정에서 몇 번 오가다 온 경우 등
+	     히스토리가 꼬여도 항상 같은 곳으로 돌아가게). -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (back) {
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/mypage'; });
+		}
+	})();
+	</script>
+
+	<!-- 토글은 즉시 저장 — 켜고 끄면 폼을 자동 제출해서 바로 서버에 반영한다. 전체 페이지를 다시
+	     받아오는 방식이라 새로고침처럼 맨 위로 스크롤이 튀는데, 누른 자리 그대로 있는 게 자연스러워서
+	     제출 직전 스크롤 위치를 sessionStorage에 적어두고 새로 받은 화면에서 그 위치로 복원한다. -->
+	<script th:inline="none">
+	(function () {
+		var SCROLL_KEY = 'settingsScrollY';
+
+		document.querySelectorAll('.list-menu-item--toggle input[type="checkbox"]').forEach(function (input) {
+			input.addEventListener('change', function () {
+				sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+				input.form.requestSubmit();
+			});
+		});
+
+		var savedY = sessionStorage.getItem(SCROLL_KEY);
+		if (savedY !== null) {
+			sessionStorage.removeItem(SCROLL_KEY);
+			window.scrollTo(0, parseInt(savedY, 10) || 0);
+		}
+	})();
+	</script>
+</div>
+</body>
+</html>

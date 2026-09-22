@@ -1,168 +1,298 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('매출 리포트', ~{:: #content}, '', true, '점주 모드', null)}">
+      th:replace="~{common/layout :: layout('매출 리포트', ~{:: #content}, '', true, '', null)}">
 <body>
 <!--/*
 	매출 리포트 — WBS 3.0, 문창호. /store/sales-report?period=today|thisweek|lastweek (또는 ?from=&to=)
-	Supabase(sales 테이블)의 (날짜,상품)별 마감 스냅샷으로 매출 성과 + 구제 성과를 함께 낸다.
-	기존 판매·폐기 리포트(/store/report)를 이 화면으로 대체한다.
-	기간 pill(오늘/이번 주/지난 주) + 직접 선택. 주 경계는 정산 주(월~일)와 같아서 정산 확정분과 대조된다.
-	화면 숫자는 SalesReportService.build() 하나에서 나온다.
+	A안(히어로 요약형): 상단 네이비 그라데이션 히어로 + 둥근 서피스 크림 바디 시트 + 대시보드 컴포넌트 재사용
 */-->
-<div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/store.css}">
+<div id="content" th:fragment="content" class="page page--sales-report">
+	<link rel="stylesheet" th:href="@{/css/store.css?v=20260922c}">
 
-	<!-- Supabase 미설정 -->
-	<div th:unless="${configured}" class="card" style="text-align: center">
-		<p style="font-size: var(--fs-xl)">🔌</p>
-		<p class="u-bold" style="font-size: var(--fs-md)">매출 데이터 저장소가 아직 연결 안 됐어요</p>
-		<p class="u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-2); line-height: 1.5">
-			.env에 SUPABASE_URL / SUPABASE_SERVICE_KEY를 채우면 매출 리포트가 켜져요.
-		</p>
-	</div>
-
-	<div th:if="${configured}">
-		<p class="u-bold" style="font-size: var(--fs-md)" th:text="${report.storeName}">○○베이커리</p>
-
-		<!-- 조회 기간 — 정산 상세와 동일한 pill + 직접 선택 -->
-		<p class="settle-period__title">조회 기간</p>
-		<p class="settle-period__current" th:text="${report.periodLabel}">2026-09-08 ~ 2026-09-14 (이번 주)</p>
-		<div class="settle-period">
-			<a th:href="@{/store/sales-report(period='today')}" class="settle-period__pill"
-			   th:classappend="${report.periodKey == 'today'} ? ' is-active'">오늘</a>
-			<a th:href="@{/store/sales-report(period='thisweek')}" class="settle-period__pill"
-			   th:classappend="${report.periodKey == 'thisweek'} ? ' is-active'">이번 주</a>
-			<a th:href="@{/store/sales-report(period='lastweek')}" class="settle-period__pill"
-			   th:classappend="${report.periodKey == 'lastweek'} ? ' is-active'">지난 주</a>
-			<button type="button" id="sales-range-toggle" class="settle-period__pill settle-period__pill--toggle"
-			        th:classappend="${report.periodKey == 'custom'} ? ' is-active'"
-			        aria-controls="sales-range-form" aria-expanded="false">📅 직접 선택</button>
+	<!-- ================= 1. 상단 딥 네이비 그라데이션 히어로 ================= -->
+	<section class="dash-hero" th:if="${configured}">
+		<!-- 매장명 · 조회 기간 한 줄 (예: 창호베이커리 중앙점 · 2026-09-15 ~ 2026-09-21 (지난 주)) -->
+		<div class="dash-hero__date-label" th:text="${report.storeName} + ' · ' + ${report.periodLabel}">
+			○○베이커리 · 2026-09-15 ~ 2026-09-21 (지난 주)
 		</div>
-		<form method="get" th:action="@{/store/sales-report}" class="settle-range is-hidden" id="sales-range-form">
-			<input type="date" name="from" th:value="${report.fromDate}" class="settle-range__date" aria-label="시작일" required>
-			<span class="settle-range__tilde">~</span>
-			<input type="date" name="to" th:value="${report.toDate}" class="settle-range__date" aria-label="종료일" required>
-			<button type="submit" class="settle-range__btn is-active">조회</button>
-		</form>
 
-		<!-- 매출 -->
-		<div class="card" style="margin-top: var(--s-4)">
-			<div class="u-row" style="justify-content: space-between; align-items: baseline">
-				<span class="u-bold" style="font-size: var(--fs-sm)">회수 매출</span>
-				<span class="u-bold u-primary" style="font-size: var(--fs-xl)"
-				      th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')} + '원'">1,240,000원</span>
-			</div>
-			<div class="report-summary" style="margin-top: var(--s-2)">
-				<div><span>판매 수량</span><b th:text="${report.soldCount} + '개'">88개</b></div>
-				<div><span>할인 제공액</span><b th:text="${#numbers.formatInteger(report.discountGiven, 0, 'COMMA')} + '원'">92,000원</b></div>
-				<div th:if="${report.prevTotalSales != null}">
-					<span>전주(<span th:text="${#numbers.formatInteger(report.prevTotalSales, 0, 'COMMA')}">280,000</span>원) 대비</span>
-					<b th:classappend="${report.deltaPercent >= 0} ? ' u-primary' : ' u-danger'"
-					   th:text="${(report.deltaPercent >= 0 ? '▲ +' : '▼ ') + report.deltaPercent + '%'}">▲ +27%</b>
-				</div>
+		<!-- 메인 회수 매출 하이라이트 + 전주 대비 배지 (0원 밑 중앙 정렬) -->
+		<div class="dash-hero__balance-box">
+			<div class="dash-hero__balance-label">회수 매출</div>
+			<div class="dash-hero__balance-amount"
+			      th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')} + '원'">1,240,000원</div>
+			<!-- 전주 대비 배지 (전주 매출이 있을 때만, 금액 아래 중앙 정렬) -->
+			<div th:if="${report.prevTotalSales != null}" class="sales-delta-badge"
+			     th:title="${'전주 ' + #numbers.formatInteger(report.prevTotalSales, 0, 'COMMA') + '원 대비 ' + (report.deltaPercent >= 0 ? '+' : '') + report.deltaPercent + '%'}">
+				<span>전주(<span th:text="${#numbers.formatInteger(report.prevTotalSales, 0, 'COMMA')}">280,000</span>원) 대비</span>
+				<span class="sales-delta-badge__arrow" th:classappend="${report.deltaPercent >= 0} ? ' is-up' : ' is-down'"
+				      th:text="${report.deltaPercent >= 0} ? '▲' : '▼'">▲</span>
+				<span class="sales-delta-badge__val"
+				      th:text="${(report.deltaPercent >= 0 ? '+' : '') + report.deltaPercent + '%'}">+27%</span>
 			</div>
 		</div>
 
-		<!-- 구제 · 폐기 -->
-		<div class="card" style="margin-top: var(--s-3)">
-			<div class="u-row" style="justify-content: space-between; align-items: baseline">
-				<span class="u-bold" style="font-size: var(--fs-sm)">구제율</span>
-				<span class="u-bold u-primary" style="font-size: var(--fs-xl)"
-				      th:text="${report.rescueRatePercent} + '%'">82%</span>
+		<!-- 반투명 2분할 스탯 바: 판매 수량 88개 / 구제율 82% -->
+		<div class="dash-hero__stat-bar">
+			<div class="dash-hero__stat-col">
+				<span class="dash-hero__stat-name">판매 수량</span>
+				<span class="dash-hero__stat-num"><span th:text="${report.soldCount}">88</span><small>개</small></span>
 			</div>
-			<div class="report-summary" style="margin-top: var(--s-2)">
-				<div><span>등록</span><b th:text="${report.registeredCount} + '개'">107개</b></div>
-				<div><span>판매</span><b th:text="${report.soldCount} + '개'">88개</b></div>
-				<div><span>폐기</span><b th:text="${report.wastedCount} + '개'">19개</b></div>
-				<div><span>CO₂ 절감</span><b th:text="${report.co2Kg} + 'kg'">26.4kg</b></div>
+			<div class="dash-hero__stat-divider"></div>
+			<div class="dash-hero__stat-col">
+				<span class="dash-hero__stat-name">구제율</span>
+				<span class="dash-hero__stat-num"><span th:text="${report.rescueRatePercent}">82</span><small>%</small></span>
 			</div>
-			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: var(--s-2)">
-				구제율 = 판매 ÷ 등록. CO₂ 절감은 카테고리별 배출계수 × 판매 수량 추정치예요.
+		</div>
+	</section>
+
+	<!-- ================= 2. 둥근 윗모서리 크림 바디 시트 ================= -->
+	<section class="dash-sheet">
+		<!-- Supabase 미설정 안내 -->
+		<div th:unless="${configured}" class="dash-card sales-empty-card">
+			<div class="sales-empty-card__icon" aria-hidden="true">
+				<span style="font-size: 24px">🔌</span>
+			</div>
+			<p class="sales-empty-card__title">매출 데이터 저장소가 아직 연결 안 됐어요</p>
+			<p class="sales-empty-card__sub">
+				.env에 SUPABASE_URL / SUPABASE_SERVICE_KEY를 채우면 매출 리포트가 켜져요.
 			</p>
 		</div>
 
-		<!-- 빈 상태 -->
-		<div th:if="${report.empty}" class="card" style="margin-top: var(--s-3); text-align: center">
-			<p class="u-sub" style="font-size: var(--fs-sm)">이 기간에 매출 데이터가 없어요.</p>
-		</div>
-
-		<div th:unless="${report.empty}">
-			<!-- 일별 그래프 (판매 초록 / 폐기 빨강 스택) -->
-			<div th:if="${report.showGraph}">
-				<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-top: var(--s-4)">
-					<p class="u-bold" style="font-size: var(--fs-sm)">일별 판매 · 폐기</p>
-					<span class="u-sub" style="font-size: var(--fs-xs)">
-						<span style="color: var(--c-primary)">● 판매</span>
-						<span style="color: var(--c-danger); margin-left: 6px">● 폐기</span>
-					</span>
+		<div th:if="${configured}">
+			<!-- 1) 기간 선택 (A안: 3분할 세그먼트 + 우측 독립 캘린더 버튼) + 직접 선택 폼 -->
+			<div class="settle-period" role="tablist" aria-label="조회 기간 선택">
+				<!-- 좌측: [ 오늘 | 이번 주 | 지난 주 ] 일체형 3분할 세그먼트 컨트롤 -->
+				<div class="settle-period__seg" role="group" aria-label="기간 프리셋">
+					<button type="button" class="settle-period__pill settle-period__seg-btn"
+					        th:classappend="${report.periodKey == 'today'} ? ' is-active' : ''"
+					        th:attr="aria-selected=${report.periodKey == 'today' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'today' ? 'true' : 'false'}"
+					        onclick="location.href='/store/sales-report?period=today'">오늘</button>
+					<button type="button" class="settle-period__pill settle-period__seg-btn"
+					        th:classappend="${report.periodKey == 'thisweek'} ? ' is-active' : ''"
+					        th:attr="aria-selected=${report.periodKey == 'thisweek' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'thisweek' ? 'true' : 'false'}"
+					        onclick="location.href='/store/sales-report?period=thisweek'">이번 주</button>
+					<button type="button" class="settle-period__pill settle-period__seg-btn"
+					        th:classappend="${report.periodKey == 'lastweek'} ? ' is-active' : ''"
+					        th:attr="aria-selected=${report.periodKey == 'lastweek' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'lastweek' ? 'true' : 'false'}"
+					        onclick="location.href='/store/sales-report?period=lastweek'">지난 주</button>
 				</div>
-				<div class="bar-chart-wrap">
-					<p class="bar-chart__hint" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
-					<div class="bar-chart">
-						<div class="bar-chart__col" th:each="d : ${report.days}"
-						     th:title="${d.label + ' · 판매 ' + d.soldQty + ' / 폐기 ' + d.wastedQty + ' · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}"
-						     th:data-tip="${d.label + ' · 판매 ' + d.soldQty + '개 · 폐기 ' + d.wastedQty + '개 · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}">
-							<div class="bar-chart__track">
-								<div class="bar-chart__fill" th:style="'height:' + ${d.soldHeightPercent + d.wastedHeightPercent} + '%'">
-									<div class="bar-chart__seg bar-chart__seg--waste" th:style="'flex-grow:' + ${d.wastedHeightPercent}"></div>
-									<div class="bar-chart__seg bar-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}"></div>
-								</div>
-							</div>
-							<div class="bar-chart__label" th:text="${d.showLabel} ? ${d.label} : ''">1</div>
-						</div>
+
+				<!-- 우측: [ 📅 직접 선택 ▾ ] 독립형 액션 버튼 -->
+				<button type="button" id="sales-range-toggle" class="settle-period__pill settle-period__custom-btn settle-period__pill--toggle"
+				        th:classappend="${report.periodKey == 'custom'} ? ' is-active' : ''"
+				        th:attr="aria-selected=${report.periodKey == 'custom' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'custom' ? 'true' : 'false'}, aria-expanded=${report.periodKey == 'custom' ? 'true' : 'false'}"
+				        aria-controls="sales-range-form">
+					<svg class="settle-period__icon-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+						<line x1="16" y1="2" x2="16" y2="6"></line>
+						<line x1="8" y1="2" x2="8" y2="6"></line>
+						<line x1="3" y1="10" x2="21" y2="10"></line>
+					</svg>
+					<span>직접 선택</span>
+					<svg class="settle-period__icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<polyline points="6 9 12 15 18 9"></polyline>
+					</svg>
+				</button>
+			</div>
+			<form method="get" th:action="@{/store/sales-report}" class="settle-range"
+			      th:classappend="${report.periodKey == 'custom'} ? '' : ' is-hidden'" id="sales-range-form">
+				<input type="date" name="from" th:value="${report.fromDate}" class="settle-range__date" aria-label="시작일" required>
+				<span class="settle-range__tilde">~</span>
+				<input type="date" name="to" th:value="${report.toDate}" class="settle-range__date" aria-label="종료일" required>
+				<button type="submit" class="settle-range__btn is-active">조회</button>
+			</form>
+
+			<!-- [빈 상태] 조회 기간에 데이터가 없을 때: 2)~6) 숨기고 단일 안내 카드만 표시 -->
+			<div th:if="${report.empty}" class="dash-card sales-empty-card">
+				<div class="sales-empty-card__icon" aria-hidden="true">
+					<svg class="icon"><use href="#i-document"/></svg>
+				</div>
+				<p class="sales-empty-card__title">이 기간에 매출 데이터가 없어요.</p>
+				<p class="sales-empty-card__sub">다른 기간을 선택하거나 영업일이 있는 주간을 골라보세요.</p>
+			</div>
+
+			<!-- [데이터 있을 때]: 2) ~ 6) 순서대로 표시 -->
+			<div th:unless="${report.empty}">
+				<!-- 2) 흰 카드: 2분할로 "판매 수량 88개" / "할인 제공액 92,000원" -->
+				<div class="dash-card sales-metrics-split">
+					<div class="sales-metric-col">
+						<span class="sales-metric-col__label">판매 수량</span>
+						<span class="sales-metric-col__value"><b th:text="${report.soldCount}">88</b>개</span>
+					</div>
+					<div class="sales-metric-col__divider" aria-hidden="true"></div>
+					<div class="sales-metric-col">
+						<span class="sales-metric-col__label">할인 제공액</span>
+						<span class="sales-metric-col__value"><b th:text="${#numbers.formatInteger(report.discountGiven, 0, 'COMMA')}">92,000</b>원</span>
 					</div>
 				</div>
-			</div>
 
-			<!-- 상품별 -->
-			<p class="u-bold" style="font-size: var(--fs-sm); margin-top: var(--s-4)">상품별</p>
-			<div class="report-table-wrap" style="margin-top: var(--s-2)">
-				<table class="report-table">
-					<thead>
-					<tr><th style="text-align:left">상품명</th><th>등록</th><th>판매</th><th>폐기</th><th>매출</th><th>구제율</th></tr>
-					</thead>
-					<tbody>
-					<tr th:each="p : ${report.products}">
-						<td style="text-align:left" th:text="${p.name}">크림빵</td>
-						<td th:text="${p.registeredQty}">30</td>
-						<td th:text="${p.soldQty}">25</td>
-						<td th:text="${p.wastedQty}">5</td>
-						<td th:text="${#numbers.formatInteger(p.amount, 0, 'COMMA')}">50,000</td>
-						<td th:text="${p.rescueRatePercent} + '%'">83%</td>
-					</tr>
-					</tbody>
-					<tfoot>
-					<tr>
-						<td style="text-align:left">합계</td>
-						<td th:text="${report.registeredCount}">107</td>
-						<td th:text="${report.soldCount}">88</td>
-						<td th:text="${report.wastedCount}">19</td>
-						<td th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')}">1,240,000</td>
-						<td th:text="${report.rescueRatePercent} + '%'">82%</td>
-					</tr>
-					</tfoot>
-				</table>
+				<!-- 3) 섹션 제목 "구제 · 폐기 현황" (우측 보조 텍스트) + 4칸 카드 + 안내 문구 -->
+				<div class="dash-section-head">
+					<h3 class="dash-section-title">구제 · 폐기 현황</h3>
+					<span class="dash-section-more"
+					      th:text="${report.periodKey == 'today' ? '오늘' : (report.periodKey == 'thisweek' ? '이번 주' : (report.periodKey == 'lastweek' ? '지난 주' : report.periodLabel))}">지난 주</span>
+				</div>
+				<div class="dash-card sales-rescue-card">
+					<div class="sales-rescue-grid">
+						<!-- 구제율 강조 -->
+						<div class="sales-rescue-item sales-rescue-item--highlight">
+							<span class="sales-rescue-item__label">구제율</span>
+							<span class="sales-rescue-item__value sales-rescue-item__value--highlight">
+								<b th:text="${report.rescueRatePercent}">82</b>%
+							</span>
+						</div>
+						<!-- 등록 -->
+						<div class="sales-rescue-item">
+							<span class="sales-rescue-item__label">등록</span>
+							<span class="sales-rescue-item__value">
+								<b th:text="${report.registeredCount}">107</b>개
+							</span>
+						</div>
+						<!-- 판매 -->
+						<div class="sales-rescue-item">
+							<span class="sales-rescue-item__label">판매</span>
+							<span class="sales-rescue-item__value">
+								<b th:text="${report.soldCount}">88</b>개
+							</span>
+						</div>
+						<!-- 폐기 -->
+						<div class="sales-rescue-item">
+							<span class="sales-rescue-item__label">폐기</span>
+							<span class="sales-rescue-item__value">
+								<b th:text="${report.wastedCount}">19</b>개
+							</span>
+						</div>
+					</div>
+					<div class="sales-rescue-card__footer">
+						<p class="sales-rescue-card__desc">구제율 = 판매 ÷ 등록. CO₂ 절감은 카테고리별 배출계수 × 판매 수량 추정치예요.</p>
+						<p class="sales-rescue-card__co2">이번 기간 CO₂ 절감 <strong th:text="${report.co2Kg} + 'kg'">5.5kg</strong></p>
+					</div>
+				</div>
+
+				<!--/* 4) 일별 판매 · 폐기 섹션 (2일 이상 기간일 때만 표시, 하루 기간이면 생략) */-->
+				<div th:if="${report.showGraph}">
+					<div class="dash-section-head">
+						<h3 class="dash-section-title">일별 판매 · 폐기</h3>
+						<span class="dash-legend-inline">
+							<span class="tally__dot" style="background: var(--c-primary)"></span>판매
+							<span class="tally__dot" style="background: var(--c-danger)"></span>폐기
+						</span>
+					</div>
+					<div class="dash-card">
+						<div class="bar-chart-wrap dash-chart">
+							<div class="dash-chart__plot">
+								<div class="dash-chart__axis" aria-hidden="true">
+									<span class="is-zero">0</span>
+									<span class="is-mid is-hidden"></span>
+									<span class="is-max is-hidden"></span>
+								</div>
+								<div class="dash-chart__area">
+									<i class="dash-chart__line dash-chart__line--zero" aria-hidden="true"></i>
+									<i class="dash-chart__line dash-chart__line--mid" aria-hidden="true"></i>
+									<i class="dash-chart__line dash-chart__line--max" aria-hidden="true"></i>
+									<div class="bar-chart">
+										<button type="button" class="bar-chart__col" th:each="d : ${report.days}"
+										        aria-pressed="false"
+										        th:attr="aria-label=${d.label + ' 판매 ' + d.soldQty + '개, 폐기 ' + d.wastedQty + '개, 매출 ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}"
+										        th:title="${d.label + ' | 판매 ' + d.soldQty + '개 · 폐기 ' + d.wastedQty + '개 · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}"
+										        th:data-tip="${d.label + ' · 판매 ' + d.soldQty + '개 · 폐기 ' + d.wastedQty + '개 · ' + #numbers.formatInteger(d.amount, 0, 'COMMA') + '원'}"
+										        th:data-total="${d.soldQty + d.wastedQty}">
+											<div class="bar-chart__track">
+												<div class="bar-chart__fill" th:style="'height:' + ${d.soldHeightPercent + d.wastedHeightPercent} + '%'">
+													<div class="bar-chart__seg bar-chart__seg--waste" th:style="'flex-grow:' + ${d.wastedHeightPercent}"></div>
+													<div class="bar-chart__seg bar-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}"></div>
+												</div>
+											</div>
+											<div class="bar-chart__label" th:text="${d.showLabel} ? ${d.label} : ''">09/18</div>
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<p class="bar-chart__hint" aria-live="polite" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
+					</div>
+					<p class="dash-chart__total">판매 <span th:text="${report.soldCount}">88</span>개 · 폐기 <span th:text="${report.wastedCount}">19</span>개</p>
+				</div>
+
+				<!-- 5) 섹션 제목 "상품별 판매" (우측 "N개 상품") + 가로 스크롤 Sticky 표 -->
+				<div class="dash-section-head">
+					<h3 class="dash-section-title">상품별 판매</h3>
+					<span class="dash-section-more" th:text="${#lists.size(report.products)} + '개 상품'">N개 상품</span>
+				</div>
+				<div class="dash-card" style="padding: 0; overflow: hidden;">
+					<div class="report-table-wrap">
+						<table class="report-table">
+							<thead>
+								<tr>
+									<th class="is-sticky-col" style="text-align:left">상품명</th>
+									<th>등록</th>
+									<th>판매</th>
+									<th>폐기</th>
+									<th style="text-align:right">매출</th>
+									<th>구제율</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="p : ${report.products}">
+									<td class="is-sticky-col" style="text-align:left" th:text="${p.name}">크림빵</td>
+									<td th:text="${p.registeredQty}">30</td>
+									<td th:text="${p.soldQty}">25</td>
+									<td th:text="${p.wastedQty}">5</td>
+									<td style="text-align:right" th:text="${#numbers.formatInteger(p.amount, 0, 'COMMA')}">50,000</td>
+									<td th:text="${p.rescueRatePercent} + '%'">83%</td>
+								</tr>
+							</tbody>
+							<tfoot>
+								<tr>
+									<td class="is-sticky-col" style="text-align:left">합계</td>
+									<td th:text="${report.registeredCount}">107</td>
+									<td th:text="${report.soldCount}">88</td>
+									<td th:text="${report.wastedCount}">19</td>
+									<td style="text-align:right" th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')}">1,240,000</td>
+									<td th:text="${report.rescueRatePercent} + '%'">82%</td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+
+				<!-- 6) 섹션 제목 "리포트 파일" + Excel / PDF 다운로드 버튼 -->
+				<div class="dash-section-head">
+					<h3 class="dash-section-title">리포트 파일</h3>
+				</div>
+				<div class="report-file-actions">
+					<a th:href="@{/store/sales-report/excel(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
+					   target="_blank" rel="noopener" class="report-download-btn"
+					   aria-label="Excel 리포트 다운로드 (새 탭으로 열기)">
+						<svg class="icon report-btn-icon" aria-hidden="true"><use href="#i-document"/></svg>
+						<span>Excel</span>
+					</a>
+					<a th:href="@{/store/sales-report/pdf(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
+					   target="_blank" rel="noopener" class="report-download-btn"
+					   aria-label="PDF 리포트 다운로드 (새 탭으로 열기)">
+						<svg class="icon report-btn-icon" aria-hidden="true"><use href="#i-document"/></svg>
+						<span>PDF</span>
+					</a>
+				</div>
 			</div>
 		</div>
-
-		<!-- 리포트 파일 — 새 탭에서 열리고, 저장은 뷰어의 다운로드 버튼으로 -->
-		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-4)">
-			<a th:href="@{/store/sales-report/excel(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
-			   target="_blank" rel="noopener" class="btn btn--outline btn--block">Excel</a>
-			<a th:href="@{/store/sales-report/pdf(period=${report.periodKey}, from=${report.fromDate}, to=${report.toDate})}"
-			   target="_blank" rel="noopener" class="btn btn--outline btn--block">PDF</a>
-		</div>
-	</div>
+	</section>
 
 	<script th:inline="none">
 	(function () {
+		// 하단 탭바가 없는 화면이므로 레이아웃 기본 하단 여백 제거
+		var main = document.querySelector('.app__main');
+		if (main) { main.style.paddingBottom = '0px'; }
+
+		// 뒤로가기 버튼 -> /store/dashboard
 		var back = document.querySelector('.topbar__back[data-back]');
 		if (back) {
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/store/dashboard'; });
 		}
 
-		// "직접 선택" 토글 — 누를 때만 날짜 입력칸이 열린다 (정산 상세와 동일).
+		// "직접 선택" 토글
 		var btn = document.getElementById('sales-range-toggle');
 		var form = document.getElementById('sales-range-form');
 		if (btn && form) {
@@ -173,6 +303,41 @@
 					var first = form.querySelector('input[name="from"]');
 					if (first) { first.focus(); }
 				}
+			});
+		}
+
+		// 차트 y축 눈금 및 aria-pressed 인터랙션
+		var chart = document.querySelector('.dash-chart');
+		if (chart) {
+			var cols = chart.querySelectorAll('.bar-chart__col');
+			var maxVal = 0;
+			cols.forEach(function (col) {
+				var tot = parseInt(col.getAttribute('data-total') || '0', 10);
+				if (tot > maxVal) maxVal = tot;
+			});
+			if (maxVal > 0) {
+				var maxSpan = chart.querySelector('.dash-chart__axis .is-max');
+				var midSpan = chart.querySelector('.dash-chart__axis .is-mid');
+				if (maxSpan) { maxSpan.textContent = maxVal; maxSpan.classList.remove('is-hidden'); }
+				if (midSpan) {
+					if (maxVal >= 2) {
+						midSpan.textContent = Math.round(maxVal / 2);
+						midSpan.classList.remove('is-hidden');
+					} else {
+						midSpan.classList.add('is-hidden');
+					}
+				}
+			}
+
+			// aria-pressed 동기화
+			chart.addEventListener('click', function (e) {
+				var tapped = e.target.closest('.bar-chart__col');
+				if (!tapped) return;
+				setTimeout(function () {
+					cols.forEach(function (c) {
+						c.setAttribute('aria-pressed', c.classList.contains('is-selected') ? 'true' : 'false');
+					});
+				}, 10);
 			});
 		}
 	})();

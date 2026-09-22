@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('언어 설정', ~{:: #content}, 'my', false, '', null)}">
+<body>
+<!--/*
+	환경설정 > 언어 설정 (2026-09-22, 문창호). 지금은 고른 값을 저장만 하고(UserEntity.language)
+	실제 화면 다국어 처리는 없는 껍데기다. 각 행은 <form>+숨김 input으로 POST해서 그 자리에서
+	선택을 바꾸고(전체 페이지 재조회), 뒤로가기로 돌아가면 환경설정의 "언어 설정" 행 값도 갱신된다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/mypage.css}">
+	<link rel="stylesheet" th:href="@{/css/settings.css}">
+
+	<div class="card settings-card">
+		<form th:each="lang, iter : ${languages}" th:action="@{/user/settings/language}" method="post">
+			<input type="hidden" name="language" th:value="${lang.code}">
+			<button type="submit" class="list-menu-item list-menu-item--radio"
+			        th:classappend="${lang.code == currentCode} ? ' is-selected' : ''"
+			        th:style="${iter.last} ? 'border-bottom: none' : ''"
+			        th:attr="aria-pressed=${lang.code == currentCode}">
+				<span class="list-menu-item__title" th:text="${lang.label}">한국어</span>
+				<svg th:if="${lang.code == currentCode}" class="settings-check" viewBox="0 0 24 24" fill="none"
+				     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<polyline points="20 6 9 17 4 12"/>
+				</svg>
+			</button>
+		</form>
+	</div>
+
+	<!-- 뒤로가기는 항상 환경설정으로 (환경설정에서 들어온 depth+1 화면이라 그 자리로 돌아가는 게 자연스럽다). -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (back) {
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/user/settings'; });
+		}
+	})();
+	</script>
+</div>
+</body>
+</html>

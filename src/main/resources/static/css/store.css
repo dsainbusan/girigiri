@@ -219,22 +219,127 @@ a.stat-card:hover .stat-card__go--gear {
 .bar-chart__label { font-size: 10px; color: var(--c-text-mut); margin-top: var(--s-1); }
 .bar-chart__label.is-today { color: var(--c-text); font-weight: var(--fw-bold); }
 
-/* ---------- 대시보드 "처리할 일" 배너 ---------- */
+/* ---------- 대시보드 "처리할 일" 배너 (핀테크 푸시 알림 카드) ---------- */
 .todo-banner {
-  border: 1px solid var(--c-primary-border);
-  border-radius: var(--r-lg);
-  background: var(--c-primary-weak);
-  overflow: hidden;
-  margin-bottom: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
 }
+
+/* 기존 단순 행 호환 (.settlement.html 등) */
 .todo-banner__row {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--s-3) var(--s-4);
-  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary-strong);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-primary-strong);
+  background: var(--c-primary-weak);
+  border: 1px solid var(--c-primary-border);
+  border-radius: var(--r-md);
+  text-decoration: none;
 }
-.todo-banner__row + .todo-banner__row { border-top: 1px solid var(--c-primary-border); }
 .todo-banner__row b { color: var(--c-primary); }
 .todo-banner__go { font-size: var(--fs-lg); color: var(--c-primary); }
+
+/* 신규 프리미엄 알림 카드 (.todo-banner__card) */
+.todo-banner__card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 13px 16px;
+  background: var(--c-surface);
+  border: 1px solid rgba(15, 43, 140, 0.09);
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.todo-banner__card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--c-primary);
+  border-radius: 4px 0 0 4px;
+}
+.todo-banner__card--warning::before {
+  background: #F59E0B; /* 주의 앰버 */
+}
+.todo-banner__card:active {
+  transform: scale(0.98);
+}
+.todo-banner__card:hover {
+  border-color: rgba(15, 43, 140, 0.2);
+  box-shadow: 0 6px 18px rgba(15, 43, 140, 0.09);
+}
+.todo-banner__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--c-bg); /* #F6F0E3 웜 크림 베이지 */
+  color: var(--c-primary);  /* #0F2B8C 기리기리 딥 네이비 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.todo-banner__card--warning .todo-banner__icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: #D97706;
+}
+.todo-banner__icon .icon {
+  width: 20px;
+  height: 20px;
+}
+.todo-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+.todo-banner__title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  line-height: 1.25;
+}
+.todo-banner__desc {
+  font-size: var(--fs-xs);
+  color: var(--c-text-sub);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+.todo-banner__action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.todo-banner__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+}
+.todo-banner__badge--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+}
+.todo-banner__arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--c-text-mut);
+}
 
 /* ---------- "오늘의 구제" 상단 POS 상태 스트립 ---------- */
 .pos-strip {
@@ -266,12 +371,30 @@ a.stat-card:hover .stat-card__go--gear {
   cursor: default;
 }
 
-/* 발행 대기 초안의 출처 뱃지 (POS 재고 / 템플릿 / 직접) */
+/* 발행 대기 초안의 출처 뱃지 (POS 재고 / 템플릿 / 직접) — 판매중 칩과 통일된 소프트 pill 뱃지 */
 .draft-src {
   flex-shrink: 0;
-  font-size: var(--fs-xs); color: var(--c-text-sub);
-  background: var(--c-surface); border: 1px solid var(--c-line);
-  border-radius: var(--r-sm); padding: 1px 6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-pill);
+  padding: 3px var(--s-2);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.draft-src--pos {
+  background: rgba(0, 21, 75, 0.06);
+  color: var(--c-primary);
+  border: 1px solid rgba(0, 21, 75, 0.12);
+}
+.draft-src--template {
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  border: 1px solid rgba(13, 148, 136, 0.18);
+}
+.draft-src--direct {
+  background: var(--c-bg);
+  color: var(--c-text-sub);
+  border: 1px solid var(--c-line);
 }
 
 /* POS 메뉴별 설정 — 라벨 붙은 할인율 / 앱 판매 수량 칸 */
@@ -690,6 +813,334 @@ a.stat-card:hover .stat-card__go--gear {
 .stock-item__more:hover { background: var(--c-bg); color: var(--c-text); }
 .stock-item__more:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 
+/* 판매 대기 카드 하단 액션 & 인포 배너 (2026-09-21) */
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: rgba(0, 21, 75, 0.04);
+  border: 1px solid rgba(0, 21, 75, 0.08);
+  border-radius: var(--r-md);
+  padding: 9px 12px;
+  font-size: var(--fs-xs);
+  color: var(--c-text-sub);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.draft-banner svg {
+  flex-shrink: 0;
+  color: var(--c-primary);
+}
+.stock-item__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  gap: var(--s-2);
+}
+.stock-item__foot-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.btn--publish {
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 21, 75, 0.15);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.3;
+}
+.btn--publish:hover {
+  background: #08216F;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 21, 75, 0.22);
+}
+.btn--publish:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 21, 75, 0.14);
+}
+.draft-cutoff-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-mut);
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+
+/* 판매 대기 카드 상단 제외 ✕ 버튼 */
+.btn-item-dismiss {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--r-pill);
+  color: var(--c-text-mut);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: -4px;
+}
+.btn-item-dismiss:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--c-danger);
+}
+
+/* 판매 대기 카드 하단 수정 버튼 */
+.btn--quick-edit {
+  background: var(--c-surface);
+  color: var(--c-text-sub);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  padding: 5px 12px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+.btn--quick-edit:hover {
+  background: var(--c-bg);
+  color: var(--c-text);
+  border-color: var(--c-primary-border);
+}
+
+/* =====================================================================
+   간편 수정 바텀시트 팝업 (Quick Edit Sheet)
+   ===================================================================== */
+.quick-edit-panel {
+  padding: var(--s-4) var(--s-4) calc(var(--s-5) + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.quick-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--s-4);
+}
+.quick-edit-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin: 0;
+}
+.quick-edit-sub {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+  margin-top: 2px;
+  display: block;
+}
+.quick-edit-close-btn {
+  background: none;
+  border: none;
+  color: var(--c-text-sub);
+  padding: 4px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quick-edit-close-btn:hover {
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.qe-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.qe-label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+
+/* 수량 스텝퍼 */
+.qe-stepper {
+  display: flex;
+  align-items: center;
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  width: 100%;
+}
+.qe-stepper__btn {
+  width: 44px;
+  height: 40px;
+  border: none;
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.1s ease;
+}
+.qe-stepper__btn:active {
+  transform: scale(0.96);
+  background: var(--c-line-weak);
+}
+.qe-stepper__input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.qe-stepper__input {
+  width: 60px;
+  text-align: center;
+  border: none;
+  background: none;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  outline: none;
+  -moz-appearance: textfield;
+}
+.qe-stepper__input::-webkit-outer-spin-button,
+.qe-stepper__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qe-stepper__unit {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+}
+
+/* 할인율 세그먼트 토글 */
+.qe-rate-toggle {
+  display: flex;
+  background: var(--c-bg);
+  border-radius: var(--r-md);
+  padding: 3px;
+  gap: 3px;
+}
+.qe-rate-tab {
+  flex: 1;
+  cursor: pointer;
+}
+.qe-rate-tab input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.qe-rate-tab__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  transition: all 0.15s ease;
+}
+.qe-rate-tab input:checked + .qe-rate-tab__box {
+  background: var(--c-surface);
+  color: var(--c-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 직접 지정 할인 칩 및 인풋 */
+.qe-chips {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+}
+.qe-chip {
+  flex: 1 1 auto;
+  min-width: 48px;
+  padding: 6px 8px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--c-text-sub);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.qe-chip:hover, .qe-chip.is-active {
+  border-color: var(--c-primary);
+  background: var(--c-primary-weak);
+  color: var(--c-primary);
+}
+.qe-rate-input {
+  width: 120px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  text-align: right;
+  font-weight: var(--fw-bold);
+}
+
+/* 실시간 가격 미리보기 박스 */
+.qe-price-preview {
+  margin-top: var(--s-4);
+  background: rgba(0, 21, 75, 0.03);
+  border: 1px dashed rgba(0, 21, 75, 0.12);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.qe-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+/* 액션 버튼 그룹 */
+.qe-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+.qe-btn {
+  flex: 1;
+  padding: 12px 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.qe-btn--publish {
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 21, 75, 0.18);
+}
+.qe-btn--publish:hover {
+  background: #08216F;
+}
+
 .stock-sheet, .stock-dialog { position: fixed; inset: 0; z-index: 1000; display: flex; }
 .stock-sheet.is-hidden, .stock-dialog.is-hidden { display: none; }
 .stock-sheet { align-items: flex-end; justify-content: center; }
@@ -770,9 +1221,7 @@ a.stat-card:hover .stat-card__go--gear {
 .js-autogrow { resize: none; overflow-y: auto; max-height: 40vh; }
 
 /* ---------- 오늘의 구제 자동 등록 (템플릿 / 발행 대기) ---------- */
-.draft-box { border: 1px solid var(--c-primary-border); border-radius: var(--r-lg); background: var(--c-surface); padding: var(--s-3); }
-.draft-box .stock-item { border: 0; padding: var(--s-2) 0 0; }
-.draft-box .stock-item + .stock-item { margin-top: var(--s-3); border-top: 1px dashed var(--c-primary-border); }
+.draft-box { display: flex; flex-direction: column; gap: var(--s-3); }
 
 /* 템플릿 폼 — 요일 선택 토글 */
 .weekday-row { display: flex; gap: var(--s-2); }
@@ -796,14 +1245,38 @@ a.stat-card:hover .stat-card__go--gear {
   background: var(--c-bg);
 }
 
-/* 대시보드 상단바와 히어로의 색상 일체화 (레퍼런스 이미지의 풀스크린 그라데이션 연출)
-   변경됨 (2026-09-22, UI/UX 감사) — #00154B/#08216F는 토큰에 없는 새 네이비였고(마지막 색만
-   --c-primary와 우연히 일치), 배지 그린도 리브랜딩 때 걷어낸 색을 하드코딩으로 되살린 것이었다.
-   시각 결과는 그대로 두고 토큰만 입혔다 — 그라데이션은 기존 --c-primary-strong/--c-primary
-   2단으로, 배지는 새로 추가한 --c-live-* 토큰으로. */
-.app:has(.page--dashboard) .topbar--dark {
-  background: var(--c-primary-strong);
-  border-bottom: none;
+/* 대시보드 & 매출 리포트: 상단바와 히어로의 완전 일체화 (1안: 풀블리드 히어로)
+   상단바 배경을 투명화하고 본문을 상단바 뒤(화면 최상단 y=0)까지 끌어올려 단색 경계선을 100% 제거.
+   스크롤 시에만 반투명 블러 네이비(.is-scrolled)로 전환되어 가독성을 유지한다. */
+.app:has(.page--dashboard) .topbar--dark,
+.app:has(.page--sales-report) .topbar--dark {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              backdrop-filter 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app:has(.page--dashboard) .topbar--dark.is-scrolled,
+.app:has(.page--sales-report) .topbar--dark.is-scrolled {
+  background: rgba(0, 26, 92, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.app:has(.page--dashboard) .app__main,
+.app:has(.page--sales-report) .app__main {
+  margin-top: calc(-1 * var(--topbar-h));
+}
+.app:has(.page--sales-report) .topbar--dark .topbar__back {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
 }
 .app:has(.page--dashboard) .topbar--dark .badge {
   background: var(--c-live-weak);
@@ -815,11 +1288,14 @@ a.stat-card:hover .stat-card__go--gear {
   border-radius: var(--r-pill);
 }
 
-/* 1. 상단 딥 네이비 그라데이션 히어로 (프로필 중복 제거 후 매출 및 상태 중심) */
+/* 1. 상단 딥 네이비 그라데이션 히어로 (화면 최상단부터 자연스럽게 흐르는 풀블리드) */
 .dash-hero {
-  background: linear-gradient(155deg, var(--c-primary-strong) 0%, var(--c-primary) 100%);
+  background:
+    radial-gradient(ellipse 80% 60% at 85% -10%, rgba(56, 120, 255, 0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 15% 90%, rgba(140, 163, 214, 0.16) 0%, transparent 60%),
+    linear-gradient(160deg, #00123D 0%, #061B61 35%, #0B2B8F 70%, #1442B8 100%);
   color: var(--c-surface);
-  padding: var(--s-3) var(--s-5) var(--s-6);
+  padding: calc(var(--topbar-h) + var(--s-3)) var(--s-5) var(--s-6);
   position: relative;
   overflow: hidden;
 }
@@ -828,21 +1304,21 @@ a.stat-card:hover .stat-card__go--gear {
   position: absolute;
   top: -40px;
   right: -30px;
-  width: 180px;
-  height: 180px;
+  width: 260px;
+  height: 260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.22) 0%, rgba(59, 130, 246, 0.08) 45%, transparent 70%);
   pointer-events: none;
 }
 .dash-hero::after {
   content: "";
   position: absolute;
-  bottom: -20px;
+  bottom: -30px;
   left: -20px;
-  width: 140px;
-  height: 140px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(140, 163, 214, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(140, 163, 214, 0.18) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -1094,4 +1570,610 @@ a.stat-card:hover .stat-card__go--gear {
   font-size: var(--fs-xs);
   color: rgba(255, 255, 255, 0.8);
 }
+
+/* =====================================================================
+   대시보드 "통계 분석" 탭 — A안 카드 분리형 (2026-09-22)
+   업무 요약 탭의 섹션 제목(.dash-section-*)·알림 카드(.todo-banner__card)를 그대로 재사용하고, 여기선 흰 카드와
+   차트/범례/지표만 새로 정의한다. .donut/.bar-chart는 매출 리포트 화면과 같이 쓰는 컴포넌트라 전부
+   .dash-stats 안으로 한정한다(리포트 화면은 그대로).
+   색·그림자·테두리는 토큰만 쓴다: 그림자는 --shadow-card, 테두리는 --c-primary-mid를 40%로 섞은 값.
+   글씨 색은 옅은 네이비/주황/빨강을 쓰지 않는다(채움·점·아이콘에만) — 크림/흰 배경 위 대비 확보.
+   ===================================================================== */
+.dash-stats { --plot-h: 110px; --label-h: 22px; }
+
+/* 하위 토글(밑줄형): 높이 44px, 선택 시 3px 네이비 밑줄. 비선택 글씨는 크림 위 대비가 낮은 --c-text-mut 대신 --c-text-sub. */
+.dash-stats__tabs { margin-bottom: var(--s-4); }
+.dash-stats__tabs .stat-toggle-tab {
+  min-height: 44px; padding: 0; font-size: var(--fs-sm);
+  color: var(--c-text-sub); border-bottom: 3px solid transparent;
+}
+.dash-stats__tabs .stat-toggle-tab.is-active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+.dash-stats__tabs .stat-toggle-tab:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+
+/* 섹션 제목 옆 보조 텍스트: 업무 요약(11px, 흐린 색)보다 크고 진하게 — 통계 숫자 옆이라 읽혀야 한다. */
+.dash-stats .dash-section-more { font-size: var(--fs-sm); color: var(--c-text-sub); }
+.dash-legend-inline { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--c-text-sub); }
+.dash-legend-inline .tally__dot + .tally__dot { margin-left: var(--s-2); }
+
+.dash-card {
+  background: var(--c-surface);
+  border: 1px solid color-mix(in srgb, var(--c-primary-mid) 40%, transparent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+/* 알약 행 */
+.dash-pills { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+.dash-pill { display: inline-flex; align-items: center; gap: 4px; }
+.dash-pill svg { width: 13px; height: 13px; flex: none; }
+/* 목표 수정 연필: 터치 영역 44px, 음수 마진으로 행 높이는 알약 기준 유지 */
+.dash-icon-btn {
+  width: 44px; height: 44px; margin: -10px -10px -10px -6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: var(--r-pill);
+  color: var(--c-text-sub); cursor: pointer;
+}
+.dash-icon-btn .icon { width: 16px; height: 16px; }
+.dash-icon-btn:hover { background: var(--c-bg); color: var(--c-primary); }
+.dash-icon-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+
+/* 도넛 + 범례를 좌우로 (2026-09-22 스크롤 줄이기) — 예전엔 도넛 아래에 범례가 따로 쌓여 세로를 많이 먹었다.
+   도넛은 120px로 줄이고 안쪽 글씨를 읽히게 한다(안쪽 지름 88px). */
+.dash-overview { display: flex; align-items: center; gap: var(--s-4); margin: var(--s-3) 0 var(--s-3); }
+.dash-donut { flex: none; }
+.dash-stats .donut { width: 120px; height: 120px; }
+.dash-stats .donut::after { inset: 16px; }
+.dash-stats .donut__value { font-size: 24px; }
+.dash-stats .donut__label,
+.dash-stats .donut__note { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+/* 범례: 도넛 오른쪽 세로 목록 */
+.dash-legend { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.dash-legend__cell {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
+}
+.dash-legend__name { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
+.dash-legend__num { font-size: var(--fs-lg); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; }
+.dash-legend__num small { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); margin-left: 2px; }
+.dash-legend__row {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
+}
+.dash-legend__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dash-legend__text b { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.dash-legend__text small { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+.dash-note {
+  display: flex; justify-content: space-between; gap: var(--s-2);
+  margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line);
+  font-size: var(--fs-xs); color: var(--c-text-sub);
+}
+.dash-note strong { color: var(--c-text); }
+
+/* 절감 효과 3열 */
+.dash-metrics { display: flex; gap: var(--s-2); }
+.dash-metric { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.dash-metric__icon {
+  width: 36px; height: 36px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c-bg); color: var(--c-primary);
+}
+.dash-metric__icon .icon { width: 18px; height: 18px; }
+.dash-metric__value { font-size: var(--fs-md); font-weight: var(--fw-black); white-space: nowrap; letter-spacing: -.02em; }
+.dash-metric__label { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+/* 절감 효과 제목 줄 — 카드 안 구분선 아래. 오른쪽 "매출 리포트 ›"는 예전 리포트 버튼 카드를 대신하는 링크(업무 요약의
+   "매출 리포트" 메뉴와 중복이라 카드로 둘 이유가 없다). 터치 영역은 음수 마진으로 확보하고 행 높이는 유지한다. */
+.dash-subhead {
+  display: flex; align-items: baseline; gap: var(--s-2);
+  margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--c-line-weak);
+}
+.dash-subhead + .dash-metrics { margin-top: var(--s-3); }
+.dash-subhead__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.dash-subhead__sub { font-size: var(--fs-xs); color: var(--c-text-sub); }
+.dash-subhead__link {
+  margin-left: auto; padding: 12px 0 12px 12px; margin-top: -12px; margin-bottom: -12px;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary); text-decoration: none; white-space: nowrap;
+}
+.dash-subhead__link:hover { text-decoration: underline; }
+.dash-subhead__link:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; border-radius: var(--r-sm); }
+
+/* 최근 7일 막대 차트: y축 눈금 + 가로 눈금선 + 버튼 막대 */
+.dash-chart {
+  --plot-h: 120px;
+  --label-h: 24px;
+  margin-top: 0;
+}
+.dash-chart__plot { display: grid; grid-template-columns: 28px 1fr; padding-top: 8px; }
+.dash-chart__axis, .dash-chart__area { position: relative; height: calc(var(--plot-h) + var(--label-h)); }
+.dash-chart__axis span {
+  position: absolute; right: 6px; transform: translateY(50%);
+  font-size: var(--fs-xs); line-height: 1; color: var(--c-text-sub); font-variant-numeric: tabular-nums;
+}
+.dash-chart__axis .is-zero { bottom: var(--label-h); }
+.dash-chart__axis .is-mid  { bottom: calc(var(--label-h) + var(--plot-h) / 2); }
+.dash-chart__axis .is-max  { bottom: calc(var(--label-h) + var(--plot-h)); }
+.dash-chart__line { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--c-line-weak); }
+.dash-chart__line--zero { bottom: var(--label-h); border-top: 1px solid var(--c-line); }
+.dash-chart__line--mid  { bottom: calc(var(--label-h) + var(--plot-h) / 2); }
+.dash-chart__line--max  { bottom: calc(var(--label-h) + var(--plot-h)); }
+.dash-chart .bar-chart { position: relative; height: 100%; gap: 0; }
+/* 막대는 <button> — 기본 버튼 모양을 지우고 세로 전체를 터치 영역으로 쓴다(폭은 N등분). */
+.dash-chart .bar-chart__col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dash-chart .bar-chart__col:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; border-radius: var(--r-sm); }
+.dash-chart .bar-chart__track {
+  width: 18px;
+  height: var(--plot-h);
+  margin-top: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.dash-chart .bar-chart__label {
+  margin-top: 0; height: var(--label-h); display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-xs); color: var(--c-text-sub);
+}
+/* 오늘: 날짜는 네이비 알약, 막대는 외곽선 */
+/* 알약 높이 18px + 위아래 2px = 다른 열의 라벨 높이(--label-h 22px)와 같아서 막대 바닥선이 어긋나지 않는다. */
+.dash-chart .bar-chart__label.is-today {
+  height: 18px; margin: 2px 0; padding: 0 7px; align-self: center;
+  border-radius: var(--r-pill); background: var(--c-primary); color: var(--c-primary-on); font-weight: var(--fw-bold);
+}
+.dash-chart .bar-chart__col.is-today .bar-chart__fill { outline: 2px solid var(--c-primary); outline-offset: 1px; }
+/* 오늘 값이 0이면 막대가 없어서 외곽선이 작은 빈 상자처럼 보인다 — 그때는 끈다. */
+.dash-chart .bar-chart__col.is-today[data-total="0"] .bar-chart__fill { outline: none; }
+.dash-chart .bar-chart__hint { margin: var(--s-3) 0 0; font-size: var(--fs-xs); color: var(--c-text-sub); }
+.dash-chart .bar-chart__hint.is-active { color: var(--c-text); }
+.dash-chart__total { margin: var(--s-2) 0 0; text-align: center; font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+/* =====================================================================
+   매출 리포트 (A안: 히어로 요약형) 전용 스타일
+   - 대시보드 히어로/바디 시트/카드 디자인 일체화
+   - 옅은 네이비·주황·빨강은 글씨 색으로 쓰지 않고 점·채움·아이콘에만 사용
+   ===================================================================== */
+.app:has(.page--sales-report) .app__main {
+  padding-bottom: 0;
+}
+.page--sales-report {
+  padding: 0;
+  background: var(--c-bg);
+}
+.page--sales-report .dash-sheet {
+  padding-bottom: var(--s-4);
+}
+
+/* 히어로: 네이비 그라데이션(#00154B → #08216F → #0F2B8C) 및 전주 대비 배지 */
+.page--sales-report .dash-hero {
+  background:
+    radial-gradient(ellipse 80% 60% at 85% -10%, rgba(56, 120, 255, 0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 15% 90%, rgba(140, 163, 214, 0.16) 0%, transparent 60%),
+    linear-gradient(160deg, #00123D 0%, #061B61 35%, #0B2B8F 70%, #1442B8 100%);
+  padding: calc(var(--topbar-h) + var(--s-3)) var(--s-4) var(--s-6);
+}
+.page--sales-report .dash-hero__balance-box {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: var(--s-2) 0 var(--s-3);
+  position: relative;
+  z-index: 2;
+}
+.page--sales-report .dash-hero__balance-amount {
+  margin-bottom: 6px;
+}
+.sales-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.sales-delta-badge__arrow {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+}
+.sales-delta-badge__arrow.is-up {
+  color: #ffffff;
+}
+.sales-delta-badge__arrow.is-down {
+  color: #EF4444; /* 화살표 아이콘만 하락 시 빨강 */
+}
+.sales-delta-badge__val {
+  color: #ffffff; /* 글씨색은 항상 흰색 (빨강 글씨 금지) */
+  font-weight: var(--fw-bold);
+}
+
+/* 1) 기간 선택 (A안: 3분할 세그먼트 컨트롤 + 우측 독립 캘린더 버튼) */
+.page--sales-report .settle-period {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--s-3);
+  width: 100%;
+}
+.page--sales-report .settle-period__seg {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.page--sales-report .settle-period__seg-btn {
+  min-height: 38px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--c-text-sub);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.page--sales-report .settle-period__seg-btn:hover:not(.is-active) {
+  color: var(--c-text);
+  background: rgba(0, 0, 0, 0.04);
+}
+.page--sales-report .settle-period__seg-btn.is-active {
+  background: var(--c-primary);
+  color: #ffffff;
+  font-weight: var(--fw-bold);
+  box-shadow: 0 2px 6px rgba(8, 33, 111, 0.25);
+}
+.page--sales-report .settle-period__custom-btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.page--sales-report .settle-period__custom-btn:hover:not(.is-active) {
+  background: var(--c-bg);
+  border-color: var(--c-text-mut);
+}
+.page--sales-report .settle-period__custom-btn.is-active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #ffffff;
+  font-weight: var(--fw-bold);
+  box-shadow: 0 2px 6px rgba(8, 33, 111, 0.25);
+}
+.page--sales-report .settle-period__icon-cal {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+.page--sales-report .settle-period__icon-arrow {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.page--sales-report .settle-period__custom-btn[aria-expanded="true"] .settle-period__icon-arrow {
+  transform: rotate(180deg);
+}
+.page--sales-report .settle-range {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.page--sales-report .settle-range__date {
+  min-height: 44px;
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-surface);
+}
+.page--sales-report .settle-range__btn {
+  min-height: 44px;
+  min-width: 64px;
+  padding: 0 16px;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--r-sm);
+  background: var(--c-primary);
+  color: #ffffff;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.page--sales-report .settle-range__btn:hover {
+  opacity: 0.9;
+}
+
+/* 빈 상태 카드 */
+.sales-empty-card {
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+}
+.sales-empty-card__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--s-3);
+}
+.sales-empty-card__icon .icon {
+  width: 26px;
+  height: 26px;
+}
+.sales-empty-card__title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin-bottom: 6px;
+}
+.sales-empty-card__sub {
+  font-size: var(--fs-xs);
+  color: var(--c-text-sub);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 2) 2분할 흰 카드 (판매 수량 / 할인 제공액) */
+.sales-metrics-split {
+  display: flex;
+  align-items: center;
+  padding: var(--s-4) var(--s-3);
+}
+.sales-metric-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.sales-metric-col__label {
+  font-size: 13px;
+  color: var(--c-text-sub);
+  margin-bottom: 4px;
+  font-weight: var(--fw-medium);
+}
+.sales-metric-col__value {
+  font-size: 18px;
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+.sales-metric-col__value b {
+  font-size: 20px;
+  font-weight: var(--fw-bold);
+}
+.sales-metric-col__divider {
+  width: 1px;
+  height: 38px;
+  background: rgba(140, 163, 214, 0.3);
+  flex-shrink: 0;
+}
+
+/* 3) 구제 · 폐기 현황 4칸 그리드 */
+.sales-rescue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.sales-rescue-item {
+  padding: var(--s-3);
+  background: rgba(246, 240, 227, 0.45);
+  border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.sales-rescue-item--highlight {
+  background: rgba(15, 43, 140, 0.05);
+  border-color: rgba(15, 43, 140, 0.18);
+}
+.sales-rescue-item__label {
+  font-size: 12px;
+  color: var(--c-text-sub);
+  font-weight: var(--fw-medium);
+}
+.sales-rescue-item__value {
+  font-size: 17px;
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+.sales-rescue-item__value b {
+  font-size: 20px;
+  font-weight: var(--fw-bold);
+}
+.sales-rescue-item__value--highlight {
+  color: var(--c-primary);
+}
+.sales-rescue-item__value--highlight b {
+  font-size: 24px;
+  font-weight: var(--fw-black);
+  color: var(--c-primary);
+}
+.sales-rescue-card__footer {
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--c-line-weak);
+}
+.sales-rescue-card__desc {
+  font-size: 12px;
+  color: var(--c-text-sub);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.sales-rescue-card__co2 {
+  font-size: 13px;
+  color: var(--c-text-sub);
+  margin: 0;
+}
+.sales-rescue-card__co2 strong {
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+}
+
+/* 4) 일별 판매 · 폐기 차트 안내 (하루 기간일 때) */
+.sales-daily-hint-card {
+  padding: var(--s-5) var(--s-4);
+  text-align: center;
+}
+.sales-daily-hint-card__text {
+  font-size: var(--fs-sm);
+  color: var(--c-text-sub);
+  margin: 0;
+}
+
+/* 5) 상품별 판매 테이블 가로 스크롤 & 첫 열 Sticky 고정 */
+.page--sales-report .report-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+.page--sales-report .report-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-xs);
+}
+.page--sales-report .report-table th,
+.page--sales-report .report-table td {
+  border-bottom: 1px solid var(--c-line-weak);
+  border-right: 1px solid var(--c-line-weak);
+  padding: 10px 12px;
+  text-align: right;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+.page--sales-report .report-table th.is-sticky-col,
+.page--sales-report .report-table td.is-sticky-col {
+  border-left: none;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 2px 0 6px -2px rgba(15, 43, 140, 0.12);
+}
+.page--sales-report .report-table thead th {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+  border-top: none;
+}
+.page--sales-report .report-table tbody td:first-child {
+  background: var(--c-surface);
+  font-weight: var(--fw-medium);
+}
+.page--sales-report .report-table tbody tr:hover td {
+  background-color: rgba(246, 240, 227, 0.4);
+}
+.page--sales-report .report-table tbody tr:hover td:first-child {
+  background-color: var(--c-surface);
+}
+.page--sales-report .report-table tfoot td {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-weight: var(--fw-bold);
+  border-bottom: none;
+}
+
+/* 6) 리포트 파일 액션 (Excel / PDF 다운로드 버튼) */
+.report-file-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+  margin-bottom: 0;
+}
+.report-download-btn {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+.report-download-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  background: rgba(15, 43, 140, 0.04);
+}
+.report-btn-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--c-primary);
+}
+
 

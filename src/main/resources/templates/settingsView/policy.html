@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout(${title}, ~{:: #content}, '', false, '', null)}">
+<body>
+<!--/*
+	이용약관/개인정보처리방침 (2026-09-22, 문창호). authView/signup.html의 가입 동의 화면에 있던
+	"(임시) 정식 문서로 교체 예정" 안내를 그대로 화면으로 보여준다 — 환경설정 링크가 죽은 링크가
+	되지 않게 하기 위한 최소 구현. 정식 문서로 교체될 때까지의 임시 화면이다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<div class="card">
+		<p class="u-sub" style="line-height: 1.7">
+			※ (임시) 정식 <span th:text="${title}">이용약관</span> 문서로 교체 예정입니다.
+		</p>
+	</div>
+
+	<!-- 뒤로가기는 항상 환경설정으로 (환경설정에서 들어온 depth+1 화면). -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (back) {
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/user/settings'; });
+		}
+	})();
+	</script>
+</div>
+</body>
+</html>
