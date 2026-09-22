@@ -115,6 +115,11 @@
 				비우면 마감시간 기준 자동 (마감 1시간 이내 −50% · 1~3시간 −30% · 그 외 −20%).
 				자동값보다 <b>더 깎는 건</b> 되지만 <b>덜 깎진 못해요</b>.
 			</p>
+			<!-- 추가됨 (2026-09-22, UI/UX 감사) — 원가·할인율을 입력해도 최종 판매가가 안 보여서
+			     계산기를 따로 두드려야 했다. 할인율을 직접 넣으면 그대로, 비워두면 자동 계산의
+			     기본값(그 외 구간 -20%)을 예시로 보여준다 — 마감시간 기준 자동 로직(서버)까지 JS로
+			     그대로 복제하진 않고 "예상"이라고 명시해 실제 값과 어긋날 수 있음을 알린다. -->
+			<p id="expected-price-preview" class="u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-2); font-weight: var(--fw-bold)"></p>
 		</div>
 
 		<!-- 6. 설명 -->
@@ -291,6 +296,38 @@
 						loading.classList.add('is-hidden'); // 네트워크 오류 등 — 조용히 무시
 					});
 			});
+		})();
+	</script>
+
+	<!-- 추가됨 (2026-09-22, UI/UX 감사) — 원가·할인율 실시간 예상 판매가 미리보기. -->
+	<script>
+		(function () {
+			var originalInput = document.getElementById('originalPrice');
+			var discountInput = document.getElementById('discountRate');
+			var preview = document.getElementById('expected-price-preview');
+			if (!originalInput || !discountInput || !preview) return;
+
+			var DEFAULT_RATE = 20; // 서버 자동계산의 "그 외" 구간 기본값 — 정확한 값은 마감시간에 따라 서버가 계산.
+
+			function render() {
+				var original = parseInt(originalInput.value, 10);
+				if (!original || original <= 0) {
+					preview.textContent = '';
+					return;
+				}
+				var rateInput = parseInt(discountInput.value, 10);
+				var hasExplicitRate = discountInput.value.trim() !== '' && !isNaN(rateInput);
+				var rate = hasExplicitRate ? rateInput : DEFAULT_RATE;
+				var expected = Math.round(original * (1 - rate / 100));
+				var label = hasExplicitRate
+					? '예상 판매가 ' + expected.toLocaleString() + '원'
+					: '예상 판매가 ' + expected.toLocaleString() + '원 (자동 -' + rate + '% 기준 예시 — 마감시간에 따라 달라질 수 있어요)';
+				preview.textContent = label;
+			}
+
+			originalInput.addEventListener('input', render);
+			discountInput.addEventListener('input', render);
+			render();
 		})();
 	</script>
 </div>

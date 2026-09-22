@@ -37,6 +37,18 @@
   color: var(--c-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
+/* 추가됨 (2026-09-22, UI/UX 감사) — "통계 분석" 탭 존재를 처음 오는 사장님에게 알리는 점.
+   한 번 누르면(dashboard.html의 stats-tab-btn 클릭 리스너) is-hidden이 붙어 사라진다. */
+.stat-toggle-tab__dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--c-accent); margin-left: 4px; vertical-align: super;
+  animation: statTabPulse 1.6s ease-in-out infinite;
+}
+.stat-toggle-tab__dot.is-hidden { display: none; }
+@keyframes statTabPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
 .stat-panel {
   animation: fadeIn 0.2s ease-in-out;
 }
@@ -784,15 +796,19 @@ a.stat-card:hover .stat-card__go--gear {
   background: var(--c-bg);
 }
 
-/* 대시보드 상단바와 히어로의 색상 일체화 (레퍼런스 이미지의 풀스크린 그라데이션 연출) */
+/* 대시보드 상단바와 히어로의 색상 일체화 (레퍼런스 이미지의 풀스크린 그라데이션 연출)
+   변경됨 (2026-09-22, UI/UX 감사) — #00154B/#08216F는 토큰에 없는 새 네이비였고(마지막 색만
+   --c-primary와 우연히 일치), 배지 그린도 리브랜딩 때 걷어낸 색을 하드코딩으로 되살린 것이었다.
+   시각 결과는 그대로 두고 토큰만 입혔다 — 그라데이션은 기존 --c-primary-strong/--c-primary
+   2단으로, 배지는 새로 추가한 --c-live-* 토큰으로. */
 .app:has(.page--dashboard) .topbar--dark {
-  background: #00154B;
+  background: var(--c-primary-strong);
   border-bottom: none;
 }
 .app:has(.page--dashboard) .topbar--dark .badge {
-  background: rgba(34, 197, 94, 0.2);
-  color: #86EFAC;
-  border: 1px solid rgba(134, 239, 172, 0.35);
+  background: var(--c-live-weak);
+  color: var(--c-live-on);
+  border: 1px solid var(--c-live-border);
   font-size: 11px;
   font-weight: var(--fw-bold);
   padding: 3px 9px;
@@ -801,8 +817,8 @@ a.stat-card:hover .stat-card__go--gear {
 
 /* 1. 상단 딥 네이비 그라데이션 히어로 (프로필 중복 제거 후 매출 및 상태 중심) */
 .dash-hero {
-  background: linear-gradient(155deg, #00154B 0%, #08216F 45%, #0F2B8C 100%);
-  color: #FFFFFF;
+  background: linear-gradient(155deg, var(--c-primary-strong) 0%, var(--c-primary) 100%);
+  color: var(--c-surface);
   padding: var(--s-3) var(--s-5) var(--s-6);
   position: relative;
   overflow: hidden;

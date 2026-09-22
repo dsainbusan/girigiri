@@ -346,10 +346,10 @@
 						batchResultCard.style.display = 'block';
 						if (failed.length === 0) {
 							batchResultTitle.textContent = '✅ ' + succeeded.length + '건 모두 픽업 처리 완료!';
-							batchResultTitle.style.color = '#1b5e20';
+							batchResultTitle.style.color = 'var(--c-primary-strong)';
 						} else {
 							batchResultTitle.textContent = '✅ ' + succeeded.length + '건 완료 · ⚠️ ' + failed.length + '건 실패';
-							batchResultTitle.style.color = '#e65100';
+							batchResultTitle.style.color = 'var(--c-accent-strong)';
 						}
 						batchResultList.innerHTML = failed.map(function (r) {
 							return '<li>⚠️ ' + escapeHtml(r.pickupCode) + ' — ' + escapeHtml(r.message) + '</li>';
@@ -363,7 +363,7 @@
 					.catch(function () {
 						batchResultCard.style.display = 'block';
 						batchResultTitle.textContent = '⚠️ 처리 중 오류가 발생했어요. 다시 시도해주세요.';
-						batchResultTitle.style.color = '#e65100';
+						batchResultTitle.style.color = 'var(--c-accent-strong)';
 						batchResultList.innerHTML = '';
 						batchSubmitBtn.disabled = cart.length === 0;
 						batchSubmitBtn.textContent = cart.length > 0

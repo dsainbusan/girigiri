@@ -61,7 +61,10 @@
 		<div class="dash-tabs-wrap">
 			<div class="stat-toggle-tabs">
 				<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">업무 요약</button>
-				<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계 분석</button>
+				<!-- 추가됨 (2026-09-22, UI/UX 감사) — 최상위 탭 뒤에 숨어 있어서 처음 오는 사장님이
+				     "통계 분석" 탭 자체를 못 알아챌 수 있다는 지적. 한 번 눌러보기 전까지만 작은
+				     점으로 존재를 알리고, 누르면(또는 이미 본 적 있으면) 다시 안 뜬다. -->
+				<button type="button" id="stats-tab-btn" class="stat-toggle-tab" data-target="panel-stats">통계 분석<span id="stats-tab-dot" class="stat-toggle-tab__dot" aria-hidden="true"></span></button>
 			</div>
 		</div>
 
@@ -383,6 +386,23 @@
 				});
 			});
 		});
+
+		// 1-1. "통계 분석" 탭 최초 진입 인디케이터 (2026-09-22, UI/UX 감사) — 위 1번 제네릭 탭
+		// 핸들러와 별개로, 이 특정 버튼에만 붙는 최초-1회 로직이라 따로 뺐다.
+		var statsTabBtn = document.getElementById('stats-tab-btn');
+		var statsTabDot = document.getElementById('stats-tab-dot');
+		var STATS_TAB_SEEN_KEY = 'giriDashStatsTabSeen';
+		if (statsTabBtn && statsTabDot) {
+			try {
+				if (localStorage.getItem(STATS_TAB_SEEN_KEY) === '1') {
+					statsTabDot.classList.add('is-hidden');
+				}
+			} catch (e) { /* 프라이빗 모드 등 — 매번 보여주는 쪽이 안전 */ }
+			statsTabBtn.addEventListener('click', function () {
+				statsTabDot.classList.add('is-hidden');
+				try { localStorage.setItem(STATS_TAB_SEEN_KEY, '1'); } catch (e) { /* 무시 */ }
+			});
+		}
 
 		// 2. 구제율 목표 수정
 		var editBtn = document.getElementById('rescue-goal-edit-btn');
