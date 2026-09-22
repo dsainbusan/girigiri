@@ -243,6 +243,43 @@ body.mkt {
 	.mkt-chip--1 { right: -6px; }
 }
 
+/* ---------------- Partners marquee ---------------- */
+.mkt-partners { padding: 48px 0 56px; overflow: hidden; }
+.mkt-partners__label {
+	text-align: center; font-size: 13px; font-weight: 800; color: #7D735E;
+	text-transform: uppercase; letter-spacing: .08em; margin: 0 0 24px;
+}
+.mkt-marquee {
+	overflow: hidden;
+	/* 좌우 끝을 서서히 흐려지게 — 로고가 배너 경계에서 딱 잘리는 느낌을 없앤다. */
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+	mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+.mkt-marquee__track {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	width: max-content;
+	animation: mkt-marquee-scroll 32s linear infinite;
+}
+.mkt-marquee:hover .mkt-marquee__track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+	.mkt-marquee__track { animation: none; }
+}
+@keyframes mkt-marquee-scroll {
+	from { transform: translateX(0); }
+	/* 두 세트를 이어 붙여서 정확히 절반(첫 세트 폭)만큼 이동하면 이음매 없이 반복된다. */
+	to { transform: translateX(-50%); }
+}
+.mkt-marquee__item {
+	flex: none;
+	display: flex; align-items: center; justify-content: center;
+	width: 168px; height: 72px;
+	background: #fff; border: 1px solid #EDE5D4; border-radius: 14px;
+	padding: 14px 20px;
+}
+.mkt-marquee__item img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
 /* ---------------- Section shared ---------------- */
 .mkt-section { padding: 88px 0; }
 .mkt-section--tint { background: #F6F0E3; }
