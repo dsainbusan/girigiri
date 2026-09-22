@@ -196,5 +196,18 @@
     });
   })();
 </script>
+
+<!-- 추가됨 (2026-09-22, UI/UX 감사) — "행 클릭 시 상세 이동"이 members/stores/reports/stats/
+     notices/storeOrders/memberReservations/orders 8개 화면에 토씨 하나 안 틀리고 복붙돼 있었다.
+     로직 하나 고치려면 8곳을 다 찾아 고쳐야 해서 여기(모든 슈퍼어드민 화면이 거치는 레이아웃)
+     한 곳으로 모았다 — .row-clickable + data-href 마크업 규약은 그대로 두고 스크립트만 공용화. -->
+<script>
+  document.querySelectorAll('tr.row-clickable').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a, button, input, form')) return;
+      window.location.href = row.dataset.href;
+    });
+  });
+</script>
 </body>
 </html>

@@ -124,7 +124,8 @@
             <span class="badge badge--danger" th:if="${store.status != 'SUSPENDED' and store.approvalStatus != 'PENDING' and !openStatusMap[store.id]}">휴업</span>
           </td>
           <td class="action-row">
-            <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post">
+            <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post"
+                  onsubmit="return confirm('이 매장의 입점을 승인할까요? 승인 즉시 손님에게 노출됩니다.')">
               <button class="chip-btn" type="submit">승인</button>
             </form>
             <a class="chip-btn chip-btn--neutral" th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}">수정</a>
@@ -138,13 +139,19 @@
     </table>
   </div>
 
+  <!-- 행 클릭 시 상세 이동 스크립트는 common/layout-admin.html로 공용화했다(2026-09-22, UI/UX 감사). -->
   <script th:inline="none">
-    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('a, button, input, form')) return;
-        window.location.href = row.dataset.href;
+    // 추가됨 (2026-09-22, UI/UX 감사) — 개별 행 삭제엔 confirm()이 있는데 피해 범위가 더 큰
+    // 일괄 정지엔 없었다. members.html과 동일한 방식 — submitter의 formaction으로 판별.
+    var bulkForm = document.getElementById('bulk-form');
+    if (bulkForm) {
+      bulkForm.addEventListener('submit', function (e) {
+        var action = e.submitter && e.submitter.getAttribute('formaction');
+        if (action && action.indexOf('bulk-suspend') !== -1 && !confirm('선택한 매장을 정지할까요?')) {
+          e.preventDefault();
+        }
       });
-    });
+    }
   </script>
 
 </div>

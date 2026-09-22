@@ -32,7 +32,9 @@
 <body>
 <div id="content" th:fragment="content">
 
-  <h2 class="subhead">오늘 플랫폼 지표</h2>
+  <!-- 추가됨 (2026-09-22, UI/UX 감사) — 아래 4개 카드는 위 TODO대로 아직 실집계 연동 전 데모
+       숫자다. 운영자가 실제 지표로 오인해 판단하는 걸 막으려고 배지로 명시한다(실데이터 연동되면 뗄 것). -->
+  <h2 class="subhead">오늘 플랫폼 지표 <span class="badge badge--neutral" style="font-size:11px">데모 데이터</span></h2>
   <div class="stat-grid">
     <a class="stat-card stat-card--link" th:href="@{/superadmin/members}">
       <span class="stat-card__label">전체 회원수</span>

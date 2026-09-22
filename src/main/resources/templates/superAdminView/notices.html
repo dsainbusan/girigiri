@@ -60,14 +60,6 @@
     <a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/superadmin/notices(page=${page + 1})}">&rsaquo;</a>
   </div>
 
-  <script th:inline="none">
-    document.querySelectorAll('tr.row-clickable').forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('a, button, input, form')) return;
-        window.location.href = row.dataset.href;
-      });
-    });
-  </script>
 
 </div>
 </body>

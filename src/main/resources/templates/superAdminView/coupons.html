@@ -68,12 +68,14 @@
             <span class="badge badge--danger" th:if="${c.statusLabel == '기한 만료'}">기한 만료</span>
           </td>
           <td>
+            <!-- 변경됨 (2026-09-22, UI/UX 감사) — 표 안 보조 액션은 members.html/stores.html처럼
+                 .chip-btn 계열로 통일(이 화면만 .btn--ghost를 쓰고 있었다). -->
             <form th:action="@{/superadmin/coupons/{id}/toggle(id=${c.id})}" method="post" style="display:inline">
-              <button type="submit" class="btn btn--sm btn--ghost" th:text="${c.active} ? '끄기' : '켜기'">끄기</button>
+              <button type="submit" class="chip-btn chip-btn--neutral" th:text="${c.active} ? '끄기' : '켜기'">끄기</button>
             </form>
             <form th:action="@{/superadmin/coupons/{id}/delete(id=${c.id})}" method="post" style="display:inline"
                   onsubmit="return confirm('이 캠페인을 삭제할까요?')">
-              <button type="submit" class="btn btn--sm btn--ghost" aria-label="캠페인 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
+              <button type="submit" class="chip-btn chip-btn--danger" aria-label="캠페인 삭제"><svg class="icon"><use href="#i-trash"/></svg></button>
             </form>
           </td>
         </tr>
