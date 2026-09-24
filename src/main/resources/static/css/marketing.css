@@ -66,6 +66,12 @@ body.mkt {
 	display: block;
 	flex: none;
 }
+.mkt-logo__badge--sm {
+	/* footer 브랜드 줄 전용 — nav보다 작게 (2026-09-24, home.html 인라인 스타일 제거) */
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+}
 .mkt-nav__links {
 	display: flex;
 	align-items: center;
@@ -160,6 +166,12 @@ body.mkt {
 	color: var(--c-text-mut-strong);
 	max-width: 480px;
 	margin: 0 0 32px;
+}
+.mkt-hero p.lead em {
+	/* 2026-09-24, home.html 인라인 스타일 제거 — "판매" 강조 */
+	font-style: normal;
+	color: var(--c-primary-strong);
+	font-weight: 800;
 }
 .mkt-hero__actions {
 	display: flex;
