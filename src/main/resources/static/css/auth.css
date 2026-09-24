@@ -26,6 +26,22 @@
 	display: block;
 }
 
+/* 추가됨 (2026-09-23) — "마지막으로 로그인한 계정이에요" 힌트 배지. loginForm.html의 인라인 스크립트가
+   localStorage를 보고 해당 버튼에만 display:inline-block으로 보여준다. */
+.last-login-badge {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 10px;
+	font-weight: var(--fw-bold);
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.85);
+	color: var(--c-text);
+	white-space: nowrap;
+}
+
 /* 3개 소셜 버튼과 "이메일" 사이 구분선 — 소셜이 기본, 이메일은 대안이라는 위계를 준다. */
 .oauth-or {
 	display: flex;

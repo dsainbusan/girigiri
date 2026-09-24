@@ -31,11 +31,22 @@
 		</div>
 	</div>
 
+	<!-- 추가됨 (2026-09-24) — 이메일 인증 직후 이 화면으로 넘어왔을 때, 아래 휴대폰 인증이 "또?"라는
+	     피로감으로 느껴지지 않게 미리 알려준다. /auth/emailSignup의 verify-otp 성공 시에만 이 쿼리로
+	     들어온다 — 구조는 그대로 두고 안내만 추가하는 저비용 개선(코드 감사 결과 반영). -->
+	<p class="u-primary" th:if="${param.welcome != null and param.welcome[0] == 'email_verified'}"
+	   style="margin-bottom: var(--s-4); font-size: var(--fs-sm);">
+		✓ 이메일 인증 완료! 이어서 휴대폰 인증까지 하면 가입이 끝나요.
+	</p>
+
 	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)"
 	   th:text="${param.error[0] == 'agree' ? '필수 약관에 동의해야 가입할 수 있어요.'
 	           : (param.error[0] == 'phone' ? '휴대폰 번호 형식을 확인해 주세요.'
+	           : (param.error[0] == 'phone_linked' ? '이미 다른 계정으로 가입된 휴대폰 번호예요. 연동을 통해 기존 계정을 사용할 수 있어요.'
 	           : (param.error[0] == 'phonedup' ? '이미 가입된 휴대폰 번호예요. 이메일 찾기를 이용해 보세요.'
-	           : '닉네임은 2~10자로 입력해 주세요.'))}">닉네임은 2~10자로 입력해 주세요.</p>
+	           : (param.error[0] == 'link_failed' ? '본인 확인에 실패했어요. 비밀번호를 다시 확인해 주세요.'
+	           : (param.error[0] == 'otp_required' ? '휴대폰 인증을 먼저 완료해 주세요.'
+	           : '닉네임은 2~10자로 입력해 주세요.')))))}">닉네임은 2~10자로 입력해 주세요.</p>
 
 	<form th:action="@{/auth/signup}" method="post">
 		<!-- 닉네임 입력 -->
@@ -45,13 +56,35 @@
 			       th:value="${nickname}" placeholder="2~10자" minlength="2" maxlength="10" required>
 		</div>
 
-		<!-- 휴대폰 번호 — 본인확인(실명인증)은 안 함(입력값 그대로 저장). 이메일/비번 찾기·노쇼 연락용.
+		<!-- 휴대폰 번호 — 인증번호(OTP)로 번호 소유를 확인한다. 실제 문자 발송은 안 하고(사업자
+		     계약이 필요한 SMS API 예산이 없음), 서버가 생성한 코드를 화면에 그대로 보여주는 목업이다
+		     — 코드 감사에서 "전화번호가 실명인증 없이 사용자가 입력한 값 그대로"라 지적된 부분을
+		     완전히 없애진 못하지만(실제 통신사 인증은 아님), 최소한 "그 번호를 지금 실제로 받을 수
+		     있는 사람인지"는 증명하게 해서 오타·타인 번호 입력을 걸러준다.
 		     입력하는 대로 하이픈을 자동으로 넣고, 형식이 안 맞으면 제출을 막는다. -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="phone">휴대폰 번호</label>
-			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
-			       th:value="${phone}" placeholder="010-1234-5678" maxlength="13"
-			       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required>
+			<div class="u-row" style="gap: var(--s-2); align-items: stretch;">
+				<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+				       th:value="${phone}" placeholder="010-1234-5678" maxlength="13"
+				       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required style="flex: 1;">
+				<button type="button" id="btn-check-phone" class="btn btn--outline btn--sm" style="flex: none; min-width: 80px;">중복 확인</button>
+			</div>
+			<p id="phone-feedback" style="display:none; font-size: var(--fs-xs); margin-top: 6px;"></p>
+
+			<div class="u-row" style="gap: var(--s-2); align-items: center; margin-top: var(--s-2);">
+				<button type="button" id="btn-send-otp" class="btn btn--outline btn--sm" style="flex: none;">인증번호 받기</button>
+				<span id="otp-status" class="u-mut" style="font-size: var(--fs-xs);"></span>
+			</div>
+			<div id="otp-block" style="display:none; margin-top: var(--s-2);">
+				<p id="otp-mock-banner" class="otp-mock-banner"></p>
+				<div class="u-row" style="gap: var(--s-2); align-items: stretch;">
+					<input class="input" type="text" id="otp-code-input" inputmode="numeric" maxlength="6"
+					       placeholder="인증번호 6자리" style="flex: 1;">
+					<button type="button" id="btn-verify-otp" class="btn btn--outline btn--sm" style="flex: none;">인증 확인</button>
+				</div>
+				<p id="otp-feedback" style="display:none; font-size: var(--fs-xs); margin-top: 6px;"></p>
+			</div>
 		</div>
 
 		<!-- 활동 지역 입력 — 시/도·시/군/구는 드롭다운(/js/regions.json), 동/읍/면은 직접 입력.
@@ -159,6 +192,55 @@
 			가입을 완료하지 않고 나가기
 		</button>
 	</form>
+
+	<!-- 1:N 멀티 소셜 계정 연동(Account Linking) 모달 및 폼.
+	     본인 확인 없이는 절대 연동(병합)하지 않는다 — 전화번호는 실명인증이 안 된 값이라(위 안내 참고)
+	     "그 번호를 안다"는 것만으로는 계정 소유를 증명하지 못한다. 대상 계정의 로그인 수단에 따라
+	     둘 중 하나로만 본인 확인을 한다:
+	       1) 이메일+비밀번호 계정 → 비밀번호를 직접 입력받아 서버에서 대조(AuthService.linkSocialAccountWithPassword)
+	       2) 소셜 전용 계정 → 그 소셜 로그인을 다시 완료시킨다(브라우저를 실제 /oauth2/authorization/{provider}로
+	          보냄 — AuthController#prepareLinkReauth). 로그인에 성공해 돌아왔을 때만 OAuth2LoginSuccessHandler가
+	          병합을 수행한다. -->
+	<form id="link-account-form" th:action="@{/auth/link-account}" method="post" style="display:none">
+		<input type="hidden" name="phone" id="link-account-phone">
+		<input type="hidden" name="password" id="link-account-password">
+	</form>
+
+	<div id="social-link-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+		<div class="modal-box social-link-modal-box">
+			<p class="social-link-modal-text">
+				이미 <span id="social-link-modal-provider" class="u-bold" th:text="${linkedProvider != null ? linkedProvider : '소셜'}">네이버</span>로 가입된 회원의<br>
+				전화번호입니다. 본인 확인 후 이전과<br>
+				동일하게 사용할 수 있어요.
+			</p>
+
+			<!-- 추가됨 (2026-09-23) — "결과는 표준적인데(병합되면 어느 수단으로 로그인해도 같은 계정) 그
+			     결과에 도달하는 동의 과정이 실제 서비스보다 가볍다"는 지적 반영. 버튼 이름이 "재인증"이라
+			     본인 확인 절차 정도로만 느껴지고, 실제로는 지금 가입 중이던 계정이 없어지고 두 계정이
+			     영구히 하나로 묶인다는 무게감이 안 드러났다. 결과를 명시적으로 알려준다. -->
+			<div class="social-link-modal-notice">
+				동의하면 <b>지금 가입 중이던 계정은 삭제</b>되고, 기존 계정에 로그인 수단으로 추가돼요.
+				앞으로 이 소셜로 로그인해도 항상 기존 계정으로 들어갑니다. (연동은 마이페이지에서 나중에 해제할 수 있어요)
+			</div>
+
+			<!-- 대상 계정이 이메일+비밀번호 로그인일 때만 노출 -->
+			<div id="social-link-password-box" style="display:none; margin-bottom: var(--s-3);">
+				<input class="input" type="password" id="social-link-password-input"
+				       placeholder="비밀번호" autocomplete="current-password" style="width: 100%;">
+				<p id="social-link-password-error" class="u-danger" style="display:none; font-size: var(--fs-xs); margin-top: 6px;"></p>
+			</div>
+
+			<!-- 추가됨 (2026-09-23) — 번호 재사용(통신사 재배정)·오타로 남 계정과 우연히 겹치는 경우를 위한
+			     탈출구. 전화번호 입력칸 자체는 원래도 잠기지 않아 직접 수정하면 가입은 계속 가능했지만,
+			     그 사실을 안내하는 UI가 없어 사용자가 막혔다고 오해할 수 있었다. -->
+			<button type="button" id="social-link-modal-not-mine" class="social-link-modal-not-mine">이 계정, 제가 아니에요</button>
+
+			<div class="social-link-modal-actions">
+				<button type="button" id="social-link-modal-cancel" class="social-link-modal-btn social-link-modal-btn--cancel">취소</button>
+				<button type="button" id="social-link-modal-confirm" class="social-link-modal-btn social-link-modal-btn--confirm">재인증</button>
+			</div>
+		</div>
+	</div>
 
 	<script th:inline="none">
 		(function () {
@@ -285,6 +367,87 @@
 		#btn-submit:disabled {
 			opacity: .45;
 			cursor: not-allowed;
+		}
+
+		/* 소셜 계정 연동 확인 모달 */
+		.social-link-modal-box {
+			max-width: 320px;
+			width: 90%;
+			padding: 24px 20px 16px;
+			border-radius: var(--r-xl);
+			background: var(--c-surface);
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+			border: 1px solid var(--c-line);
+			text-align: left;
+			animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+		}
+		@keyframes modalPop {
+			from { opacity: 0; transform: scale(0.95); }
+			to { opacity: 1; transform: scale(1); }
+		}
+		.social-link-modal-text {
+			font-size: var(--fs-md);
+			line-height: 1.6;
+			color: var(--c-text);
+			margin: 0 0 20px 0;
+			word-break: keep-all;
+		}
+		.otp-mock-banner {
+			background: var(--c-info-weak);
+			border-radius: var(--r-md);
+			padding: 8px 10px;
+			font-size: var(--fs-xs);
+			color: var(--c-text);
+			margin-bottom: 6px;
+			word-break: keep-all;
+		}
+		.social-link-modal-notice {
+			background: var(--c-info-weak);
+			border-radius: var(--r-md);
+			padding: 10px 12px;
+			font-size: var(--fs-xs);
+			line-height: 1.5;
+			color: var(--c-text);
+			word-break: keep-all;
+			margin-bottom: var(--s-3);
+		}
+		.social-link-modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 16px;
+			margin-top: 8px;
+		}
+		.social-link-modal-btn {
+			background: none;
+			border: none;
+			padding: 6px 12px;
+			font-size: var(--fs-md);
+			font-weight: var(--fw-bold);
+			cursor: pointer;
+			border-radius: var(--r-md);
+			transition: background-color 0.15s, opacity 0.15s;
+		}
+		.social-link-modal-btn--cancel {
+			color: #FF5A5A;
+		}
+		.social-link-modal-btn--cancel:hover {
+			background: rgba(255, 90, 90, 0.08);
+		}
+		.social-link-modal-btn--confirm {
+			color: #FF5A5A;
+		}
+		.social-link-modal-btn--confirm:hover {
+			background: rgba(255, 90, 90, 0.08);
+		}
+		.social-link-modal-not-mine {
+			display: block;
+			background: none;
+			border: none;
+			padding: 0 0 var(--s-3);
+			font-size: var(--fs-xs);
+			color: var(--c-text-mut);
+			text-decoration: underline;
+			cursor: pointer;
 		}
 	</style>
 
@@ -469,6 +632,396 @@
 				});
 			});
 		});
+	})();
+	</script>
+
+	<!-- 1:N 멀티 소셜 계정 연동(Account Linking) 클라이언트 스크립트 -->
+	<script th:inline="javascript">
+	(function () {
+		var linkModal = document.getElementById('social-link-modal');
+		var linkModalProvider = document.getElementById('social-link-modal-provider');
+		var linkModalCancel = document.getElementById('social-link-modal-cancel');
+		var linkModalConfirm = document.getElementById('social-link-modal-confirm');
+		var linkModalNotMine = document.getElementById('social-link-modal-not-mine');
+		var linkAccountForm = document.getElementById('link-account-form');
+		var linkAccountPhone = document.getElementById('link-account-phone');
+		var linkAccountPassword = document.getElementById('link-account-password');
+		var linkPasswordBox = document.getElementById('social-link-password-box');
+		var linkPasswordInput = document.getElementById('social-link-password-input');
+		var linkPasswordError = document.getElementById('social-link-password-error');
+		var phoneInput = document.getElementById('phone');
+		var btnCheckPhone = document.getElementById('btn-check-phone');
+		var phoneFeedback = document.getElementById('phone-feedback');
+		var currentLinkedPhone = '';
+		var currentLinkedProviderRaw = '';
+		var isPhoneChecked = false;
+		var lastCheckedPhone = '';
+
+		// 휴대폰 인증(OTP) 상태 — 목업(실제 SMS 미발송, 서버가 만든 코드를 화면에 그대로 보여줌).
+		var btnSendOtp = document.getElementById('btn-send-otp');
+		var otpStatus = document.getElementById('otp-status');
+		var otpBlock = document.getElementById('otp-block');
+		var otpMockBanner = document.getElementById('otp-mock-banner');
+		var otpCodeInput = document.getElementById('otp-code-input');
+		var btnVerifyOtp = document.getElementById('btn-verify-otp');
+		var otpFeedback = document.getElementById('otp-feedback');
+		var isOtpVerified = false;
+		var lastOtpVerifiedPhone = '';
+		var otpCountdownTimer = null;
+
+		function showOtpFeedback(msg, isSuccess) {
+			if (!otpFeedback) return;
+			otpFeedback.textContent = msg;
+			otpFeedback.style.color = isSuccess ? 'var(--c-success, #16a34a)' : 'var(--c-danger, #dc2626)';
+			otpFeedback.style.display = 'block';
+		}
+
+		function resetOtpState() {
+			isOtpVerified = false;
+			lastOtpVerifiedPhone = '';
+			if (otpCountdownTimer) {
+				clearInterval(otpCountdownTimer);
+				otpCountdownTimer = null;
+			}
+			if (otpBlock) otpBlock.style.display = 'none';
+			if (otpStatus) otpStatus.textContent = '';
+			if (otpCodeInput) {
+				otpCodeInput.value = '';
+				otpCodeInput.disabled = false;
+			}
+			if (otpFeedback) otpFeedback.style.display = 'none';
+			if (btnSendOtp) {
+				btnSendOtp.disabled = false;
+				btnSendOtp.textContent = '인증번호 받기';
+			}
+			if (btnVerifyOtp) {
+				btnVerifyOtp.disabled = false;
+				btnVerifyOtp.textContent = '인증 확인';
+			}
+		}
+
+		if (btnSendOtp) {
+			btnSendOtp.addEventListener('click', function () {
+				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				if (!/^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/.test(rawPhone)) {
+					showOtpFeedback('휴대폰 번호를 먼저 올바르게 입력해 주세요.', false);
+					phoneInput && phoneInput.focus();
+					return;
+				}
+				btnSendOtp.disabled = true;
+				btnSendOtp.textContent = '전송 중...';
+				fetch('/auth/send-otp', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'phone=' + encodeURIComponent(rawPhone)
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						btnSendOtp.disabled = false;
+						if (!data.sent) {
+							btnSendOtp.textContent = '인증번호 받기';
+							showOtpFeedback('휴대폰 번호를 확인해 주세요.', false);
+							return;
+						}
+						btnSendOtp.textContent = '다시 받기';
+						if (otpBlock) otpBlock.style.display = 'block';
+						if (otpMockBanner) {
+							otpMockBanner.textContent = '[테스트 환경] 실제로 문자를 보내지 않고 여기 표시합니다 — 인증번호: ' + data.mockCode;
+						}
+						if (otpCodeInput) {
+							otpCodeInput.value = '';
+							otpCodeInput.focus();
+						}
+						if (otpFeedback) otpFeedback.style.display = 'none';
+
+						var remaining = data.expiresInSeconds || 180;
+						if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+						function tickCountdown() {
+							if (otpStatus) {
+								var m = Math.floor(remaining / 60);
+								var s = String(remaining % 60).padStart(2, '0');
+								otpStatus.textContent = '유효시간 ' + m + ':' + s;
+							}
+							remaining -= 1;
+							if (remaining < 0) {
+								clearInterval(otpCountdownTimer);
+								otpCountdownTimer = null;
+								if (otpStatus) otpStatus.textContent = '인증번호가 만료됐어요. 다시 받아주세요.';
+							}
+						}
+						tickCountdown();
+						otpCountdownTimer = setInterval(tickCountdown, 1000);
+					})
+					.catch(function () {
+						btnSendOtp.disabled = false;
+						btnSendOtp.textContent = '인증번호 받기';
+						showOtpFeedback('전송 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
+					});
+			});
+		}
+
+		if (btnVerifyOtp) {
+			btnVerifyOtp.addEventListener('click', function () {
+				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				var code = otpCodeInput ? otpCodeInput.value.trim() : '';
+				if (!code) {
+					showOtpFeedback('인증번호를 입력해 주세요.', false);
+					otpCodeInput && otpCodeInput.focus();
+					return;
+				}
+				btnVerifyOtp.disabled = true;
+				fetch('/auth/verify-otp', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'phone=' + encodeURIComponent(rawPhone) + '&code=' + encodeURIComponent(code)
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						btnVerifyOtp.disabled = false;
+						if (data.verified) {
+							isOtpVerified = true;
+							lastOtpVerifiedPhone = rawPhone;
+							if (otpCountdownTimer) { clearInterval(otpCountdownTimer); otpCountdownTimer = null; }
+							if (otpStatus) otpStatus.textContent = '✓ 인증 완료';
+							if (otpCodeInput) otpCodeInput.disabled = true;
+							btnVerifyOtp.disabled = true;
+							btnVerifyOtp.textContent = '완료';
+							if (btnSendOtp) btnSendOtp.disabled = true;
+							showOtpFeedback('✓ 휴대폰 인증이 완료됐어요.', true);
+						} else {
+							var reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
+							showOtpFeedback(reason, false);
+						}
+					})
+					.catch(function () {
+						btnVerifyOtp.disabled = false;
+						showOtpFeedback('확인 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
+					});
+			});
+		}
+
+		// 전화번호 입력 시 자동 하이픈 및 중복확인 상태 초기화
+		if (phoneInput) {
+			phoneInput.addEventListener('input', function () {
+				var val = phoneInput.value.replace(/[^0-9]/g, '');
+				if (val.length > 3 && val.length <= 7) {
+					phoneInput.value = val.substring(0, 3) + '-' + val.substring(3);
+				} else if (val.length > 7) {
+					phoneInput.value = val.substring(0, 3) + '-' + val.substring(3, 7) + '-' + val.substring(7, 11);
+				} else {
+					phoneInput.value = val;
+				}
+
+				if (phoneInput.value !== lastCheckedPhone) {
+					isPhoneChecked = false;
+					if (phoneFeedback) {
+						phoneFeedback.style.display = 'none';
+					}
+					if (btnCheckPhone) {
+						btnCheckPhone.textContent = '중복 확인';
+						btnCheckPhone.classList.remove('btn--primary');
+						btnCheckPhone.classList.add('btn--outline');
+					}
+				}
+				// 번호가 바뀌면 이전 인증은 무효 — 방금 받은 인증번호가 새 번호에 대한 게 아니니까.
+				if (phoneInput.value !== lastOtpVerifiedPhone) {
+					resetOtpState();
+				}
+			});
+		}
+
+		function showPhoneFeedback(msg, isSuccess) {
+			if (!phoneFeedback) return;
+			phoneFeedback.textContent = msg;
+			phoneFeedback.style.color = isSuccess ? 'var(--c-success, #16a34a)' : 'var(--c-danger, #dc2626)';
+			phoneFeedback.style.display = 'block';
+		}
+
+		// providerRaw가 "email"이면 비밀번호로, 그 외(카카오/구글/라인)는 실제 소셜 재로그인으로
+		// 본인 확인한다 — 전화번호만으로는 절대 연동(병합)하지 않는다.
+		function openLinkModal(providerDisplay, providerRaw, phone) {
+			currentLinkedPhone = phone;
+			currentLinkedProviderRaw = providerRaw || '';
+			if (linkModalProvider) {
+				linkModalProvider.textContent = providerDisplay || '소셜';
+			}
+			var isEmailTarget = currentLinkedProviderRaw.toLowerCase() === 'email';
+			if (linkPasswordBox) {
+				linkPasswordBox.style.display = isEmailTarget ? 'block' : 'none';
+			}
+			if (linkPasswordInput) {
+				linkPasswordInput.value = '';
+			}
+			if (linkPasswordError) {
+				linkPasswordError.style.display = 'none';
+			}
+			if (linkModalConfirm) {
+				linkModalConfirm.textContent = isEmailTarget ? '확인' : ((providerDisplay || '소셜') + '로 재로그인');
+			}
+			if (linkModal) {
+				linkModal.style.display = 'flex';
+			}
+		}
+
+		function closeLinkModal() {
+			if (linkModal) {
+				linkModal.style.display = 'none';
+			}
+		}
+
+		if (linkModalCancel) {
+			linkModalCancel.addEventListener('click', closeLinkModal);
+		}
+		if (linkModalNotMine) {
+			linkModalNotMine.addEventListener('click', function () {
+				// 이 번호가 자기 것이 아니라고 밝힌 경우 — 강제로 연동시키지 않는다. 전화번호 재사용
+				// (통신사 재배정)이나 오타로 남 계정과 우연히 겹친 정상적인 케이스일 수 있어서다.
+				// 입력칸 자체는 원래 잠겨있지 않으니, 비워주고 포커스만 옮겨 "다른 번호로 계속 진행"
+				// 하는 길을 분명히 안내한다.
+				closeLinkModal();
+				isPhoneChecked = false;
+				lastCheckedPhone = '';
+				if (phoneInput) {
+					phoneInput.value = '';
+					phoneInput.focus();
+				}
+				if (btnCheckPhone) {
+					btnCheckPhone.textContent = '중복 확인';
+					btnCheckPhone.classList.remove('btn--primary');
+					btnCheckPhone.classList.add('btn--outline');
+				}
+				showPhoneFeedback('다른 휴대폰 번호를 입력해 주세요.', false);
+			});
+		}
+		if (linkModal) {
+			linkModal.addEventListener('click', function (e) {
+				if (e.target === linkModal) closeLinkModal();
+			});
+		}
+		if (linkModalConfirm) {
+			linkModalConfirm.addEventListener('click', function () {
+				if (!currentLinkedPhone) return;
+
+				if (currentLinkedProviderRaw.toLowerCase() === 'email') {
+					// 본인 확인 1: 비밀번호 대조 — 서버(AuthService.linkSocialAccountWithPassword)가
+					// 실제로 검증한다. 여기서는 빈 값만 막는다.
+					var pw = linkPasswordInput ? linkPasswordInput.value : '';
+					if (!pw) {
+						if (linkPasswordError) {
+							linkPasswordError.textContent = '비밀번호를 입력해 주세요.';
+							linkPasswordError.style.display = 'block';
+						}
+						linkPasswordInput && linkPasswordInput.focus();
+						return;
+					}
+					linkAccountPhone.value = currentLinkedPhone;
+					linkAccountPassword.value = pw;
+					linkAccountForm.submit();
+				} else {
+					// 본인 확인 2: 대상 계정의 실제 소셜 로그인을 한 번 더 완료시킨다.
+					// 전화번호는 서버 세션에 잠깐 stash될 뿐 — 이 로그인이 실제로 성공해서 그 계정의
+					// 전화번호와 일치할 때만 OAuth2LoginSuccessHandler가 연동을 수행한다.
+					window.location.href = '/auth/link-account/prepare?phone=' + encodeURIComponent(currentLinkedPhone)
+							+ '&provider=' + encodeURIComponent(currentLinkedProviderRaw);
+				}
+			});
+		}
+
+		// 중복 확인 비동기 실행 함수
+		function executePhoneCheck(callback) {
+			var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+			if (!rawPhone) {
+				showPhoneFeedback('휴대폰 번호를 입력해 주세요.', false);
+				phoneInput && phoneInput.focus();
+				return;
+			}
+			if (!/^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/.test(rawPhone)) {
+				showPhoneFeedback('올바른 휴대폰 번호 형식(010-XXXX-XXXX)을 입력해 주세요.', false);
+				phoneInput && phoneInput.focus();
+				return;
+			}
+
+			if (btnCheckPhone) {
+				btnCheckPhone.disabled = true;
+				btnCheckPhone.textContent = '확인 중...';
+			}
+
+			fetch('/auth/check-phone?phone=' + encodeURIComponent(rawPhone))
+				.then(function (res) { return res.json(); })
+				.then(function (data) {
+					if (btnCheckPhone) {
+						btnCheckPhone.disabled = false;
+						btnCheckPhone.textContent = '중복 확인';
+					}
+					if (data.taken && data.linked) {
+						showPhoneFeedback('이미 가입된 번호입니다. 본인 확인 후 계정 연동을 진행합니다.', false);
+						openLinkModal(data.provider, data.providerRaw, rawPhone);
+					} else if (data.taken) {
+						showPhoneFeedback('이미 다른 계정에 등록된 휴대폰 번호입니다.', false);
+						isPhoneChecked = false;
+					} else {
+						showPhoneFeedback('✓ 가입 가능한 휴대폰 번호입니다.', true);
+						isPhoneChecked = true;
+						lastCheckedPhone = rawPhone;
+						if (btnCheckPhone) {
+							btnCheckPhone.textContent = '확인 완료';
+						}
+						if (typeof callback === 'function') callback();
+					}
+				})
+				.catch(function () {
+					if (btnCheckPhone) {
+						btnCheckPhone.disabled = false;
+						btnCheckPhone.textContent = '중복 확인';
+					}
+					showPhoneFeedback('확인 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
+				});
+		}
+
+		if (btnCheckPhone) {
+			btnCheckPhone.addEventListener('click', function () {
+				executePhoneCheck();
+			});
+		}
+
+		// 1. 서버 리다이렉트 (error=phone_linked) 시 모달 자동 노출
+		/*[# th:if="${param.error != null and param.error[0] == 'phone_linked'}"]*/
+		var serverProv = /*[[${linkedProvider}]]*/ '';
+		var serverProvRaw = /*[[${linkedProviderRaw}]]*/ '';
+		var serverPhone = /*[[${linkedPhone}]]*/ '';
+		if (serverPhone) {
+			openLinkModal(serverProv, serverProvRaw, serverPhone);
+		}
+		/*[/]*/
+
+		// 2. 가입 완료 폼 제출 시: 중복 확인 검증
+		var signupForm = document.querySelector('form[action*="/auth/signup"]');
+		if (signupForm) {
+			signupForm.addEventListener('submit', function (e) {
+				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				if (!rawPhone) {
+					e.preventDefault();
+					showPhoneFeedback('휴대폰 번호를 입력해 주세요.', false);
+					phoneInput && phoneInput.focus();
+					return;
+				}
+
+				if (!isOtpVerified || rawPhone !== lastOtpVerifiedPhone) {
+					e.preventDefault();
+					showOtpFeedback('휴대폰 인증을 먼저 완료해 주세요.', false);
+					btnSendOtp && btnSendOtp.focus();
+					return;
+				}
+
+				if (!isPhoneChecked || rawPhone !== lastCheckedPhone) {
+					e.preventDefault();
+					showPhoneFeedback('휴대폰 번호 중복 확인을 먼저 진행해 주세요.', false);
+					executePhoneCheck(function () {
+						signupForm.submit();
+					});
+				}
+			});
+		}
 	})();
 	</script>
 

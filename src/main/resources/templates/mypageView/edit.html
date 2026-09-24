@@ -9,21 +9,63 @@
 	  담당: 문창호 (WBS 2.1 회원정보 수정 / 회원 관리)
 	*/-->
 
+	<!-- 알림 메시지 배너 -->
+	<p class="u-primary u-center" th:if="${param.unlinked}" style="margin-bottom: var(--s-4); font-size: var(--fs-sm);">✓ 소셜 계정 연동이 성공적으로 해제되었어요.</p>
+	<p class="u-danger" th:if="${param.unlinkError != null and param.unlinkError[0] == 'minimum'}" style="margin-bottom: var(--s-4); font-size: var(--fs-sm);">최소 1개의 로그인 수단은 유지되어야 해요.</p>
+	<p class="u-danger" th:if="${param.unlinkError != null and param.unlinkError[0] != 'minimum'}" style="margin-bottom: var(--s-4); font-size: var(--fs-sm);">연동 해제 중 오류가 발생했어요. 다시 시도해 주세요.</p>
+
 	<!-- 계정 소셜 연동 정보 박스 -->
 	<div class="card" style="background: var(--c-surface); border: 1px solid var(--c-line-weak); margin-bottom: var(--s-4);">
-		<div class="u-row" style="gap: var(--s-3);">
-			<svg class="icon" style="width:22px;height:22px"><use href="#i-user"/></svg>
-			<div>
-				<div class="u-row" style="gap: var(--s-2);">
-					<span class="u-bold" style="font-size: var(--fs-sm);"
-					      th:text="${user?.oauthProvider == 'email' ? '이메일 계정' : '연동 계정'}">연동 계정</span>
-					<span th:unless="${user?.oauthProvider == 'email'}" class="badge badge--info" style="font-size: 10px;"
-					      th:text="${user?.oauthProvider == 'kakao' ? '카카오' : (user?.oauthProvider == 'google' ? '구글' : '라인')}">카카오</span>
+		<div class="u-row u-between" style="align-items: center; margin-bottom: var(--s-3);">
+			<div class="u-row" style="gap: var(--s-2); align-items: center;">
+				<svg class="icon" style="width:20px;height:20px"><use href="#i-user"/></svg>
+				<span class="u-bold" style="font-size: var(--fs-sm);">연동된 로그인 계정</span>
+			</div>
+			<span th:if="${canUnlink}" class="badge badge--success" style="font-size: 10px;">멀티 연동 중</span>
+		</div>
+
+		<!-- 변경됨 (2026-09-24, 코드 감사) — 예전엔 "이메일 로그인"만 고정된 첫 줄로 따로 그리고
+		     "기본 계정"이라고 못박아뒀는데, 실제로는 구글로 최초 가입한 뒤 이메일 로그인을 나중에
+		     추가한 계정도 있어서(계정 연동) 그 경우 최초 가입 수단이 구글인데도 화면엔 이메일이
+		     "기본"이라고 잘못 표시됐다. 이제 모든 로그인 수단(이메일 포함)을 linkedSocials 하나의
+		     목록으로 통일하고, "기본 계정" 표시는 UserEntity.oauthProvider/oauthId(실제 최초 가입
+		     수단 — 그게 해제되면 AuthService.unlinkSocialAccount가 남은 것으로 자동 갱신함)와
+		     정확히 일치하는 행에만 붙인다. -->
+		<div style="display: flex; flex-direction: column; gap: var(--s-2);">
+			<div th:each="social : ${linkedSocials}"
+			     class="u-row u-between" style="align-items: center; padding: 10px 12px; background: var(--c-bg); border-radius: var(--r-md);">
+				<div class="u-row" style="gap: var(--s-2); align-items: center;">
+					<span class="badge badge--info" style="font-size: 11px;"
+					      th:text="${social.provider == 'google' ? '구글' : (social.provider == 'kakao' ? '카카오' : (social.provider == 'line' ? '라인' : (social.provider == 'email' ? '이메일' : social.provider)))}">구글</span>
+					<!-- 변경됨 (2026-09-23, 코드 감사) — 예전엔 user.email(계정 전체에 하나뿐인 대표 이메일)을
+					     보여줘서, 같은 provider로 서로 다른 실제 계정 두 개가 연동된 경우(정상 시나리오) 두
+					     행이 똑같은 이메일로 떠 "중복 연동"처럼 오인됐다. social별 connectedEmail을 대신 쓴다. -->
+					<span style="font-size: var(--fs-sm);"
+					      th:text="${social.connectedEmail != null ? social.connectedEmail : '소셜 계정 연동됨'}">소셜 연동</span>
 				</div>
-				<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 2px;"
-				   th:text="${user?.email != null ? user.email : '소셜 계정 로그인 연동됨'}">user@example.com</p>
+				<div>
+					<!-- 최초 가입 수단이었던 행 — 유지 필수/연결 해제 여부와 별개로 항상 표시 -->
+					<span th:if="${social.provider == user?.oauthProvider and social.providerId == user?.oauthId}"
+					      class="u-mut" style="font-size: var(--fs-xs); margin-right: 6px;">기본 계정</span>
+					<!-- 2개 이상일 때: 개별 연동 해제 버튼 -->
+					<form th:if="${canUnlink}" th:action="@{/mypage/unlink-social}" method="post" style="display: inline;"
+					      th:data-confirm="${(social.provider == 'google' ? '구글' : (social.provider == 'kakao' ? '카카오' : (social.provider == 'line' ? '라인' : '이메일'))) + ' 연동을 해제하시겠어요? 예약·절약 내역은 그대로 유지돼요. 단, 이 ' + (social.provider == 'google' ? '구글' : (social.provider == 'kakao' ? '카카오' : (social.provider == 'line' ? '라인' : '이메일'))) + (social.provider == 'email' ? ' 로그인으로는 더 이상 접속할 수 없어요.' : ' 계정으로 다시 로그인하면 새 계정이 만들어져요.')}">
+						<input type="hidden" name="socialAccountId" th:value="${social.id}">
+						<button type="submit" class="btn btn--outline btn--sm"
+						        style="font-size: 11px; padding: 3px 8px; color: var(--c-danger); border-color: var(--c-danger); background: transparent;">
+							연결 해제
+						</button>
+					</form>
+					<!-- 1개뿐일 때: 유지 필수 안내 배지 -->
+					<span th:unless="${canUnlink}" class="u-mut" style="font-size: var(--fs-xs); display: inline-block;">
+						유지 필수
+					</span>
+				</div>
 			</div>
 		</div>
+		<p th:unless="${canUnlink}" class="u-mut" style="font-size: var(--fs-xs); margin-top: var(--s-2);">
+			* 계정 보호를 위해 최소 1개의 로그인 수단은 유지되어야 합니다.
+		</p>
 	</div>
 
 	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)"
@@ -148,7 +190,16 @@
 
 	<!-- 회원 탈퇴 -->
 	<div style="margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--c-line-weak); text-align: center;">
-		<form th:action="@{/mypage/withdraw}" method="post"
+		<!-- 복수 계정 연동 중일 때: 스마트 분기 모달 트리거 -->
+		<div th:if="${canUnlink}">
+			<button type="button" id="btn-open-withdraw-choice" class="u-danger"
+			        style="background: none; border: none; font-size: var(--fs-xs); text-decoration: underline; padding: var(--s-2); cursor: pointer;">
+				회원 탈퇴
+			</button>
+		</div>
+
+		<!-- 단일 계정일 때: 기본 확인창 후 전체 탈퇴 -->
+		<form th:unless="${canUnlink}" th:action="@{/mypage/withdraw}" method="post"
 		      data-confirm="정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다.">
 			<button type="submit" class="u-danger"
 			        style="background: none; border: none; font-size: var(--fs-xs); text-decoration: underline; padding: var(--s-2); cursor: pointer;">
@@ -223,6 +274,89 @@
 					window.girigiriAlert('새 비밀번호가 일치하지 않아요.');
 				}
 			});
+		})();
+	</script>
+
+	<!-- 복수 연동 회원을 위한 스마트 탈퇴/연결해제 분기 모달 -->
+	<div id="withdraw-choice-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true">
+		<div class="modal-box" style="max-width: 360px; text-align: left; padding: var(--s-5);">
+			<h4 style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: var(--s-2); color: var(--c-text);">
+				탈퇴 전 확인해 주세요
+			</h4>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-4); line-height: 1.5;">
+				현재 여러 개의 로그인 수단이 연동되어 있어요.<br>
+				진행을 원하는 방식을 선택해 주세요.
+			</p>
+
+			<!-- 옵션 1: 특정 소셜 연동만 해제 (권장) -->
+			<div th:if="${linkedSocials != null and !linkedSocials.isEmpty()}" style="margin-bottom: var(--s-3);">
+				<form th:action="@{/mypage/unlink-social}" method="post">
+					<input type="hidden" name="socialAccountId" th:value="${linkedSocials[0].id}">
+					<button type="submit" class="btn btn--block btn--outline"
+					        style="border-color: var(--c-primary); color: var(--c-primary); padding: var(--s-3); text-align: left; border-radius: var(--r-lg);">
+						<div style="font-weight: var(--fw-bold); font-size: var(--fs-sm);">
+							<span th:text="${linkedSocials[0].provider == 'google' ? '구글' : (linkedSocials[0].provider == 'kakao' ? '카카오' : (linkedSocials[0].provider == 'line' ? '라인' : (linkedSocials[0].provider == 'email' ? '이메일' : '소셜')))}">소셜</span> 연동만 해제하기 (권장)
+						</div>
+						<div style="font-size: 11px; color: var(--c-text-sub); margin-top: 2px;">
+							기존 예약 및 이용 내역은 다른 계정으로 계속 유지돼요.
+						</div>
+					</button>
+				</form>
+			</div>
+
+			<!-- 옵션 2: 전체 회원 탈퇴 -->
+			<form th:action="@{/mypage/withdraw}" method="post" style="margin-bottom: var(--s-3);">
+				<button type="submit" class="btn btn--block btn--outline"
+				        style="border-color: var(--c-line); color: var(--c-danger); padding: var(--s-3); text-align: left; border-radius: var(--r-lg);">
+					<div style="font-weight: var(--fw-bold); font-size: var(--fs-sm);">
+						전체 서비스 회원 탈퇴
+					</div>
+					<div style="font-size: 11px; color: var(--c-text-sub); margin-top: 2px;">
+						모든 소셜 연동과 이용 내역(예약, 쿠폰 등)이 영구 삭제돼요.
+					</div>
+				</button>
+			</form>
+
+			<button type="button" id="btn-close-withdraw-choice" class="btn btn--block btn--sm"
+			        style="background: var(--c-line-weak); border: none; color: var(--c-text); margin-top: var(--s-2);">
+				취소
+			</button>
+		</div>
+	</div>
+
+	<script th:inline="none">
+		(function () {
+			var modal = document.getElementById('withdraw-choice-modal');
+			var openBtn = document.getElementById('btn-open-withdraw-choice');
+			var closeBtn = document.getElementById('btn-close-withdraw-choice');
+			if (openBtn && modal) {
+				openBtn.addEventListener('click', function () {
+					modal.style.display = 'flex';
+				});
+			}
+			if (closeBtn && modal) {
+				closeBtn.addEventListener('click', function () {
+					modal.style.display = 'none';
+				});
+			}
+			if (modal) {
+				modal.addEventListener('click', function (e) {
+					if (e.target === modal) modal.style.display = 'none';
+				});
+			}
+		})();
+	</script>
+
+	<!--/* 추가됨 (2026-09-24) — 이 화면은 /mypage/edit?unlinked, ?unlinkError= 등 여러 리다이렉트를
+	     거쳐 들어올 수 있어(연동 해제 성공/실패), history.back()이 그 중간 경유지(리다이렉트 직전 POST
+	     요청 등)로 튈 수 있다. 뒤로가기는 항상 마이페이지 홈으로 고정한다 (signup.html·loginForm.html과
+	     동일 패턴 — app.js의 기본 data-back 위임보다 먼저 떼어낸다). */-->
+	<script th:inline="none">
+		(function () {
+			var back = document.querySelector('.topbar__back[data-back]');
+			if (!back) { return; }
+			back.removeAttribute('data-back');
+			back.addEventListener('click', function () { location.href = '/mypage'; });
 		})();
 	</script>
 

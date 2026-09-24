@@ -7,6 +7,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 // "user"는 MySQL 예약어라 회피. uniqueConstraints 추가됨 (2026-09-08, 코드 감사) — 왜: 로그인 키인
@@ -47,11 +49,17 @@ public class UserEntity {
 	// 변경됨 (2026-08-21) — 왜: dev 브랜치에는 OAuth2 로그인이 없던 시절의 login_id/password가
 	// 남아 있었는데, 자체 회원가입이 없는(CLAUDE.md 3.1) 프로젝트라 항상 비어있게 되는 필드라 제거.
 	// oauthProvider/oauthId도 자체가입 경로가 없으므로 항상 값이 채워져 nullable = false로 필수화.
+	// 2026-09-22: 1:N 멀티 소셜 계정 연동 체계(user_social_accounts) 도입 이후에도 기존 쿼리와의 호환성을 위해 유지한다.
 	@Column(name = "oauth_provider", length = 20, nullable = false)
 	private String oauthProvider;   // google / kakao / line
 
 	@Column(name = "oauth_id", length = 100, nullable = false)
 	private String oauthId;
+
+	// 2026-09-22: 1:N 멀티 소셜 계정 연동(Account Linking) 목록
+	@Builder.Default
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<SocialAccountEntity> socialAccounts = new ArrayList<>();
 
 	// 추가됨 (2026-08-21) — 왜: 소셜 계정 없이도 가입할 수 있도록 이메일+비밀번호 로그인을 추가하면서
 	// 신설. 이메일 계정은 oauthProvider="email", oauthId=이메일 값으로 저장해 기존 조회 로직

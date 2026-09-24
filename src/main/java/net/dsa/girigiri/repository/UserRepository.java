@@ -20,6 +20,11 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
 	boolean existsByPhone(String phone);
 
+	// 추가됨 (2026-09-24) — 이메일 가입 시 "다른 provider로 이미 가입된 이메일"을 찾기 위해 필요.
+	// email 컬럼엔 유니크 제약이 없어(같은 이메일로 소셜 여러 개 가입 이력이 있을 수 있음) 단건 조회로
+	// 안전하게 쓰려고 findFirst를 쓴다 — 여러 건이어도 예외 없이 그중 하나만 돌려준다.
+	Optional<UserEntity> findFirstByEmail(String email);
+
 	List<UserEntity> findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(
 			String nickname, String email, Sort sort);
 }
