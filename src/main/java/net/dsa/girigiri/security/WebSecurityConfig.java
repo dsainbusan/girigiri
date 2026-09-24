@@ -13,8 +13,6 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -93,6 +91,11 @@ public class WebSecurityConfig {
 			// 추가됨 (2026-08-21) — 왜: 이메일 가입/로그인 화면. 로그인 전 단계라 permitAll 없이는
 			// 접근 자체가 막힌다(/auth/emailLogin은 formLogin의 loginProcessingUrl이기도 하다).
 			, "/auth/emailSignup"
+			// 추가됨 (2026-09-24) — 이메일 가입 1·2단계(인증번호 발송/확인)는 계정이 아직 없는 상태(로그인
+			// 전)에서 호출되므로 위 /auth/emailSignup과 같은 이유로 공개해야 한다.
+			, "/auth/emailSignup/send-otp"
+			, "/auth/emailSignup/verify-otp"
+			, "/auth/emailSignup/prepare-link"
 			, "/auth/emailLogin"
 	);
 
@@ -170,12 +173,7 @@ public class WebSecurityConfig {
 		return http.build();
 	}
 
-	// 추가됨 (2026-08-21) — 왜: 이메일 회원가입 시 비밀번호 암호화 저장(AuthController#emailSignup),
-	// 로그인 시 검증(EmailUserDetailsService 기반 DaoAuthenticationProvider) 양쪽에서 필요.
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+	// PasswordEncoder 빈은 PasswordEncoderConfig로 옮겼다 (2026-09-23, 순환 참조 회피 — 그 파일 주석 참고).
 
 	// 추가됨 — 왜: LINE 로그인 시도 중 "[invalid_id_token] Signed JWT rejected:
 	// Another algorithm expected, or no matching key(s) found" 에러 발생. LINE 채널이 ID 토큰을

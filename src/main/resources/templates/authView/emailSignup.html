@@ -6,8 +6,11 @@
 	이메일 회원가입 화면
 	담당: 문창호 (WBS 2.1 인증)
 	- 소셜 계정이 없어도 이메일+비밀번호로 가입할 수 있게 하는 4번째 옵션.
-	- 여기서는 계정만 만들고 자동 로그인은 하지 않는다 — 가입 후 /auth/emailLogin으로 보내서
-	  방금 입력한 비밀번호로 직접 로그인하게 한다.
+	- 2단계 진행: (1) 이메일/비밀번호 입력 → 형식·중복 검증 후 인증번호 발송, 계정은 아직 안 만든다.
+	  (2) 인증번호 확인 → 통과해야 그때 실제 계정을 만들고 자동 로그인시켜 /auth/signup(부가정보
+	  입력)으로 보낸다. 변경됨 (2026-09-24, 코드 감사) — 예전엔 인증 없이 1단계에서 바로 계정을
+	  만들어서, 인증 안 된 남의 이메일로 계정을 선점("스쿼팅")당하면 진짜 주인이 나중에 그 이메일로
+	  못 가입하는 결함이 있었다. AuthService.validateEmailSignupInput/completeEmailSignup 주석 참고.
 */-->
 <div id="content" th:fragment="content" class="page">
 
@@ -16,7 +19,7 @@
 	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'mismatch'}" style="margin-bottom: var(--s-4)">비밀번호가 서로 일치하지 않아요.</p>
 	<p class="u-danger" th:if="${param.error != null and param.error[0] == 'duplicate'}" style="margin-bottom: var(--s-4)">이미 가입된 이메일이에요. 로그인해 주세요.</p>
 
-	<form th:action="@{/auth/emailSignup}" method="post">
+	<form id="email-signup-form">
 		<div class="field">
 			<label class="field__label" for="email">이메일</label>
 			<input class="input" type="email" id="email" name="email" th:value="${email}" placeholder="example@email.com" required>
@@ -32,12 +35,240 @@
 			<input class="input" type="password" id="passwordConfirm" name="passwordConfirm" placeholder="비밀번호를 한 번 더 입력해 주세요" minlength="8" required>
 		</div>
 
-		<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">가입하기</button>
+		<!-- 1단계 통과 후에만 노출 — 인증번호 확인 전까지는 계정이 없다. -->
+		<div id="email-signup-otp-block" style="display:none; margin-top: var(--s-4);">
+			<p id="email-signup-otp-banner" class="otp-mock-banner" style="display:none;"></p>
+			<label class="field__label" for="signupOtpCode">인증번호</label>
+			<div class="u-row" style="gap: var(--s-2); align-items: stretch;">
+				<input class="input" type="text" id="signupOtpCode" inputmode="numeric" maxlength="6"
+				       placeholder="인증번호 6자리" style="flex: 1;">
+				<button type="button" id="btn-verify-signup-otp" class="btn btn--outline" style="flex: none;">인증 확인</button>
+			</div>
+			<p id="email-signup-otp-feedback" style="display:none; font-size: var(--fs-xs); margin-top: 6px;"></p>
+		</div>
+
+		<button type="submit" id="btn-email-signup" class="btn btn--block" style="margin-top: var(--s-6)">인증번호 받기</button>
 	</form>
 
 	<p class="u-center u-sub" style="font-size: var(--fs-sm); margin-top: var(--s-4)">
 		이미 계정이 있으신가요? <a th:href="@{/auth/emailLogin}" class="u-primary" style="font-weight: var(--fw-bold)">로그인</a>
 	</p>
+
+	<!-- 추가됨 (2026-09-24) — 이 이메일이 이미 다른 소셜 계정에 있을 때: 새 계정을 만드는 대신 그
+	     계정에 이메일+비밀번호 로그인을 "추가"할지 물어본다. AuthController#prepareEmailSignupLink 참고. -->
+	<div id="email-link-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+		<div class="modal-box email-link-modal-box">
+			<p class="email-link-modal-text">
+				이미 <span id="email-link-modal-provider" class="u-bold">구글</span>로 가입된 이메일이에요.
+			</p>
+			<div class="email-link-modal-notice">
+				동의하면 <b>본인 확인(재인증)</b> 후, 방금 입력한 비밀번호로 그 계정에 이메일 로그인이
+				추가돼요. 앞으로 이메일+비밀번호로 로그인해도 항상 같은 계정으로 들어갑니다.
+			</div>
+			<div class="email-link-modal-actions">
+				<button type="button" id="email-link-modal-cancel" class="email-link-modal-btn email-link-modal-btn--cancel">취소</button>
+				<button type="button" id="email-link-modal-confirm" class="email-link-modal-btn email-link-modal-btn--confirm">재인증</button>
+			</div>
+		</div>
+	</div>
+
+	<style>
+		.otp-mock-banner {
+			background: var(--c-info-weak);
+			border-radius: var(--r-md);
+			padding: 8px 10px;
+			font-size: var(--fs-xs);
+			color: var(--c-text);
+			margin-bottom: 6px;
+			word-break: keep-all;
+		}
+		.email-link-modal-box {
+			max-width: 320px;
+			width: 90%;
+			padding: 24px 20px 16px;
+			border-radius: var(--r-xl);
+			background: var(--c-surface);
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+			border: 1px solid var(--c-line);
+			text-align: left;
+		}
+		.email-link-modal-text {
+			font-size: var(--fs-md);
+			line-height: 1.6;
+			color: var(--c-text);
+			margin: 0 0 12px 0;
+			word-break: keep-all;
+		}
+		.email-link-modal-notice {
+			background: var(--c-info-weak);
+			border-radius: var(--r-md);
+			padding: 10px 12px;
+			font-size: var(--fs-xs);
+			line-height: 1.5;
+			color: var(--c-text);
+			word-break: keep-all;
+			margin-bottom: var(--s-3);
+		}
+		.email-link-modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 16px;
+		}
+		.email-link-modal-btn {
+			background: none;
+			border: none;
+			padding: 6px 12px;
+			font-size: var(--fs-md);
+			font-weight: var(--fw-bold);
+			cursor: pointer;
+			border-radius: var(--r-md);
+			color: #FF5A5A;
+		}
+		.email-link-modal-btn:hover {
+			background: rgba(255, 90, 90, 0.08);
+		}
+	</style>
+
+	<script th:inline="none">
+		(function () {
+			var form = document.getElementById('email-signup-form');
+			var emailInput = document.getElementById('email');
+			var passwordInput = document.getElementById('password');
+			var passwordConfirmInput = document.getElementById('passwordConfirm');
+			var btnSubmit = document.getElementById('btn-email-signup');
+			var otpBlock = document.getElementById('email-signup-otp-block');
+			var otpBanner = document.getElementById('email-signup-otp-banner');
+			var otpCodeInput = document.getElementById('signupOtpCode');
+			var btnVerifyOtp = document.getElementById('btn-verify-signup-otp');
+			var otpFeedback = document.getElementById('email-signup-otp-feedback');
+			var otpRequested = false;
+
+			var linkModal = document.getElementById('email-link-modal');
+			var linkModalProvider = document.getElementById('email-link-modal-provider');
+			var linkModalCancel = document.getElementById('email-link-modal-cancel');
+			var linkModalConfirm = document.getElementById('email-link-modal-confirm');
+
+			function openEmailLinkModal(providerDisplay) {
+				linkModalProvider.textContent = providerDisplay || '소셜';
+				linkModal.style.display = 'flex';
+			}
+			linkModalCancel.addEventListener('click', function () {
+				linkModal.style.display = 'none';
+			});
+			linkModal.addEventListener('click', function (e) {
+				if (e.target === linkModal) linkModal.style.display = 'none';
+			});
+			linkModalConfirm.addEventListener('click', function () {
+				// 전화번호 재인증(prepareLinkReauth)과 동일한 패턴 — 여기서는 아무것도 연동하지 않고,
+				// 서버가 이미 세션에 stash해둔 이메일/비밀번호/대상 계정 정보를 들고 실제 소셜
+				// 재로그인으로 브라우저를 보낸다. 로그인이 실제로 성공해서 대상 계정과 일치할 때만
+				// OAuth2LoginSuccessHandler가 이메일 로그인을 추가한다.
+				window.location.href = '/auth/emailSignup/prepare-link';
+			});
+
+			function showOtpFeedback(msg, isSuccess) {
+				otpFeedback.textContent = msg;
+				otpFeedback.style.color = isSuccess ? 'var(--c-success, #16a34a)' : 'var(--c-danger, #dc2626)';
+				otpFeedback.style.display = 'block';
+			}
+
+			var ERROR_MESSAGES = {
+				INVALID_EMAIL: '이메일 형식이 올바르지 않아요.',
+				INVALID_PASSWORD: '비밀번호는 8자 이상이어야 해요.',
+				PASSWORD_MISMATCH: '비밀번호가 서로 일치하지 않아요.',
+				DUPLICATE: '이미 가입된 이메일이에요. 로그인해 주세요.'
+			};
+
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+
+				btnSubmit.disabled = true;
+				btnSubmit.textContent = otpRequested ? '다시 보내는 중...' : '전송 중...';
+
+				fetch('/auth/emailSignup/send-otp', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'email=' + encodeURIComponent(emailInput.value.trim())
+						+ '&password=' + encodeURIComponent(passwordInput.value)
+						+ '&passwordConfirm=' + encodeURIComponent(passwordConfirmInput.value)
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						btnSubmit.disabled = false;
+						if (!data.ok) {
+							btnSubmit.textContent = otpRequested ? '다시 받기' : '인증번호 받기';
+							window.location.href = '/auth/emailSignup?error='
+								+ (data.error === 'INVALID_EMAIL' ? 'email'
+									: data.error === 'INVALID_PASSWORD' ? 'password'
+									: data.error === 'PASSWORD_MISMATCH' ? 'mismatch'
+									: 'duplicate')
+								+ '&email=' + encodeURIComponent(emailInput.value.trim());
+							return;
+						}
+
+						if (data.linked) {
+							btnSubmit.textContent = '인증번호 받기';
+							openEmailLinkModal(data.provider);
+							return;
+						}
+
+						otpRequested = true;
+						emailInput.disabled = true;
+						passwordInput.disabled = true;
+						passwordConfirmInput.disabled = true;
+						btnSubmit.textContent = '인증번호 다시 받기';
+						otpBlock.style.display = 'block';
+						if (data.mailSent) {
+							otpBanner.style.display = 'none';
+						} else {
+							// 발송 미설정(개발 환경 등) — 목업처럼 코드를 화면에 그대로 보여준다.
+							otpBanner.style.display = 'block';
+							otpBanner.textContent = '[테스트 환경] 메일 발송이 설정되지 않아 여기 표시합니다 — 인증번호: ' + data.mockCode;
+						}
+						otpCodeInput.value = '';
+						otpCodeInput.focus();
+						otpFeedback.style.display = 'none';
+					})
+					.catch(function () {
+						btnSubmit.disabled = false;
+						btnSubmit.textContent = otpRequested ? '다시 받기' : '인증번호 받기';
+						showOtpFeedback('전송 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
+					});
+			});
+
+			btnVerifyOtp.addEventListener('click', function () {
+				var code = otpCodeInput.value.trim();
+				if (!code) {
+					showOtpFeedback('인증번호를 입력해 주세요.', false);
+					otpCodeInput.focus();
+					return;
+				}
+				btnVerifyOtp.disabled = true;
+				fetch('/auth/emailSignup/verify-otp', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'code=' + encodeURIComponent(code)
+				})
+					.then(function (res) { return res.json(); })
+					.then(function (data) {
+						btnVerifyOtp.disabled = false;
+						if (data.verified) {
+							showOtpFeedback('✓ 인증 완료! 이동합니다...', true);
+							window.location.href = data.redirectTo || '/auth/signup';
+						} else if (data.reason === 'duplicate') {
+							window.location.href = '/auth/emailSignup?error=duplicate&email=' + encodeURIComponent(emailInput.value.trim());
+						} else {
+							var reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
+							showOtpFeedback(reason, false);
+						}
+					})
+					.catch(function () {
+						btnVerifyOtp.disabled = false;
+						showOtpFeedback('확인 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
+					});
+			});
+		})();
+	</script>
 
 </div>
 </body>

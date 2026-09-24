@@ -41,7 +41,9 @@ public class ProfileCompletionInterceptor implements HandlerInterceptor {
 		}
 
 		String uri = request.getRequestURI();
-		if (uri.equals("/auth/signup") || uri.equals("/auth/signup/cancel") || uri.equals("/auth/logout")) {
+		if (uri.equals("/auth/signup") || uri.equals("/auth/signup/cancel") || uri.equals("/auth/logout")
+				|| uri.equals("/auth/link-account") || uri.equals("/auth/link-account/prepare") || uri.equals("/auth/check-phone")
+				|| uri.equals("/auth/send-otp") || uri.equals("/auth/verify-otp")) {
 			return true;
 		}
 

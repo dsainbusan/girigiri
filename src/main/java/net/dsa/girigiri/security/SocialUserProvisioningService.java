@@ -1,11 +1,14 @@
 package net.dsa.girigiri.security;
 
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.entity.SocialAccountEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.repository.SocialAccountRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 추가됨 (2026-08-20) — 왜: (oauthProvider, oauthId)로 기존 계정을 찾고 없으면 즉시 자동 생성하는 로직.
@@ -16,26 +19,58 @@ import org.springframework.stereotype.Component;
  * 변경됨 (2026-08-21) — 왜: 원래는 role=PENDING(역할 미선택)으로 만들고 /auth/roleSelect에서 유저가
  * 직접 USER/ADMIN을 고르게 했는데, 기획이 바뀌어 가입 시 무조건 role=USER로 확정한다. 점주(OWNER)는
  * 셀프 선택이 아니라 별도 신청/승인 폼(운영자가 승인)으로만 될 수 있음 — 그 폼은 아직 미구현.
+ *
+ * 변경됨 (2026-09-22) — 왜: 1:N 멀티 소셜 계정 연동(Account Linking) 체계 도입.
+ * user_social_accounts 테이블을 먼저 조회하여 동일한 유저에 여러 소셜(구글/카카오/라인 등)이
+ * 연동되어 있을 경우에도 하나의 UserEntity로 로그인되도록 지원한다.
  */
 @Component
 @RequiredArgsConstructor
 public class SocialUserProvisioningService {
 
 	private final UserRepository userRepository;
+	private final SocialAccountRepository socialAccountRepository;
 
-	// 변경됨 (2026-08-21) — 왜: 회원가입 완료 화면(authView/signup)의 "OO 계정으로 시작해요" 박스에
-	// 이메일을 마스킹해서 보여주려면 최초 생성 시점에 email을 같이 저장해둬야 한다.
+	@Transactional
 	public UserEntity findOrCreate(String provider, String oauthId, String nickname, String email) {
-		UserEntity user = userRepository.findByOauthProviderAndOauthId(provider, oauthId)
-				.orElseGet(() -> userRepository.save(
-						UserEntity.builder()
-								.oauthProvider(provider)
-								.oauthId(oauthId)
-								.nickname(nickname)
-								.email(email)
-								.role(UserEntity.ROLE_USER)
-								.build()
-				));
+		// 1. 1:N 소셜 계정 연동 테이블에서 먼저 조회 (통합된 멀티 소셜 계정 지원)
+		UserEntity user = socialAccountRepository.findByProviderAndProviderId(provider, oauthId)
+				.map(SocialAccountEntity::getUser)
+				.orElseGet(() -> {
+					// 2. 하위 호환: 기존 users 테이블에만 존재하는 계정인지 확인 (마이그레이션 전/누락 대비)
+					return userRepository.findByOauthProviderAndOauthId(provider, oauthId)
+							.map(legacyUser -> {
+								// 소셜 연동 테이블에 자동 등록하여 다음 로그인부터 1번 경로로 빠르게 조회되게 함
+								SocialAccountEntity socialAccount = SocialAccountEntity.builder()
+										.user(legacyUser)
+										.provider(provider)
+										.providerId(oauthId)
+										.connectedEmail(email)
+										.build();
+								socialAccountRepository.save(socialAccount);
+								return legacyUser;
+							})
+							.orElseGet(() -> {
+								// 3. 완전히 새로운 소셜 회원: users 행 생성 + user_social_accounts 행 동시 생성
+								UserEntity newUser = userRepository.save(
+										UserEntity.builder()
+												.oauthProvider(provider)
+												.oauthId(oauthId)
+												.nickname(nickname)
+												.email(email)
+												.role(UserEntity.ROLE_USER)
+												.build()
+								);
+								SocialAccountEntity socialAccount = SocialAccountEntity.builder()
+										.user(newUser)
+										.provider(provider)
+										.providerId(oauthId)
+										.connectedEmail(email)
+										.build();
+								socialAccountRepository.save(socialAccount);
+								return newUser;
+							});
+				});
 
 		// 추가됨 (2026-09-08) — 왜: 코드 감사에서 "회원 정지"가 소셜 로그인 경로(구글/카카오/라인
 		// 전부 이 메서드를 거침)에서 전혀 확인되지 않는다는 게 발견됐다. 정지된 계정이 그대로

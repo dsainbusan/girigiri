@@ -4,7 +4,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.service.AuthService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -34,9 +36,18 @@ import java.io.IOException;
  *
  * 변경됨 (2026-08-21) — 왜: 이메일 로그인(EmailLoginSuccessHandler)에도 완전히 동일한 세션 초기화
  * 로직이 필요해져서 AuthSessionInitializer로 공통 로직을 뽑아냈다.
+ *
+ * 변경됨 (2026-09-23, 코드 감사) — 왜: 1:N 계정 연동(Account Linking)의 소셜 재인증 경로
+ * (AuthController#prepareLinkReauth)가 여기로 돌아온다. "가입 대기 중이던 계정을, 지금 막 실제로
+ * 로그인에 성공한 이 계정으로 병합해도 되는지"는 이 로그인이 진짜로 그 전화번호의 주인인지 확인해야만
+ * 알 수 있어서(전화번호만으로는 본인 확인이 안 됨 — AuthService.linkSocialAccountWithPassword 주석 참고)
+ * 그 판단을 세션 초기화 직전, 여기서 한다.
  */
 @Component
+@RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+	private final AuthService authService;
 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -45,6 +56,49 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		UserEntity user = principal.getUser();
 
 		HttpSession session = request.getSession();
+
+		// 계정 연동 소셜 재인증 경로 확인 — 1회용(consume)으로 즉시 제거해 재사용/리플레이를 막는다.
+		Object pendingSourceId = session.getAttribute("linkPendingSourceUserId");
+		Object pendingPhone = session.getAttribute("linkPendingPhone");
+		session.removeAttribute("linkPendingSourceUserId");
+		session.removeAttribute("linkPendingPhone");
+
+		if (pendingSourceId instanceof Long sourceId && pendingPhone instanceof String phoneStr
+				&& !sourceId.equals(user.getId())
+				&& user.getPhone() != null
+				&& user.getPhone().equals(AuthService.formatPhone(phoneStr))) {
+			// 지금 막 로그인에 성공한 계정(user)이 연동하려던 전화번호의 실제 주인임이 증명됐다 —
+			// 가입 대기 중이던 계정(sourceId)의 소셜 정보를 이 계정으로 병합한다. 그 사이 대기 계정이
+			// 이미 다른 방식으로 가입을 완료했거나 삭제됐다면(드문 경합) 병합만 건너뛰고 이 로그인
+			// 자체는 정상 진행한다 — 로그인이 예외로 깨지면 안 된다.
+			try {
+				user = authService.linkSocialAccountAfterReauth(sourceId, user.getId());
+			} catch (RuntimeException e) {
+				logger.info("계정 연동 실패 (소셜 재인증 경로, 로그인은 정상 진행): " + e.getMessage());
+			}
+		}
+
+		// 추가됨 (2026-09-24) — 이메일 가입 중 "이미 다른 소셜로 가입된 이메일" 재인증 경로 확인.
+		// AuthController#prepareEmailSignupLink가 stash해둔 값과, 지금 막 로그인에 성공한 계정의 id가
+		// 정확히 같을 때만(=본인 확인 성공) 그 계정에 이메일+비밀번호 로그인을 추가한다.
+		Object pendingEmailLinkTargetUserId = session.getAttribute("pendingEmailLinkTargetUserId");
+		Object pendingEmailLinkEmail = session.getAttribute("pendingEmailLinkEmail");
+		Object pendingEmailLinkPasswordHash = session.getAttribute("pendingEmailLinkPasswordHash");
+		session.removeAttribute("pendingEmailLinkTargetUserId");
+		session.removeAttribute("pendingEmailLinkEmail");
+		session.removeAttribute("pendingEmailLinkPasswordHash");
+		session.removeAttribute("pendingEmailLinkProviderRaw");
+
+		if (pendingEmailLinkTargetUserId instanceof Long targetId && pendingEmailLinkEmail instanceof String emailStr
+				&& pendingEmailLinkPasswordHash instanceof String passwordHash
+				&& targetId.equals(user.getId())) {
+			try {
+				user = authService.linkEmailPasswordToAccount(targetId, emailStr, passwordHash);
+			} catch (RuntimeException e) {
+				logger.info("이메일 로그인 추가 실패 (재인증 경로, 로그인은 정상 진행): " + e.getMessage());
+			}
+		}
+
 		String targetUrl = AuthSessionInitializer.initSessionAndGetTargetUrl(request, session, user);
 
 		clearAuthenticationAttributes(request);

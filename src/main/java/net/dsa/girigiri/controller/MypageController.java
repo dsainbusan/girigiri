@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.service.AuthService;
 import net.dsa.girigiri.service.LedgerService;
 import net.dsa.girigiri.service.MypageService;
 import net.dsa.girigiri.service.ReservationService;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class MypageController {
 
 	private final MypageService mypageService;
+	private final AuthService authService;
 	private final StoreAccessService storeAccessService;
 	private final ReservationService reservationService;
 	private final LedgerService ledgerService;
@@ -73,8 +75,30 @@ public class MypageController {
 		mypageService.findUser(userId).ifPresent(user -> model.addAttribute("user", user));
 		storeAccessService.findMyStore(userId).ifPresent(store -> model.addAttribute("store", store));
 		model.addAttribute("kakaoMapJsKey", kakaoMapJsKey);
+		model.addAttribute("linkedSocials", authService.getLinkedSocialAccounts(userId));
+		model.addAttribute("canUnlink", authService.canUnlinkSocialAccount(userId));
 
 		return "mypageView/edit";
+	}
+
+	/**
+	 * 특정 소셜 계정 연동 해제 처리
+	 */
+	@LoginRequired
+	@PostMapping("/unlink-social")
+	public String unlinkSocial(@RequestParam Long socialAccountId, HttpSession session) {
+		Long userId = (Long) session.getAttribute("userId");
+		if (userId != null && socialAccountId != null) {
+			try {
+				authService.unlinkSocialAccount(userId, socialAccountId);
+				return "redirect:/mypage/edit?unlinked";
+			} catch (IllegalStateException e) {
+				return "redirect:/mypage/edit?unlinkError=minimum";
+			} catch (Exception e) {
+				return "redirect:/mypage/edit?unlinkError";
+			}
+		}
+		return "redirect:/mypage/edit";
 	}
 
 	/**

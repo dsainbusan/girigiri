@@ -307,8 +307,16 @@
     };
 
     // confirm() 대체 — 버튼 2개, "확인"을 눌러야 onConfirm이 호출된다.
-    window.girigiriConfirm = function (message, onConfirm) {
-      openModal({ desc: message, showCancel: true });
+    window.girigiriConfirm = function (message, onConfirm, opts) {
+      opts = opts || {};
+      openModal({
+        title: opts.title || "",
+        desc: message,
+        showCancel: true,
+        okLabel: opts.okLabel || "확인",
+        cancelLabel: opts.cancelLabel || "취소",
+        tone: opts.tone || "neutral"
+      });
       okBtn.onclick = function () { closeModal(); onConfirm(); };
       cancelBtn.onclick = closeModal;
     };
