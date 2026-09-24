@@ -20,7 +20,7 @@
 	<p class="u-danger" th:if="${param.error != null and param.error[0] != 'rate'}" style="margin-bottom: var(--s-4)">값을 다시 확인해 주세요.</p>
 	<p class="u-primary" th:if="${param.connected}" style="margin-bottom: var(--s-4)">연동 완료! 메뉴·재고를 불러왔어요.</p>
 	<p class="u-primary" th:if="${param.synced}" style="margin-bottom: var(--s-4)">메뉴를 다시 불러왔어요.</p>
-	<p class="u-primary u-bold" th:if="${param.saved}" style="margin-bottom: var(--s-4)">저장되었습니다.</p>
+	<p class="u-primary u-bold" th:if="${param.saved}" style="margin-bottom: var(--s-4)">저장됐어요.</p>
 
 	<!-- 미연동 -->
 	<div th:unless="${connected}">
@@ -47,7 +47,7 @@
 				<label class="field__label" for="storeCode">매장 코드 <span class="u-accent">*</span></label>
 				<input class="input" type="text" id="storeCode" name="storeCode"
 				       placeholder="POS사 포털에서 발급받은 코드" required maxlength="50">
-				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">데모라 아무 값이나 넣어도 연동됩니다.</p>
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">데모라 아무 값이나 넣어도 연동돼요.</p>
 			</div>
 			<button type="submit" class="btn btn--block" style="margin-top: var(--s-6)">연동하기</button>
 		</form>
@@ -81,7 +81,7 @@
 			<p class="u-sub" style="font-size: var(--fs-xs); margin: 2px 0 var(--s-3); line-height: 1.6">
 				매일 이 시각에 POS 재고를 확인해서 "지금 이만큼 남았는데 팔래요?"를 물어봐요.<br>
 				<b>마감 1~1.5시간 전을 권장</b>해요 — 그때 남은 재고가 곧 폐기분이고, 할인율도
-				그 시각 기준으로 정해져서 더 깊게 잡혀요(자동값 −50%). 한 번 올린 상품 가격은 이후 자동으로 안 바뀝니다.
+				그 시각 기준으로 정해져서 더 깊게 잡혀요(자동값 −50%). 한 번 올린 상품 가격은 이후 자동으로 안 바뀌어요.
 				<b>마감 10분 전부터는 발행이 닫혀요</b>(손님이 픽업할 시간이 없어서) — 그 안에 [바로 올리기] 하세요.
 				비워 두면 자동 생성을 안 해요.
 			</p>
@@ -89,7 +89,7 @@
 				<input class="input" type="time" name="promptTime" th:value="${promptTime}" style="flex:1">
 				<button type="submit" class="btn btn--sm">저장</button>
 			</div>
-			<p class="u-primary u-bold" th:if="${param.timeSaved}" style="font-size: var(--fs-xs); margin-top: 4px">저장되었습니다.</p>
+			<p class="u-primary u-bold" th:if="${param.timeSaved}" style="font-size: var(--fs-xs); margin-top: 4px">저장됐어요.</p>
 		</form>
 
 		<a th:href="@{/store/pos/sim}" class="btn btn--outline btn--block btn--sm" style="margin-top: var(--s-3)">🖥️ POS 시뮬레이터 (시연용)</a>

@@ -11,7 +11,7 @@
 
   <a class="link-action mb-16" th:href="@{/superadmin/notices}">&larr; 공지사항 목록</a>
 
-  <p class="form-error" th:if="${param.error == 'period'}">종료일은 시작일보다 빠를 수 없어요.</p>
+  <p class="form-error" th:if="${param.error == 'period'}">종료일은 시작일보다 빠를 수 없습니다.</p>
   <p class="form-error" th:if="${param.error != null and param.error != 'period'}">제목과 내용을 모두 입력해 주세요.</p>
 
   <form th:action="@{/superadmin/notices/new}" method="post" class="form-narrow">
