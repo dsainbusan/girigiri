@@ -28,6 +28,11 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title th:text="${title} ?: 'ギリギリ'">ギリギリ</title>
+  <!-- 2026-09-24 추가 — 브랜드 파비콘(송보미 제공, static/images/brand/). -->
+  <link rel="icon" type="image/svg+xml" th:href="@{/images/brand/logo.svg}">
+  <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/brand/favicon-32.png}">
+  <link rel="icon" type="image/png" sizes="16x16" th:href="@{/images/brand/favicon-16.png}">
+  <link rel="apple-touch-icon" th:href="@{/images/brand/apple-touch-icon.png}">
   <!-- 2026-09-21 추가 — 왜: tokens.css의 --font-base가 1순위로 "Noto Sans KR"을 선언해뒀는데
        정작 이 폰트를 실제로 불러오는 곳이 어디에도 없어서, 모든 기기가 항상 시스템 기본 폰트로
        폴백하고 있었다(맥은 산 프란시스코, 윈도우는 맑은 고딕 등 — 기기마다 다르게 보임).

@@ -33,6 +33,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="${title} != null ? ${title} + ' · 운영자' : 'ギリギリ 운영자'">ギリギリ 운영자</title>
+  <!-- 2026-09-24 추가 — 브랜드 파비콘(송보미 제공, static/images/brand/). -->
+  <link rel="icon" type="image/svg+xml" th:href="@{/images/brand/logo.svg}">
+  <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/brand/favicon-32.png}">
+  <link rel="icon" type="image/png" sizes="16x16" th:href="@{/images/brand/favicon-16.png}">
+  <link rel="apple-touch-icon" th:href="@{/images/brand/apple-touch-icon.png}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
   <link rel="stylesheet" th:href="@{/css/layout-admin.css}">
 </head>
@@ -84,7 +89,9 @@
 <!-- 글로벌 내비게이션 -->
 <nav class="gnb">
   <div class="container gnb__bar">
-    <a class="gnb__brand" th:href="@{/superadmin/dashboard}">ギリギリ</a>
+    <a class="gnb__brand" th:href="@{/superadmin/dashboard}">
+      <img th:src="@{/images/brand/logo.svg}" alt="" width="20" height="20" style="vertical-align:-5px;margin-right:4px">ギリギリ
+    </a>
     <span th:if="${badge}" class="gnb__badge-label" th:text="${badge}">뱃지</span>
     <ul class="gnb__list">
       <li><a class="gnb__link" th:classappend="${active=='dashboard'} ? ' is-active'"

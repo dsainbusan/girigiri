@@ -48,7 +48,9 @@
 }
 .banner--danger .banner__title,
 .banner--danger .banner__desc {
-	color: var(--c-danger);
+	/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — --c-danger on -weak 배경 실측
+	   대비 ≈3.4:1로 AA(4.5:1) 미달 → --c-danger-strong으로 교체 */
+	color: var(--c-danger-strong);
 }
 
 /* 추가됨 (2026-08-21) — 왜: 체크아웃 화면에서 예약 수량이 1개로 고정돼 있던 걸 남은 수량 이하
@@ -164,8 +166,10 @@
 }
 .scan-status.status-warn {
 	background: var(--c-accent-weak);
-	color: var(--c-accent);
-	border: 1px solid #FDBA74;
+	/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — --c-accent on -weak 배경 실측 대비
+	   ≈2.7:1로 AA 미달 → --c-accent-strong으로 교체 */
+	color: var(--c-accent-strong);
+	border: 1px solid var(--c-accent-border);
 }
 .scan-status .scan-status-title {
 	font-size: var(--fs-lg);

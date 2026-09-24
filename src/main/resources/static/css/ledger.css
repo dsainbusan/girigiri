@@ -8,8 +8,8 @@
 
 /* ---------- 새 뱃지 획득 토스트 (page 최상단, 히어로 카드 위) ---------- */
 .ledger-badge-toast {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border: 1px solid #f59e0b;
+  background: linear-gradient(135deg, var(--c-badge-rep), var(--c-badge-rep-border));
+  border: 1px solid var(--c-badge-rep-accent);
   border-radius: var(--r-lg);
   padding: var(--s-3) var(--s-4);
   margin-bottom: var(--s-3);
@@ -20,25 +20,25 @@
 .ledger-badge-toast.is-hidden { opacity: 0; transform: translateY(-8px); pointer-events: none; height: 0; margin: 0; padding: 0; overflow: hidden; border-width: 0; }
 @keyframes ledgerToastSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 .ledger-badge-toast__header { display: flex; align-items: center; justify-content: space-between; }
-.ledger-badge-toast__title { font-size: var(--fs-sm); font-weight: var(--fw-black); color: #92400e; }
+.ledger-badge-toast__title { font-size: var(--fs-sm); font-weight: var(--fw-black); color: var(--c-badge-rep-on); }
 .ledger-badge-toast__close {
-  background: none; border: none; color: #92400e; font-size: 14px; font-weight: var(--fw-bold);
+  background: none; border: none; color: var(--c-badge-rep-on); font-size: 14px; font-weight: var(--fw-bold);
   cursor: pointer; padding: 2px 4px; line-height: 1;
 }
 .ledger-badge-toast__list { display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-2); }
 .ledger-badge-toast__item { display: flex; align-items: center; gap: var(--s-2); }
 .ledger-badge-toast__icon {
   font-size: 22px; line-height: 1; flex-shrink: 0; width: 36px; height: 36px; overflow: hidden;
-  border-radius: 50%; background: var(--c-surface); border: 2px solid #f59e0b;
+  border-radius: 50%; background: var(--c-surface); border: 2px solid var(--c-badge-rep-accent);
   display: flex; align-items: center; justify-content: center;
 }
 .ledger-badge-toast__info { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .ledger-badge-toast__name { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: #78350f; }
-.ledger-badge-toast__desc { font-size: 11px; color: #92400e; opacity: .85; }
-.ledger-badge-toast__hint { display: block; margin-top: var(--s-2); font-size: 11px; font-weight: var(--fw-bold); color: #92400e; text-align: right; }
+.ledger-badge-toast__desc { font-size: 11px; color: var(--c-badge-rep-on); opacity: .85; }
+.ledger-badge-toast__hint { display: block; margin-top: var(--s-2); font-size: 11px; font-weight: var(--fw-bold); color: var(--c-badge-rep-on); text-align: right; }
 .ledger-badge-toast__share-btn {
   flex-shrink: 0; align-self: flex-start;
-  background: rgba(255, 255, 255, .6); border: 1px solid #f59e0b; border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, .6); border: 1px solid var(--c-badge-rep-accent); border-radius: var(--r-sm);
   font-size: 14px; padding: 4px 8px; line-height: 1; cursor: pointer;
 }
 .ledger-badge-toast__share-btn:hover { background: #fff; }
@@ -65,9 +65,9 @@
 .ledger-tier-chip:hover { box-shadow: 0 3px 8px rgba(0,0,0,.12); transform: translateY(-1px); }
 .ledger-tier-chip:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
 .ledger-tier-chip.is-rep {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
-  border-color: #f59e0b;
+  background: linear-gradient(135deg, var(--c-badge-rep), var(--c-badge-rep-border));
+  color: var(--c-badge-rep-on);
+  border-color: var(--c-badge-rep-accent);
   box-shadow: 0 1px 4px rgba(245, 158, 11, 0.2);
 }
 .ledger-tier-chip.is-empty {
@@ -92,7 +92,9 @@
   font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-mut);
 }
 .ledger-hero__delta.is-up { color: var(--c-primary); }
-.ledger-hero__delta.is-down { color: var(--c-danger); }
+/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 13px bold는 large-text 기준 미달이라
+   본문 AA(4.5:1) 적용 대상 — 크림 배경 실측 대비 ≈3.3:1 → --c-danger-strong으로 교체 */
+.ledger-hero__delta.is-down { color: var(--c-danger-strong); }
 .ledger-hero__delta-sub { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-mut); margin-left: 2px; }
 
 .ledger-hero__row { display: flex; gap: var(--s-3); margin-top: var(--s-4); }
@@ -146,14 +148,14 @@
 #hero-goal-bar { transition: width .6s ease; }
 /* 목표 게이지 3단계 색 — 0~79% 기본 초록(공용 .progress__bar 그대로), 80~99% 주황(is-near,
    "거의 다 왔다" 긴장감), 100%+ 골드(is-achieved, 달성!). */
-.progress__bar.is-near { background: #f97316; }
+.progress__bar.is-near { background: var(--c-accent); }
 /* 목표 달성 — 골드 톤으로 눈에 띄게. */
 .ledger-hero__goal.is-achieved .ledger-hero__goal-label { color: #b45309; font-weight: var(--fw-bold); }
-.progress__bar.is-achieved { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.progress__bar.is-achieved { background: linear-gradient(90deg, var(--c-badge-rep-accent), #fbbf24); }
 
 .ledger-goal-error {
   margin-top: var(--s-3); padding: 10px var(--s-3);
-  background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--r-md);
+  background: var(--c-danger-weak); border: 1px solid var(--c-danger-border); border-radius: var(--r-md);
   color: var(--c-danger); font-size: var(--fs-sm); font-weight: var(--fw-bold);
 }
 .ledger-goal-error.is-hidden { display: none; }
@@ -328,7 +330,9 @@
 .ledger-history-chip:hover { border-color: var(--c-primary-border); color: var(--c-primary); }
 .ledger-history-chip.is-active {
   background: var(--c-primary-strong); color: var(--c-primary-on); border-color: var(--c-primary-strong);
-  box-shadow: 0 1px 4px rgba(1,42,140,.2);
+  /* 2026-09-24, docs/design-system.md 부채 정리 — 2026-09-17 리브랜딩 전 구 네이비 rgb(1,42,140)
+     잔재값을 현재 --c-primary(#0F2B8C = rgb(15,43,140)) 기준으로 보정 */
+  box-shadow: 0 1px 4px rgba(15,43,140,.2);
 }
 
 .ledger-history-select-wrap {
@@ -409,7 +413,9 @@
 .ledger-history-card__original { font-size: 10px; color: var(--c-text-mut); }
 .ledger-history-card__original.is-muted { color: var(--c-text-mut); font-weight: var(--fw-medium); }
 .ledger-history-card__rate {
-  color: var(--c-danger); font-weight: var(--fw-bold); margin-left: 2px;
+  /* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 10px에 --c-danger는 흰 바탕 실측 대비
+     ≈3.8:1로 AA 미달 → --c-danger-strong으로 교체 */
+  color: var(--c-danger-strong); font-weight: var(--fw-bold); margin-left: 2px;
 }
 .ledger-history-card__badge { flex-shrink: 0; }
 .ledger-history-card__saved-chip {
@@ -441,7 +447,7 @@
   font-size: 24px; line-height: 1; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   width: 48px; height: 48px; border-radius: 50%; overflow: hidden;
-  background: #fef3c7; border: 2px solid #f59e0b;
+  background: var(--c-badge-rep); border: 2px solid var(--c-badge-rep-accent);
 }
 .ledger-badge-hero__main.is-empty .ledger-badge-hero__rep-icon {
   background: var(--c-bg); border-color: var(--c-line);
@@ -508,7 +514,7 @@
   flex-shrink: 0; overflow: hidden;
 }
 .ledger-badge-preview-icon.is-rep {
-  border-color: #f59e0b; background: #fffbeb; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+  border-color: var(--c-badge-rep-accent); background: #fffbeb; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 .ledger-badge-preview-empty {
   font-size: 11px; color: var(--c-text-mut); line-height: 1.4;
@@ -594,7 +600,9 @@
   background: var(--c-primary-strong);
   border-color: var(--c-primary-strong);
   color: var(--c-primary-on);
-  box-shadow: 0 2px 6px rgba(1, 42, 140, 0.25);
+  /* 2026-09-24, docs/design-system.md 부채 정리 — 구 네이비 rgb(1,42,140) 잔재값을 현재
+     --c-primary(#0F2B8C = rgb(15,43,140)) 기준으로 보정 */
+  box-shadow: 0 2px 6px rgba(15, 43, 140, 0.25);
 }
 
 /* 뱃지 그리드 & 카드 */
@@ -619,7 +627,7 @@
   transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.06);
 }
 .ledger-badge-card.is-unlocked.is-rep {
-  border: 2px solid #f59e0b; background: linear-gradient(180deg, #fffbeb 0%, var(--c-surface) 60%);
+  border: 2px solid var(--c-badge-rep-accent); background: linear-gradient(180deg, #fffbeb 0%, var(--c-surface) 60%);
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
 }
 .ledger-badge-card.is-locked {
@@ -645,7 +653,7 @@
   border-radius: var(--r-pill);
 }
 .ledger-badge-card__tag.is-rep {
-  background: #f59e0b; color: #fff;
+  background: var(--c-badge-rep-accent); color: #fff;
 }
 .ledger-badge-card__tag.is-unlocked {
   background: var(--c-primary-weak); color: var(--c-primary-strong);
@@ -704,7 +712,7 @@
   border-radius: var(--r-sm);
 }
 .badge-status-chip.is-rep {
-  background: #fef3c7; color: #b45309; border: 1px solid #fde68a;
+  background: var(--c-badge-rep); color: #b45309; border: 1px solid var(--c-badge-rep-border);
 }
 .badge-set-btn {
   font-size: 11px !important; padding: 4px 0 !important;
@@ -834,10 +842,11 @@
   border-radius: var(--r-xl);
   background: linear-gradient(165deg, var(--ledger-share-from), var(--ledger-share-to));
   color: #fff; text-align: center; overflow: hidden;
-  /* --font-base의 1순위인 "Noto Sans KR"은 이 프로젝트에서 실제로 로드하지 않는 폰트라(설치 안 됨)
-     브라우저는 알아서 다음 폰트로 폴백하지만, html2canvas는 그 폴백 순서를 브라우저와 다르게 계산해
-     한글 글자폭이 달라지는(=캡처했을 때만 배열이 틀어져 보이는) 문제가 있었다. 실제로 설치돼 있는
-     폰트로 바로 고정해서 폴백 자체를 없앤다. */
+  /* common/layout.html이 Google Fonts로 "Noto Sans KR"을 로드하긴 하지만(2026-09-24 정정 —
+     예전엔 이 프로젝트가 로드하지 않는다고 잘못 적었었다), html2canvas는 웹폰트 로드 타이밍/폴백
+     순서를 브라우저와 다르게 계산해 한글 글자폭이 달라지는(=캡처했을 때만 배열이 틀어져 보이는)
+     문제가 있었다. 캡처 안정성을 위해 OS에 이미 설치돼 있는 폰트로 고정해서 웹폰트 의존 자체를
+     없앤다. */
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
   /* line-height를 명시하지 않으면(기본값 normal) html2canvas가 한글 폰트의 줄높이를 브라우저와
      다르게 추정해서, 다운로드한 이미지에서만 줄 간격이 실제보다 좁게(글자끼리 붙어 보이게) 나오는

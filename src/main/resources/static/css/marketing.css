@@ -10,10 +10,18 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body.mkt {
+	/* 이 파일 전용 로컬 토큰 (2026-09-24, docs/design-system.md 부채 정리) — tokens.css에는
+	   브랜드 컬러만 두기로 한 이 파일의 원칙(상단 헤더 코멘트 참고)에 따라, 이 화면에서만
+	   반복되거나 tokens.css에 대응 값이 없는 색은 전역 토큰이 아니라 여기 로컬로 정의한다. */
+	--mkt-border: var(--mkt-border);       /* 카드/네비/마퀴 아이템 테두리 — 6곳 반복 */
+	--mkt-line: #DDD6C6;         /* 히어로 목업 카드의 장식용 텍스트 라인 */
+	--mkt-text-label: #4A4438;   /* 통계 라벨 — --c-text-sub보다 살짝 진한 별도 톤 */
+	--mkt-shadow-primary: rgba(15, 43, 140, .28); /* 2026-09-17 리브랜딩 전 구 네이비(rgba(1,42,140,*))
+	                                                  잔재값을 현재 --c-primary(#0F2B8C)에 맞춰 보정 */
 	margin: 0;
 	font-family: var(--font-base);
-	color: #1C1C1C;
-	background: #FFFFFF;
+	color: var(--c-text);
+	background: var(--c-surface);
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
 }
@@ -32,7 +40,7 @@ body.mkt {
 	z-index: 50;
 	background: rgba(255, 255, 255, .92);
 	backdrop-filter: blur(8px);
-	border-bottom: 1px solid #EDE5D4;
+	border-bottom: 1px solid var(--mkt-border);
 }
 .mkt-nav__row {
 	display: flex;
@@ -50,17 +58,19 @@ body.mkt {
 	margin-right: auto;
 }
 .mkt-logo__badge {
+	/* 2026-09-24 — 텍스트("ギリ") 뱃지 대신 실제 브랜드 로고 이미지(static/images/brand/logo.svg)를
+	   쓰면서 배경/글자 스타일은 로고 SVG 자체에 이미 포함돼 있어 더 필요 없다. */
 	width: 36px;
 	height: 36px;
 	border-radius: 11px;
-	background: var(--c-primary);
-	color: var(--c-primary-weak);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 13px;
-	font-weight: 900;
+	display: block;
 	flex: none;
+}
+.mkt-logo__badge--sm {
+	/* footer 브랜드 줄 전용 — nav보다 작게 (2026-09-24, home.html 인라인 스타일 제거) */
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
 }
 .mkt-nav__links {
 	display: flex;
@@ -68,7 +78,7 @@ body.mkt {
 	gap: 32px;
 	font-size: 15px;
 	font-weight: 600;
-	color: #6B6354;
+	color: var(--c-text-mut-strong);
 }
 .mkt-nav__links a:hover { color: var(--c-primary-strong); }
 @media (max-width: 860px) {
@@ -96,7 +106,7 @@ body.mkt {
 .mkt-btn.mkt-btn--primary {
 	background: var(--c-primary);
 	color: var(--c-primary-weak);   /* 흰색 대신 브랜드 크림톤 (2026-09-17 요청) */
-	box-shadow: 0 10px 24px rgba(1, 42, 140, .28);
+	box-shadow: 0 10px 24px var(--mkt-shadow-primary);
 }
 .mkt-btn--primary:hover { transform: translateY(-1px); filter: brightness(1.04); }
 .mkt-btn.mkt-btn--ghost {
@@ -114,8 +124,8 @@ body.mkt {
 	overflow: hidden;
 	padding: 88px 0 100px;
 	background:
-		radial-gradient(720px 420px at 88% -10%, var(--c-primary-weak) 0%, rgba(240,253,244,0) 70%),
-		#FFFFFF;
+		radial-gradient(720px 420px at 88% -10%, var(--c-primary-weak) 0%, transparent 70%),
+		var(--c-surface);
 }
 .mkt-hero__grid {
 	display: grid;
@@ -153,9 +163,15 @@ body.mkt {
 .mkt-hero p.lead {
 	font-size: 18px;
 	line-height: 1.65;
-	color: #6B6354;
+	color: var(--c-text-mut-strong);
 	max-width: 480px;
 	margin: 0 0 32px;
+}
+.mkt-hero p.lead em {
+	/* 2026-09-24, home.html 인라인 스타일 제거 — "판매" 강조 */
+	font-style: normal;
+	color: var(--c-primary-strong);
+	font-weight: 800;
 }
 .mkt-hero__actions {
 	display: flex;
@@ -171,9 +187,9 @@ body.mkt {
 	margin: 0 auto;
 }
 .mkt-mock__frame {
-	background: #fff;
+	background: var(--c-surface);
 	border-radius: 28px;
-	box-shadow: 0 30px 70px -20px rgba(15, 23, 42, .28), 0 0 0 1px #EDE5D4;
+	box-shadow: 0 30px 70px -20px rgba(15, 23, 42, .28), 0 0 0 1px var(--mkt-border);
 	overflow: hidden;
 	transform: rotate(2deg);
 }
@@ -202,7 +218,7 @@ body.mkt {
 	gap: 12px;
 	padding: 10px;
 	border-radius: 14px;
-	background: #F6F0E3;
+	background: var(--c-bg);
 }
 .mkt-mock__thumb {
 	width: 44px; height: 44px; border-radius: 10px; flex: none;
@@ -212,13 +228,16 @@ body.mkt {
 }
 .mkt-mock__thumb svg { width: 22px; height: 22px; }
 .mkt-mock__lines { flex: 1; min-width: 0; }
-.mkt-mock__line { height: 8px; border-radius: 4px; background: #DDD6C6; }
+.mkt-mock__line { height: 8px; border-radius: 4px; background: var(--mkt-line); }
 .mkt-mock__line + .mkt-mock__line { margin-top: 6px; width: 60%; }
 .mkt-mock__badge {
 	flex: none;
 	font-size: 11px;
 	font-weight: 800;
-	color: var(--c-primary-weak);
+	/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 크림(--c-primary-weak)-on-오렌지는
+	   실측 대비 ~1.85:1로 AA 미달. .btn--accent(components.css)와 동일하게 --c-text로 교체 →
+	   실측 6.08:1, AA 통과. */
+	color: var(--c-text);
 	background: var(--c-accent);
 	padding: 3px 8px;
 	border-radius: 999px;
@@ -246,7 +265,7 @@ body.mkt {
 /* ---------------- Partners marquee ---------------- */
 .mkt-partners { padding: 48px 0 56px; overflow: hidden; }
 .mkt-partners__label {
-	text-align: center; font-size: 13px; font-weight: 800; color: #7D735E;
+	text-align: center; font-size: 13px; font-weight: 800; color: var(--c-text-mut);
 	text-transform: uppercase; letter-spacing: .08em; margin: 0 0 24px;
 }
 .mkt-marquee {
@@ -275,14 +294,14 @@ body.mkt {
 	flex: none;
 	display: flex; align-items: center; justify-content: center;
 	width: 168px; height: 72px;
-	background: #fff; border: 1px solid #EDE5D4; border-radius: 14px;
+	background: var(--c-surface); border: 1px solid var(--mkt-border); border-radius: 14px;
 	padding: 14px 20px;
 }
 .mkt-marquee__item img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* ---------------- Section shared ---------------- */
 .mkt-section { padding: 88px 0; }
-.mkt-section--tint { background: #F6F0E3; }
+.mkt-section--tint { background: var(--c-bg); }
 .mkt-section__head { text-align: center; max-width: 620px; margin: 0 auto 56px; }
 .mkt-section__eyebrow {
 	font-size: 13px; font-weight: 800; color: var(--c-primary-strong);
@@ -294,7 +313,7 @@ body.mkt {
 	letter-spacing: -0.02em;
 	margin: 0 0 12px;
 }
-.mkt-section__head p { color: #5C5545; font-size: 16px; line-height: 1.6; margin: 0; }
+.mkt-section__head p { color: var(--c-text-sub); font-size: 16px; line-height: 1.6; margin: 0; }
 
 /* ---------------- Stats ---------------- */
 .mkt-stats {
@@ -304,8 +323,8 @@ body.mkt {
 }
 @media (max-width: 760px) { .mkt-stats { grid-template-columns: 1fr; } }
 .mkt-stat {
-	background: #fff;
-	border: 1px solid #EDE5D4;
+	background: var(--c-surface);
+	border: 1px solid var(--mkt-border);
 	border-radius: 20px;
 	padding: 32px 24px;
 	text-align: center;
@@ -317,8 +336,8 @@ body.mkt {
 	letter-spacing: -0.02em;
 	font-variant-numeric: tabular-nums;
 }
-.mkt-stat__label { margin-top: 8px; font-size: 15px; font-weight: 700; color: #4A4438; }
-.mkt-stat__sub { margin-top: 4px; font-size: 13px; color: #7D735E; }
+.mkt-stat__label { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--mkt-text-label); }
+.mkt-stat__sub { margin-top: 4px; font-size: 13px; color: var(--c-text-mut); }
 
 /* ---------------- Steps ---------------- */
 .mkt-steps {
@@ -328,8 +347,8 @@ body.mkt {
 }
 @media (max-width: 760px) { .mkt-steps { grid-template-columns: 1fr; } }
 .mkt-step {
-	background: #fff;
-	border: 1px solid #EDE5D4;
+	background: var(--c-surface);
+	border: 1px solid var(--mkt-border);
 	border-radius: 20px;
 	padding: 28px;
 	position: relative;
@@ -339,7 +358,7 @@ body.mkt {
 	top: 24px; right: 24px;
 	font-size: 34px;
 	font-weight: 900;
-	color: #F6F0E3;
+	color: var(--c-bg);
 }
 .mkt-step__icon {
 	width: 48px; height: 48px;
@@ -351,13 +370,14 @@ body.mkt {
 }
 .mkt-step__icon svg { width: 24px; height: 24px; }
 .mkt-step h3 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
-.mkt-step p { font-size: 14.5px; color: #5C5545; line-height: 1.6; margin: 0; }
+.mkt-step p { font-size: 14.5px; color: var(--c-text-sub); line-height: 1.6; margin: 0; }
 
 /* ---------------- Owner CTA banner ---------------- */
 .mkt-owner {
 	border-radius: 28px;
 	background: linear-gradient(135deg, var(--c-primary-strong) 0%, var(--c-primary) 100%);
-	color: #fff;
+	color: var(--c-primary-on);   /* --c-primary 배경 위 텍스트 — 흰색 대신 브랜드 크림톤 (2026-09-24,
+	                                  이미 .mkt-btn--ghost 등 같은 컴포넌트 안에서 쓰던 톤과 통일) */
 	padding: 56px;
 	display: grid;
 	grid-template-columns: 1.3fr .7fr;
@@ -377,16 +397,38 @@ body.mkt {
 .mkt-owner .mkt-btn--ghost:hover { background: rgba(255,255,255,.12); }
 
 /* ---------------- Footer ---------------- */
-.mkt-footer { padding: 56px 0 40px; border-top: 1px solid #EDE5D4; }
+.mkt-footer { padding-top: 56px; border-top: 1px solid var(--mkt-border); }
 .mkt-footer__row {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: 24px;
 	flex-wrap: wrap;
+	padding-bottom: 40px;
 }
 .mkt-footer__brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; }
-.mkt-footer__desc { margin-top: 10px; font-size: 13.5px; color: #7D735E; max-width: 320px; line-height: 1.6; }
-.mkt-footer__links { display: flex; gap: 28px; font-size: 14px; font-weight: 700; color: #6B6354; }
+.mkt-footer__desc { margin-top: 10px; font-size: 13.5px; color: var(--c-text-mut); max-width: 320px; line-height: 1.6; }
+.mkt-footer__links { display: flex; gap: 28px; font-size: 14px; font-weight: 700; color: var(--c-text-mut-strong); }
 .mkt-footer__links a:hover { color: var(--c-primary-strong); }
-.mkt-footer__meta { margin-top: 32px; padding-top: 24px; border-top: 1px solid #F6F0E3; font-size: 12.5px; color: #D9D2C4; }
+
+/* 사업자정보 영역 — 사용자 제공 레퍼런스(배달의민족 하단)처럼 위 마케팅 섹션들과 톤을 확실히
+   구분하는 짙은 배경("법적 고지" 구간이라는 인상을 준다). 브랜드 네이비를 그대로 써서 이 페이지의
+   다른 어두운 영역(.mkt-owner)과 톤이 이어지게 했다. */
+.mkt-footer__biz-section { background: var(--c-primary-strong); padding: 32px 0 28px; margin-top: 0; }
+.mkt-footer__social { display: flex; gap: 16px; margin-bottom: 24px; }
+.mkt-footer__social-ico {
+	width: 34px; height: 34px; border-radius: 50%;
+	background: rgba(255,255,255,.1); color: rgba(255,255,255,.75);
+	display: flex; align-items: center; justify-content: center;
+}
+.mkt-footer__social-ico svg { width: 17px; height: 17px; }
+.mkt-footer__biz-name { color: rgba(255,255,255,.85); font-weight: 700; font-size: 14px; margin: 0 0 8px; }
+.mkt-footer__biz-line { color: rgba(255,255,255,.5); font-size: 12.5px; line-height: 1.9; margin: 0; }
+.mkt-footer__biz-line a { color: rgba(255,255,255,.7); text-decoration: underline; }
+.mkt-footer__biz-line a:hover { color: #fff; }
+/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 이 두 줄은 원래 rgba(255,255,255,.35)로
+   --c-primary-strong(#001A5C) 배경 위 실측 대비 ~3.0:1이라 작은 텍스트 기준 AA(4.5:1) 미달이었다.
+   같은 배경 위에서 이미 AA를 통과하던 .mkt-footer__biz-line(.5 알파, 4.83:1)과 알파를 맞춰
+   ~4.56~4.83:1로 올렸다. */
+.mkt-footer__biz-note { color: rgba(255,255,255,.5); font-size: 11.5px; margin: 10px 0 0; }
+.mkt-footer__meta { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); font-size: 12px; color: rgba(255,255,255,.5); }

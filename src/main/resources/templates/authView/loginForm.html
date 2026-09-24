@@ -11,13 +11,13 @@
 	<link rel="stylesheet" th:href="@{/css/auth.css}">
 
 	<div class="u-center" style="margin: var(--s-6) 0 var(--s-8)">
-		<div style="width:72px;height:72px;margin:0 auto var(--s-4);border-radius:var(--r-xl);background:var(--c-primary);color:var(--c-primary-on);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:var(--fw-black)">ギリ</div>
+		<img th:src="@{/images/brand/logo.svg}" alt="기리기리" width="72" height="72" style="margin:0 auto var(--s-4);display:block">
 		<h1 class="u-primary">기리기리</h1>
 		<p class="u-bold" style="margin-top:var(--s-2)">마감 특가로 아끼는 동네 장보기</p>
 		<p class="u-mut" style="margin-top:4px">오늘도 기리기리 세이브</p>
 	</div>
 
-	<p class="u-danger u-center" th:if="${param.error}" style="margin-bottom: var(--s-4)">로그인에 실패했습니다. 다시 시도해 주세요.</p>
+	<p class="u-danger u-center" th:if="${param.error}" style="margin-bottom: var(--s-4)">로그인에 실패했어요. 다시 시도해 주세요.</p>
 
 	<a th:href="@{/oauth2/authorization/kakao}" data-login-provider="kakao" class="btn btn--block btn--kakao oauth-btn">
 		<span class="oauth-btn__ico">
@@ -58,7 +58,7 @@
 		<span class="last-login-badge" data-provider-badge="email" style="display:none">최근 로그인</span>
 	</a>
 
-	<p class="u-mut u-center" style="font-size:var(--fs-xs);margin:var(--s-4) 0">가입 시 이용약관 및 개인정보처리방침에 동의하게 됩니다</p>
+	<p class="u-mut u-center" style="font-size:var(--fs-xs);margin:var(--s-4) 0">가입하면 이용약관과 개인정보처리방침에 동의하게 돼요</p>
 
 	<div class="card" style="background:var(--c-primary-weak)">
 		<p class="u-bold">사장님이신가요?</p>
