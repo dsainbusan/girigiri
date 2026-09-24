@@ -1,0 +1,89 @@
+/* faq.css — 기리기리 home 자주 묻는 질문
+   2026-09-24 — 원본은 자체 색(#14213D, #E63946 등)과 자체 레이아웃(사이드바+2컬럼 그리드,
+   sticky 헤더)을 쓰고 있었는데, 마케팅 홈의 다른 모든 섹션(임팩트/이용방법/파트너 CTA)은
+   .mkt-section + .mkt-section__head(가운데 정렬 eyebrow+h2+p) 패턴을 공유한다 — 이 섹션만
+   다른 폭/여백/타이포 스케일로 튀어서 같은 리듬으로 맞췄다. 색도 전부 브랜드 토큰으로 교체
+   (특히 원본의 빨강 accent는 이 프로젝트에서 "폐기/취소" 전용 의미색이라 장식용으로 쓰면 안 됨). */
+
+.faq__tabs {
+	display: flex;
+	width: fit-content;
+	margin: 0 auto 40px;
+	padding: 4px;
+	border-radius: var(--r-pill);
+	background: var(--c-bg);
+	gap: 2px;
+}
+.faq__tab {
+	border: 0;
+	background: transparent;
+	color: var(--c-text-mut-strong);
+	font: inherit;
+	font-size: 15px;
+	font-weight: 700;
+	padding: 8px 20px;
+	border-radius: var(--r-pill);
+	cursor: pointer;
+	transition: background .2s ease, color .2s ease;
+}
+.faq__tab[aria-selected="true"] { background: var(--c-primary); color: var(--c-primary-on); }
+
+/* 탭 아래 아코디언 — 본문과 같은 리듬을 쓰되, 질문/답변은 읽기 좋은 폭으로 가운데 정렬 */
+.faq__panel {
+	max-width: 720px;
+	margin: 0 auto;
+	border-top: 1px solid var(--mkt-border);
+}
+.faq__item { border-bottom: 1px solid var(--mkt-border); }
+.faq__item summary {
+	list-style: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 22px 4px;
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--c-text);
+}
+.faq__item summary::-webkit-details-marker { display: none; }
+.faq__item summary::after {                     /* + 아이콘, 열리면 × */
+	content: "";
+	flex: none;
+	width: 20px;
+	height: 20px;
+	background:
+		linear-gradient(currentColor 0 0) center / 14px 2px no-repeat,
+		linear-gradient(currentColor 0 0) center / 2px 14px no-repeat;
+	transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.faq__item[open] summary::after { transform: rotate(45deg); color: var(--c-primary-strong); }
+.faq__item summary:hover { color: var(--c-primary-strong); }
+.faq__answer { padding: 0 32px 24px 4px; color: var(--c-text-sub); font-size: 15.5px; line-height: 1.75; }
+.faq__answer p { margin: 0; }
+.faq__answer a {
+	color: var(--c-primary-strong);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* 열고 닫을 때 높이 애니메이션 (지원 브라우저만, 나머지는 그냥 즉시 열림) */
+@supports (interpolate-size: allow-keywords) {
+	#faq { interpolate-size: allow-keywords; }
+	.faq__item::details-content {
+		height: 0; overflow: clip;
+		transition: height .35s cubic-bezier(.2, .8, .2, 1), content-visibility .35s allow-discrete;
+	}
+	.faq__item[open]::details-content { height: auto; }
+}
+
+#faq :focus-visible { outline: 2px solid var(--c-primary); outline-offset: 3px; border-radius: 6px; }
+
+@media (max-width: 760px) {
+	.faq__item summary { font-size: 16px; padding: 18px 2px; }
+	.faq__answer { padding-right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	#faq *, #faq *::after, .faq__item::details-content { transition: none !important; }
+}

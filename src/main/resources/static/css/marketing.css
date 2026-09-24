@@ -38,9 +38,15 @@ body.mkt {
 	position: sticky;
 	top: 0;
 	z-index: 50;
-	background: rgba(255, 255, 255, .92);
-	backdrop-filter: blur(8px);
 	border-bottom: 1px solid var(--mkt-border);
+}
+/* 2026-09-24 — 굴절 유리(liquid-glass) 효과 적용. 배경/블러는 이제 .lg-glass 레이어가 담당하므로
+   여기선 이 요소 전용 값(각진 모서리, sticky 유지)만 덮어쓴다. .mkt-nav.lg-glass처럼 클래스를
+   묶어서 지정도를 올려야 liquid-glass.css의 .lg-glass 기본값(알약 모서리)보다 항상 이긴다. */
+.mkt-nav.lg-glass {
+	--lg-radius: 0;
+	--lg-tint: rgba(255, 255, 255, .5);
+	position: sticky;
 }
 .mkt-nav__row {
 	display: flex;
@@ -314,6 +320,7 @@ body.mkt {
 	margin: 0 0 12px;
 }
 .mkt-section__head p { color: var(--c-text-sub); font-size: 16px; line-height: 1.6; margin: 0; }
+.mkt-section__head p a { color: var(--c-primary-strong); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------------- Stats ---------------- */
 .mkt-stats {
