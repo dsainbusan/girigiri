@@ -155,7 +155,9 @@
    낮추고, 실제로 얼마 안 남았을 때만(store.urgent, 백엔드 계산값) 빨간색으로 튀게 한다 —
    "전부 급함"이 아니라 "이것만 진짜 급함"이 전달되도록. */
 .store-card__left { display: flex; align-items: center; gap: var(--s-1); font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); }
-.store-card__left.is-urgent { color: var(--c-danger); }
+/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 11px(--fs-xs)에 --c-danger는 흰 바탕
+   실측 대비 ≈3.8:1로 AA(4.5:1) 미달 → --c-danger-strong으로 교체 */
+.store-card__left.is-urgent { color: var(--c-danger-strong); }
 
 /* ---------------- Banner (절약 강조 등) ---------------- */
 .banner {
@@ -169,7 +171,7 @@
 }
 .banner__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary); }
 .banner__desc  { font-size: var(--fs-xs); color: var(--c-primary-strong); }
-.banner--info { background: var(--c-info-weak); border-color: #A5F3FC; }
+.banner--info { background: var(--c-info-weak); border-color: var(--c-info-border); }
 
 /* ---------------- Stat card (대시보드) ---------------- */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
@@ -284,7 +286,8 @@
 /* ---------------- Review photo upload (리뷰 사진 업로드 dropzone) ----------------
    강노은: storeView/detail.html과 reviewView/my.html(내 리뷰 관리 인라인 수정) 양쪽에서 써서 공용으로 뺐다.
    참고 디자인(연한 초록 카드 + 아이콘 배지 + 알약형 "Choose files" 버튼 + 박스 바깥의 안내문구) 톤을
-   우리 토큰(--c-primary가 이미 초록 계열)으로 재현했다.
+   우리 토큰으로 재현했다 (당시 --c-primary가 그린 계열이었음 — 2026-09-17 네이비 리스킨으로 지금은
+   --c-primary가 네이비다, 2026-09-24 정정).
    상태 2가지: idle(사진 없음/선택 전) ↔ preview(사진 있음 — 기존 사진이거나 새로 고른 파일).
    "제거"를 누르면 별도 안내 없이 곧장 idle로 돌아간다. div 클릭/드래그 앤 드롭 동작은 app.js 참고. */
 .review-upload {
@@ -367,7 +370,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,7 +384,7 @@
   border-radius: var(--r-lg);
   padding: var(--s-5);
   text-align: center;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-modal);
 }
 .modal-box__icon {
   width: 48px; height: 48px; margin: 0 auto var(--s-3);

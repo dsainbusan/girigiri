@@ -66,16 +66,17 @@
 | `--c-primary-weak` | #F6F0E3 | 크림 틴트 배경 (= `--c-bg`) |
 | `--c-primary-border` | #C7D2EA | 옅은 네이비 테두리 (선택 칩·배너·고스트 버튼) |
 | `--c-primary-on` | #F6F0E3 | 네이비 위 글자 (흰색 대신 크림) |
+| `--c-primary-active` | #193DB3 | 2026-09-24 추가 — `--c-primary`보다 밝은 활성 톤. layout.css 하단 탭바 FAB의 is-active 전용 |
 | `--c-primary-mid` | #8CA3D6 | 도넛 "예약됨(픽업 대기)". 글자 색으로 쓰지 않는다 |
 | `--c-idle` | #D9D2C4 | 도넛 "아직 판정 안 남". 글자 색으로 쓰지 않는다 |
 
 ### 색 — 기능 (의미가 고정됨)
 | 토큰 | 값 | 의미 / 규칙 |
 |---|---|---|
-| `--c-accent` / `-weak` / `-strong` | #F97316 / #FFF7ED / #C2410C | **주황 = 할인·마감임박 전용.** 실패·경고에 빌려 쓰지 않는다. 주황 채움 위 글자는 `--c-text`. 옅은 배경 위 글자는 `-strong` |
-| `--c-danger` / `-weak` / `-border` / `-strong` | #EF4444 / #FEF2F2 / #FECACA / #B91C1C | 폐기·긴급·실패·취소. 옅은 배경 위 글자는 `-strong` |
-| `--c-info` / `-weak` / `-strong` | #0EA5E9 / #EFF6FF / #0369A1 | 정보. 옅은 배경 위 글자는 `-strong` |
-| `--c-badge-rep` / `-border` / `-on` | #FEF3C7 / #FDE68A / #92400E | 대표 뱃지(게이미피케이션) 전용 호박색 |
+| `--c-accent` / `-weak` / `-border` / `-strong` | #F97316 / #FFF7ED / #FDBA74 / #C2410C | **주황 = 할인·마감임박 전용.** 실패·경고에 빌려 쓰지 않는다. 주황 채움 위 글자는 `--c-text`. 옅은 배경 위 글자는 `-strong`. `-border`는 2026-09-24 추가(reservation.css `.scan-status.status-warn` 테두리) |
+| `--c-danger` / `-weak` / `-border` / `-strong` | #EF4444 / #FEF2F2 / #FECACA / #B91C1C | 폐기·긴급·실패·취소. 옅은 배경 위 글자는 `-strong`. **작은 글자(본문 크기)에 순정 `--c-danger`를 흰/크림 배경에 직접 쓰면 대비 미달(≈3.3~3.8:1)이라 항상 `-strong`을 쓴다** |
+| `--c-info` / `-weak` / `-border` / `-strong` | #0EA5E9 / #EFF6FF / #A5F3FC / #0369A1 | 정보. 옅은 배경 위 글자는 `-strong`. `-border`는 2026-09-24 추가(components.css `.banner--info` 테두리) |
+| `--c-badge-rep` / `-border` / `-on` / `-accent` | #FEF3C7 / #FDE68A / #92400E / #F59E0B | 대표 뱃지(게이미피케이션) 전용 호박색. `-accent`는 2026-09-24 추가(ledger.css 도감/달성 강조 테두리·배경, 9곳) |
 | `--c-live-weak` / `-on` / `-border` | rgba 그린 / #86EFAC / rgba | "점주 모드" 라이브 배지 — **딥네이비 히어로 위 전용** |
 
 ### 색 — 중립 (웜 그레이)
@@ -104,7 +105,7 @@
 |---|---|
 | 간격 (4px 단위) | `--s-1` 4 · `--s-2` 8 · `--s-3` 12 · `--s-4` 16 · `--s-5` 20 · `--s-6` 24 · `--s-8` 32 |
 | 모서리 | `--r-sm` 8 · `--r-md` 12 · `--r-lg` 16 · `--r-xl` 18 · `--r-pill` 999 |
-| 그림자 | `--shadow-card` (떠 있어야 할 카드) · `--shadow-nav` (하단 탭바, 챗봇 FAB) |
+| 그림자 | `--shadow-card` (떠 있어야 할 카드) · `--shadow-nav` (하단 탭바, 챗봇 FAB) · `--shadow-modal` (모달 박스, 2026-09-24 추가 — components.css `.modal-box`가 순정 검정 대신 이 슬레이트 톤을 쓴다) |
 | 레이아웃 | `--app-max` 420 · `--topbar-h` 56 · `--bottomnav-h` 64 · `--hero-h-sm` 120 · `--hero-h-lg` 150 |
 | 오버레이 | `--overlay-scrim` rgba(0,0,0,.45) · `--z-modal` 200 |
 
@@ -246,30 +247,28 @@ Subscrr 레퍼런스에서 가져온 추가 규칙. **기존 색 값은 그대�
 코드를 건드릴 때 같이 고칠 수 있으면 고치고, 고치면 이 목록에서 지운다.
 
 ### 누락 / 오류
-- [ ] `home.html`이 `css/map.css`를 링크하지만 **파일이 없다** (404).
-- [ ] `ledger.css` `.ledger-share-card` 주석은 "Noto Sans KR을 로드하지 않는다"고 하지만 `common/layout.html`이 Google Fonts로 로드한다. Malgun Gothic 고정은 html2canvas 캡처 안정성 때문이면 유지하되 주석을 고칠 것.
-- [ ] 오래된 주석: `layout-admin.css` 머리말("컨슈머 앱 = 그린 톤"), `components.css` `.review-upload`("--c-primary가 초록 계열"), `store.css`("판매=초록"), 정산서 헤더("연한 초록 틴트") — 지금은 네이비/크림.
+- [x] `home.html`이 `css/map.css`를 링크한다는 항목은 오독이었다 — 실제로는 `<!--/* TODO(강노은): ... static/css/map.css로 분리 */-->` **주석**이고 진짜 `<link>`는 `home.css` 하나뿐이라 404는 나지 않는다 (2026-09-24 확인, 항목 정정).
+- [x] `ledger.css` `.ledger-share-card` 주석 — "Noto Sans KR을 로드하지 않는다"를 "로드는 하지만 html2canvas 캡처 안정성 때문에 Malgun Gothic으로 고정한다"로 정정 완료 (2026-09-24).
+- [x] `components.css` `.review-upload` 주석의 "--c-primary가 이미 초록 계열" → "당시엔 그린, 2026-09-17 리스킨 이후 지금은 네이비"로 정정 완료 (2026-09-24). (`layout-admin.css`/`store.css`/정산서 헤더는 슈퍼어드민·점주 도메인이라 이번 범위 밖 — 미정리 상태 그대로.)
 
 ### 대비 미달 (WCAG AA)
-- [ ] `reservation.css` `.scan-status.status-warn`: `--c-accent` 글자 on `--c-accent-weak` ≈ 2.7:1 → 글자를 `--c-accent-strong`으로.
-- [ ] `reservation.css` `.banner--danger`: `--c-danger` 글자 on `-weak` ≈ 3.4:1 → `--c-danger-strong`으로.
-- [ ] `--c-danger` 작은 글자(흰 바탕 ≈ 3.8:1): `.store-card__left.is-urgent`(11px), `.ledger-history-card__rate`(10px), `.ledger-hero__delta.is-down`(13px, 크림 바탕 ≈ 3.3:1) → `--c-danger-strong` 검토.
-- [x] `marketing.css` `.mkt-footer__meta`: 옛 버그(#D9D2C4 on 흰색 ≈ 1.5:1)는 2026-09 footer 개편(짙은 네이비 배경 + `rgba(255,255,255,*)`)으로 이미 대체됨. 개편 후 값(`.35` 알파)도 새 배경 기준 재실측하니 ≈3.0:1로 AA 미달이라 `.mkt-footer__biz-note`와 함께 `.5` 알파로 올려 ≈4.56~4.83:1로 수정 완료 (2026-09-24).
-- [x] `marketing.css` `.mkt-mock__badge`: 크림 on 주황 ≈ 2.5:1(재실측 1.85:1) → `--c-text`로 교체, 재실측 6.08:1 (2026-09-24).
+- [x] `reservation.css` `.scan-status.status-warn`: `--c-accent` on `-weak` ≈2.7:1 → `--c-accent-strong`로 교체 완료 (2026-09-24).
+- [x] `reservation.css` `.banner--danger`: `--c-danger` on `-weak` ≈3.4:1 → `--c-danger-strong`로 교체 완료 (2026-09-24).
+- [x] `components.css` `.store-card__left.is-urgent`(11px, 흰 바탕 ≈3.8:1), `ledger.css` `.ledger-history-card__rate`(10px, ≈3.8:1), `.ledger-hero__delta.is-down`(13px bold — large-text 기준 미달, 크림 바탕 ≈3.3:1) 전부 `--c-danger-strong`로 교체 완료 (2026-09-24).
+- [x] `marketing.css` `.mkt-footer__meta`/`.mkt-mock__badge` — 2026-09-24 정리 완료 (아래 표 및 커밋 참고).
 
 ### 토큰 대신 하드코딩된 값
-| 파일 | 토큰과 같은 값 (→ `var()`로 교체만) | 토큰 없는 값 |
-|---|---|---|
-| `components.css` | — | `#fff`×3, `.banner--info` 테두리 #A5F3FC, `.modal-overlay` rgba(0,0,0,.5)/z-index 100 (→ `--overlay-scrim`/`--z-modal`?) |
-| `layout.css` | #FFFFFF→`--c-surface` ×2 | `.topbar--dark`의 #fff/반투명 흰색, FAB 활성 #193DB3 |
-| `ledger.css` | #FEF3C7/#FDE68A/#92400E→`--c-badge-rep*`, #F97316→`--c-accent`, #FEF2F2/#FECACA→`--c-danger-weak/-border` | 호박 #F59E0B×9 #B45309 #FBBF24 #FFFBEB #78350F, 환경 배너 그린 3색, 탐험 넛지 보라 3색, 공유 카드 카테고리 그라데이션 10색, 옛 네이비 그림자 rgba(1,42,140) |
-| `marketing.css` | ✅ 2026-09-24 정리 완료: #1C1C1C→`--c-text`, #6B6354→`--c-text-mut-strong`, #7D735E→`--c-text-mut`, #5C5545→`--c-text-sub`, #F6F0E3→`--c-bg`, #FFFFFF→`--c-surface` 전부 교체. (#D9D2C4는 footer 개편으로 이미 코드에서 사라짐 — 교체 대상 없음.) | ✅ 정리 완료: 이 파일 헤더가 "브랜드 컬러만 tokens.css에서 가져오고 나머지는 이 파일에서 정의"라고 명시하므로, tokens.css에 넣는 대신 `body.mkt` 스코프의 로컬 커스텀 프로퍼티로 뺐다 — `--mkt-border`(옛 #EDE5D4×7), `--mkt-line`(옛 #DDD6C6), `--mkt-text-label`(옛 #4A4438), `--mkt-shadow-primary`(옛 그림자 rgba(1,42,140,.28)를 현재 `--c-primary` #0F2B8C 기준으로 rgba(15,43,140,.28)로 보정). 옛 그린 rgba(240,253,244,0)은 알파 0이라 시각 차이 없이 `transparent`로 교체. |
-| `reservation.css` | — | `.scan-status.status-warn` 테두리 #FDBA74 |
-| `store.css` | #FFFFFF→`--c-surface` ×10, #0F2B8C→`--c-primary`, #EF4444→`--c-danger` | `.dash-hero` 그라데이션 #00123D #061B61 #0B2B8F #1442B8 #08216F, 회청색 #9CA3AF #D1D5DB #1E3A8A, 틸 #0F766E, #D97706 #F59E0B #FCA5A5 #FDBA74 |
+| 파일 | 상태 (2026-09-24) |
+|---|---|
+| `components.css` | `.banner--info` 테두리 #A5F3FC → 새 토큰 `--c-info-border`로 교체. `.modal-overlay` 배경 rgba(0,0,0,.5) → `--overlay-scrim`(.45, 시각차 미미)로 통일, box-shadow rgba(0,0,0,.25) → 새 토큰 `--shadow-modal`(다른 그림자들과 같은 슬레이트 톤)로 교체. z-index:100은 옆 주석("하단 액션바(25)/탭바(30)보다 위")과 [3. z-index 표](#3-토큰-tokenscss)에 이미 문서화된 별도 층(100 vs `--z-modal` 200)이라 손대지 않음(합치면 스태킹이 바뀜). `#fff`×3(naver/line 버튼, store-card__thumb 배지)은 [소셜 로그인 규정](#색--소셜-로그인-브랜드-규정)이 "line 흰 글자"를 명시하고 있고 thumb는 배경색이 매장마다 동적이라 순정 흰색이 맞음 — 확인 결과 실제 부채 아님. |
+| `layout.css` | `.topbar--dark .topbar__mode-btn`의 `#FFFFFF`(대문자) 2곳을 파일 내 다른 곳과 같은 `#fff` 표기로 통일(값 자체는 이미 맞았음 — 대소문자만 불일치). `--c-surface`로 바꾸지 않은 이유: 그건 "표면/배경" 의미 토큰이라 다크 상단바 위 텍스트 색으로 쓰는 건 의미가 안 맞는다고 판단(marketing.css `.mkt-owner`와 같은 논리). FAB 활성 #193DB3 → 새 토큰 `--c-primary-active`로 교체. |
+| `ledger.css` | 정확히 같은 값(#FEF3C7/#FDE68A/#92400E→`--c-badge-rep*`, #F97316→`--c-accent`, #FEF2F2/#FECACA→`--c-danger-weak/-border`, #F59E0B×9→새 토큰 `--c-badge-rep-accent`) 전부 교체 완료. 옛 네이비 그림자 rgba(1,42,140,*) 2곳도 현재 `--c-primary` rgb(15,43,140) 기준으로 보정. 남겨둔 것: 환경 배너 그린 3색·탐험 넛지 보라 3색(각각 "왜 그린/보라를 브랜드색 대신 쓰는지" 설명 주석과 실측 대비율까지 이미 있는 **의도된 예외** — 진짜 부채 아님), 호박 #B45309/#FBBF24/#FFFBEB/#78350F(자리 1~2곳뿐인 사소한 장식용 변형이라 토큰 승격 보류), 공유 카드 카테고리 그라데이션 10색(`--ledger-share-from/-to` 커스텀 프로퍼티로 이미 카테고리별로 잘 스코프돼 있어서 추가 추상화가 오히려 안 좋다고 판단). |
+| `marketing.css` | ✅ 2026-09-24 정리 완료 (아래 "이전 정리 기록" 참고). |
+| `reservation.css` | 테두리 #FDBA74 → 새 토큰 `--c-accent-border`로 교체. |
+| `store.css` | 점주 대시보드 전용 도메인이라 이번 "유저 화면" 정리 범위 밖 — 미정리 상태 그대로 남음. |
 
-- 추천 신규 토큰: `--c-badge-rep-accent: #F59E0B`(대표 뱃지 테두리·강조), `--z-*` 스케일.
-  (`#EDE5D4` 카드 테두리는 2026-09-24에 `--mkt-border`로 marketing.css 로컬 스코프에 정리 완료 — 위 표 참고.)
-- `.dash-hero` 그라데이션 → [6. 다크 존](#6-다크-존--알약-추가-예정--아직-코드에-없음)의 `--zone-bg` 단색으로 대체 후보.
+- 2026-09-24에 새로 추가된 토큰: `--c-info-border`, `--c-accent-border`, `--c-primary-active`, `--c-badge-rep-accent`, `--shadow-modal` (전부 `tokens.css`에 추가, 위 표의 근거).
+- `.dash-hero` 그라데이션(store.css) → [6. 다크 존](#6-다크-존--알약-추가-예정--아직-코드에-없음)의 `--zone-bg` 단색으로 대체 후보 (미정리, 점주 도메인).
 
 ### 중복 (승격 후보)
 - [ ] `.btn:disabled`가 `reservation.css`에만 있다 → 모든 화면의 비활성 버튼에 필요 → `components.css`로.

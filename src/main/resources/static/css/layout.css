@@ -132,7 +132,7 @@
 .topbar--dark .topbar__mode-btn {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #FFFFFF;
+  color: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -140,7 +140,7 @@
 .topbar--dark .topbar__mode-btn:hover {
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.4);
-  color: #FFFFFF;
+  color: #fff;
 }
 .topbar--dark .topbar__mode-btn:active {
   background: rgba(255, 255, 255, 0.28);
@@ -219,7 +219,7 @@
   transform: translateX(-50%) scale(0.93);
 }
 .bottomnav__item--fab.is-active .bottomnav__fab-circle {
-  background: #193db3;
+  background: var(--c-primary-active);
   box-shadow: 0 0 0 2px var(--c-primary), 0 6px 18px rgba(15, 43, 140, 0.45);
 }
 .bottomnav__item--fab.is-active .bottomnav__fab-label {
