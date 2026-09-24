@@ -3,7 +3,8 @@
       th:replace="~{common/layout :: layout('기리기리', ~{:: #content}, 'home', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/home.css}">
+	<!-- css/home.css는 2026-09-24 삭제됨 — 유일한 규칙(.store-card.is-blocked)이 components.css로
+	     이동해서 이 파일에 남길 스타일이 없어졌다 (WBS CSS 1단계 정리). -->
 
 	<!-- 스플래시 화면 (2026-09-17 추가, 2026-09-17 그래픽 보강, 2026-09-17 CTA 버튼 추가) — "앱을
 	     열면 바로 데이터가 아니라 로고+설명이 잠깐 뜬다"는 요청 → "조금 세련된 그래픽이 들어가도
@@ -13,8 +14,9 @@
 	     "잠깐 떴다 무조건 자동으로 사라지는" 방식은 버튼을 누를 틈도 없이 사라져서 의미가 없다 —
 	     그래서 기본은 버튼 클릭으로 넘어가고, 못 보고 지나칠 경우를 대비한 자동 진행(폴백)만 넉넉하게
 	     남겨뒀다. 배지 주위의 "레이더 핑" 링 애니메이션은 "마감 임박 · 긴급 구제" 컨셉(급박함/
-	     실시간성)을 은유한 것. FOUC 방지를 위해 home.css 로드를 기다리지 않도록 이 안에서만 쓰는
-	     스타일을 별도 style 태그로 넣는다. -->
+	     실시간성)을 은유한 것. FOUC 방지를 위해 외부 스타일시트 로드를 기다리지 않도록 이 안에서만
+	     쓰는 스타일을 별도 style 태그로 넣는다 (2026-09-24 — 이 화면 전용 CSS였던 home.css는
+	     삭제됨, 이 인라인 스타일과는 원래 무관). -->
 	<style>
 		#splash-screen{position:fixed;inset:0;z-index:999;overflow:hidden;background:linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease;}
 		#splash-screen::before,#splash-screen::after{content:'';position:absolute;border-radius:50%;pointer-events:none;}

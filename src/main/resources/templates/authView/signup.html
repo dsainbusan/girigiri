@@ -364,10 +364,8 @@
 			margin: var(--s-2) 0 0;
 			line-height: 1.5;
 		}
-		#btn-submit:disabled {
-			opacity: .45;
-			cursor: not-allowed;
-		}
+		/* #btn-submit:disabled 로컬 규칙은 2026-09-24 삭제 — components.css의 전역 .btn:disabled와
+		   겹쳐서 이중으로 흐려지는 문제가 있었다 (WBS CSS 1단계 정리, 승인 완료). */
 
 		/* 소셜 계정 연동 확인 모달 */
 		.social-link-modal-box {
