@@ -220,7 +220,7 @@ public class AuthController {
 		}
 
 		session.setAttribute("viewMode", switchToOwner ? "OWNER_MODE" : "USER_MODE");
-		return "redirect:" + (switchToOwner ? "/store/dashboard" : "/");
+		return "redirect:" + (switchToOwner ? "/store/dashboard" : "/app");
 	}
 
 	/**

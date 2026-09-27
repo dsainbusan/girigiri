@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('환경설정', ~{:: #content}, 'my', false, '', null)}">
+      th:replace="~{common/layout :: layout('환경설정', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'my'}, false, '', null)}">
 <body>
 <!--/*
 	마이페이지 하위 "환경설정" 화면 (2026-09-22, 문창호, WBS 6.1 인수 범위). B안(카드 분리형) —
@@ -46,27 +46,10 @@
 		</div>
 	</div>
 
-	<!-- 계정 — 비밀번호 변경/회원 탈퇴는 별도 화면이 없어 실제 기능이 있는 /mypage/edit로 함께 이동한다. -->
-	<div class="settings-section">
-		<p class="settings-section__title">계정</p>
-		<div class="card settings-card">
-			<a th:href="@{/mypage/edit}" class="list-menu-item">
-				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-pencil"/></svg></span>
-				<span class="list-menu-item__title">회원정보 수정</span>
-				<span class="list-menu-item__arrow">&rsaquo;</span>
-			</a>
-			<a th:href="@{/mypage/edit}" class="list-menu-item">
-				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-lock"/></svg></span>
-				<span class="list-menu-item__title">비밀번호 변경</span>
-				<span class="list-menu-item__arrow">&rsaquo;</span>
-			</a>
-			<a th:href="@{/mypage/edit}" class="list-menu-item list-menu-item--danger" style="border-bottom: none;">
-				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-warning"/></svg></span>
-				<span class="list-menu-item__title">회원 탈퇴</span>
-				<span class="list-menu-item__arrow">&rsaquo;</span>
-			</a>
-		</div>
-	</div>
+	<!-- 변경됨 (2026-09-27, UI/UX 개편) — "계정" 섹션(회원정보수정/비밀번호변경/회원탈퇴)이 3줄 다
+	     /mypage/edit라는 같은 페이지로만 연결돼 있어서, 서로 다른 기능처럼 보이지만 실제로는 전부
+	     "그 페이지로 이동, 알아서 찾아라"였다. 마이페이지 메인 메뉴에 이미 "회원정보 수정" → /mypage/edit
+	     링크가 있어서(mypage.html) 완전히 중복이기도 했다 — 딥링크로 손보는 대신 섹션째 삭제했다. -->
 
 	<!-- 약관 및 동의 -->
 	<div class="settings-section">
@@ -121,6 +104,19 @@
 					<span class="settings-toggle__track"></span>
 				</label>
 			</form>
+		</div>
+	</div>
+
+	<!-- 기타 — 추가됨 (2026-09-27, 레퍼런스 앱 참고) — 버전 정보 표시. 실제 빌드 버전 관리 체계가
+	     따로 없어서(CI 태깅 등) 고정값으로 둔다 — 실제 배포 파이프라인이 생기면 그때 model attribute로
+	     바꾸면 된다. -->
+	<div class="settings-section">
+		<p class="settings-section__title">기타</p>
+		<div class="card settings-card">
+			<div class="list-menu-item" style="border-bottom: none;">
+				<span class="list-menu-item__title">버전 정보</span>
+				<span class="list-menu-item__value" style="margin-right: 0;">1.0.0</span>
+			</div>
 		</div>
 	</div>
 

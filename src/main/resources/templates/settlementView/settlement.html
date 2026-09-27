@@ -44,8 +44,11 @@
 					      th:text="'이번 정산 주간 · 주 ' + ${currentWeek.dayOfWeek} + '일차 · ' + ${#temporals.format(currentWeek.confirmDate, 'M월 d일')} + ' 확정 예정'">이번 정산 주간 · 9월 8일 확정 예정</span>
 				</div>
 				<div class="settle-hist__right">
-					<span class="settle-hist__amt" th:text="${#numbers.formatInteger(currentWeek.amount, 0, 'COMMA')} + '원'">37,050원</span>
-					<span class="badge badge--accent">진행 중</span>
+					<div class="settle-hist__right-col">
+						<span class="settle-hist__amt" th:text="${#numbers.formatInteger(currentWeek.amount, 0, 'COMMA')} + '원'">37,050원</span>
+						<span class="badge badge--accent">진행 중</span>
+					</div>
+					<svg class="icon settle-hist__arrow"><use href="#i-chevron-right"/></svg>
 				</div>
 			</a>
 		</li>
@@ -63,14 +66,17 @@
 					</span>
 				</div>
 				<div class="settle-hist__right">
-					<span class="settle-hist__amt" th:text="${#numbers.formatInteger(s.status == 'PENDING' or s.status == 'PAID' ? s.payout : s.weekAmount, 0, 'COMMA')} + '원'">32,775원</span>
-					<span class="badge" th:switch="${s.status}"
-					      th:classappend="${s.status == 'PAID'} ? ' badge--success' : (${s.status == 'PENDING'} ? ' badge--accent' : '')">
-						<span th:case="'PAID'">지급 완료</span>
-						<span th:case="'PENDING'">지급 대기</span>
-						<span th:case="'CARRIED'">이월</span>
-						<span th:case="'ROLLED'">합산됨</span>
-					</span>
+					<div class="settle-hist__right-col">
+						<span class="settle-hist__amt" th:text="${#numbers.formatInteger(s.status == 'PENDING' or s.status == 'PAID' ? s.payout : s.weekAmount, 0, 'COMMA')} + '원'">32,775원</span>
+						<span class="badge" th:switch="${s.status}"
+						      th:classappend="${s.status == 'PAID'} ? ' badge--success' : (${s.status == 'PENDING'} ? ' badge--accent' : '')">
+							<span th:case="'PAID'">지급 완료</span>
+							<span th:case="'PENDING'">지급 대기</span>
+							<span th:case="'CARRIED'">이월</span>
+							<span th:case="'ROLLED'">합산됨</span>
+						</span>
+					</div>
+					<svg class="icon settle-hist__arrow"><use href="#i-chevron-right"/></svg>
 				</div>
 			</a>
 		</li>

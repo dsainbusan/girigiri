@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout(${inquiry.title}, ~{:: #content}, 'home', false, '', null)}">
+      th:replace="~{common/layout :: layout(${inquiry.title}, ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'home'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 	<!--/* 강노은: 원래 있던 "고객센터"(/user/support) 화면의 "내 문의내역" 탭으로 연결한다 —

@@ -20,40 +20,41 @@
 	      공통인 것은 그대로 둔다.
 	*/-->
 
-	<!-- 1. 프로필 헤더 카드 -->
-	<a th:href="@{/mypage/edit}" class="card" style="display: flex; align-items: center; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); text-decoration: none; color: inherit;">
-		<!-- 아바타 원형 (초록 배경 + 닉네임 첫 글자) -->
-		<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--c-primary); color: var(--c-primary-on); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: var(--fw-black); flex-shrink: 0;">
-			<span th:text="${user != null and user.nickname != null ? #strings.substring(user.nickname, 0, 1) : 'G'}">송</span>
-		</div>
-
-		<!-- 닉네임 및 동네 / 절약 N일째 정보 -->
-		<div class="u-grow" style="min-width: 0;">
-			<div class="u-row" style="gap: var(--s-2); flex-wrap: wrap; align-items: center;">
-				<h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold);" th:text="${user != null ? user.nickname : '로그인이 필요합니다'}">송보미</h2>
-				<span th:if="${user != null and user.representativeBadge != null and T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).isPresent()}"
-				      class="badge" style="font-size: 10px; font-weight: var(--fw-bold); background: var(--c-badge-rep); color: var(--c-badge-rep-on); border: 1px solid var(--c-badge-rep-border);"
-				      th:text="${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().icon} + ' ' + ${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().name}">
-					🦸 골목길 구조대
-				</span>
-				<span th:if="${user != null and user.role == 'OWNER'}" class="badge badge--success" style="font-size: 10px;">사장님</span>
-				<span th:if="${user != null and user.role == 'ADMIN'}" class="badge badge--accent" style="font-size: 10px;">운영자</span>
+	<!-- 1. 프로필 헤더 카드 (구조 개선: 정보 영역과 프로필 수정 버튼 분리) -->
+	<div class="card" style="padding: var(--s-4); border-radius: var(--r-xl);">
+		<div style="display: flex; align-items: center; gap: var(--s-3);">
+			<!-- 아바타 원형 (네이비 배경 + 닉네임 첫 글자) -->
+			<div style="width: 56px; height: 56px; border-radius: 50%; background: var(--c-primary); color: var(--c-primary-on); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: var(--fw-black); flex-shrink: 0;">
+				<span th:text="${user != null and user.nickname != null ? #strings.substring(user.nickname, 0, 1) : 'G'}">송</span>
 			</div>
-			<p style="font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 4px;">
-				<span th:text="${user != null and user.region != null ? user.region : '동네 미설정'}">광안동</span>
-				<span> · 절약 </span><span th:text="${daysJoined} ?: '1'">47</span><span>일째</span>
-			</p>
+
+			<!-- 닉네임 및 동네 / 절약 N일째 정보 -->
+			<div class="u-grow" style="min-width: 0;">
+				<div class="u-row" style="gap: var(--s-2); flex-wrap: wrap; align-items: center;">
+					<h2 style="font-size: var(--fs-lg); font-weight: var(--fw-bold);" th:text="${user != null ? user.nickname : '로그인이 필요합니다'}">송보미</h2>
+					<span th:if="${user != null and user.representativeBadge != null and T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).isPresent()}"
+					      class="badge" style="font-size: 10px; font-weight: var(--fw-bold); background: var(--c-badge-rep); color: var(--c-badge-rep-on); border: 1px solid var(--c-badge-rep-border);"
+					      th:text="${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().icon} + ' ' + ${T(net.dsa.girigiri.domain.Badge).findByCode(user.representativeBadge).get().name}">
+						🦸 골목길 구조대
+					</span>
+					<span th:if="${user != null and user.role == 'OWNER'}" class="badge badge--success" style="font-size: 10px;">사장님</span>
+					<span th:if="${user != null and user.role == 'ADMIN'}" class="badge badge--accent" style="font-size: 10px;">운영자</span>
+				</div>
+				<p style="font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 4px;">
+					<span th:text="${user != null and user.region != null ? user.region : '동네 미설정'}">광안동</span>
+					<!-- "절약 N일째"는 소비자 실적 표현이라 점주 모드에선 "가입 N일째"로 표기 -->
+					<span th:text="${session.viewMode == 'OWNER_MODE'} ? ' · 가입 ' : ' · 절약 '"> · 절약 </span><span th:text="${daysJoined} ?: '1'">47</span><span>일째</span>
+				</p>
+			</div>
 		</div>
 
-		<!-- 우측 꺾쇠 -->
-		<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
-	</a>
+		<!-- 프로필 수정 전용 버튼 (레퍼런스 구조: 카드 내 명확한 CTA 버튼 배치) -->
+		<a th:href="@{/mypage/edit}" class="btn btn--block btn--outline" style="margin-top: var(--s-3); padding: 9px 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); border-color: var(--c-line); color: var(--c-text); background: var(--c-bg); border-radius: var(--r-md); text-align: center; text-decoration: none;">
+			프로필 수정
+		</a>
+	</div>
 
-	<!-- 2. 이번 달 절약 카드 (네이비 배너) — 카드 안 작은 반투명 pill 버튼이 눈에 잘 안 띈다는
-	     피드백(2026-09-17)으로, 바로 위 프로필 카드/아래 매장 신뢰도 카드와 같은 패턴(카드 전체를
-	     링크로 감싸고 우측에 화살표)으로 통일 — 탭 영역도 훨씬 커진다. 색은 네이비+크림 리스킨
-	     반영(흰색 대신 --c-primary-on, 그린 그림자 대신 네이비 그림자).
-	     점주 모드에서는 숨김(2026-09-22) — 소비자 절약 실적이라 점주 업무 맥락과 안 맞는다. -->
+	<!-- 2. 이번 달 절약 카드 (네이비 배너) — 점주 모드에서는 숨김 -->
 	<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/ledger}" style="background: var(--c-primary); color: var(--c-primary-on); border-radius: var(--r-lg); padding: var(--s-4) var(--s-5); margin-top: var(--s-3); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(1, 42, 140, 0.15); text-decoration: none;">
 		<div>
 			<div style="font-size: var(--fs-xs); opacity: 0.9; font-weight: var(--fw-medium);">이번 달 절약</div>
@@ -64,74 +65,54 @@
 		<span style="font-size: var(--fs-xs); font-weight: var(--fw-bold); display: inline-flex; align-items: center; gap: 2px;">가계부 &rsaquo;</span>
 	</a>
 
-	<!-- 2-1. 내 매장 신뢰도 카드 (2026-09-14 추가, 담당: 송채현) — 사장님 계정(매장 보유)한테만 보임.
-	     ReservationService.getStoreCancelStats(원래 있던 매장 취소율 계산)를 그대로 재사용한다.
-	     지금은 보여주기만 하고 이 점수로 뭘 막거나 하지 않는다.
-	     변경됨 (2026-09-15) — 취소율 숫자만 보이고 그 뒤의 예약 목록으로는 못 들어갔다는 요청으로
-	     링크를 통계 대시보드(/store/dashboard)에서 전체 예약 목록(/reservation/orders)으로 변경. -->
-	<a th:if="${store != null and storeReliability != null}" th:href="@{/reservation/orders}" class="card" style="display: flex; align-items: center; justify-content: space-between; padding: var(--s-4); border-radius: var(--r-xl); margin-top: var(--s-3); text-decoration: none; color: inherit;">
-		<div>
-			<div style="font-size: var(--fs-xs); color: var(--c-text-mut); font-weight: var(--fw-medium);">내 매장 신뢰도</div>
-			<div style="font-size: var(--fs-md); font-weight: var(--fw-bold); margin-top: 2px;" th:if="${storeReliability.totalReservationCount() > 0}">
-				취소율 <span th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
-				<span style="font-size: var(--fs-xs); color: var(--c-text-mut); font-weight: var(--fw-medium);"
-				      th:text="'(전체 ' + ${storeReliability.totalReservationCount()} + '건 중 매장취소 ' + ${storeReliability.storeCancelledCount()} + '건)'">(전체 0건 중 매장취소 0건)</span>
-			</div>
-			<div style="font-size: var(--fs-sm); color: var(--c-text-mut); margin-top: 2px;" th:if="${storeReliability.totalReservationCount() == 0}">
-				아직 취소 이력 없음
-			</div>
-		</div>
-		<span style="color: var(--c-text-mut); font-size: 18px; font-weight: var(--fw-bold);">&rsaquo;</span>
-	</a>
 
-	<!-- 3. 메뉴 리스트 카드 -->
-	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
-		<!-- 예약 내역 / 찜한 가게 / 내가 쓴 리뷰 — 전부 "손님으로서" 하는 활동이라 점주 모드에서는
-		     숨긴다(2026-09-22). 점주가 받은 예약·리뷰는 각각 /reservation/orders, /store/reviews에 따로 있다. -->
-		<!-- 예약 내역 — /reservation/my (진행중/픽업완료/노쇼·취소 탭, 영수증 PDF 보기 포함). 링크 누락돼 있던 걸 연결. -->
-		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/reservation/my}" class="list-menu-item">
+	<!-- 3. 그룹 1: 나의 활동 (소비자 모드 전용) -->
+	<div th:if="${session.viewMode != 'OWNER_MODE'}" class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+		<div class="mypage-group-title">나의 활동</div>
+		<!-- 예약 내역 -->
+		<a th:href="@{/reservation/my}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-document"/></svg></span>
 			<span class="list-menu-item__title">예약 내역</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
 		<!-- 찜한 가게 -->
-		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/likes}" class="list-menu-item">
+		<a th:href="@{/user/likes}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-heart"/></svg></span>
 			<span class="list-menu-item__title">찜한 가게</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 내가 쓴 리뷰 (구현 완료 — 강노은) -->
-		<a th:if="${session.viewMode != 'OWNER_MODE'}" th:href="@{/user/reviews/my}" class="list-menu-item">
+		<!-- 내가 쓴 리뷰 -->
+		<a th:href="@{/user/reviews/my}" class="list-menu-item" style="border-bottom: none;">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-star"/></svg></span>
 			<span class="list-menu-item__title">내가 쓴 리뷰</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
+	</div>
 
-		<!-- 알림 설정 -->
-		<a th:href="@{/user/alerts}" class="list-menu-item">
-			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-bell"/></svg></span>
-			<span class="list-menu-item__title">알림 설정</span>
-			<span class="list-menu-item__arrow">&rsaquo;</span>
-		</a>
-
-		<!-- 고객 지원 (문의 게시판 — 구현 완료, 강노은. FAQ/내 문의내역/문의하기 탭 화면.
-		     챗봇은 우측 하단 플로팅 버튼(#chat-fab-btn)에서만 연다 — 이 항목은 챗봇이랑 분리함) -->
-		<a th:href="@{/user/support}" class="list-menu-item">
+	<!-- 4. 그룹 2: 고객 지원 -->
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+		<div class="mypage-group-title">고객 지원</div>
+		<!-- 1:1 챗봇 상담 -->
+		<a href="javascript:void(0)" id="btn-open-chatbot-row" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-chat"/></svg></span>
-			<span class="list-menu-item__title">고객 지원</span>
+			<span class="list-menu-item__title">1:1 챗봇 상담</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
-		<!-- 회원정보 수정 (구현 완료) -->
-		<a th:href="@{/mypage/edit}" class="list-menu-item">
-			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-pencil"/></svg></span>
-			<span class="list-menu-item__title">회원정보 수정</span>
+		<!-- 문의 게시판 · FAQ -->
+		<a th:href="@{/user/support}" class="list-menu-item" style="border-bottom: none;">
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-document"/></svg></span>
+			<span class="list-menu-item__title">문의 게시판 · FAQ</span>
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
+	</div>
 
-		<!-- 환경설정 (2026-09-22 추가) — 언어·알림 바로가기·계정·약관 동의를 모아둔 화면 -->
+	<!-- 5. 그룹 3: 설정 -->
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); overflow: hidden;">
+		<div class="mypage-group-title">설정</div>
+		<!-- 환경설정 (알림·언어·약관·매장알림 관리) -->
 		<a th:href="@{/user/settings}" class="list-menu-item" style="border-bottom: none;">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-settings"/></svg></span>
 			<span class="list-menu-item__title">환경설정</span>
@@ -139,26 +120,25 @@
 		</a>
 	</div>
 
+	<!-- 6. 그룹 4: 계정 -->
+	<div class="card" style="padding: 0; border-radius: var(--r-xl); margin-top: var(--s-3); margin-bottom: var(--s-5); overflow: hidden;">
+		<div class="mypage-group-title">계정</div>
+		<!-- 점주 모드 전환 (OWNER 계정에만 노출) -->
+		<form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" style="margin: 0;">
+			<input type="hidden" name="target" th:value="${session.viewMode == 'OWNER_MODE'} ? 'user' : 'owner'" />
+			<button type="submit" class="list-menu-item" style="width: 100%; background: none; font-family: inherit; cursor: pointer; text-align: left;">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-storefront"/></svg></span>
+				<span class="list-menu-item__title" th:text="${session.viewMode == 'OWNER_MODE'} ? '일반 모드로 전환' : '점주 모드로 전환'">점주 모드로 전환</span>
+				<span class="list-menu-item__arrow">&rsaquo;</span>
+			</button>
+		</form>
 
-	<!-- 4-1. 점주 모드 전환 (2026-09-16 추가) — 상단바 모드 전환 버튼을 여기로 옮겨왔다(모든 화면
-	     상단바를 차지하는 대신, 유저 모드의 "홈"인 마이페이지 하단에서 전환). OWNER 계정에만 노출 —
-	     USER는 전환할 "점주 모드" 자체가 없다(common/header.html 예전 조건과 동일).
-	     변경됨 (2026-09-22) — 왜: target이 항상 "owner"로 고정돼 있어서, 이미 점주 모드에서 대시보드
-	     "마이" 탭으로 들어온 경우에도 "점주 모드로"가 그대로 떠 있었다(누르면 대시보드로 돌아갈 뿐,
-	     "일반 모드로" 갈 방법이 이 화면엔 없었음). 지금 viewMode를 보고 라벨·target을 반대로 뒤집는다. -->
-	<form th:if="${session.role == 'OWNER'}" th:action="@{/auth/mode}" method="post" style="margin-top: var(--s-5)">
-		<input type="hidden" name="target" th:value="${session.viewMode == 'OWNER_MODE'} ? 'user' : 'owner'" />
-		<button type="submit" class="topbar__mode-btn" style="width: 100%; justify-content: center; padding: 10px 0;">
-			<span class="topbar__mode-icon" aria-hidden="true"><svg class="icon" style="width:14px;height:14px"><use href="#i-storefront"/></svg></span>
-			<span th:text="${session.viewMode == 'OWNER_MODE'} ? '일반 모드로' : '점주 모드로'">점주 모드로</span>
-		</button>
-	</form>
-
-	<!-- 5. 로그아웃 버튼 -->
-	<div style="margin-top: var(--s-3); margin-bottom: var(--s-4);">
-		<form th:if="${user != null}" th:action="@{/auth/logout}" method="post">
-			<button type="submit" class="btn btn--block btn--outline u-mut" style="padding: 12px; font-size: var(--fs-sm); border-color: var(--c-line);">
-				로그아웃
+		<!-- 로그아웃 (빨간 톤 아이콘 + 텍스트, 레퍼런스 스타일) -->
+		<form th:if="${user != null}" th:action="@{/auth/logout}" method="post" style="margin: 0;">
+			<button type="submit" class="list-menu-item list-menu-item--danger" style="width: 100%; border-bottom: none; background: none; font-family: inherit; cursor: pointer; text-align: left;">
+				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-logout"/></svg></span>
+				<span class="list-menu-item__title">로그아웃</span>
+				<span class="list-menu-item__arrow" style="color: var(--c-danger);">&rsaquo;</span>
 			</button>
 		</form>
 	</div>
@@ -265,6 +245,11 @@
 				input.focus();
 			}
 			fabBtn.addEventListener('click', openPanel);
+
+			var chatbotRow = document.getElementById('btn-open-chatbot-row');
+			if (chatbotRow) {
+				chatbotRow.addEventListener('click', openPanel);
+			}
 
 			closeBtn.addEventListener('click', function () {
 				panel.style.display = 'none';

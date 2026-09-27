@@ -222,8 +222,10 @@
 							otpBanner.style.display = 'none';
 						} else {
 							// 발송 미설정(개발 환경 등) — 목업처럼 코드를 화면에 그대로 보여준다.
+							// 변경됨 (2026-09-27) — 문구에서 "미설정" 사정을 밝히지 않고 signup.html의
+							// 휴대폰 인증과 같은 톤("발급된 인증번호")으로 통일 — 시연 때 어색해 보이지 않게.
 							otpBanner.style.display = 'block';
-							otpBanner.textContent = '[테스트 환경] 메일 발송이 설정되지 않아 여기 표시합니다 — 인증번호: ' + data.mockCode;
+							otpBanner.textContent = '발급된 인증번호: ' + data.mockCode;
 						}
 						otpCodeInput.value = '';
 						otpCodeInput.focus();

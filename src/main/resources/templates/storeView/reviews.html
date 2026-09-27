@@ -10,36 +10,50 @@
 	답글 수정 폼은 리뷰별로 여러 개 열릴 수 있어서(detail.html의 "내 리뷰 수정"과 달리 한 화면에
 	여러 리뷰가 있음), data-toggle-target id를 리뷰 id로 구분해 각각 독립적으로 펼친다(app.js의
 	공용 data-toggle-target/data-close-panel 패턴 재사용).
+
+	변경됨 (2026-09-26, UI/UX 개편) — 범용 .card + 인라인 style 나열 구조를 dash-card 계열
+	(store.css의 .review-card/.review-reply)로 교체. 폼 name·JS 로직·toggle id 규칙은 안 바꿨다.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-4)">
-		<span class="u-bold">
-			<span style="color: var(--c-accent)" th:text="'★' + ${#numbers.formatDecimal(averageRating, 1, 1)}">★4.5</span>
-			<span class="u-mut" style="font-size: var(--fs-sm)" th:text="'(' + ${reviewCount} + '개)'">(12개)</span>
-		</span>
+	<!-- 평점 요약 — 대시보드 절감 효과 카드와 같은 dash-metrics 패턴 재사용 -->
+	<div class="dash-card">
+		<div class="dash-metrics">
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-star"/></svg></div>
+				<span class="dash-metric__value" th:text="${#numbers.formatDecimal(averageRating, 1, 1)}">4.5</span>
+				<span class="dash-metric__label">평균 별점</span>
+			</div>
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-chat"/></svg></div>
+				<span class="dash-metric__value" th:text="${reviewCount}">12</span>
+				<span class="dash-metric__label">전체 리뷰</span>
+			</div>
+		</div>
 	</div>
 
-	<div th:if="${#lists.isEmpty(reviews)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 등록된 리뷰가 없어요.
+	<div th:if="${#lists.isEmpty(reviews)}" class="dash-card empty-card">
+		<div class="empty-card__icon" aria-hidden="true">
+			<svg class="icon"><use href="#i-star"/></svg>
+		</div>
+		<p class="empty-card__title">아직 등록된 리뷰가 없어요.</p>
+		<p class="empty-card__sub">손님이 픽업을 완료하면 이 자리에 리뷰가 쌓여요.</p>
 	</div>
 
-	<div th:each="r : ${reviews}" class="card" style="margin-bottom: var(--s-3)" th:with="info=${reviewerInfo.get(r.id)}">
-		<div class="u-row" style="justify-content: space-between">
+	<div th:each="r : ${reviews}" class="review-card" th:with="info=${reviewerInfo.get(r.id)}">
+		<div class="review-card__head">
 			<!-- 닉네임을 누르면 간단 정보(뱃지·가입기간·이 매장 방문 횟수) 토글 (2026-09-17).
 			     민감정보(전화번호 등)는 일부러 안 넣는다 — ReviewerInfoDto 주석 참고. -->
-			<button type="button" th:id="'reviewer-info-btn-' + ${r.id}" class="u-bold"
-			        style="font-size: var(--fs-sm); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px"
+			<button type="button" th:id="'reviewer-info-btn-' + ${r.id}" class="review-card__name"
 			        th:attr="data-toggle-target='reviewer-info-' + ${r.id}" th:text="${r.reviewerName}">닉네임</button>
-			<span class="u-mut" style="font-size: var(--fs-xs)">
+			<span class="review-card__meta">
 				<span th:text="${r.createdAtLabel}">3일 전</span>
 				<span th:if="${r.edited}" title="작성 후 내용이 수정된 리뷰예요"> · 수정됨</span>
 			</span>
 		</div>
 
-		<div th:id="'reviewer-info-' + ${r.id}" th:attr="data-reopen-btn='reviewer-info-btn-' + ${r.id}" hidden
-		     style="margin-top: var(--s-2); padding: var(--s-3); background: var(--c-bg); border-radius: var(--r-md); font-size: var(--fs-xs)">
+		<div th:id="'reviewer-info-' + ${r.id}" th:attr="data-reopen-btn='reviewer-info-btn-' + ${r.id}" hidden class="review-info-panel">
 			<div class="u-row" style="justify-content: space-between; align-items: flex-start">
 				<div>
 					<p th:if="${info != null and info.badgeIcon != null}"
@@ -48,35 +62,31 @@
 					<p class="u-sub" style="margin-top: 4px" th:if="${info != null}" th:text="${info.daysJoinedLabel}">가입 47일째</p>
 					<p class="u-sub" style="margin-top: 2px" th:if="${info != null}" th:text="'우리 매장 이용 ' + ${info.visitCount} + '회'">우리 매장 이용 3회</p>
 				</div>
-				<button type="button" data-close-panel class="u-mut" style="background: none; border: none; padding: 0; cursor: pointer; font-size: var(--fs-sm)">✕</button>
+				<button type="button" data-close-panel class="review-info-panel__close">✕</button>
 			</div>
 		</div>
-		<div style="color: var(--c-accent); font-size: var(--fs-sm); margin-top: 2px"
-		     th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
-		<p style="font-size: var(--fs-sm); margin-top: var(--s-1)" th:text="${r.content}">리뷰 내용</p>
+		<div class="review-card__stars" th:text="${'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}">★★★★☆</div>
+		<p class="review-card__content" th:text="${r.content}">리뷰 내용</p>
 		<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
-		     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
-		     style="margin-top: 6px; width: 100%; max-width: 220px; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--r-md)">
+		     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'" class="review-card__photo">
 
 		<!-- 사장님 답글 — 있으면 보여주고 수정/삭제, 없으면 등록 폼 -->
-		<div th:if="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}"
-		     style="margin-top: var(--s-3); padding: var(--s-3); background: var(--c-bg); border-radius: var(--r-md)">
-			<div class="u-row" style="justify-content: space-between">
-				<b style="font-size: var(--fs-xs); color: var(--c-primary)">🏪 사장님 답글</b>
-				<span class="u-mut" style="font-size: var(--fs-xs)">
+		<div th:if="${r.replyContent != null and !#strings.isEmpty(r.replyContent)}" class="review-reply">
+			<div class="review-reply__head">
+				<b>🏪 사장님 답글</b>
+				<span class="review-reply__meta">
 					<span th:text="${r.replyCreatedAtLabel}">1일 전</span>
 					<span th:if="${r.replyEdited}"> · 수정됨</span>
 				</span>
 			</div>
-			<p style="font-size: var(--fs-sm); margin-top: var(--s-1)" th:text="${r.replyContent}">답글 내용</p>
-			<div class="u-row" style="gap: 6px; margin-top: var(--s-2)">
-				<button type="button" th:id="'reply-edit-btn-' + ${r.id}" class="btn btn--outline"
-				        th:attr="data-toggle-target='reply-edit-form-' + ${r.id}"
-				        style="padding: var(--s-1) var(--s-3); font-size: 12px">수정</button>
+			<p class="review-reply__content" th:text="${r.replyContent}">답글 내용</p>
+			<div class="review-reply__actions">
+				<button type="button" th:id="'reply-edit-btn-' + ${r.id}" class="btn btn--sm btn--outline"
+				        th:attr="data-toggle-target='reply-edit-form-' + ${r.id}">수정</button>
 				<form th:action="@{/store/reviews/{id}/reply/delete(id=${r.id})}" method="post"
 				      onsubmit="return confirm('답글을 삭제할까요?')">
-					<button type="submit" class="btn btn--outline"
-					        style="padding: var(--s-1) var(--s-3); font-size: 12px; color: var(--c-danger); border-color: var(--c-danger)">삭제</button>
+					<button type="submit" class="btn btn--sm btn--outline"
+					        style="color: var(--c-danger); border-color: var(--c-danger)">삭제</button>
 				</form>
 			</div>
 			<form th:id="'reply-edit-form-' + ${r.id}" th:attr="data-reopen-btn='reply-edit-btn-' + ${r.id}" hidden

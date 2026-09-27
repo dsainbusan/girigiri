@@ -12,19 +12,36 @@
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 
-	<!-- 이 화면은 마이페이지에서만 진입 → 뒤로가기를 항상 마이페이지로 고정 -->
+	<!-- 점주 화면(대시보드 또는 예약확인)으로 뒤로가기 -->
 	<script th:inline="none">
 	(function () {
 		var backBtn = document.querySelector('.topbar__back');
 		if (!backBtn) { return; }
 		backBtn.removeAttribute('data-back');
-		backBtn.addEventListener('click', function () { location.href = '/mypage'; });
+		backBtn.addEventListener('click', function () {
+			if (document.referrer && (document.referrer.includes('/store/dashboard') || document.referrer.includes('/reservation/incoming'))) {
+				location.href = document.referrer;
+			} else {
+				location.href = '/store/dashboard';
+			}
+		});
 	})();
 	</script>
 
 	<div class="card" style="display:flex; justify-content:space-between; align-items:center">
-		<span class="u-sub">지금까지의 전체 예약</span>
-		<span class="u-bold" th:text="${totalCount} + '건'">0건</span>
+		<div>
+			<span class="u-sub">지금까지의 전체 예약</span>
+			<div style="font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 2px;">
+				<th:block th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
+					매장 취소율 <strong th:style="${storeReliability.cancelRatePercent() > 0} ? 'color: var(--c-danger);' : 'color: var(--c-primary);'" th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</strong>
+					<span th:text="'(취소 ' + ${storeReliability.storeCancelledCount()} + '건 / 전체 ' + ${storeReliability.totalReservationCount()} + '건)'">(취소 0건 / 전체 0건)</span>
+				</th:block>
+				<th:block th:if="${storeReliability == null or storeReliability.totalReservationCount() == 0}">
+					매장 취소율 <strong style="color: var(--c-primary);">0%</strong> <span>(취소 이력 없음)</span>
+				</th:block>
+			</div>
+		</div>
+		<span class="u-bold" style="font-size: var(--fs-lg);" th:text="${totalCount} + '건'">0건</span>
 	</div>
 
 	<div th:if="${totalCount == 0}" class="empty-state">아직 들어온 예약이 없어요.</div>
