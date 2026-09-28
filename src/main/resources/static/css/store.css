@@ -620,11 +620,23 @@ a.stat-card:hover .stat-card__go--gear {
 }
 .settle-section-title span { font-weight: var(--fw-regular); color: var(--c-text-sub); }
 
-.settle-txns { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--c-line); }
+/* 추가됨 (2026-09-28) — 왜: .settle-txn의 border-bottom(--c-line-weak, #F1ECE1)이 카드 없이 페이지
+   배경(--c-bg, #F6F0E3) 위에 바로 놓여 있어서 두 색이 거의 구분이 안 됐다 — 거래 내역끼리 나누는
+   요소가 안 보인다는 피드백의 원인. .settle-ledger처럼 흰 카드(--c-surface)로 감싸서 그 위에서
+   기존 라인이 실제로 보이게 한다(순수 색상 문제라 토큰 자체는 안 바꿈 — 흰 배경 위 --c-line-weak는
+   .order-log 등 다른 화면에서도 쓰는 정상적인 옅은 구분선이다). */
+.settle-txns-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 0 var(--s-3);
+}
+.settle-txns { list-style: none; margin: 0; padding: 0; }
 .settle-txn {
   padding: var(--s-3) var(--s-1);
   border-bottom: 1px solid var(--c-line-weak);
 }
+.settle-txns-card .settle-txn:last-child { border-bottom: none; }
 .settle-txn__row {
   display: flex;
   align-items: baseline;

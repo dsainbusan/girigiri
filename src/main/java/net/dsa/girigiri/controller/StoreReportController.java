@@ -4,8 +4,10 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.domain.dto.SettlementData;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
+import net.dsa.girigiri.util.PaginationUtil;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 점주용 매장 정산 화면 (WBS 2.0, 문창호 담당).
@@ -64,10 +67,17 @@ public class StoreReportController {
 	 * 매장 정산 — 상세(정산서) 화면. period: today / week / month(기본). from·to(yyyy-MM-dd) 둘 다 주면 그 구간.
 	 * 목록의 주간 행 클릭 또는 "기간 직접 조회"로 진입. 뒤로가기 = 목록.
 	 */
+	// 추가됨 (2026-09-28) — "정산 대상 거래"가 기간에 따라 수십 건 쌓이면 스크롤이 끝없이 길어진다는
+	// 피드백. Excel/PDF는 이 페이징과 무관하게 항상 전체(settlement.lines())를 그대로 쓴다 — 화면
+	// 표시용으로만 잘라서 pagedLines로 따로 넘긴다.
+	private static final int SETTLEMENT_PAGE_SIZE = 5;
+	private static final int SETTLEMENT_PAGE_WINDOW = 5;
+
 	@GetMapping("/settlement/detail")
 	public String settlementDetail(@RequestParam(defaultValue = "month") String period,
 	                               @RequestParam(required = false) String from,
 	                               @RequestParam(required = false) String to,
+	                               @RequestParam(defaultValue = "0") int page,
 	                               HttpSession session, Model model) {
 		Long userId = (Long) session.getAttribute("userId");
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
@@ -79,7 +89,19 @@ public class StoreReportController {
 		boolean custom = fromDate != null && toDate != null && !toDate.isBefore(fromDate);
 		String p = settlementService.normalizeSettlementPeriod(period);
 
-		model.addAttribute("settlement", settlementService.build(store, p, fromDate, toDate));
+		SettlementData settlement = settlementService.build(store, p, fromDate, toDate);
+		model.addAttribute("settlement", settlement);
+
+		List<SettlementData.Line> lines = settlement.lines();
+		int totalPages = PaginationUtil.totalPages(lines.size(), SETTLEMENT_PAGE_SIZE);
+		int safePage = Math.max(0, Math.min(page, totalPages - 1));
+		int windowStart = Math.max(0, Math.min(safePage - 2, totalPages - SETTLEMENT_PAGE_WINDOW));
+		model.addAttribute("pagedLines", PaginationUtil.paginate(lines, safePage, SETTLEMENT_PAGE_SIZE));
+		model.addAttribute("page", safePage);
+		model.addAttribute("totalPages", totalPages);
+		model.addAttribute("pageWindowStart", windowStart);
+		model.addAttribute("pageWindowEnd", Math.min(totalPages - 1, windowStart + SETTLEMENT_PAGE_WINDOW - 1));
+
 		model.addAttribute("period", custom ? "custom" : p);
 		model.addAttribute("from", custom ? fromDate.toString() : "");
 		model.addAttribute("to", custom ? toDate.toString() : "");

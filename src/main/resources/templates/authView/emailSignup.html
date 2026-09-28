@@ -37,8 +37,15 @@
 
 		<!-- 1단계 통과 후에만 노출 — 인증번호 확인 전까지는 계정이 없다. -->
 		<div id="email-signup-otp-block" style="display:none; margin-top: var(--s-4);">
-			<p id="email-signup-otp-banner" class="otp-mock-banner" style="display:none;"></p>
-			<label class="field__label" for="signupOtpCode">인증번호</label>
+			<div id="email-signup-otp-banner" class="otp-mock-banner" style="display:none;">
+				<svg class="icon otp-mock-banner__icon"><use href="#i-lock"/></svg>
+				<span class="otp-mock-banner__label">발급된 인증번호</span>
+				<span id="email-signup-otp-banner-code" class="otp-mock-banner__code"></span>
+			</div>
+			<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+				<label class="field__label" for="signupOtpCode">인증번호</label>
+				<span id="email-signup-otp-status" class="u-mut" style="font-size: var(--fs-xs);"></span>
+			</div>
 			<div class="u-row" style="gap: var(--s-2); align-items: stretch;">
 				<input class="input" type="text" id="signupOtpCode" inputmode="numeric" maxlength="6"
 				       placeholder="인증번호 6자리" style="flex: 1;">
@@ -73,14 +80,38 @@
 	</div>
 
 	<style>
+		/* 변경됨 (2026-09-28) — signup.html(휴대폰 인증)과 같은 디자인. 가로로 꽉 찬 박스에 텍스트만
+		   욱여넣은 게 허전해 보인다는 피드백 — 내용 크기만큼만 차지하는 칩 형태로, 코드는 모노스페이스
+		   + 자간을 줘서 실제 인증 코드처럼 보이게 했다. */
 		.otp-mock-banner {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			max-width: 100%;
 			background: var(--c-info-weak);
-			border-radius: var(--r-md);
-			padding: 8px 10px;
+			border: 1px dashed var(--c-info-border);
+			border-radius: var(--r-full);
+			padding: 7px 16px 7px 12px;
+			margin-bottom: 8px;
+		}
+		.otp-mock-banner__icon {
+			width: 14px;
+			height: 14px;
+			flex-shrink: 0;
+			color: var(--c-info-strong);
+		}
+		.otp-mock-banner__label {
 			font-size: var(--fs-xs);
-			color: var(--c-text);
-			margin-bottom: 6px;
-			word-break: keep-all;
+			font-weight: var(--fw-medium);
+			color: var(--c-text-mut-strong);
+			white-space: nowrap;
+		}
+		.otp-mock-banner__code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: var(--fs-md);
+			font-weight: var(--fw-black);
+			letter-spacing: 2.5px;
+			color: var(--c-info-strong);
 		}
 		.email-link-modal-box {
 			max-width: 320px;
@@ -138,10 +169,35 @@
 			var btnSubmit = document.getElementById('btn-email-signup');
 			var otpBlock = document.getElementById('email-signup-otp-block');
 			var otpBanner = document.getElementById('email-signup-otp-banner');
+			var otpBannerCode = document.getElementById('email-signup-otp-banner-code');
 			var otpCodeInput = document.getElementById('signupOtpCode');
 			var btnVerifyOtp = document.getElementById('btn-verify-signup-otp');
 			var otpFeedback = document.getElementById('email-signup-otp-feedback');
+			var otpStatus = document.getElementById('email-signup-otp-status');
 			var otpRequested = false;
+			var otpCountdownTimer = null;
+
+			// signup.html(휴대폰 인증)과 같은 3분 카운트다운 — 서버가 이미 내려주는 expiresInSeconds를
+			// 화면에서 그동안 그냥 버리고 있었다(백엔드 AuthController#emailSignupSendOtp 참고).
+			function startOtpCountdown(seconds) {
+				var remaining = seconds || 180;
+				if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+				function tick() {
+					if (otpStatus) {
+						var m = Math.floor(remaining / 60);
+						var s = String(remaining % 60).padStart(2, '0');
+						otpStatus.textContent = '유효시간 ' + m + ':' + s;
+					}
+					remaining -= 1;
+					if (remaining < 0) {
+						clearInterval(otpCountdownTimer);
+						otpCountdownTimer = null;
+						if (otpStatus) otpStatus.textContent = '인증번호가 만료됐어요. 다시 받아주세요.';
+					}
+				}
+				tick();
+				otpCountdownTimer = setInterval(tick, 1000);
+			}
 
 			var linkModal = document.getElementById('email-link-modal');
 			var linkModalProvider = document.getElementById('email-link-modal-provider');
@@ -224,12 +280,14 @@
 							// 발송 미설정(개발 환경 등) — 목업처럼 코드를 화면에 그대로 보여준다.
 							// 변경됨 (2026-09-27) — 문구에서 "미설정" 사정을 밝히지 않고 signup.html의
 							// 휴대폰 인증과 같은 톤("발급된 인증번호")으로 통일 — 시연 때 어색해 보이지 않게.
-							otpBanner.style.display = 'block';
-							otpBanner.textContent = '발급된 인증번호: ' + data.mockCode;
+							otpBanner.style.display = 'inline-flex';
+							otpBannerCode.textContent = data.mockCode;
 						}
 						otpCodeInput.value = '';
+						otpCodeInput.disabled = false;
 						otpCodeInput.focus();
 						otpFeedback.style.display = 'none';
+						startOtpCountdown(data.expiresInSeconds);
 					})
 					.catch(function () {
 						btnSubmit.disabled = false;
@@ -255,6 +313,8 @@
 					.then(function (data) {
 						btnVerifyOtp.disabled = false;
 						if (data.verified) {
+							if (otpCountdownTimer) { clearInterval(otpCountdownTimer); otpCountdownTimer = null; }
+							if (otpStatus) otpStatus.textContent = '✓ 인증 완료';
 							showOtpFeedback('✓ 인증 완료! 이동합니다...', true);
 							window.location.href = data.redirectTo || '/auth/signup';
 						} else if (data.reason === 'duplicate') {

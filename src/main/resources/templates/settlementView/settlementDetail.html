@@ -74,22 +74,33 @@
 
 	<!-- 정산 대상 거래 -->
 	<p class="settle-section-title">정산 대상 거래 <span th:text="'· ' + ${#lists.size(settlement.lines)} + '건'">· 5건</span></p>
-	<ul class="settle-txns">
-		<li class="settle-txn" th:each="l : ${settlement.lines}">
-			<div class="settle-txn__row">
-				<span class="settle-txn__date" th:text="${l.dateLabel}">08/24</span>
-				<span class="settle-txn__name" th:text="${l.name}">식빵 마감세트</span>
-				<span class="settle-txn__amt" th:text="${#numbers.formatInteger(l.amount, 0, 'COMMA')} + '원'">5,400원</span>
-			</div>
-			<div class="settle-txn__sub">
-				<span class="settle-txn__tag" th:text="${l.status}">픽업 완료</span>
-				<span th:text="'수수료 −' + ${#numbers.formatInteger(l.commission, 0, 'COMMA')} + ' · 정산 ' + ${#numbers.formatInteger(l.payout, 0, 'COMMA')} + '원'">수수료 −540 · 정산 4,860원</span>
-			</div>
-		</li>
-		<li class="settle-txn settle-txn--empty" th:if="${#lists.isEmpty(settlement.lines)}">
-			이 기간에 정산 대상 결제가 없어요.
-		</li>
-	</ul>
+	<div class="settle-txns-card">
+		<ul class="settle-txns" th:if="${!#lists.isEmpty(settlement.lines)}">
+			<li class="settle-txn" th:each="l : ${pagedLines}">
+				<div class="settle-txn__row">
+					<span class="settle-txn__date" th:text="${l.dateLabel}">08/24</span>
+					<span class="settle-txn__name" th:text="${l.name}">식빵 마감세트</span>
+					<span class="settle-txn__amt" th:text="${#numbers.formatInteger(l.amount, 0, 'COMMA')} + '원'">5,400원</span>
+				</div>
+				<div class="settle-txn__sub">
+					<span class="settle-txn__tag" th:text="${l.status}">픽업 완료</span>
+					<span th:text="'수수료 −' + ${#numbers.formatInteger(l.commission, 0, 'COMMA')} + ' · 정산 ' + ${#numbers.formatInteger(l.payout, 0, 'COMMA')} + '원'">수수료 −540 · 정산 4,860원</span>
+				</div>
+			</li>
+		</ul>
+		<p class="settle-txn--empty" th:if="${#lists.isEmpty(settlement.lines)}">이 기간에 정산 대상 결제가 없어요.</p>
+	</div>
+
+	<!-- 페이지네이션 (2026-09-28) — 예약/리뷰 목록과 같은 방식. 기간·직접선택 날짜를 유지한 채 페이지만 넘긴다. -->
+	<div class="pagination" th:if="${totalPages > 1}">
+		<a th:classappend="${page <= 0} ? ' is-disabled'"
+		   th:href="@{/store/settlement/detail(page=${page - 1}, period=${period}, from=${from}, to=${to})}">&lsaquo;</a>
+		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
+		   th:classappend="${p == page} ? ' is-active'" th:text="${p + 1}"
+		   th:href="@{/store/settlement/detail(page=${p}, period=${period}, from=${from}, to=${to})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'"
+		   th:href="@{/store/settlement/detail(page=${page + 1}, period=${period}, from=${from}, to=${to})}">&rsaquo;</a>
+	</div>
 	<div class="settle-txns__foot" th:if="${!#lists.isEmpty(settlement.lines)}">
 		<span>합계</span>
 		<span>

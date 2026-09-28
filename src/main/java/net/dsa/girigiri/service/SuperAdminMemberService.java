@@ -5,15 +5,19 @@ import net.dsa.girigiri.domain.dto.MemberActivityRowDto;
 import net.dsa.girigiri.domain.entity.ComplaintEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.domain.entity.UserArchiveEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ComplaintRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.UserArchiveRepository;
+import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -37,6 +41,8 @@ public class SuperAdminMemberService {
 	private final ComplaintRepository complaintRepository;
 	private final LookupService lookupService;
 	private final StoreAccessService storeAccessService;
+	private final UserBadgeRepository userBadgeRepository;
+	private final UserArchiveRepository userArchiveRepository;
 
 	// 변경됨 — 왜: 필터 탭을 "전체/일반 회원/점주 회원/정지 회원"으로 바꿔달라는 요청 — 역할 기준
 	// 필터가 USER/ADMIN(운영자)에서 USER(일반 회원)/OWNER(점주 회원)로 바뀌었다. 운영자 계정은 수가
@@ -53,6 +59,11 @@ public class SuperAdminMemberService {
 		List<UserEntity> users = keyword.isEmpty()
 				? userRepository.findAll(sort)
 				: userRepository.findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword, sort);
+
+		// 추가됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — 왜: withdraw()가 더 이상
+		// users 로우를 즉시 지우지 않고 deletedAt만 채우기 때문에, 여기서 걸러주지 않으면 탈퇴한
+		// 회원이 회원 목록에 계속 보이게 된다.
+		users = users.stream().filter(u -> u.getDeletedAt() == null).toList();
 
 		if ("USER".equals(normalizedFilter)) {
 			return users.stream().filter(u -> UserEntity.ROLE_USER.equals(u.getRole())).toList();
@@ -153,8 +164,33 @@ public class SuperAdminMemberService {
 				|| !reservationRepository.existsByStoreIdAndStatusIn(ownedStore.getId(), INCOMPLETE_RESERVATION_STATUSES);
 	}
 
+	/**
+	 * 변경됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — MypageService#withdraw(자진 탈퇴)와
+	 * 동일한 로직으로 맞춘다. 예전엔 여기만 user_badge 정리 없이 바로 hard delete해서 자진 탈퇴
+	 * 경로와 동작이 어긋나 있었는데(코드 감사에서는 못 잡았던 부분), 이번에 같이 정리한다.
+	 *
+	 * 추가됨 (2026-09-28, 코드 리뷰 — 문창호) — MypageService#withdraw와 같은 이유로 oauthId/phone을
+	 * 더미값 처리한다 — 강제 탈퇴시킨 회원도 나중에 같은 계정으로 재가입할 수 있어야 한다.
+	 */
 	@Transactional
 	public void withdraw(Long id) {
-		userRepository.deleteById(id);
+		UserEntity user = lookupService.getUser(id);
+		LocalDateTime now = LocalDateTime.now();
+
+		userArchiveRepository.save(UserArchiveEntity.builder()
+				.originalUserId(user.getId())
+				.oauthProvider(user.getOauthProvider())
+				.email(user.getEmail())
+				.phone(user.getPhone())
+				.joinedAt(user.getCreatedAt())
+				.withdrawnAt(now)
+				.build());
+
+		userBadgeRepository.deleteByUserId(id);
+
+		user.setOauthId("withdrawn_" + user.getId());
+		user.setPhone(null);
+		user.setDeletedAt(now);
+		userRepository.save(user);
 	}
 }

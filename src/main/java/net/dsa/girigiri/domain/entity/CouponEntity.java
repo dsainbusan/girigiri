@@ -80,6 +80,13 @@ public class CouponEntity {
 	@Column(name = "used", nullable = false)
 	private boolean used = false;
 
+	// 추가됨 (2026-09-22, 보미 피드백 반영) — 왜: used가 언제 true로 바뀌었는지 기록이 없어서
+	// "이 쿠폰이 실제로 언제 소진됐는지" 알 방법이 없었다. BaseTimeEntity의 원칙(범용 updated_at보다
+	// 의미가 분명한 도메인 컬럼을 쓸 것)을 따라 generic updated_at 대신 이 이름으로 둔다.
+	// CouponService.markUsed()에서 채우고, restore()로 되돌릴 때(취소/노쇼 복구) 다시 null로 비운다.
+	@Column(name = "used_at")
+	private LocalDateTime usedAt;
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

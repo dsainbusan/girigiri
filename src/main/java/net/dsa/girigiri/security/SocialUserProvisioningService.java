@@ -82,6 +82,15 @@ public class SocialUserProvisioningService {
 					new OAuth2Error("account_suspended", "정지된 계정입니다.", null));
 		}
 
+		// 추가됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — 왜: 탈퇴(withdraw)가 이제
+		// users 로우를 바로 지우지 않고 deletedAt만 채우기 때문에, 여기서 막지 않으면 findOrCreate가
+		// 탈퇴한 계정을 그대로 찾아서 로그인시켜버린다. 위 정지 계정 차단과 동일한 방식(Spring
+		// Security OAuth2 로그인 필터가 잡아서 failureUrl로 보냄).
+		if (user.getDeletedAt() != null) {
+			throw new OAuth2AuthenticationException(
+					new OAuth2Error("account_withdrawn", "탈퇴한 계정입니다.", null));
+		}
+
 		return user;
 	}
 }

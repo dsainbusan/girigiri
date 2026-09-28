@@ -53,23 +53,21 @@
 	</div>
 
 	<!-- 결과 요약 -->
-	<div class="dash-card" style="margin-top: var(--s-4)">
-		<div class="dash-metrics">
-			<div class="dash-metric">
-				<div class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></div>
-				<span class="dash-metric__value" th:text="${totalCount}">3</span>
-				<span class="dash-metric__label" th:text="${filterActive} ? '조회 결과' : '픽업까지 끝난 거래'">픽업까지 끝난 거래</span>
-			</div>
-			<div class="dash-metric">
-				<div class="dash-metric__icon"><svg class="icon"><use href="#i-money"/></svg></div>
-				<span class="dash-metric__value" th:text="${#numbers.formatInteger(totalAmount, 0, 'COMMA')} + '원'">26,400원</span>
-				<span class="dash-metric__label">합계 금액</span>
-			</div>
+	<div class="orders-summary" style="margin-top: var(--s-4)">
+		<div class="orders-summary__top">
+			<span class="orders-summary__label" th:text="${filterActive} ? '조회 결과' : '픽업까지 끝난 거래'">픽업까지 끝난 거래</span>
+			<span class="orders-summary__count">
+				<span th:text="${totalCount}">3</span><span class="orders-summary__count-unit">건</span>
+			</span>
+		</div>
+		<div class="orders-summary__meta">
+			<span>합계 금액</span>
+			<span class="orders-summary__em" th:text="${#numbers.formatInteger(totalAmount, 0, 'COMMA')} + '원'">26,400원</span>
+			<span>· 노쇼·취소된 예약은 빠져 있어요</span>
 		</div>
 	</div>
-	<p class="u-sub" style="font-size: var(--fs-xs); margin-top: -4px; margin-bottom: var(--s-3)">노쇼·취소된 예약은 여기 나오지 않아요.</p>
 
-	<div th:if="${totalCount == 0}" class="dash-card empty-card">
+	<div th:if="${totalCount == 0}" class="dash-card empty-card" style="margin-top: var(--s-3)">
 		<div class="empty-card__icon" aria-hidden="true">
 			<svg class="icon"><use href="#i-document"/></svg>
 		</div>
@@ -78,23 +76,40 @@
 
 	<!-- 날짜별 그룹 -->
 	<div th:each="group : ${groups}">
-		<div class="dash-section-head" style="margin-top: var(--s-4)">
-			<h3 class="dash-section-title" style="font-size: var(--fs-sm)" th:text="${group.key}">08월 26일 (화)</h3>
-		</div>
+		<p class="order-log-date" th:text="${group.key}">08월 26일 (화)</p>
 
-		<div class="dash-card" th:each="r : ${group.value}" style="margin-bottom: var(--s-2)">
-			<div class="u-row" style="justify-content: space-between; align-items: baseline">
-				<span class="u-bold" style="font-size: var(--fs-md)">
-					<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
-				</span>
-				<span class="u-sub" style="font-size: var(--fs-sm)" th:text="${r.pickedTime}">10:35</span>
+		<div class="order-log" th:each="r : ${group.value}">
+			<div class="order-log__head">
+				<span class="order-log__time" th:text="'픽업 ' + ${r.pickedTime}">픽업 10:35</span>
+				<span class="order-log__code" th:text="${r.pickupCode}">PICK-1001</span>
 			</div>
-			<p class="u-sub" style="margin-top: 4px">
-				결제 <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원
-				· 코드 <strong th:text="${r.pickupCode}">PICK-1001</strong>
-			</p>
-			<p class="u-sub" style="font-size: var(--fs-xs)">주문 <span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span></p>
+
+			<div class="order-log__title-row">
+				<span class="order-log__product" th:text="${r.productName}">식빵 마감세트</span>
+				<span class="order-log__qty" th:text="${r.quantity} + '개'">1개</span>
+			</div>
+
+			<div class="order-log__price-row">
+				<span class="order-log__key">결제 금액</span>
+				<span class="order-log__price" th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')} + '원'">3,000원</span>
+			</div>
+
+			<div class="order-log__foot">
+				<span class="order-log__key" th:text="'주문 ' + ${r.reservedAtDisplay}">주문 08월 21일 15:00</span>
+			</div>
 		</div>
+	</div>
+
+	<!-- 페이지네이션 (2026-09-28) — 전체 예약 화면과 같은 이유. 날짜/시간대 필터를 걸어둔 채로
+	     페이지를 넘겨도 조건이 유지되도록 링크에 필터값을 같이 실어 보낸다. -->
+	<div class="pagination" th:if="${totalPages > 1}">
+		<a th:classappend="${page <= 0} ? ' is-disabled'"
+		   th:href="@{/reservation/completed(page=${page - 1}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}">&lsaquo;</a>
+		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
+		   th:classappend="${p == page} ? ' is-active'" th:text="${p + 1}"
+		   th:href="@{/reservation/completed(page=${p}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'"
+		   th:href="@{/reservation/completed(page=${page + 1}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}">&rsaquo;</a>
 	</div>
 </div>
 </body>
