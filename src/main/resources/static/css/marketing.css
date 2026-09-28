@@ -57,7 +57,7 @@ body.mkt {
 .mkt-nav__row {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 32px;
 	height: 72px;
 }
 .mkt-logo {
@@ -95,6 +95,10 @@ body.mkt {
 .mkt-nav__links a:hover { color: var(--c-primary-strong); }
 @media (max-width: 860px) {
 	.mkt-nav__links { display: none; }
+	/* 이 폭 아래에선 .mkt-nav__links가 사라져서 .mkt-nav__row의 gap이 로고↔버튼 사이에만 남는다.
+	   32px는 데스크톱에서 링크 목록↔CTA 버튼 사이를 벌리려고 넓힌 값이라, 로고 옆에 바로 그대로
+	   쓰면 모바일 헤더가 헐렁해 보여서 원래 값(12px)으로 되돌린다. */
+	.mkt-nav__row { gap: 12px; }
 }
 
 /* ---------------- Buttons ---------------- */
