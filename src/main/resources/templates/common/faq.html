@@ -9,97 +9,100 @@
   "정책 확인" 주석이 붙은 답변은 팀에서 정한 규칙에 맞게 고쳐 주세요.
   (2026-09-24 — 원래 fragments/faq였는데 이 프로젝트는 공용 프래그먼트를 common/에 모아두는
    컨벤션이라(components.html, footer.html, header.html 등) 여기로 옮겼다.
-   2026-09-24 추가 개편 — 원본은 자체 그리드(사이드바+2컬럼) 레이아웃이었는데, 마케팅 홈의 다른
-   모든 섹션(임팩트/이용방법/파트너 CTA)이 .mkt-section + .mkt-section__head(가운데 정렬,
-   eyebrow+h2+p) 패턴을 쓰고 있어서 이 섹션만 다른 리듬으로 튀었다. 같은 패턴으로 맞췄다.) -->
+   2026-09-28 재개편 — 사용자가 참고한 레퍼런스(Subscrr류 QNA)의 좌(제목)/우(질문목록) 비대칭
+   그리드 + "+/×" 십자선 아이콘 애니메이션 구조를 그대로 가져오되, 폰트는 body.mkt이 이미 물려주는
+   --font-base(Noto Sans KR)를 그대로 쓰고 색은 전부 기리기리 브랜드 토큰(--c-primary-strong 등)
+   으로 교체했다. 레퍼런스엔 없던 구매자/사장님 탭은 이미 있던 기능이라 오른쪽 컬럼 안에 그대로 둔다. -->
 <section id="faq" th:fragment="faq" class="mkt-section" aria-labelledby="faq-title">
-  <div class="mkt__wrap">
-    <div class="mkt-section__head">
+  <div class="mkt__wrap faq__grid">
+    <div class="faq__head">
       <div class="mkt-section__eyebrow">FAQ</div>
       <h2 id="faq-title">자주 묻는 질문</h2>
       <p>찾는 답이 없으면 <a th:href="@{/user/inquiries}" href="#">1:1 문의</a>로 남겨 주세요.</p>
     </div>
 
-    <div class="faq__tabs" role="tablist" aria-label="질문 대상">
-      <button class="faq__tab" role="tab" id="faq-tab-buyer" aria-controls="faq-buyer" aria-selected="true">구매하는 분</button>
-      <button class="faq__tab" role="tab" id="faq-tab-store" aria-controls="faq-store" aria-selected="false" tabindex="-1">가게 사장님</button>
+    <div class="faq__body">
+      <div class="faq__tabs" role="tablist" aria-label="질문 대상">
+        <button class="faq__tab" role="tab" id="faq-tab-buyer" aria-controls="faq-buyer" aria-selected="true">구매하는 분</button>
+        <button class="faq__tab" role="tab" id="faq-tab-store" aria-controls="faq-store" aria-selected="false" tabindex="-1">가게 사장님</button>
+      </div>
+
+      <!-- 구매자 -->
+      <div class="faq__panel" id="faq-buyer" role="tabpanel" aria-labelledby="faq-tab-buyer">
+        <details class="faq__item" name="faq-buyer">
+          <summary>기한이 임박한 상품, 먹어도 괜찮나요?<i></i></summary>
+          <div class="faq__answer">
+            <p>기리기리에는 소비기한이 지나지 않은 상품만 올라와요. 가게에서 보관 기준에 맞게 관리하던 상품이고, 상품마다 소비기한이 표시되어 있으니 구매 전에 확인해 주세요. 받으신 뒤에는 되도록 빨리 드시는 게 가장 맛있어요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-buyer">
+          <summary>어떻게 구매하나요?<i></i></summary>
+          <div class="faq__answer">
+            <p>원하는 상품을 예약하고 결제한 뒤, 가게가 정한 픽업 시간에 매장에 가서 받으시면 돼요. 픽업할 때 예약 내역 화면을 보여 주세요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-buyer">
+          <summary>예약을 취소하고 싶어요.<i></i></summary>
+          <div class="faq__answer">
+            <!-- 정책 확인 반영 완료 (2026-09-24, ReservationService.cancelReservation 기준) —
+                 둘 다 만족해야 취소 가능: 1) 주문 후 30분 이내, 2) 매장 마감 30분 전까지.
+                 마감세일 음식 특성상 취소 창을 오래 열어두면 매장이 재판매할 시간이 없어서 이렇게 짧다. -->
+            <p>예약 후 <strong>30분 이내</strong>에만 예약 내역에서 직접 취소할 수 있어요. 매장 마감 30분 전이 지났을 때도 취소가 어려워요 — 마감세일 음식이라 취소 시간을 넉넉히 드리기가 어렵거든요. 이 시간이 지나면 취소 버튼을 눌러도 취소되지 않아요. 결제 금액은 취소 시 결제하신 수단으로 바로 환불돼요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-buyer">
+          <summary>픽업 시간을 놓쳤어요.<i></i></summary>
+          <div class="faq__answer">
+            <!-- 정책 확인: 노쇼 처리 -->
+            <p>늦어질 것 같으면 예약 내역의 가게 연락처로 먼저 알려 주세요. 가게 마감 뒤에는 상품을 보관해 드리기 어려워서, 연락 없이 받지 않은 예약은 환불되지 않을 수 있어요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-buyer">
+          <summary>받은 상품이 설명과 달라요.<i></i></summary>
+          <div class="faq__answer">
+            <p>상품 사진을 찍어 <a th:href="@{/user/inquiries}" href="#">1:1 문의</a>로 알려 주세요. 가게와 확인한 뒤 환불이나 교환을 도와드려요.</p>
+          </div>
+        </details>
+      </div>
+
+      <!-- 가게 -->
+      <div class="faq__panel" id="faq-store" role="tabpanel" aria-labelledby="faq-tab-store" hidden>
+        <details class="faq__item" name="faq-store">
+          <summary>가게는 어떻게 등록하나요?<i></i></summary>
+          <div class="faq__answer">
+            <!-- 정책 확인: 필요 서류, 승인 기간 -->
+            <p>가게 회원으로 가입한 뒤 사업자 정보를 입력해 등록을 신청해 주세요. 운영팀이 확인하고 승인하면 바로 상품을 올릴 수 있어요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-store">
+          <summary>수수료가 있나요?<i></i></summary>
+          <div class="faq__answer">
+            <!-- 정책 확인: 수수료율 -->
+            <p>판매된 금액에 대해서만 수수료가 붙고, 등록이나 월 이용료는 없어요. 정확한 수수료율은 가게 관리 화면의 정산 안내에서 확인할 수 있어요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-store">
+          <summary>어떤 상품을 올릴 수 있나요?<i></i></summary>
+          <div class="faq__answer">
+            <p>소비기한이 남아 있고 판매 기준에 맞게 보관 중인 상품이라면 올릴 수 있어요. 상품을 등록할 때 소비기한과 픽업 가능 시간을 꼭 입력해 주세요. 기한이 지난 상품은 자동으로 판매가 멈춰요.</p>
+          </div>
+        </details>
+
+        <details class="faq__item" name="faq-store">
+          <summary>판매 대금은 언제 받나요?<i></i></summary>
+          <div class="faq__answer">
+            <!-- 정책 확인: 정산 주기 -->
+            <p>픽업이 끝난 주문을 모아 정해진 주기마다 등록한 계좌로 정산해 드려요. 정산 내역은 가게 관리 화면에서 볼 수 있어요.</p>
+          </div>
+        </details>
+      </div>
     </div>
-
-  <!-- 구매자 -->
-  <div class="faq__panel" id="faq-buyer" role="tabpanel" aria-labelledby="faq-tab-buyer">
-    <details class="faq__item" name="faq-buyer">
-      <summary>기한이 임박한 상품, 먹어도 괜찮나요?</summary>
-      <div class="faq__answer">
-        <p>기리기리에는 소비기한이 지나지 않은 상품만 올라와요. 가게에서 보관 기준에 맞게 관리하던 상품이고, 상품마다 소비기한이 표시되어 있으니 구매 전에 확인해 주세요. 받으신 뒤에는 되도록 빨리 드시는 게 가장 맛있어요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-buyer">
-      <summary>어떻게 구매하나요?</summary>
-      <div class="faq__answer">
-        <p>원하는 상품을 예약하고 결제한 뒤, 가게가 정한 픽업 시간에 매장에 가서 받으시면 돼요. 픽업할 때 예약 내역 화면을 보여 주세요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-buyer">
-      <summary>예약을 취소하고 싶어요.</summary>
-      <div class="faq__answer">
-        <!-- 정책 확인 반영 완료 (2026-09-24, ReservationService.cancelReservation 기준) —
-             둘 다 만족해야 취소 가능: 1) 주문 후 30분 이내, 2) 매장 마감 30분 전까지.
-             마감세일 음식 특성상 취소 창을 오래 열어두면 매장이 재판매할 시간이 없어서 이렇게 짧다. -->
-        <p>예약 후 <strong>30분 이내</strong>에만 예약 내역에서 직접 취소할 수 있어요. 매장 마감 30분 전이 지났을 때도 취소가 어려워요 — 마감세일 음식이라 취소 시간을 넉넉히 드리기가 어렵거든요. 이 시간이 지나면 취소 버튼을 눌러도 취소되지 않아요. 결제 금액은 취소 시 결제하신 수단으로 바로 환불돼요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-buyer">
-      <summary>픽업 시간을 놓쳤어요.</summary>
-      <div class="faq__answer">
-        <!-- 정책 확인: 노쇼 처리 -->
-        <p>늦어질 것 같으면 예약 내역의 가게 연락처로 먼저 알려 주세요. 가게 마감 뒤에는 상품을 보관해 드리기 어려워서, 연락 없이 받지 않은 예약은 환불되지 않을 수 있어요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-buyer">
-      <summary>받은 상품이 설명과 달라요.</summary>
-      <div class="faq__answer">
-        <p>상품 사진을 찍어 <a th:href="@{/user/inquiries}" href="#">1:1 문의</a>로 알려 주세요. 가게와 확인한 뒤 환불이나 교환을 도와드려요.</p>
-      </div>
-    </details>
-  </div>
-
-  <!-- 가게 -->
-  <div class="faq__panel" id="faq-store" role="tabpanel" aria-labelledby="faq-tab-store" hidden>
-    <details class="faq__item" name="faq-store">
-      <summary>가게는 어떻게 등록하나요?</summary>
-      <div class="faq__answer">
-        <!-- 정책 확인: 필요 서류, 승인 기간 -->
-        <p>가게 회원으로 가입한 뒤 사업자 정보를 입력해 등록을 신청해 주세요. 운영팀이 확인하고 승인하면 바로 상품을 올릴 수 있어요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-store">
-      <summary>수수료가 있나요?</summary>
-      <div class="faq__answer">
-        <!-- 정책 확인: 수수료율 -->
-        <p>판매된 금액에 대해서만 수수료가 붙고, 등록이나 월 이용료는 없어요. 정확한 수수료율은 가게 관리 화면의 정산 안내에서 확인할 수 있어요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-store">
-      <summary>어떤 상품을 올릴 수 있나요?</summary>
-      <div class="faq__answer">
-        <p>소비기한이 남아 있고 판매 기준에 맞게 보관 중인 상품이라면 올릴 수 있어요. 상품을 등록할 때 소비기한과 픽업 가능 시간을 꼭 입력해 주세요. 기한이 지난 상품은 자동으로 판매가 멈춰요.</p>
-      </div>
-    </details>
-
-    <details class="faq__item" name="faq-store">
-      <summary>판매 대금은 언제 받나요?</summary>
-      <div class="faq__answer">
-        <!-- 정책 확인: 정산 주기 -->
-        <p>픽업이 끝난 주문을 모아 정해진 주기마다 등록한 계좌로 정산해 드려요. 정산 내역은 가게 관리 화면에서 볼 수 있어요.</p>
-      </div>
-    </details>
-  </div>
   </div>
 </section>
 </body>

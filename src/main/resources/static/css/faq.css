@@ -1,14 +1,25 @@
 /* faq.css — 기리기리 home 자주 묻는 질문
-   2026-09-24 — 원본은 자체 색(#14213D, #E63946 등)과 자체 레이아웃(사이드바+2컬럼 그리드,
-   sticky 헤더)을 쓰고 있었는데, 마케팅 홈의 다른 모든 섹션(임팩트/이용방법/파트너 CTA)은
-   .mkt-section + .mkt-section__head(가운데 정렬 eyebrow+h2+p) 패턴을 공유한다 — 이 섹션만
-   다른 폭/여백/타이포 스케일로 튀어서 같은 리듬으로 맞췄다. 색도 전부 브랜드 토큰으로 교체
-   (특히 원본의 빨강 accent는 이 프로젝트에서 "폐기/취소" 전용 의미색이라 장식용으로 쓰면 안 됨). */
+   2026-09-28 재개편 — 사용자가 참고한 레퍼런스(Subscrr류 QNA) 구조를 그대로 가져왔다:
+     좌(제목) : 우(질문목록) = .7fr : 1.3fr 비대칭 그리드, "+/×" 십자선(<i>) 아이콘이
+     스프링 이징(cubic-bezier(.34,1.56,.64,1))으로 돌아가며 열리는 애니메이션.
+   폰트는 별도로 안 얹는다 — body.mkt이 이미 --font-base(Noto Sans KR)를 물려준다.
+   색은 레퍼런스의 --orange(#FF2500)/--peri-ink(#4c63c7) 대신 전부 브랜드 토큰으로 교체했다
+   (주황은 이 프로젝트에서 "할인/마감임박" 전용 의미색이라 장식 아이콘에 쓰면 안 됨 — 대신
+   --c-primary-strong 네이비를 강조색으로 썼다). 구매자/사장님 탭은 레퍼런스엔 없던, 이미
+   구현돼 있던 기능이라 오른쪽 컬럼 안에 그대로 얹었다. */
+
+.faq__grid {
+	display: grid;
+	grid-template-columns: minmax(240px, .7fr) 1.3fr;
+	gap: clamp(30px, 5vw, 80px);
+}
+.faq__head h2 { font-size: clamp(28px, 3vw, 38px); font-weight: 900; letter-spacing: -0.02em; margin: 0 0 12px; }
+.faq__head p { color: var(--c-text-mut-strong); font-size: 16px; line-height: 1.6; margin: 0; }
 
 .faq__tabs {
 	display: flex;
 	width: fit-content;
-	margin: 0 auto 40px;
+	margin: 0 0 32px;
 	padding: 4px;
 	border-radius: var(--r-pill);
 	background: var(--c-bg);
@@ -28,40 +39,45 @@
 }
 .faq__tab[aria-selected="true"] { background: var(--c-primary); color: var(--c-primary-on); }
 
-/* 탭 아래 아코디언 — 본문과 같은 리듬을 쓰되, 질문/답변은 읽기 좋은 폭으로 가운데 정렬 */
-.faq__panel {
-	max-width: 720px;
-	margin: 0 auto;
-	border-top: 1px solid var(--mkt-border);
-}
-.faq__item { border-bottom: 1px solid var(--mkt-border); }
+/* 질문 목록 — .qa(레퍼런스) 역할, 이 프로젝트 BEM 컨벤션에 맞춰 .faq__item으로 */
+.faq__item { border-top: 1px solid var(--mkt-border); }
+.faq__item:last-child { border-bottom: 1px solid var(--mkt-border); }
 .faq__item summary {
 	list-style: none;
 	cursor: pointer;
 	display: flex;
-	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
-	padding: 22px 4px;
-	font-size: 17px;
+	align-items: center;
+	gap: 20px;
+	padding: 26px 0;
 	font-weight: 700;
+	font-size: clamp(17px, 1.6vw, 20px);
+	letter-spacing: -0.01em;
 	color: var(--c-text);
+	transition: color .3s ease;
 }
-.faq__item summary::-webkit-details-marker { display: none; }
-.faq__item summary::after {                     /* + 아이콘, 열리면 × */
-	content: "";
-	flex: none;
-	width: 20px;
-	height: 20px;
-	background:
-		linear-gradient(currentColor 0 0) center / 14px 2px no-repeat,
-		linear-gradient(currentColor 0 0) center / 2px 14px no-repeat;
-	transition: transform .3s cubic-bezier(.2, .8, .2, 1);
-}
-.faq__item[open] summary::after { transform: rotate(45deg); color: var(--c-primary-strong); }
 .faq__item summary:hover { color: var(--c-primary-strong); }
-.faq__answer { padding: 0 32px 24px 4px; color: var(--c-text-sub); font-size: 15.5px; line-height: 1.75; }
-.faq__answer p { margin: 0; }
+.faq__item summary::-webkit-details-marker { display: none; }
+
+/* 십자선 아이콘 — before=가로선, after=세로선. 열리면 세로선이 접히고(scaleY(0)) 가로선이
+   180도 돌아서(대칭이라 시각적으로는 그대로) + → − 로 보인다. 레퍼런스 그대로. */
+.faq__item summary i { position: relative; width: 16px; height: 16px; flex: 0 0 auto; }
+.faq__item summary i::before,
+.faq__item summary i::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	background: var(--c-primary-strong);
+	transition: transform .4s cubic-bezier(.34, 1.56, .64, 1);
+}
+.faq__item summary i::before { width: 100%; height: 2px; }
+.faq__item summary i::after  { width: 2px; height: 100%; }
+.faq__item[open] summary i::after  { transform: scaleY(0); }
+.faq__item[open] summary i::before { transform: rotate(180deg); }
+
+.faq__answer { margin: 0 0 26px; }
+.faq__answer p { margin: 0; color: var(--c-text-sub); max-width: 620px; font-size: 15.5px; line-height: 1.75; }
 .faq__answer a {
 	color: var(--c-primary-strong);
 	text-decoration: underline;
@@ -80,10 +96,12 @@
 
 #faq :focus-visible { outline: 2px solid var(--c-primary); outline-offset: 3px; border-radius: 6px; }
 
+@media (max-width: 900px) {
+	.faq__grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 760px) {
-	.faq__item summary { font-size: 16px; padding: 18px 2px; }
-	.faq__answer { padding-right: 8px; }
+	.faq__item summary { padding: 18px 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-	#faq *, #faq *::after, .faq__item::details-content { transition: none !important; }
+	#faq *, #faq *::after, #faq *::before, .faq__item::details-content { transition: none !important; }
 }
