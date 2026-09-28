@@ -1,128 +1,652 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('POS 시뮬레이터', ~{:: #content}, '', true, '시연용', null)}">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title th:text="${storeName} != null ? ${storeName} + ' POS 시뮬레이터' : 'GIRIGIRI POS TERMINAL'">GIRIGIRI POS TERMINAL</title>
+	<!-- 하드웨어 POS 전용 독립 스타일시트 (기존 웹 디자인과 완전 분리) -->
+	<link rel="stylesheet" th:href="@{/css/pos-terminal.css}">
+</head>
 <body>
-<!--/*
-	POS 시뮬레이터 — 2026-08-27 신규 (문창호). 시연/개발용.
-	진짜 매장 POS 단말이 없어서 이 화면이 "매장 POS"인 척한다.
-	2026-08-30 — 아침생산/빨리감기/재고저장 버튼이 실제로 POST /api/pos/stock 을 호출한다.
-	(재고 숫자는 이 화면=POS가 직접 계산해서 그 규격의 JSON으로 기리기리에 보낸다. 아래 "전송 로그"에 실제 요청/응답이 찍힌다.)
-	실제 POS사가 이 규격으로 붙이면 코드 수정 없이 그대로 동작한다. 명세: docs/pos-json-spec.md
-*/-->
-<div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/store.css}">
+<div class="pos-terminal-app">
 
-	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-3)">값을 확인해 주세요.</p>
+	<!-- ======================================================================
+	     1. HARDWARE STATUS HEADER (상단 단말 상태바)
+	     ====================================================================== -->
+	<header class="pos-header">
+		<div class="pos-header__left">
+			<div class="pos-badge-brand">
+				<span class="led-dot"></span>
+				<span>POS-01 ONLINE</span>
+			</div>
+			<div class="pos-header__store" th:if="${connected}">
+				<span class="pos-header__store-name" th:text="${storeName} + ' POS'">매장 POS</span>
+				<span class="pos-header__store-tag">STATION #COUNTER-1</span>
+			</div>
+			<div class="pos-header__store" th:unless="${connected}">
+				<span class="pos-header__store-name" style="color: #f87171;">단말기 미등록 상태</span>
+			</div>
+		</div>
 
-	<div th:unless="${connected}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		먼저 <a th:href="@{/store/pos}" style="text-decoration: underline">POS 연동</a>을 해주세요.
+		<div class="pos-header__center">
+			<div class="pos-clock-box">
+				<span class="pos-clock-label">SYS CLK</span>
+				<span id="pos-clock" class="pos-clock-time">2026-09-26 00:00:00</span>
+			</div>
+		</div>
+
+		<div class="pos-header__right">
+			<button type="button" id="btn-fullscreen" class="pos-btn-sys" title="전체화면 토글 (F11)">
+				🖥️ <span>전체화면</span>
+			</button>
+			<a th:href="@{/store/pos}" class="pos-btn-sys pos-btn-sys--exit" title="기리기리 관리 화면으로 나가기">
+				⏻ <span>POS 종료 (ESC)</span>
+			</a>
+		</div>
+	</header>
+
+	<div th:if="${param.error}" style="background: #7f1d1d; color: #fee2e2; border-bottom: 2px solid #ef4444; padding: 6px 16px; font-size: 12px; font-weight: bold; font-family: var(--pos-font-mono); display: flex; align-items: center; gap: 8px; z-index: 10;">
+		<span>⚠️ [HARDWARE ERROR]</span>
+		<span>입력값을 확인해 주십시오. 유효하지 않은 재고 파라미터가 감지되었습니다.</span>
 	</div>
 
-	<div th:if="${connected}">
-		<div class="pos-sim__screen">
-			<div class="pos-sim__brand">🖥️ <span th:text="${storeName} + ' POS'">○○상회 POS</span></div>
-			<p class="pos-sim__note">
-				이건 <b>매장 POS 시뮬레이터</b>입니다. 아래 버튼은 이 POS가 계산한 재고를
-				<code>POST /api/pos/stock</code> 규격으로 기리기리에 실제로 전송합니다.
-			</p>
+	<!-- ======================================================================
+	     2-A. DISCONNECTED STATE (미연동 부팅 에러 화면)
+	     ====================================================================== -->
+	<main th:unless="${connected}" class="pos-error-screen">
+		<div class="pos-error-chassis">
+			<div class="pos-error-head">
+				<span style="font-size: 24px;">⚠️</span>
+				<div>
+					<div class="pos-error-title">SYSTEM HALT: NO POS INTERFACE</div>
+					<div style="font-size: 11px; color: #fca5a5;">DEVICE ID: GR-POS-TERM-8800</div>
+				</div>
+			</div>
+			<div class="pos-error-body">
+				<p>포스기 시뮬레이터 하드웨어가 정상 기동되었으나, 기리기리 매장과의 인터페이스가 연결되지 않았습니다.</p>
+				<div class="pos-error-code">
+					ERROR_CODE: ERR_POS_PROVIDER_UNCONFIGURED<br>
+					COMMUNICATION_PORT: CLOSED (SESSION DISCONNECTED)
+				</div>
+				<p>매장 POS 연동 화면에서 POS 사업자 및 매장 코드를 등록한 후 시뮬레이터를 다시 실행해 주십시오.</p>
+			</div>
+			<div class="pos-error-actions">
+				<a th:href="@{/store/pos}" class="pos-btn-error">⚙️ POS 연동 설정 화면으로 이동</a>
+				<a th:href="@{/store/dashboard}" class="pos-btn-error pos-btn-error--ghost">매장 대시보드로 복귀</a>
+			</div>
 		</div>
+	</main>
 
-		<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3); flex-wrap: wrap">
-			<button type="button" id="sim-restock" class="btn btn--outline btn--block btn--sm" style="flex:1 1 45%">🌅 아침 생산 (재고 채우기)</button>
-			<button type="button" id="sim-selldown" class="btn btn--outline btn--block btn--sm" style="flex:1 1 45%">⏩ 하루 장사 빨리감기</button>
-		</div>
+	<!-- ======================================================================
+	     2-B. CONNECTED POS WORKSPACE (연동된 2분할 산업용 POS 메인 화면)
+	     ====================================================================== -->
+	<main th:if="${connected}" class="pos-workspace">
 
-		<form th:action="@{/store/pos/sim/prompt}" method="post" style="margin-top: var(--s-2)">
-			<button type="submit" class="btn btn--block">📤 마감 임박 → 앱에 물어보기</button>
-		</form>
-		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px; text-align: center">
-			지금 재고로 "오늘의 구제" 초안을 만들어서 판매 대기에 올립니다. (이건 앱 내부 동작 — POS 전송 아님)
-		</p>
-
-		<p class="section-title" style="padding-bottom: var(--s-2)">현재 재고</p>
-		<ul id="sim-menu">
-			<li th:each="m : ${menuItems}" class="stock-item"
-			    th:attr="data-sku=${m.posSku},data-price=${m.originalPrice}">
-				<div class="u-row" style="justify-content: space-between; gap: var(--s-3)">
-					<div class="stock-item__body">
-						<span class="stock-item__name" th:text="${m.name}">크루아상</span>
-						<span class="stock-item__meta" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">3,500원</span>
+		<!-- ------------------------------------------------------------------
+		     LEFT PANEL: 터치 상품 재고 그리드 (INVENTORY TOUCH MATRIX)
+		     ------------------------------------------------------------------ -->
+		<section class="pos-panel-left">
+			<!-- 패널 서브바 -->
+			<div class="pos-subbar">
+				<div class="pos-subbar__title">
+					<span>📦 재고 관리 매트릭스 (STOCK INVENTORY)</span>
+				</div>
+				<div class="pos-subbar__stats">
+					<div class="pos-stat-chip">
+						<span class="pos-stat-chip__label">총 품목:</span>
+						<span id="stat-total-items" class="pos-stat-chip__val" th:text="${#lists.size(menuItems)} + '종'">0종</span>
 					</div>
-					<div class="u-row" style="gap: 4px">
-						<input class="input sim-stock" type="number" th:value="${m.stockQuantity}"
-						       min="0" style="width: 68px; padding: 6px 8px; text-align: right">
-						<button type="button" class="btn btn--sm btn--outline sim-save">저장</button>
+					<div class="pos-stat-chip">
+						<span class="pos-stat-chip__label">총 잔여 재고:</span>
+						<span id="stat-total-stock" class="pos-stat-chip__val pos-stat-chip__val--stock">0개</span>
 					</div>
 				</div>
-			</li>
-		</ul>
+			</div>
 
-		<p class="section-title" style="padding-bottom: var(--s-2)">전송 로그</p>
-		<pre id="sim-log" class="pos-sim__log">아직 전송 없음</pre>
+			<!-- 필터 & 툴바 -->
+			<div class="pos-toolbar">
+				<div class="pos-search-box">
+					<span style="font-size: 13px; color: var(--pos-text-dim); margin-right: 6px;">🔍</span>
+					<input type="text" id="sim-search" placeholder="품목명 또는 SKU 검색...">
+				</div>
+				<div class="pos-toolbar__actions">
+					<button type="button" id="btn-zero-all" class="pos-btn-tool" title="모든 품목 재고를 0으로 설정">
+						모두 품절(0)
+					</button>
+					<button type="button" id="btn-reset-inputs" class="pos-btn-tool" title="서버에 저장된 원래 값으로 복원">
+						화면 새로고침
+					</button>
+				</div>
+			</div>
 
-		<a th:href="@{/store/pos}" class="btn btn--ghost btn--block btn--sm" style="margin-top: var(--s-3)">← POS 연동 관리로</a>
-	</div>
+			<!-- 메뉴 그리드 목록 -->
+			<div class="pos-grid-container">
+				<div id="sim-menu" class="pos-item-grid">
+					<article th:each="m : ${menuItems}" class="pos-item-card stock-item"
+					         th:attr="data-sku=${m.posSku},data-price=${m.originalPrice},data-name=${m.name}"
+					         tabindex="0">
+						<div class="pos-item-card__header">
+							<span class="pos-item-sku" th:text="${m.posSku != null ? m.posSku : 'SKU-NONE'}">BR001</span>
+							<span class="pos-item-price" th:text="${#numbers.formatInteger(m.originalPrice, 0, 'COMMA')} + '원'">3,500원</span>
+						</div>
 
-	<script th:inline="none">
-	(function () {
-		var list = document.getElementById('sim-menu');
-		if (!list) { return; }
-		var logEl = document.getElementById('sim-log');
-		var rows = Array.prototype.slice.call(list.querySelectorAll('.stock-item'));
+						<h3 class="pos-item-name" th:text="${m.name}">품목명</h3>
 
-		function seedStock(price) {
-			return Math.max(5, Math.min(40, Math.floor(60000 / Math.max(1, price))));
+						<div class="pos-item-ctrl">
+							<div class="pos-item-qty-row">
+								<button type="button" class="pos-btn-step btn-qty-minus" title="1개 감소">−</button>
+								<input class="pos-qty-display sim-stock" type="number"
+								       th:value="${m.stockQuantity != null ? m.stockQuantity : 0}"
+								       min="0" max="9999">
+								<button type="button" class="pos-btn-step btn-qty-plus" title="1개 증가">+</button>
+							</div>
+							<button type="button" class="pos-btn-save sim-save" title="이 품목 재고만 서버로 전송">
+								💾 단품 전송
+							</button>
+						</div>
+					</article>
+				</div>
+			</div>
+		</section>
+
+		<!-- ------------------------------------------------------------------
+		     RIGHT PANEL: 터치 키패드 & 펑션 키 & 감열 영수증 로그 콘솔
+		     ------------------------------------------------------------------ -->
+		<aside class="pos-panel-right">
+
+			<!-- 1. 선택 품목 인스펙터 & 터치 키패드 -->
+			<div class="pos-deck-top">
+				<div class="pos-target-banner">
+					<div class="pos-target-info">
+						<span class="pos-target-label">ACTIVE TARGET ITEM</span>
+						<span id="active-item-name" class="pos-target-name">품목을 터치하여 선택</span>
+						<span id="active-item-sku" style="font-size: 11px; color: #64748b; font-family: var(--pos-font-mono);">-</span>
+					</div>
+					<div class="pos-target-val-box">
+						<div style="font-size: 10px; color: #64748b; font-weight: 700;">CURRENT QTY</div>
+						<div id="active-item-qty" class="val-text">0</div>
+					</div>
+				</div>
+
+				<!-- 숫자 키패드 (Numpad) -->
+				<div class="pos-numpad-wrap">
+					<button type="button" class="pos-btn-num num-key" data-val="7">7</button>
+					<button type="button" class="pos-btn-num num-key" data-val="8">8</button>
+					<button type="button" class="pos-btn-num num-key" data-val="9">9</button>
+					<button type="button" class="pos-btn-num pos-btn-num--preset preset-key" data-add="10">+10</button>
+
+					<button type="button" class="pos-btn-num num-key" data-val="4">4</button>
+					<button type="button" class="pos-btn-num num-key" data-val="5">5</button>
+					<button type="button" class="pos-btn-num num-key" data-val="6">6</button>
+					<button type="button" class="pos-btn-num pos-btn-num--preset preset-key" data-add="5">+5</button>
+
+					<button type="button" class="pos-btn-num num-key" data-val="1">1</button>
+					<button type="button" class="pos-btn-num num-key" data-val="2">2</button>
+					<button type="button" class="pos-btn-num num-key" data-val="3">3</button>
+					<button type="button" class="pos-btn-num pos-btn-num--preset preset-key" data-add="1">+1</button>
+
+					<button type="button" class="pos-btn-num pos-btn-num--clr num-action" data-act="clr">CLR</button>
+					<button type="button" class="pos-btn-num num-key" data-val="0">0</button>
+					<button type="button" class="pos-btn-num num-action" data-act="del">DEL</button>
+					<button type="button" class="pos-btn-num pos-btn-num--apply num-action" data-act="apply">적용</button>
+				</div>
+			</div>
+
+			<!-- 2. 하드웨어 펑션 키 데크 (FUNCTION KEYS F1~F4) -->
+			<div class="pos-fn-deck">
+				<div class="pos-fn-deck__label">
+					<span>HARDWARE FUNCTION KEYS</span>
+					<span style="font-family: var(--pos-font-mono); color: #38bdf8;">SIMULATOR CONTROLS</span>
+				</div>
+
+				<div class="pos-fn-grid">
+					<!-- F1: 아침 생산 -->
+					<button type="button" id="sim-restock" class="pos-btn-fn pos-btn-fn--f1" title="아침 생산분 시드 재고를 일괄 전송합니다.">
+						<span class="pos-fn-badge">F1</span>
+						<div class="pos-fn-text">
+							<div>🌅 아침 생산</div>
+							<div style="font-size: 10px; font-weight: normal; opacity: 0.85;">시드 재고 일괄 생성</div>
+						</div>
+					</button>
+
+					<!-- F2: 하루 장사 빨리감기 -->
+					<button type="button" id="sim-selldown" class="pos-btn-fn pos-btn-fn--f2" title="40~85% 판매 후 남은 재고를 전송합니다.">
+						<span class="pos-fn-badge">F2</span>
+						<div class="pos-fn-text">
+							<div>⏩ 장사 빨리감기</div>
+							<div style="font-size: 10px; font-weight: normal; opacity: 0.85;">판매 시뮬레이션 (차감)</div>
+						</div>
+					</button>
+
+					<!-- F3: 전체 재고 일괄 전송 -->
+					<button type="button" id="sim-push-all" class="pos-btn-fn pos-btn-fn--f3" title="현재 화면의 모든 재고를 일괄 전송합니다.">
+						<span class="pos-fn-badge">F3</span>
+						<div class="pos-fn-text">
+							<div>💾 전체 재고 전송</div>
+							<div style="font-size: 10px; font-weight: normal; opacity: 0.85;">POST /api/pos/stock</div>
+						</div>
+					</button>
+
+					<!-- 단말기 통신 점검 / PING -->
+					<button type="button" id="sim-ping" class="pos-btn-fn" style="background:#222a36; border-color:#3d4a60; color:#cbd5e1;" title="POS 단말 통신 상태 점검">
+						<span class="pos-fn-badge" style="background:#0f131a; color:#94a3b8;">LINK</span>
+						<div class="pos-fn-text">
+							<div>📡 통신 상태 점검</div>
+							<div style="font-size: 10px; font-weight: normal; opacity: 0.85;">ONLINE / READY</div>
+						</div>
+					</button>
+
+					<!-- F4: 마감 임박 초안 생성 (단독 전체 행) -->
+					<form th:action="@{/store/pos/sim/prompt}" method="post" style="grid-column: span 2; margin: 0;">
+						<button type="submit" class="pos-btn-fn pos-btn-fn--f4" style="width: 100%;"
+						        title="지금 남은 재고로 기리기리 앱에 '오늘의 구제' 판매 초안을 즉시 생성합니다.">
+							<span class="pos-fn-badge">F4</span>
+							<div class="pos-fn-text" style="display: flex; align-items: baseline; gap: 8px;">
+								<span>📤 마감 임박 → 기리기리 앱에 초안 등록</span>
+								<span style="font-size: 11px; font-weight: 500; opacity: 0.9;">(오늘의 구제 생성)</span>
+							</div>
+						</button>
+					</form>
+				</div>
+			</div>
+
+			<!-- 3. 감열 영수증 프린터 통신 로그 (THERMAL PAPER AUDIT LOG) -->
+			<div class="pos-receipt-deck">
+				<div class="pos-receipt-header">
+					<div class="pos-printer-label">
+						<span>📠</span>
+						<span>THERMAL AUDIT PRINTER (COM3)</span>
+					</div>
+					<div style="display: flex; gap: 6px;">
+						<button type="button" id="btn-log-feed" class="pos-btn-tool" style="font-size: 10px; padding: 2px 6px;">FEED</button>
+						<button type="button" id="btn-log-clear" class="pos-btn-tool" style="font-size: 10px; padding: 2px 6px;">CLEAR</button>
+					</div>
+				</div>
+
+				<pre id="sim-log" class="pos-receipt-paper">========================================
+ GIRIGIRI INDUSTRIAL POS TERMINAL v3.4
+ STATION: #01 (COUNTER-FRONT)
+ COMM: POST /api/pos/stock
+ SYSTEM READY. AWAITING TRANSACTION.
+========================================
+</pre>
+			</div>
+
+		</aside>
+	</main>
+
+	<!-- ======================================================================
+	     3. HARDWARE SYSTEM FOOTER (최하단 시스템 상태바)
+	     ====================================================================== -->
+	<footer class="pos-footer">
+		<div class="pos-footer__info">
+			<span>DEV_MODEL: GIRIGIRI-POS-8800XT</span>
+			<span>PORT: /dev/ttyS0 (115200bps)</span>
+			<span>PROTOCOL: REST/JSON v1.2</span>
+			<span th:if="${connected}" style="color: #34d399;">STATUS: CONNECTED</span>
+			<span th:unless="${connected}" style="color: #ef4444;">STATUS: DISCONNECTED</span>
+		</div>
+		<div class="pos-footer__shortcuts">
+			<span><kbd>F1</kbd> 아침생산</span>
+			<span><kbd>F2</kbd> 장사빨리감기</span>
+			<span><kbd>F3</kbd> 전체전송</span>
+			<span><kbd>F11</kbd> 전체화면</span>
+			<span><kbd>ESC</kbd> 메인복귀</span>
+		</div>
+	</footer>
+
+</div>
+
+<!-- ==========================================================================
+     POS TERMINAL CLIENT SCRIPT
+     ========================================================================== -->
+<script th:inline="none">
+(function () {
+	// 1. 실시간 디지털 시계
+	var clockEl = document.getElementById('pos-clock');
+	function updateClock() {
+		if (!clockEl) return;
+		var now = new Date();
+		var y = now.getFullYear();
+		var m = String(now.getMonth() + 1).padStart(2, '0');
+		var d = String(now.getDate()).padStart(2, '0');
+		var hh = String(now.getHours()).padStart(2, '0');
+		var mm = String(now.getMinutes()).padStart(2, '0');
+		var ss = String(now.getSeconds()).padStart(2, '0');
+		clockEl.textContent = y + '-' + m + '-' + d + ' ' + hh + ':' + mm + ':' + ss + ' KST';
+	}
+	setInterval(updateClock, 1000);
+	updateClock();
+
+	// 2. 전체화면 토글
+	var btnFs = document.getElementById('btn-fullscreen');
+	if (btnFs) {
+		btnFs.addEventListener('click', function () {
+			if (!document.fullscreenElement) {
+				document.documentElement.requestFullscreen().catch(function () {});
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen().catch(function () {});
+				}
+			}
+		});
+	}
+
+	// 3. POS 재고 및 통신 제어
+	var list = document.getElementById('sim-menu');
+	if (!list) { return; }
+
+	var logEl = document.getElementById('sim-log');
+	var rows = Array.prototype.slice.call(list.querySelectorAll('.stock-item'));
+
+	var statTotalItems = document.getElementById('stat-total-items');
+	var statTotalStock = document.getElementById('stat-total-stock');
+
+	var activeItemName = document.getElementById('active-item-name');
+	var activeItemSku = document.getElementById('active-item-sku');
+	var activeItemQty = document.getElementById('active-item-qty');
+	var currentActiveRow = null;
+
+	// 영수증 로그 출력 함수
+	function appendLog(text) {
+		if (!logEl) return;
+		var now = new Date();
+		var timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+		var line = '[' + timeStr + ']\n' + text + '\n' + '----------------------------------------\n';
+		logEl.textContent += line;
+		logEl.scrollTop = logEl.scrollHeight;
+	}
+
+	// 총합 통계 업데이트
+	function updateTotals() {
+		var totalStock = 0;
+		rows.forEach(function (r) {
+			var v = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
+			totalStock += Math.max(0, v);
+		});
+		if (statTotalStock) {
+			statTotalStock.textContent = totalStock.toLocaleString() + '개';
 		}
+		if (statTotalItems) {
+			statTotalItems.textContent = rows.length + '종';
+		}
+		if (currentActiveRow) {
+			var curVal = currentActiveRow.querySelector('.sim-stock').value;
+			if (activeItemQty) activeItemQty.textContent = curVal;
+		}
+	}
 
-		// POS가 계산한 재고 배열을 실제 엔드포인트로 전송
-		function pushStock(items) {
-			var body = JSON.stringify(items);
-			logEl.textContent = 'POST /api/pos/stock\n' + JSON.stringify(items, null, 2) + '\n\n전송 중...';
-			fetch('/api/pos/stock', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: body
-			}).then(function (res) {
-				return res.json().then(function (json) {
-					logEl.textContent = 'POST /api/pos/stock\n' + JSON.stringify(items, null, 2)
-						+ '\n\n← ' + res.status + ' ' + JSON.stringify(json);
-					// 화면 재고칸을 전송값으로 갱신
-					items.forEach(function (it) {
-						var row = rows.find(function (r) { return r.getAttribute('data-sku') === it.posSku; });
-						if (row) { row.querySelector('.sim-stock').value = it.remaining; }
-					});
+	// 품목 선택 활성화
+	function setActiveRow(row) {
+		rows.forEach(function (r) { r.classList.remove('is-active'); });
+		if (!row) {
+			currentActiveRow = null;
+			if (activeItemName) activeItemName.textContent = '품목을 터치하여 선택';
+			if (activeItemSku) activeItemSku.textContent = '-';
+			if (activeItemQty) activeItemQty.textContent = '0';
+			return;
+		}
+		currentActiveRow = row;
+		row.classList.add('is-active');
+		if (activeItemName) activeItemName.textContent = row.getAttribute('data-name') || '품목';
+		if (activeItemSku) activeItemSku.textContent = 'SKU: ' + (row.getAttribute('data-sku') || 'N/A');
+		if (activeItemQty) activeItemQty.textContent = row.querySelector('.sim-stock').value || '0';
+	}
+
+	// 초기 첫 번째 아이템 활성화
+	if (rows.length > 0) {
+		setActiveRow(rows[0]);
+	}
+	updateTotals();
+
+	// 시드 재고 계산 (docs/pos-json-spec.md 스펙 준수)
+	function seedStock(price) {
+		return Math.max(5, Math.min(40, Math.floor(60000 / Math.max(1, price))));
+	}
+
+	function rowItem(row, remaining) {
+		return { posSku: row.getAttribute('data-sku'), remaining: remaining };
+	}
+
+	// POS 재고 실제 전송 (POST /api/pos/stock)
+	function pushStock(items) {
+		var body = JSON.stringify(items);
+		appendLog('>>> POS TX: POST /api/pos/stock (' + items.length + '건)\n' + JSON.stringify(items, null, 2));
+
+		fetch('/api/pos/stock', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: body
+		}).then(function (res) {
+			return res.json().then(function (json) {
+				appendLog('<<< POS RX: HTTP ' + res.status + ' OK\n' + JSON.stringify(json));
+				// 화면 재고칸을 전송값으로 갱신
+				items.forEach(function (it) {
+					var row = rows.find(function (r) { return r.getAttribute('data-sku') === it.posSku; });
+					if (row) {
+						row.querySelector('.sim-stock').value = it.remaining;
+					}
 				});
-			}).catch(function (e) {
-				logEl.textContent = '전송 실패: ' + e;
+				updateTotals();
+			});
+		}).catch(function (e) {
+			appendLog('!!! POS COMM ERROR: ' + e);
+		});
+	}
+
+	// [F1] 아침 생산
+	function triggerRestock() {
+		pushStock(rows.map(function (r) {
+			return rowItem(r, seedStock(parseInt(r.getAttribute('data-price'), 10) || 1));
+		}));
+	}
+	var btnRestock = document.getElementById('sim-restock');
+	if (btnRestock) { btnRestock.addEventListener('click', triggerRestock); }
+
+	// [F2] 하루 장사 빨리감기 (40~85% 판매)
+	function triggerSelldown() {
+		pushStock(rows.map(function (r) {
+			var cur = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
+			var sold = 0.40 + Math.random() * 0.45;
+			return rowItem(r, Math.max(0, Math.round(cur * (1 - sold))));
+		}));
+	}
+	var btnSelldown = document.getElementById('sim-selldown');
+	if (btnSelldown) { btnSelldown.addEventListener('click', triggerSelldown); }
+
+	// [F3] 전체 재고 전송
+	function triggerPushAll() {
+		pushStock(rows.map(function (r) {
+			var v = parseInt(r.querySelector('.sim-stock').value, 10);
+			return rowItem(r, isNaN(v) || v < 0 ? 0 : v);
+		}));
+	}
+	var btnPushAll = document.getElementById('sim-push-all');
+	if (btnPushAll) { btnPushAll.addEventListener('click', triggerPushAll); }
+
+	// PING
+	var btnPing = document.getElementById('sim-ping');
+	if (btnPing) {
+		btnPing.addEventListener('click', function () {
+			appendLog('--- POS HEARTBEAT PING ---\nDEVICE STATUS: 200 OK (LAN 1000Mbps)\nACTIVE MENU ITEMS: ' + rows.length);
+		});
+	}
+
+	// 개별 카드 이벤트 (선택, 수량 증감, 단품 저장)
+	rows.forEach(function (r) {
+		var input = r.querySelector('.sim-stock');
+		var btnMinus = r.querySelector('.btn-qty-minus');
+		var btnPlus = r.querySelector('.btn-qty-plus');
+		var btnSave = r.querySelector('.sim-save');
+
+		r.addEventListener('click', function (e) {
+			if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+				setActiveRow(r);
+			}
+		});
+
+		if (btnMinus) {
+			btnMinus.addEventListener('click', function (e) {
+				e.stopPropagation();
+				setActiveRow(r);
+				var cur = parseInt(input.value, 10) || 0;
+				input.value = Math.max(0, cur - 1);
+				updateTotals();
 			});
 		}
 
-		function rowItem(row, remaining) {
-			return { posSku: row.getAttribute('data-sku'), remaining: remaining };
+		if (btnPlus) {
+			btnPlus.addEventListener('click', function (e) {
+				e.stopPropagation();
+				setActiveRow(r);
+				var cur = parseInt(input.value, 10) || 0;
+				input.value = cur + 1;
+				updateTotals();
+			});
 		}
 
-		document.getElementById('sim-restock').addEventListener('click', function () {
-			pushStock(rows.map(function (r) {
-				return rowItem(r, seedStock(parseInt(r.getAttribute('data-price'), 10) || 1));
-			}));
-		});
+		if (input) {
+			input.addEventListener('focus', function () { setActiveRow(r); });
+			input.addEventListener('input', function () { updateTotals(); });
+		}
 
-		document.getElementById('sim-selldown').addEventListener('click', function () {
-			pushStock(rows.map(function (r) {
-				var cur = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
-				var sold = 0.40 + Math.random() * 0.45;   // 40~85% 팔림
-				return rowItem(r, Math.max(0, Math.round(cur * (1 - sold))));
-			}));
-		});
-
-		rows.forEach(function (r) {
-			r.querySelector('.sim-save').addEventListener('click', function () {
-				var v = parseInt(r.querySelector('.sim-stock').value, 10);
+		if (btnSave) {
+			btnSave.addEventListener('click', function (e) {
+				e.stopPropagation();
+				setActiveRow(r);
+				var v = parseInt(input.value, 10);
 				pushStock([rowItem(r, isNaN(v) || v < 0 ? 0 : v)]);
 			});
+		}
+	});
+
+	// 우측 키패드 (Numpad) 로직
+	var numpadWrap = document.querySelector('.pos-numpad-wrap');
+	var isNumpadTyping = false;
+
+	if (numpadWrap) {
+		numpadWrap.addEventListener('click', function (e) {
+			var btn = e.target.closest('button');
+			if (!btn || !currentActiveRow) return;
+
+			var input = currentActiveRow.querySelector('.sim-stock');
+			if (!input) return;
+
+			// 숫자 키 (0~9)
+			if (btn.classList.contains('num-key')) {
+				var digit = btn.getAttribute('data-val');
+				if (!isNumpadTyping) {
+					input.value = digit;
+					isNumpadTyping = true;
+				} else {
+					input.value = String(input.value) + digit;
+				}
+				if (parseInt(input.value, 10) > 9999) input.value = '9999';
+				updateTotals();
+			}
+
+			// 프리셋 키 (+1, +5, +10)
+			if (btn.classList.contains('preset-key')) {
+				var addVal = parseInt(btn.getAttribute('data-add'), 10) || 0;
+				var cur = parseInt(input.value, 10) || 0;
+				input.value = cur + addVal;
+				isNumpadTyping = false;
+				updateTotals();
+			}
+
+			// 액션 키 (CLR, DEL, APPLY)
+			if (btn.classList.contains('num-action')) {
+				var act = btn.getAttribute('data-act');
+				if (act === 'clr') {
+					input.value = '0';
+					isNumpadTyping = false;
+					updateTotals();
+				} else if (act === 'del') {
+					var s = String(input.value);
+					input.value = s.length > 1 ? s.slice(0, -1) : '0';
+					updateTotals();
+				} else if (act === 'apply') {
+					isNumpadTyping = false;
+					var v = parseInt(input.value, 10);
+					pushStock([rowItem(currentActiveRow, isNaN(v) || v < 0 ? 0 : v)]);
+				}
+			}
 		});
-	})();
-	</script>
-</div>
+	}
+
+	// 검색 필터
+	var searchInput = document.getElementById('sim-search');
+	if (searchInput) {
+		searchInput.addEventListener('input', function () {
+			var q = this.value.trim().toLowerCase();
+			rows.forEach(function (r) {
+				var name = (r.getAttribute('data-name') || '').toLowerCase();
+				var sku = (r.getAttribute('data-sku') || '').toLowerCase();
+				if (!q || name.indexOf(q) !== -1 || sku.indexOf(q) !== -1) {
+					r.style.display = '';
+				} else {
+					r.style.display = 'none';
+				}
+			});
+		});
+	}
+
+	// 전체 품절(0)
+	var btnZeroAll = document.getElementById('btn-zero-all');
+	if (btnZeroAll) {
+		btnZeroAll.addEventListener('click', function () {
+			if (!confirm('화면의 모든 품목 재고를 0으로 맞추시겠습니까?')) return;
+			rows.forEach(function (r) {
+				r.querySelector('.sim-stock').value = 0;
+			});
+			updateTotals();
+		});
+	}
+
+	// 화면 새로고침
+	var btnReset = document.getElementById('btn-reset-inputs');
+	if (btnReset) {
+		btnReset.addEventListener('click', function () {
+			window.location.reload();
+		});
+	}
+
+	// 영수증 로그 컨트롤 (FEED, CLEAR)
+	var btnFeed = document.getElementById('btn-log-feed');
+	if (btnFeed) {
+		btnFeed.addEventListener('click', function () {
+			appendLog('.\n.\n--- PAPER FEED ---');
+		});
+	}
+	var btnClear = document.getElementById('btn-log-clear');
+	if (btnClear) {
+		btnClear.addEventListener('click', function () {
+			if (logEl) {
+				logEl.textContent = '========================================\n THERMAL PRINTER BUFFER CLEARED\n========================================\n';
+			}
+		});
+	}
+
+	// 하드웨어 단축키 (F1, F2, F3)
+	window.addEventListener('keydown', function (e) {
+		if (e.key === 'F1') {
+			e.preventDefault();
+			triggerRestock();
+		} else if (e.key === 'F2') {
+			e.preventDefault();
+			triggerSelldown();
+		} else if (e.key === 'F3') {
+			e.preventDefault();
+			triggerPushAll();
+		} else if (e.key === 'Escape') {
+			// ESC: POS 종료 / 메인 복귀 확인
+			if (confirm('POS 시뮬레이터를 종료하고 기리기리 POS 관리 화면으로 돌아가시겠습니까?')) {
+				window.location.href = '/store/pos';
+			}
+		}
+	});
+
+})();
+</script>
 </body>
 </html>

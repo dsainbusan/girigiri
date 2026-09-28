@@ -12,12 +12,21 @@
 .list-menu-item:active {
 	background-color: var(--c-bg);
 }
+/* 변경됨 (2026-09-27, UI/UX 개편) — 아이콘이 배경 없이 맨 아이콘이라 밋밋하다는 피드백. 대시보드
+   등 다른 화면의 원형/사각 배지 아이콘(.todo-banner__icon 등)과 같은 톤으로 맞췄다. */
 .list-menu-item__icon {
-	font-size: 18px;
-	width: 28px;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--r-md);
+	background: var(--c-bg);
+	color: var(--c-primary);
 	display: flex;
 	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-right: var(--s-3);
 }
+.list-menu-item__icon .icon { width: 16px; height: 16px; }
 .list-menu-item__title {
 	font-size: var(--fs-md);
 	font-weight: var(--fw-medium);
@@ -36,6 +45,144 @@
 .list-menu-item__desc { font-size: var(--fs-xs); color: var(--c-text-sub); }
 /* 오른쪽에 현재 값을 보여주는 행(예: 언어 설정 "한국어") — 화살표 바로 왼쪽 */
 .list-menu-item__value { font-size: var(--fs-sm); color: var(--c-text-sub); margin-right: 6px; }
-/* 회원 탈퇴처럼 되돌릴 수 없는 행 — 배경/테두리는 그대로 두고 글자·아이콘만 위험색으로 */
-.list-menu-item--danger .list-menu-item__title,
-.list-menu-item--danger .list-menu-item__icon { color: var(--c-danger); }
+/* 회원 탈퇴처럼 되돌릴 수 없는 행 — 배경/테두리는 그대로 두고 글자·아이콘 배지만 위험색으로 */
+.list-menu-item--danger .list-menu-item__title { color: var(--c-danger); }
+.list-menu-item--danger .list-menu-item__icon { background: var(--c-danger-weak); color: var(--c-danger); }
+
+/* ---------- 마이페이지 회원정보 수정: 연동된 로그인 계정 카드 ---------- */
+.linked-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.linked-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-line-weak);
+  border-radius: var(--r-md);
+  box-sizing: border-box;
+}
+
+.linked-account-row__left {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1;
+  min-width: 0;
+  margin-right: var(--s-3);
+}
+
+.linked-account-row__text {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linked-account-row__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* 변경됨 (2026-09-27) — 카카오(노랑)·구글(흰색)·이메일(회색)처럼 provider별로 색을 따로 줬더니
+   구글은 브랜드 색이라기엔 그냥 흰 배지라 밋밋하고, 이메일은 아예 브랜드가 아닌데 색만 다르고,
+   결과적으로 "일부만 색칠된" 어중간한 인상이었다. 실제 브랜드 색을 전부 정확히 쓰려면 각 사의
+   가이드라인(로고 병기 등)까지 신경 써야 해서 배보다 배꼽이 크다 — 이 앱 다른 곳의 태그·배지와
+   같은 단일 톤(정보 파랑)으로 통일했다. */
+.account-provider-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+  background: var(--c-info-weak);
+  color: var(--c-info-strong);
+}
+
+/* 기본 계정 배지 (상태 표시용) */
+.account-badge--default {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
+  border: 1px solid var(--c-primary-border);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* 유지 필수 안내 배지 */
+.account-badge--lock {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--c-text-mut);
+  background: var(--c-line-weak);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* 롤백 (2026-09-27) — 꽉 채운 빨강+어두운 글씨 조합이 "경고/공포" 느낌이라는 피드백으로,
+   흰 배경 + 빨간 아웃라인 버전으로 되돌렸다. */
+.btn-unlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+  font-family: inherit;
+}
+
+.btn-unlink:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #b91c1c;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.15);
+}
+
+.btn-unlink:active {
+  background: #fee2e2;
+  transform: translateY(1px);
+}
+
+/* 마이페이지 그룹화 카드 소제목 (사용자 레퍼런스 스타일) */
+.mypage-group-title {
+  padding: 16px var(--s-4) 4px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  letter-spacing: -0.01em;
+}

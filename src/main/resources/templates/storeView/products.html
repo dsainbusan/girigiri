@@ -25,35 +25,80 @@
 		마감이 임박해서 오늘은 더 이상 올릴 수 없어요.
 	</p>
 
-	<!-- 1. POS 상태 — 연동됐으면 한 줄 요약, 안 됐으면 큰 안내(=이때가 최우선 할 일) -->
-	<div th:if="${posConnected}" class="pos-strip pos-strip--on pos-strip--line">
-		<span class="pos-strip__title" th:text="'✅ ' + ${posProviderLabel}">✅ 오케이포스</span>
-		<span class="pos-strip__desc" th:if="${posDraftPromptLabel != null}"
-		      th:text="'매일 ' + ${posDraftPromptLabel} + ' 자동 준비'">매일 20:00 자동 준비</span>
-		<span class="pos-strip__desc" th:if="${posDraftPromptLabel == null}"><svg class="icon" style="width:13px;height:13px"><use href="#i-warning"/></svg> 재고 확인 시각 미설정</span>
-		<a th:href="@{/store/pos}" class="pos-strip__link">POS 설정 ›</a>
-	</div>
-	<div th:unless="${posConnected}" class="pos-strip">
-		<p class="pos-strip__title">🔌 POS를 연동하면 재고가 자동으로 올라와요</p>
-		<p class="pos-strip__desc">마감 무렵 남은 재고로 "오늘의 구제" 초안이 저절로 만들어져요.</p>
-		<div class="u-row" style="gap: var(--s-3); flex-wrap: wrap">
-			<a th:href="@{/store/pos}" class="pos-strip__link">POS 연동하기 ›</a>
-			<a th:href="@{/store/templates}" class="pos-strip__link">POS 없이 자동 등록(템플릿) ›</a>
+	<!-- 0. 오늘 재고 요약 (2026-09-25, UI/UX 개편) — 대시보드의 .dash-card/.dash-metrics를 그대로
+	     재사용한 요약 스트립. 컨트롤러가 이미 계산해서 넘겨주던 숫자(totalCount 등)를 화면에 처음
+	     노출한다 — 백엔드 변경 없음. -->
+	<div id="stats-strip" class="dash-card" style="padding: var(--s-3) var(--s-2);">
+		<div class="dash-metrics">
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-storefront"/></svg></div>
+				<span class="dash-metric__value" th:text="${totalCount}">12</span>
+				<span class="dash-metric__label">전체</span>
+			</div>
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-box"/></svg></div>
+				<span class="dash-metric__value" th:text="${sellingCount}">8</span>
+				<span class="dash-metric__label">판매중</span>
+			</div>
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-close"/></svg></div>
+				<span class="dash-metric__value" th:text="${soldOutCount}">2</span>
+				<span class="dash-metric__label">품절</span>
+			</div>
+			<div class="dash-metric">
+				<div class="dash-metric__icon"><svg class="icon"><use href="#i-lock"/></svg></div>
+				<span class="dash-metric__value" th:text="${closedCount}">2</span>
+				<span class="dash-metric__label">마감</span>
+			</div>
 		</div>
 	</div>
 
-	<!-- 2. 판매 중 목록 (2026-09-21 — 판매 대기보다 위로. 지금 팔고 있는 게 가장 중요하고, 비어 있을 땐
-	     한 줄만 차지하니 위에 둬도 부담이 없다.) -->
-	<div id="selling-section" style="margin-bottom: var(--s-5)">
-	<div class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
-		<span class="u-bold" style="font-size: var(--fs-sm)">판매 중</span>
-		<span th:if="${totalCount > 0}" class="u-sub" style="font-size: var(--fs-xs)"
-		      th:text="'전체 ' + ${totalCount} + ' · 판매중 ' + ${sellingCount} + ' · 품절 ' + ${soldOutCount}">전체 3 · 판매중 2 · 품절 1</span>
+	<!-- 1. POS 상태 — 대시보드의 "할 일 카드"(.todo-banner__card)를 그대로 재사용해서 새 CSS 없이
+	     톤을 맞춘다. 연동 안 됐으면 대시보드 "POS 자동 등록 설정" 카드와 동일한 형태(=이때가 최우선
+	     할 일), 연동됐으면 상태 요약 카드 한 줄. -->
+	<a th:unless="${posConnected}" th:href="@{/store/pos}" class="todo-banner__card" style="margin-bottom: var(--s-3);" title="POS 연동 설정">
+		<div class="todo-banner__icon"><svg class="icon"><use href="#i-desktop"/></svg></div>
+		<div class="todo-banner__body">
+			<div class="todo-banner__title">POS 연동하고 자동으로 재고 올리기</div>
+			<div class="todo-banner__desc">마감 무렵 남은 재고로 "오늘의 구제" 초안이 저절로 만들어져요</div>
+		</div>
+		<div class="todo-banner__action">
+			<span class="todo-banner__badge">연동</span>
+			<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+		</div>
+	</a>
+	<p th:unless="${posConnected}" class="u-center" style="margin: calc(-1 * var(--s-2)) 0 var(--s-3);">
+		<a th:href="@{/store/templates}" class="u-sub" style="font-size: var(--fs-xs); text-decoration: underline;">POS 없이 자동 등록(템플릿) ›</a>
+	</p>
+	<a th:if="${posConnected}" th:href="@{/store/pos}" class="todo-banner__card" style="margin-bottom: var(--s-3);" title="POS 설정">
+		<div class="todo-banner__icon"><svg class="icon"><use href="#i-desktop"/></svg></div>
+		<div class="todo-banner__body">
+			<div class="todo-banner__title" th:text="'✅ ' + ${posProviderLabel}">✅ 오케이포스</div>
+			<div class="todo-banner__desc" th:if="${posDraftPromptLabel != null}"
+			     th:text="'매일 ' + ${posDraftPromptLabel} + ' 자동 준비'">매일 20:00 자동 준비</div>
+			<div class="todo-banner__desc" th:if="${posDraftPromptLabel == null}">재고 확인 시각 미설정</div>
+		</div>
+		<div class="todo-banner__action">
+			<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+		</div>
+	</a>
+
+	<!-- 2·3. 판매중/판매대기 — 대시보드에서 쓰던 .stat-toggle-tabs pill 토글을 그대로 재사용해서
+	     세로로 쌓여있던 두 목록을 탭으로 분리한다(2026-09-25, UI/UX 개편). 탭이 가리키는 두 패널은
+	     기존 #selling-section/#wait-section을 그대로 쓴다 — 그 안의 내용·id·10초 폴링/발행/수정
+	     스크립트는 전혀 안 건드린다(그 스크립트들은 hidden 여부와 무관하게 innerHTML만 갈아끼움). -->
+	<div class="stat-toggle-tabs" role="tablist" aria-label="재고 상태">
+		<button type="button" role="tab" id="products-tab-selling" class="stat-toggle-tab is-active"
+		        data-target="selling-section" aria-selected="true">판매중</button>
+		<button type="button" role="tab" id="products-tab-wait" class="stat-toggle-tab"
+		        data-target="wait-section" aria-selected="false">판매대기</button>
 	</div>
+
+	<div id="selling-section" style="margin-bottom: var(--s-5)">
 	<!-- 할인율 안내 (2026-09-21) — 동적 가격: "자동 조정" 상품은 마감까지 남은 시간(3시간 초과 -20% ·
 	     1~3시간 -30% · 1시간 이내 -50%)에 따라 할인율이 올라가고, "직접 지정" 상품은 점주가 정한 값이
 	     하한으로 유지된다. -->
-	<p th:if="${totalCount > 0}" class="u-mut" style="font-size: var(--fs-xs); margin: calc(-1 * var(--s-2)) 0 var(--s-3)">
+	<p th:if="${totalCount > 0}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)">
 		<b>자동 조정</b> 상품은 마감이 가까워질수록 할인율이 올라가요(3시간 전 -30%, 1시간 전 -50%). <b>직접 지정</b> 상품은 정한 할인율을 유지해요.
 	</p>
 
@@ -121,12 +166,9 @@
 	       ② 초안(draft) — 정해진 시각에 ①이 초안이 된 것. 점주가 [바로 올리기]로 동의해야 판매 시작
 	     wait-section/selling-section은 아래 스크립트가 주기적으로 서버 화면으로 통째 갈아끼워
 	     POS 재고 숫자와 예상 할인율이 실시간처럼 갱신된다. -->
-	<div id="wait-section">
-	<div th:if="${posConnected or !#lists.isEmpty(drafts)}" class="u-row" style="justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2)">
-		<span class="u-bold" style="font-size: var(--fs-sm)">판매 대기</span>
-		<span class="u-sub" style="font-size: var(--fs-xs)"
-		      th:text="'전체 ' + (${#lists.size(drafts)} + ${#lists.size(pendingMenus)}) + '개'">전체 4개</span>
-	</div>
+	<div id="wait-section" class="is-hidden">
+	<p th:if="${posConnected or !#lists.isEmpty(drafts)}" class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)"
+	   th:text="'전체 ' + (${#lists.size(drafts)} + ${#lists.size(pendingMenus)}) + '개'">전체 4개</p>
 	<p th:if="${posConnected}" class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)"
 	   th:text="${posDraftPromptLabel != null}
 	            ? '재고는 POS에서 실시간으로 반영돼요. 매일 ' + ${posDraftPromptLabel} + '이 되면 [바로 올리기]를 할 수 있고, 눌러야 판매가 시작돼요. 가격은 마감이 가까울수록 내려가요.'
@@ -390,6 +432,32 @@
 		   style="font-size: var(--fs-sm); text-decoration: underline;">자동 등록 템플릿</a>
 	</div>
 
+	<!-- 판매중/판매대기 pill 탭 토글 (2026-09-25) — dashboard.html의 .stat-toggle-tabs 그룹별 처리
+	     스크립트와 동일한 패턴. #wait-section/#selling-section은 이미 자기 id로 다른 스크립트들이
+	     참조하고 있어서 새 래퍼 없이 data-target으로 그 id를 직접 가리키기만 한다. -->
+	<script th:inline="none">
+	(function () {
+		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+			var panels = tabs
+				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
+				.filter(Boolean);
+			tabs.forEach(function (tab, i) {
+				tab.addEventListener('click', function () {
+					tabs.forEach(function (t) {
+						t.classList.remove('is-active');
+						if (t.hasAttribute('aria-selected')) { t.setAttribute('aria-selected', 'false'); }
+					});
+					panels.forEach(function (p) { p.classList.add('is-hidden'); });
+					tab.classList.add('is-active');
+					if (tab.hasAttribute('aria-selected')) { tab.setAttribute('aria-selected', 'true'); }
+					if (panels[i]) { panels[i].classList.remove('is-hidden'); }
+				});
+			});
+		});
+	})();
+	</script>
+
 	<!-- 뒤로가기는 브라우저 히스토리 대신 항상 대시보드로 (이 화면은 대시보드에서만 진입).
 	     이 인라인 스크립트는 layout 하단의 app.js보다 먼저 실행되므로, data-back을 미리 떼서
 	     app.js의 history.back() 핸들러가 이 버튼엔 안 붙게 한다. -->
@@ -408,14 +476,14 @@
 	     건너뛴다(누르던 버튼이 사라지는 걸 막기 위해). -->
 	<script th:inline="none">
 	(function () {
-		var IDS = ['wait-section', 'selling-section'];
+		var IDS = ['wait-section', 'selling-section', 'stats-strip'];
 		setInterval(function () {
 			if (document.hidden) { return; }
 			if (window.__isPublishing && window.__isPublishing()) { return; }
 			// "⋯" 시트/삭제 다이얼로그가 열려 있으면 뒤 화면을 갈아끼우지 않는다.
 			if (document.querySelector('.stock-sheet:not(.is-hidden), .stock-dialog:not(.is-hidden)')) { return; }
 			var active = document.activeElement;
-			if (active && active.closest && active.closest('#wait-section, #selling-section')) { return; }
+			if (active && active.closest && active.closest('#wait-section, #selling-section, #stats-strip')) { return; }
 			fetch(location.pathname, { credentials: 'same-origin' })
 				.then(function (res) { return res.ok ? res.text() : null; })
 				.then(function (html) {
@@ -445,7 +513,7 @@
 		function syncSections(html) {
 			if (!html) return;
 			var doc = new DOMParser().parseFromString(html, 'text/html');
-			var IDS = ['wait-section', 'selling-section'];
+			var IDS = ['wait-section', 'selling-section', 'stats-strip'];
 			var currentScroll = window.scrollY;
 			IDS.forEach(function (id) {
 				var fresh = doc.getElementById(id);
@@ -702,7 +770,7 @@
 			})
 			.then(function (html) {
 				var doc = new DOMParser().parseFromString(html, 'text/html');
-				var IDS = ['wait-section', 'selling-section'];
+				var IDS = ['wait-section', 'selling-section', 'stats-strip'];
 				var currentScroll = window.scrollY;
 				IDS.forEach(function (id) {
 					var fresh = doc.getElementById(id);
@@ -928,7 +996,7 @@
 				closeDialog(true);
 
 				var doc = new DOMParser().parseFromString(html, 'text/html');
-				var IDS = ['wait-section', 'selling-section'];
+				var IDS = ['wait-section', 'selling-section', 'stats-strip'];
 				var currentScroll = window.scrollY;
 				IDS.forEach(function (id) {
 					var fresh = doc.getElementById(id);

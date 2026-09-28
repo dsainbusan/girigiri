@@ -109,6 +109,7 @@ public class ReservationIncomingController {
 		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(storeId);
 		model.addAttribute("orders", orders);
 		model.addAttribute("totalCount", orders.size());
+		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(storeId));
 		return "reservationView/orders";
 	}
 

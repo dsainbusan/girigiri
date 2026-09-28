@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('알림 설정', ~{:: #content}, 'alert', false, '', null)}">
+      th:replace="~{common/layout :: layout('알림 설정', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'alert'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 

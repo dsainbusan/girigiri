@@ -10,7 +10,10 @@
 	<link rel="stylesheet" th:href="@{/css/store.css?v=20260922c}">
 
 	<!-- ================= 1. 상단 딥 네이비 그라데이션 히어로 ================= -->
-	<section class="dash-hero" th:if="${configured}">
+	<!-- id="sales-hero"/"sales-body" (2026-09-26, UI/UX 개편) — 기간 전환용 AJAX 스크립트가 이 두
+	     id로 innerHTML을 통째로 갈아끼운다. 페이지 재요청 없이 갱신되므로 스크롤 위치가 안 흔들리고,
+	     "그래프 보려고 내렸다가 기간 바꾸려고 다시 올리는" 왕복이 없어진다. -->
+	<section id="sales-hero" class="dash-hero" th:if="${configured}">
 		<!-- 매장명 · 조회 기간 한 줄 (예: 창호베이커리 중앙점 · 2026-09-15 ~ 2026-09-21 (지난 주)) -->
 		<div class="dash-hero__date-label" th:text="${report.storeName} + ' · ' + ${report.periodLabel}">
 			○○베이커리 · 2026-09-15 ~ 2026-09-21 (지난 주)
@@ -22,9 +25,12 @@
 			<div class="dash-hero__balance-amount"
 			      th:text="${#numbers.formatInteger(report.totalSales, 0, 'COMMA')} + '원'">1,240,000원</div>
 			<!-- 전주 대비 배지 (전주 매출이 있을 때만, 금액 아래 중앙 정렬) -->
+			<!-- 변경됨 (2026-09-27, UI/UX 개편) — "전주(40,500원) 대비 ▲ +230%"처럼 절대금액까지
+			     한 줄에 다 넣어서 배지 하나가 문장처럼 길었다. 절대금액은 title 툴팁(호버/롱프레스)으로만
+			     남기고, 화면엔 "전주 대비"(라벨) + 화살표 + 퍼센트(값)만 남겨 한눈에 읽히게 했다. -->
 			<div th:if="${report.prevTotalSales != null}" class="sales-delta-badge"
 			     th:title="${'전주 ' + #numbers.formatInteger(report.prevTotalSales, 0, 'COMMA') + '원 대비 ' + (report.deltaPercent >= 0 ? '+' : '') + report.deltaPercent + '%'}">
-				<span>전주(<span th:text="${#numbers.formatInteger(report.prevTotalSales, 0, 'COMMA')}">280,000</span>원) 대비</span>
+				<span class="sales-delta-badge__label">전주 대비</span>
 				<span class="sales-delta-badge__arrow" th:classappend="${report.deltaPercent >= 0} ? ' is-up' : ' is-down'"
 				      th:text="${report.deltaPercent >= 0} ? '▲' : '▼'">▲</span>
 				<span class="sales-delta-badge__val"
@@ -49,33 +55,36 @@
 	<!-- ================= 2. 둥근 윗모서리 크림 바디 시트 ================= -->
 	<section class="dash-sheet">
 		<!-- Supabase 미설정 안내 -->
-		<div th:unless="${configured}" class="dash-card sales-empty-card">
-			<div class="sales-empty-card__icon" aria-hidden="true">
+		<div th:unless="${configured}" class="dash-card empty-card">
+			<div class="empty-card__icon" aria-hidden="true">
 				<span style="font-size: 24px">🔌</span>
 			</div>
-			<p class="sales-empty-card__title">매출 데이터 저장소가 아직 연결 안 됐어요</p>
-			<p class="sales-empty-card__sub">
+			<p class="empty-card__title">매출 데이터 저장소가 아직 연결 안 됐어요</p>
+			<p class="empty-card__sub">
 				.env에 SUPABASE_URL / SUPABASE_SERVICE_KEY를 채우면 매출 리포트가 켜져요.
 			</p>
 		</div>
 
-		<div th:if="${configured}">
-			<!-- 1) 기간 선택 (A안: 3분할 세그먼트 + 우측 독립 캘린더 버튼) + 직접 선택 폼 -->
+		<div id="sales-body" th:if="${configured}">
+			<!-- 1) 기간 선택 (A안: 3분할 세그먼트 + 우측 독립 캘린더 버튼) + 직접 선택 폼.
+			     변경됨 (2026-09-26) — 예전엔 onclick="location.href=..."로 페이지 전체를 새로고침해서
+			     기간을 바꿀 때마다 스크롤이 맨 위로 튀었다. data-period로만 표시하고 실제 이동은
+			     아래 위임 클릭 핸들러가 fetch로 처리한다(#sales-hero/#sales-body만 갈아끼움). -->
 			<div class="settle-period" role="tablist" aria-label="조회 기간 선택">
 				<!-- 좌측: [ 오늘 | 이번 주 | 지난 주 ] 일체형 3분할 세그먼트 컨트롤 -->
 				<div class="settle-period__seg" role="group" aria-label="기간 프리셋">
 					<button type="button" class="settle-period__pill settle-period__seg-btn"
 					        th:classappend="${report.periodKey == 'today'} ? ' is-active' : ''"
 					        th:attr="aria-selected=${report.periodKey == 'today' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'today' ? 'true' : 'false'}"
-					        onclick="location.href='/store/sales-report?period=today'">오늘</button>
+					        data-period="today">오늘</button>
 					<button type="button" class="settle-period__pill settle-period__seg-btn"
 					        th:classappend="${report.periodKey == 'thisweek'} ? ' is-active' : ''"
 					        th:attr="aria-selected=${report.periodKey == 'thisweek' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'thisweek' ? 'true' : 'false'}"
-					        onclick="location.href='/store/sales-report?period=thisweek'">이번 주</button>
+					        data-period="thisweek">이번 주</button>
 					<button type="button" class="settle-period__pill settle-period__seg-btn"
 					        th:classappend="${report.periodKey == 'lastweek'} ? ' is-active' : ''"
 					        th:attr="aria-selected=${report.periodKey == 'lastweek' ? 'true' : 'false'}, aria-pressed=${report.periodKey == 'lastweek' ? 'true' : 'false'}"
-					        onclick="location.href='/store/sales-report?period=lastweek'">지난 주</button>
+					        data-period="lastweek">지난 주</button>
 				</div>
 
 				<!-- 우측: [ 📅 직접 선택 ▾ ] 독립형 액션 버튼 -->
@@ -104,12 +113,12 @@
 			</form>
 
 			<!-- [빈 상태] 조회 기간에 데이터가 없을 때: 2)~6) 숨기고 단일 안내 카드만 표시 -->
-			<div th:if="${report.empty}" class="dash-card sales-empty-card">
-				<div class="sales-empty-card__icon" aria-hidden="true">
+			<div th:if="${report.empty}" class="dash-card empty-card">
+				<div class="empty-card__icon" aria-hidden="true">
 					<svg class="icon"><use href="#i-document"/></svg>
 				</div>
-				<p class="sales-empty-card__title">이 기간에 매출 데이터가 없어요.</p>
-				<p class="sales-empty-card__sub">다른 기간을 선택하거나 영업일이 있는 주간을 골라보세요.</p>
+				<p class="empty-card__title">이 기간에 매출 데이터가 없어요.</p>
+				<p class="empty-card__sub">다른 기간을 선택하거나 영업일이 있는 주간을 골라보세요.</p>
 			</div>
 
 			<!-- [데이터 있을 때]: 2) ~ 6) 순서대로 표시 -->
@@ -209,8 +218,11 @@
 									</div>
 								</div>
 							</div>
+							<!-- 변경됨 (2026-09-27) — bar-chart__hint가 .bar-chart-wrap 밖(형제)에 있어서 app.js의
+							     공용 탭 핸들러(wrap.querySelector('.bar-chart__hint'))가 못 찾아 막대를 눌러도
+							     안내줄이 갱신 안 되던 버그. dashboard.html과 같은 위치(wrap 안, 맨 마지막)로 이동. -->
+							<p class="bar-chart__hint" aria-live="polite" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
 						</div>
-						<p class="bar-chart__hint" aria-live="polite" data-hint-default="막대를 눌러 자세히 보기">막대를 눌러 자세히 보기</p>
 					</div>
 					<p class="dash-chart__total">판매 <span th:text="${report.soldCount}">88</span>개 · 폐기 <span th:text="${report.wastedCount}">19</span>개</p>
 				</div>
@@ -292,32 +304,23 @@
 			back.addEventListener('click', function () { location.href = '/store/dashboard'; });
 		}
 
-		// "직접 선택" 토글
-		var btn = document.getElementById('sales-range-toggle');
-		var form = document.getElementById('sales-range-form');
-		if (btn && form) {
-			btn.addEventListener('click', function () {
-				var opened = form.classList.toggle('is-hidden') === false;
-				btn.setAttribute('aria-expanded', opened);
-				if (opened) {
-					var first = form.querySelector('input[name="from"]');
-					if (first) { first.focus(); }
-				}
-			});
-		}
+		var salesHero = document.getElementById('sales-hero');
+		var salesBody = document.getElementById('sales-body');
 
-		// 차트 y축 눈금 및 aria-pressed 인터랙션
-		var chart = document.querySelector('.dash-chart');
-		if (chart) {
+		// 차트 y축 눈금 계산 — #sales-body가 AJAX로 통째로 갈아끼워질 때마다 다시 불러야 해서 함수로 뺐다.
+		// aria-pressed 갱신은 함수 밖 위임 클릭 리스너가 담당(차트 DOM 자체가 매번 새로 생기므로).
+		function initChart() {
+			var chart = document.querySelector('.dash-chart');
+			if (!chart) return;
 			var cols = chart.querySelectorAll('.bar-chart__col');
 			var maxVal = 0;
 			cols.forEach(function (col) {
 				var tot = parseInt(col.getAttribute('data-total') || '0', 10);
 				if (tot > maxVal) maxVal = tot;
 			});
+			var maxSpan = chart.querySelector('.dash-chart__axis .is-max');
+			var midSpan = chart.querySelector('.dash-chart__axis .is-mid');
 			if (maxVal > 0) {
-				var maxSpan = chart.querySelector('.dash-chart__axis .is-max');
-				var midSpan = chart.querySelector('.dash-chart__axis .is-mid');
 				if (maxSpan) { maxSpan.textContent = maxVal; maxSpan.classList.remove('is-hidden'); }
 				if (midSpan) {
 					if (maxVal >= 2) {
@@ -327,19 +330,86 @@
 						midSpan.classList.add('is-hidden');
 					}
 				}
+			} else {
+				if (maxSpan) { maxSpan.classList.add('is-hidden'); }
+				if (midSpan) { midSpan.classList.add('is-hidden'); }
 			}
-
-			// aria-pressed 동기화
-			chart.addEventListener('click', function (e) {
-				var tapped = e.target.closest('.bar-chart__col');
-				if (!tapped) return;
-				setTimeout(function () {
-					cols.forEach(function (c) {
-						c.setAttribute('aria-pressed', c.classList.contains('is-selected') ? 'true' : 'false');
-					});
-				}, 10);
-			});
 		}
+		initChart();
+
+		// aria-pressed 동기화 — 위임(문서 레벨)이라 #sales-body가 갈아끼워져도 다시 붙일 필요 없음.
+		document.addEventListener('click', function (e) {
+			if (!e.target.closest('.dash-chart .bar-chart__col')) return;
+			setTimeout(function () {
+				document.querySelectorAll('.dash-chart .bar-chart__col').forEach(function (c) {
+					c.setAttribute('aria-pressed', c.classList.contains('is-selected') ? 'true' : 'false');
+				});
+			}, 10);
+		});
+
+		// 추가됨 (2026-09-26, UI/UX 개편) — 기간 전환을 페이지 재요청 없이 처리한다.
+		// #sales-hero/#sales-body를 그대로 반환하는 같은 GET 엔드포인트를 fetch로 다시 불러
+		// innerHTML만 갈아끼운다 — 새 API 없이 서버가 그려주는 화면을 재사용(재고관리 폴링과 동일 패턴).
+		// 스크롤 위치가 안 흔들려서 "그래프 보다가 기간 바꾸려고 위로 스크롤"할 필요가 없어진다.
+		// pushHistory=false로 호출하면 주소는 그대로 두고 내용만 갱신한다 — popstate(뒤로/앞으로가기)로
+		// 이미 브라우저가 옮겨놓은 주소에 대고 다시 pushState하면 같은 주소가 중복으로 쌓여서, 다음
+		// "앞으로가기" 기록이 날아가고 "뒤로가기"를 두 번 눌러야 하는 문제가 있었다.
+		function fetchAndSwap(url, pushHistory) {
+			if (pushHistory === undefined) { pushHistory = true; }
+			if (salesBody) { salesBody.style.opacity = '0.5'; salesBody.style.pointerEvents = 'none'; }
+			fetch(url, { credentials: 'same-origin' })
+				.then(function (res) { return res.ok ? res.text() : Promise.reject(new Error('요청 실패')); })
+				.then(function (html) {
+					var doc = new DOMParser().parseFromString(html, 'text/html');
+					var freshHero = doc.getElementById('sales-hero');
+					var freshBody = doc.getElementById('sales-body');
+					if (salesHero && freshHero) { salesHero.innerHTML = freshHero.innerHTML; }
+					if (salesBody && freshBody) { salesBody.innerHTML = freshBody.innerHTML; }
+					if (pushHistory) { history.pushState(null, '', url); }
+					initChart();
+				})
+				.catch(function () { location.href = url; })   // 실패하면 예전처럼 그냥 이동
+				.finally(function () {
+					if (salesBody) { salesBody.style.opacity = ''; salesBody.style.pointerEvents = ''; }
+				});
+		}
+
+		document.addEventListener('click', function (e) {
+			// 기간 프리셋 pill(오늘/이번 주/지난 주)
+			var pill = e.target.closest('[data-period]');
+			if (pill) {
+				fetchAndSwap('/store/sales-report?period=' + encodeURIComponent(pill.getAttribute('data-period')));
+				return;
+			}
+			// "직접 선택" 토글 — #sales-body가 갈아끼워지므로 위임으로 처리.
+			if (e.target.closest('#sales-range-toggle')) {
+				var toggleBtn = document.getElementById('sales-range-toggle');
+				var rangeForm = document.getElementById('sales-range-form');
+				if (rangeForm) {
+					var opened = rangeForm.classList.toggle('is-hidden') === false;
+					if (toggleBtn) { toggleBtn.setAttribute('aria-expanded', opened); }
+					if (opened) {
+						var first = rangeForm.querySelector('input[name="from"]');
+						if (first) { first.focus(); }
+					}
+				}
+			}
+		});
+
+		document.addEventListener('submit', function (e) {
+			var form = e.target.closest('#sales-range-form');
+			if (!form) return;
+			e.preventDefault();
+			var from = form.querySelector('input[name="from"]').value;
+			var to = form.querySelector('input[name="to"]').value;
+			if (!from || !to) return;
+			fetchAndSwap('/store/sales-report?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
+		});
+
+		// 브라우저 뒤로/앞으로 가기 — pushState로 바뀐 주소로 다시 fetch해서 맞춰준다.
+		window.addEventListener('popstate', function () {
+			fetchAndSwap(location.pathname + location.search, false);
+		});
 	})();
 	</script>
 </div>

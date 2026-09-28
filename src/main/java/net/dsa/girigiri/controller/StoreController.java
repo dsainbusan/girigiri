@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.StoreDashboardStatsDto;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
@@ -47,6 +48,7 @@ public class StoreController {
 	private final StoreAccessService storeAccessService;
 	private final StoreService storeService;
 	private final ReviewService reviewService;
+	private final ReservationService reservationService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -130,6 +132,9 @@ public class StoreController {
 		// 추가됨 (2026-09-17) — "리뷰 관리" 카드가 다른 카드들처럼 라벨+값 2줄 구조를 갖게(평점·건수).
 		model.addAttribute("reviewAverageRating", store == null ? 0 : reviewService.getAverageRating(store.getId()));
 		model.addAttribute("reviewCount", store == null ? 0 : reviewService.getReviewCount(store.getId()));
+
+		// 추가됨 (2026-09-27) — 대시보드 "매장 관리" 전체 내역 및 신뢰도 표시용
+		model.addAttribute("storeReliability", store == null ? null : reservationService.getStoreCancelStats(store.getId()));
 
 		return "storeView/dashboard";
 	}

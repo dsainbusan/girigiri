@@ -25,6 +25,7 @@
 */-->
 <div id="content" th:fragment="content" class="page page--dashboard">
 	<link rel="stylesheet" th:href="@{/css/store.css?v=20260922c}">
+	<link rel="stylesheet" th:href="@{/css/mypage.css}">
 
 	<!-- ================= 1. 상단 딥 네이비 그라데이션 히어로 ================= -->
 	<section class="dash-hero">
@@ -131,84 +132,115 @@
 				</a>
 			</div>
 
-			<!-- 매장 관리 그리드 (하단 탭바에 없는 매장 운영 기능 8개) -->
+			<!-- 매장 관리 (3대 카테고리 3/3/3 그리드) -->
 			<div class="dash-section-head">
 				<h3 class="dash-section-title">매장 관리</h3>
-				<span class="dash-section-more">8개 기능</span>
+				<span class="dash-section-more">9개 기능</span>
 			</div>
 
-			<div class="dash-menu-grid">
-				<!-- 1. 정산 관리 -->
-				<a th:href="@{/store/settlement(period='month')}" class="dash-menu-cell" title="이번 달 정산 내역">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-money"/></svg>
-					</div>
-					<span class="dash-menu-text">정산 관리</span>
-					<span class="dash-menu-sub" th:text="${settlementPayout}">33,212원</span>
-				</a>
+			<div class="dash-categorized-grid">
+				<!-- 1. 주문 · 판매 -->
+				<div class="dash-grid-group">
+					<div class="dash-grid-group__title">주문 · 판매</div>
+					<div class="dash-grid-group__row">
+						<!-- 전체 주문 -->
+						<a th:href="@{/reservation/orders}" class="dash-menu-cell" title="전체 예약 내역 및 매장 취소율">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-list"/></svg>
+							</div>
+							<span class="dash-menu-text">전체 주문</span>
+							<span class="dash-menu-sub" th:text="${storeReliability != null and storeReliability.totalReservationCount() > 0 ? ('취소율 ' + #numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0) + '%') : '취소율 0%'}">취소율 0%</span>
+						</a>
 
-				<!-- 2. 매출 리포트 -->
-				<a th:href="@{/store/sales-report}" class="dash-menu-cell" title="매출 리포트 다운로드">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-ledger"/></svg>
-					</div>
-					<span class="dash-menu-text">매출 리포트</span>
-					<span class="dash-menu-sub">Excel · PDF</span>
-				</a>
+						<!-- 상품 템플릿 -->
+						<a th:href="@{/store/templates}" class="dash-menu-cell" title="자주 등록하는 마감 상품 템플릿">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-pencil"/></svg>
+							</div>
+							<span class="dash-menu-text">상품 템플릿</span>
+							<span class="dash-menu-sub">원클릭 등록</span>
+						</a>
 
-				<!-- 3. 완료 내역 -->
-				<a th:href="@{/reservation/completed}" class="dash-menu-cell" title="픽업 완료된 거래 내역">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-document"/></svg>
+						<!-- POS 연동 -->
+						<a th:href="@{/store/pos}" class="dash-menu-cell" title="POS 자동 재고 연동 설정">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-desktop"/></svg>
+							</div>
+							<span class="dash-menu-text">POS 연동</span>
+							<span class="dash-menu-sub" th:text="${needsAutomationSetup ? '설정 필요' : '연동 완료'}">설정</span>
+						</a>
 					</div>
-					<span class="dash-menu-text">완료 내역</span>
-					<span class="dash-menu-sub">거래 영수증</span>
-				</a>
+				</div>
 
-				<!-- 4. 상품 템플릿 -->
-				<a th:href="@{/store/templates}" class="dash-menu-cell" title="자주 등록하는 마감 상품 템플릿">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-pencil"/></svg>
-					</div>
-					<span class="dash-menu-text">상품 템플릿</span>
-					<span class="dash-menu-sub">원클릭 등록</span>
-				</a>
+				<div class="dash-grid-group__divider"></div>
 
-				<!-- 5. 매장 정보 -->
-				<a th:href="@{/store/edit}" class="dash-menu-cell" title="매장 정보 및 영업시간 설정">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-storefront"/></svg>
-					</div>
-					<span class="dash-menu-text">매장 정보</span>
-					<span class="dash-menu-sub" th:text="${operatingHoursMain} ?: '영업시간'">09:00~</span>
-				</a>
+				<!-- 2. 매출 · 정산 -->
+				<div class="dash-grid-group">
+					<div class="dash-grid-group__title">매출 · 정산</div>
+					<div class="dash-grid-group__row">
+						<!-- 정산 관리 -->
+						<a th:href="@{/store/settlement(period='month')}" class="dash-menu-cell" title="이번 달 정산 내역">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-money"/></svg>
+							</div>
+							<span class="dash-menu-text">정산 관리</span>
+							<span class="dash-menu-sub" th:text="${settlementPayout}">33,212원</span>
+						</a>
 
-				<!-- 6. 픽업 설정 -->
-				<a th:href="@{/reservation/settings}" class="dash-menu-cell" title="손님 픽업 준비시간 및 마감시각 설정">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-settings"/></svg>
-					</div>
-					<span class="dash-menu-text">픽업 설정</span>
-					<span class="dash-menu-sub">준비 · 마감</span>
-				</a>
+						<!-- 매출 리포트 -->
+						<a th:href="@{/store/sales-report}" class="dash-menu-cell" title="매출 리포트 다운로드">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-ledger"/></svg>
+							</div>
+							<span class="dash-menu-text">매출 리포트</span>
+							<span class="dash-menu-sub">Excel · PDF</span>
+						</a>
 
-				<!-- 7. 리뷰 관리 -->
-				<a th:href="@{/store/reviews}" class="dash-menu-cell" title="리뷰 보기 및 답글 남기기">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-star"/></svg>
+						<!-- 완료 영수증 -->
+						<a th:href="@{/reservation/completed}" class="dash-menu-cell" title="픽업 완료된 거래 영수증">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-document"/></svg>
+							</div>
+							<span class="dash-menu-text">완료 영수증</span>
+							<span class="dash-menu-sub">거래 내역</span>
+						</a>
 					</div>
-					<span class="dash-menu-text">리뷰 관리</span>
-					<span class="dash-menu-sub" th:text="${reviewCount > 0 ? ('★ ' + #numbers.formatDecimal(reviewAverageRating, 1, 1)) : '신규'}">★ 3.3</span>
-				</a>
+				</div>
 
-				<!-- 8. POS 연동 -->
-				<a th:href="@{/store/pos}" class="dash-menu-cell" title="POS 자동 등록 설정">
-					<div class="dash-menu-icon">
-						<svg class="icon"><use href="#i-desktop"/></svg>
+				<div class="dash-grid-group__divider"></div>
+
+				<!-- 3. 매장 · 고객 -->
+				<div class="dash-grid-group">
+					<div class="dash-grid-group__title">매장 · 고객</div>
+					<div class="dash-grid-group__row">
+						<!-- 매장 정보 -->
+						<a th:href="@{/store/edit}" class="dash-menu-cell" title="매장 정보 및 영업시간 설정">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-storefront"/></svg>
+							</div>
+							<span class="dash-menu-text">매장 정보</span>
+							<span class="dash-menu-sub" th:text="${operatingHoursMain} ?: '영업시간'">08:00~</span>
+						</a>
+
+						<!-- 픽업 설정 -->
+						<a th:href="@{/reservation/settings}" class="dash-menu-cell" title="손님 픽업 준비시간 및 마감시각 설정">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-settings"/></svg>
+							</div>
+							<span class="dash-menu-text">픽업 설정</span>
+							<span class="dash-menu-sub">준비 · 마감</span>
+						</a>
+
+						<!-- 리뷰 관리 -->
+						<a th:href="@{/store/reviews}" class="dash-menu-cell" title="리뷰 보기 및 답글 남기기">
+							<div class="dash-menu-icon">
+								<svg class="icon"><use href="#i-star"/></svg>
+							</div>
+							<span class="dash-menu-text">리뷰 관리</span>
+							<span class="dash-menu-sub" th:text="${reviewCount > 0 ? ('★ ' + #numbers.formatDecimal(reviewAverageRating, 1, 1)) : '신규'}">★ 3.3</span>
+						</a>
 					</div>
-					<span class="dash-menu-text">POS 연동</span>
-					<span class="dash-menu-sub" th:text="${needsAutomationSetup ? '설정 필요' : '연동 완료'}">설정</span>
-				</a>
+				</div>
 			</div>
 		</div>
 		<!-- /panel-overview -->
@@ -425,13 +457,6 @@
 			</div>
 		</div>
 		<!-- /panel-stats -->
-
-	<!-- 점주 모드 로그아웃 진입점 -->
-	<form th:action="@{/auth/logout}" method="post" style="margin-top: var(--s-5); margin-bottom: var(--s-2)">
-		<button type="submit" class="btn btn--outline btn--block u-mut"
-		        style="font-size: var(--fs-sm); border-color: var(--c-line); background: var(--c-surface)">로그아웃</button>
-	</form>
-
 	</section>
 	<!-- /dash-sheet -->
 

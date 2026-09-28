@@ -5,15 +5,25 @@
 <!--/*
 	점주용 공지사항 상세 — /store/notices 목록에서 진입. 작성/수정/삭제 버튼 없음(읽기 전용,
 	그건 슈퍼어드민 화면 전용). WBS 3.0 "공지사항 게시판 관리" (김태훈 인수분 → 문창호, 2026-09-16).
+
+	변경됨 (2026-09-26, UI/UX 개편) — 목록(notices.html)과 톤을 맞춰 dash-card + 아이콘 헤더로 교체.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<a th:href="@{/store/notices}" class="u-sub" style="font-size: var(--fs-sm); text-decoration: underline;">&larr; 공지사항 목록</a>
+	<a th:href="@{/store/notices}" class="u-sub" style="display:inline-flex; align-items:center; gap:4px; font-size: var(--fs-sm); margin-bottom: var(--s-3)">
+		<svg class="icon" style="width:14px;height:14px"><use href="#i-chevron-right" transform="rotate(180 12 12)"/></svg>
+		공지사항 목록
+	</a>
 
-	<div class="card" style="margin-top: var(--s-3)">
-		<p class="u-bold" style="font-size: var(--fs-lg)" th:text="${notice.title}">공지 제목</p>
-		<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 6px; margin-bottom: var(--s-4)"
+	<div class="dash-card">
+		<div class="edit-section-card__header" style="margin-bottom: var(--s-3); padding-bottom: var(--s-3);">
+			<div class="edit-section-card__title-group">
+				<svg class="icon edit-section-card__icon"><use href="#i-megaphone"/></svg>
+				<h3 class="edit-section-card__title" style="font-size: var(--fs-lg)" th:text="${notice.title}">공지 제목</h3>
+			</div>
+		</div>
+		<p class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-4)"
 		   th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')} + ' 등록'">2026-09-16 등록</p>
 		<p style="white-space: pre-wrap; line-height: 1.6" th:text="${notice.content}">공지 내용</p>
 	</div>

@@ -4,6 +4,7 @@
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<!-- 방금 저장 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
 	<div th:if="${savedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
@@ -13,26 +14,42 @@
 		</div>
 	</div>
 
-	<div class="card">
-		<p class="u-sub"><strong th:text="${storeName}">다이스키 베이커리</strong>의 당일 픽업 마감 기준을 설정해요.
-			손님에게 보이는 "예상 픽업 가능 시각"이 이 값으로 자동 계산돼요.</p>
+	<div class="banner banner--info" style="margin-bottom: var(--s-3)">
+		<span style="font-size: 16px">⏱️</span>
+		<div class="u-grow">
+			<div class="banner__title" style="color: var(--c-info)" th:text="${storeName} + '의 당일 픽업 마감 기준'">다이스키 베이커리의 당일 픽업 마감 기준</div>
+			<div class="banner__desc" style="color: var(--c-text-sub)">손님에게 보이는 "예상 픽업 가능 시각"이 이 값으로 자동 계산돼요</div>
+		</div>
 	</div>
 
-	<form th:action="@{/reservation/settings}" method="post" style="margin-top:var(--s-3)">
-		<div class="card field">
-			<label class="field__label" for="prepTimeMinutes">준비 시간 (분)</label>
-			<input type="number" id="prepTimeMinutes" name="prepTimeMinutes" class="input"
-				   min="1" max="180" th:value="${prepTimeMinutes}">
-			<p class="u-mut" style="font-size:var(--fs-xs)">주문이 들어온 뒤 상품을 준비하는 데 걸리는 시간이에요.
-				예상 픽업 가능 시각 = 지금 시각 + 이 시간</p>
+	<form th:action="@{/reservation/settings}" method="post">
+		<div class="edit-section-card">
+			<div class="edit-section-card__header">
+				<div class="edit-section-card__title-group">
+					<svg class="icon edit-section-card__icon"><use href="#i-settings"/></svg>
+					<h3 class="edit-section-card__title">준비 시간</h3>
+				</div>
+			</div>
+			<div class="field">
+				<label class="field__label" for="prepTimeMinutes">준비 시간 (분)</label>
+				<input type="number" id="prepTimeMinutes" name="prepTimeMinutes" class="input"
+					   min="1" max="180" th:value="${prepTimeMinutes}">
+				<p class="u-mut" style="font-size:var(--fs-xs); margin-top: 4px">주문이 들어온 뒤 상품을 준비하는 데 걸리는 시간이에요.
+					예상 픽업 가능 시각 = 지금 시각 + 이 시간</p>
+			</div>
 		</div>
 
 		<!-- 변경됨 (2026-08-21) — 왜: "마지막 픽업시간을 영업 종료시간이랑 따로 입력해야 해서 불편하다"는
 			피드백. 매장 정보에 이미 있는 영업시간(operatingHours)에서 종료시간을 서버가 뽑아내서,
 			"영업 종료 시간까지" 옵션을 고르면 그 값을 그대로 쓰게 했다 — operatingHours가 나중에
 			바뀌어도 저장 시점마다 다시 계산해서 따라간다(ReservationController.parseClosingTime 참고). -->
-		<div class="card field" style="margin-top:var(--s-3)">
-			<label class="field__label">마지막 픽업 시간</label>
+		<div class="edit-section-card">
+			<div class="edit-section-card__header">
+				<div class="edit-section-card__title-group">
+					<svg class="icon edit-section-card__icon"><use href="#i-lock"/></svg>
+					<h3 class="edit-section-card__title">마지막 픽업 시간</h3>
+				</div>
+			</div>
 
 			<p class="u-mut" style="font-size:var(--fs-xs); margin-top:2px" th:if="${operatingHours != null and !operatingHours.isEmpty()}">
 				현재 영업시간: <strong th:text="${operatingHours}">09:00 ~ 22:00</strong>
@@ -60,7 +77,7 @@
 				지나면 오늘은 주문이 마감돼요.</p>
 		</div>
 
-		<button type="submit" class="btn btn--block" style="margin-top:var(--s-3)">저장</button>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">저장</button>
 	</form>
 
 	<script th:inline="none">

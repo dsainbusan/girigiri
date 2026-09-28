@@ -72,6 +72,7 @@ input, textarea, select {
 .u-accent  { color: var(--c-accent); }
 .u-danger  { color: var(--c-danger); }
 .u-row  { display: flex; align-items: center; gap: var(--s-2); }
+.u-between { justify-content: space-between; width: 100%; }
 .u-grow { flex: 1 1 auto; }
 .u-mt-2 { margin-top: var(--s-2); }
 .u-mt-4 { margin-top: var(--s-4); }

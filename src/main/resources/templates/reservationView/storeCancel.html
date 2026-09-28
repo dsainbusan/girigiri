@@ -4,21 +4,34 @@
 <body>
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<div class="card">
-		<p class="u-sub">재고 착오 등 매장 사정으로 예약을 취소해야 할 때 사용해요.
-			손님 결제는 바로 취소(환불) 처리되고, 시간 제한 없이 언제든 가능해요.</p>
+	<div class="banner banner--info" style="margin-bottom: var(--s-3)">
+		<span style="font-size: 16px">🚫</span>
+		<div class="u-grow">
+			<div class="banner__title" style="color: var(--c-info)">재고 착오 등 매장 사정으로 취소할 때</div>
+			<div class="banner__desc" style="color: var(--c-text-sub)">손님 결제는 바로 환불 처리되고, 시간 제한 없이 언제든 가능해요</div>
+		</div>
 	</div>
 
 	<!-- 변경됨 (2026-08-21) — 왜: 픽업 코드를 손으로 옮겨 적다 오타 나거나, 이미 지나간 예약을
 		 잘못 입력하는 걸 막으려고 직접 타이핑 대신 "지금 취소 가능한 예약" 목록에서 고르게 바꿨다. -->
-	<div th:if="${#lists.isEmpty(cancellable)}" class="empty-state" style="margin-top:var(--s-3)">
-		지금 취소할 수 있는 예약이 없어요.
+	<div th:if="${#lists.isEmpty(cancellable)}" class="dash-card empty-card" style="margin-top:var(--s-3)">
+		<div class="empty-card__icon" aria-hidden="true">
+			<svg class="icon"><use href="#i-box"/></svg>
+		</div>
+		<p class="empty-card__title">지금 취소할 수 있는 예약이 없어요.</p>
 	</div>
 
 	<form th:unless="${#lists.isEmpty(cancellable)}"
 		  th:action="@{/reservation/store-cancel}" method="post" id="cancel-form" style="margin-top:var(--s-3)">
-		<div class="card">
+		<div class="edit-section-card">
+			<div class="edit-section-card__header">
+				<div class="edit-section-card__title-group">
+					<svg class="icon edit-section-card__icon"><use href="#i-box"/></svg>
+					<h3 class="edit-section-card__title">취소할 예약 선택</h3>
+				</div>
+			</div>
 			<select name="pickupCode" id="cancel-code-select" class="input">
 				<option th:each="r : ${cancellable}"
 						th:value="${r.pickupCode}"
@@ -30,8 +43,13 @@
 			<p id="cancel-status" class="scan-status"></p>
 		</div>
 
-		<div class="card" style="margin-top:var(--s-3)">
-			<p class="u-bold" style="margin-bottom:var(--s-2)">취소 사유</p>
+		<div class="edit-section-card">
+			<div class="edit-section-card__header">
+				<div class="edit-section-card__title-group">
+					<svg class="icon edit-section-card__icon"><use href="#i-warning"/></svg>
+					<h3 class="edit-section-card__title">취소 사유</h3>
+				</div>
+			</div>
 			<div class="chip-row" style="flex-wrap:wrap; margin-bottom:var(--s-3)">
 				<button type="button" class="chip" data-reason="재고 부족/품절">재고 부족/품절</button>
 				<button type="button" class="chip" data-reason="준비 시간 부족">준비 시간 부족</button>

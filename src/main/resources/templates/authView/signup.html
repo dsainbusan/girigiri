@@ -62,14 +62,16 @@
 		     완전히 없애진 못하지만(실제 통신사 인증은 아님), 최소한 "그 번호를 지금 실제로 받을 수
 		     있는 사람인지"는 증명하게 해서 오타·타인 번호 입력을 걸러준다.
 		     입력하는 대로 하이픈을 자동으로 넣고, 형식이 안 맞으면 제출을 막는다. -->
+		<!-- 변경됨 (2026-09-27) — "중복 확인" 버튼을 없앴다. 인증 전에 아무나 임의의 번호를 넣고
+		     가입 여부를 조회할 수 있는 문제도 있었고(소유 증명 없는 조회), 최종 제출 때 이미 서버가
+		     같은 검사를 한 번 더 하고 있어서 앞단 버튼은 "일찍 알려주는" 것 말고 실익이 크지 않았다.
+		     대신 "인증 확인"(OTP 검증) 성공 직후 자동으로 중복 확인을 실행한다 — 번호 소유를 증명한
+		     사람에게만 가입 여부를 알려주는 셈이라 더 안전하고, 카카오/토스 등이 쓰는 순서와도 같다. -->
 		<div class="field" style="margin-top: var(--s-4)">
 			<label class="field__label" for="phone">휴대폰 번호</label>
-			<div class="u-row" style="gap: var(--s-2); align-items: stretch;">
-				<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
-				       th:value="${phone}" placeholder="010-1234-5678" maxlength="13"
-				       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required style="flex: 1;">
-				<button type="button" id="btn-check-phone" class="btn btn--outline btn--sm" style="flex: none; min-width: 80px;">중복 확인</button>
-			</div>
+			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
+			       th:value="${phone}" placeholder="010-1234-5678" maxlength="13"
+			       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required>
 			<p id="phone-feedback" style="display:none; font-size: var(--fs-xs); margin-top: 6px;"></p>
 
 			<div class="u-row" style="gap: var(--s-2); align-items: center; margin-top: var(--s-2);">
@@ -159,9 +161,27 @@
 			</label>
 			<details class="agree__doc">
 				<summary>이용약관 보기</summary>
-				<p>※ (임시) 정식 이용약관 문서로 교체 예정 — 문창호</p>
-				<p>제1조(목적) 본 약관은 기리기리 서비스의 이용조건 및 절차, 회원과 회사의 권리·의무를 규정합니다.
-					회원은 만 14세 이상이어야 하며, 마감 임박 상품의 예약·픽업 과정에서 본 약관에 따릅니다.</p>
+				<div class="agree__doc-body">
+					<p><b>제1조(목적)</b> 이 약관은 기리기리(이하 "회사")가 제공하는 마감임박 상품 예약·픽업 서비스(이하 "서비스")의
+						이용조건 및 절차, 회원과 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+					<p><b>제2조(정의)</b> "회원"이란 이 약관에 동의하고 서비스에 가입한 자를, "매장(점주)"이란 서비스에 상품을 등록해
+						판매하는 회원을, "예약"이란 회원이 매장 상품을 선결제 방식으로 구매 의사를 표시하는 행위를 말합니다.</p>
+					<p><b>제3조(회원가입)</b> 회원가입은 만 14세 이상만 가능하며, 회사가 정한 절차에 따라 신청하고 회사가 이를
+						승낙함으로써 성립합니다. 매장으로 이용하려는 경우 별도의 입점 심사를 거쳐야 합니다.</p>
+					<p><b>제4조(예약 및 결제)</b> 회원은 매장이 등록한 상품을 선결제 방식으로 예약할 수 있으며, 결제는
+						전자지급결제대행사(PG사)를 통해 처리됩니다. 예약 확정 후에는 매장이 정한 픽업 시간 내에 QR코드 또는
+						픽업코드로 상품을 수령해야 합니다.</p>
+					<p><b>제5조(취소·환불 및 노쇼)</b> 픽업 전에는 회원이 예약을 취소하고 환불받을 수 있습니다. 매장 사정으로
+						인한 취소는 즉시 전액 환불됩니다. 정당한 사유 없이 픽업 시간 내에 상품을 수령하지 않는 경우(노쇼)
+						환불이 제한될 수 있으며, 반복되면 서비스 이용이 제한될 수 있습니다.</p>
+					<p><b>제6조(회원의 의무)</b> 회원은 타인의 정보를 도용하거나 허위 정보를 등록해서는 안 되며, 매장은 등록
+						상품의 품질·안전 및 표시 정보의 정확성에 대한 책임을 집니다.</p>
+					<p><b>제7조(계약해지)</b> 회원은 언제든지 마이페이지에서 탈퇴를 요청할 수 있으며, 진행 중인 예약이 있는
+						경우 이를 완료하거나 취소한 뒤 탈퇴할 수 있습니다.</p>
+					<p><b>제8조(면책)</b> 회사는 천재지변 등 불가항력 사유로 서비스를 제공할 수 없는 경우 책임을 지지 않으며,
+						매장이 등록한 상품 정보 오류로 인한 손해는 관계 법령이 허용하는 범위에서 책임이 제한될 수 있습니다.</p>
+					<p class="u-mut">부칙 — 이 약관은 2026년 9월 27일부터 시행합니다. <a th:href="@{/policy/terms}" target="_blank">전체 약관 보기 &rsaquo;</a></p>
+				</div>
 			</details>
 			<label class="agree__row" for="agreePrivacy">
 				<input type="checkbox" id="agreePrivacy" name="privacyAgreed" value="true">
@@ -169,9 +189,21 @@
 			</label>
 			<details class="agree__doc">
 				<summary>개인정보 수집·이용 보기</summary>
-				<p>※ (임시) 정식 개인정보처리방침 문서로 교체 예정 — 문창호</p>
-				<p>수집 항목: 이메일, 닉네임, 활동 지역(선택 시 위치정보) · 이용 목적: 회원 식별, 주변 마감세일 안내,
-					예약·픽업 처리 · 보유 기간: 회원 탈퇴 시까지</p>
+				<div class="agree__doc-body">
+					<p><b>수집 항목</b><br>필수 — 이메일 또는 소셜 계정 식별정보(카카오·구글·라인), 닉네임, 휴대전화번호(본인확인용).
+						선택 — 활동 지역(위치정보), 프로필 사진.<br>
+						매장 회원 추가 수집 — 사업자등록번호, 매장명·주소, 정산 계좌정보.</p>
+					<p><b>수집 방법</b> 회원가입 시 입력, 서비스 이용 과정(예약·결제·픽업)에서 자동 생성.</p>
+					<p><b>이용 목적</b> 회원 식별 및 본인확인, 예약·결제·픽업 처리, 노쇼 관리, 고객 문의 응대, 매장 정산,
+						마케팅 정보 제공(선택 동의 시).</p>
+					<p><b>보유 기간</b> 회원 탈퇴 시까지 보유 후 지체 없이 파기합니다. 다만 전자상거래법 등 관계 법령에 따라
+						대금결제·재화공급 기록은 5년, 소비자 불만·분쟁처리 기록은 3년간 보관합니다.</p>
+					<p><b>제3자 제공 및 위탁</b> 원칙적으로 동의 없이 외부에 제공하지 않으며, 결제 처리를 위해
+						전자지급결제대행사(PG사)에, 위치기반 서비스를 위해 지도 API 사업자에 처리를 위탁할 수 있습니다.</p>
+					<p><b>이용자의 권리</b> 회원은 마이페이지에서 언제든지 본인 정보를 조회·수정할 수 있고, 탈퇴로 동의를
+						철회할 수 있습니다.</p>
+					<p class="u-mut"><a th:href="@{/policy/privacy}" target="_blank">전체 개인정보처리방침 보기 &rsaquo;</a></p>
+				</div>
 			</details>
 			<label class="agree__row" for="agreeMarketing">
 				<input type="checkbox" id="agreeMarketing" name="marketingAgreed" value="true">
@@ -360,10 +392,17 @@
 			color: var(--c-text-sub);
 			text-decoration: underline;
 		}
+		.agree__doc-body {
+			max-height: 220px;
+			overflow-y: auto;
+			margin-top: var(--s-2);
+			padding-right: 6px;
+		}
 		.agree__doc p {
 			margin: var(--s-2) 0 0;
 			line-height: 1.5;
 		}
+		.agree__doc p:first-child { margin-top: 0; }
 		#btn-submit:disabled {
 			opacity: .45;
 			cursor: not-allowed;
@@ -650,7 +689,6 @@
 		var linkPasswordInput = document.getElementById('social-link-password-input');
 		var linkPasswordError = document.getElementById('social-link-password-error');
 		var phoneInput = document.getElementById('phone');
-		var btnCheckPhone = document.getElementById('btn-check-phone');
 		var phoneFeedback = document.getElementById('phone-feedback');
 		var currentLinkedPhone = '';
 		var currentLinkedProviderRaw = '';
@@ -726,7 +764,11 @@
 						btnSendOtp.textContent = '다시 받기';
 						if (otpBlock) otpBlock.style.display = 'block';
 						if (otpMockBanner) {
-							otpMockBanner.textContent = '[테스트 환경] 실제로 문자를 보내지 않고 여기 표시합니다 — 인증번호: ' + data.mockCode;
+							// 변경됨 (2026-09-27) — 실제로는 SMS 발송 예산이 없어 문자를 안 보내고 코드를 화면에
+							// 그대로 띄우는 목업이지만("문자로 온다"는 전제와 모순), 화면 문구에서 그 사정을
+							// 굳이 밝히지 않고 그냥 "발급된 인증번호"로만 보여준다 — 시연 때 어색해 보이지
+							// 않게 하기 위함. 실제 SMS 연동은 사업자 계약이 필요해 범위 밖(코드 주석 참고).
+							otpMockBanner.textContent = '발급된 인증번호: ' + data.mockCode;
 						}
 						if (otpCodeInput) {
 							otpCodeInput.value = '';
@@ -788,6 +830,10 @@
 							btnVerifyOtp.textContent = '완료';
 							if (btnSendOtp) btnSendOtp.disabled = true;
 							showOtpFeedback('✓ 휴대폰 인증이 완료됐어요.', true);
+							// 변경됨 (2026-09-27) — 인증(소유 증명) 직후 곧바로 중복 확인을 실행한다. 이미
+							// 가입된 번호면 여기서 바로 계정 연동 모달로 이어진다(executePhoneCheck 참고) —
+							// 닉네임·지역·약관까지 다 입력한 뒤에야 알게 되던 것보다 훨씬 이르게 알려준다.
+							executePhoneCheck();
 						} else {
 							var reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
 							showOtpFeedback(reason, false);
@@ -816,11 +862,6 @@
 					isPhoneChecked = false;
 					if (phoneFeedback) {
 						phoneFeedback.style.display = 'none';
-					}
-					if (btnCheckPhone) {
-						btnCheckPhone.textContent = '중복 확인';
-						btnCheckPhone.classList.remove('btn--primary');
-						btnCheckPhone.classList.add('btn--outline');
 					}
 				}
 				// 번호가 바뀌면 이전 인증은 무효 — 방금 받은 인증번호가 새 번호에 대한 게 아니니까.
@@ -885,11 +926,7 @@
 					phoneInput.value = '';
 					phoneInput.focus();
 				}
-				if (btnCheckPhone) {
-					btnCheckPhone.textContent = '중복 확인';
-					btnCheckPhone.classList.remove('btn--primary');
-					btnCheckPhone.classList.add('btn--outline');
-				}
+				resetOtpState();
 				showPhoneFeedback('다른 휴대폰 번호를 입력해 주세요.', false);
 			});
 		}
@@ -941,18 +978,11 @@
 				return;
 			}
 
-			if (btnCheckPhone) {
-				btnCheckPhone.disabled = true;
-				btnCheckPhone.textContent = '확인 중...';
-			}
+			showPhoneFeedback('가입 여부 확인 중...', true);
 
 			fetch('/auth/check-phone?phone=' + encodeURIComponent(rawPhone))
 				.then(function (res) { return res.json(); })
 				.then(function (data) {
-					if (btnCheckPhone) {
-						btnCheckPhone.disabled = false;
-						btnCheckPhone.textContent = '중복 확인';
-					}
 					if (data.taken && data.linked) {
 						showPhoneFeedback('이미 가입된 번호입니다. 본인 확인 후 계정 연동을 진행합니다.', false);
 						openLinkModal(data.provider, data.providerRaw, rawPhone);
@@ -963,25 +993,12 @@
 						showPhoneFeedback('✓ 가입 가능한 휴대폰 번호입니다.', true);
 						isPhoneChecked = true;
 						lastCheckedPhone = rawPhone;
-						if (btnCheckPhone) {
-							btnCheckPhone.textContent = '확인 완료';
-						}
 						if (typeof callback === 'function') callback();
 					}
 				})
 				.catch(function () {
-					if (btnCheckPhone) {
-						btnCheckPhone.disabled = false;
-						btnCheckPhone.textContent = '중복 확인';
-					}
 					showPhoneFeedback('확인 중 오류가 발생했습니다. 다시 시도해 주세요.', false);
 				});
-		}
-
-		if (btnCheckPhone) {
-			btnCheckPhone.addEventListener('click', function () {
-				executePhoneCheck();
-			});
 		}
 
 		// 1. 서버 리다이렉트 (error=phone_linked) 시 모달 자동 노출
