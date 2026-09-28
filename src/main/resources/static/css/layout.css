@@ -40,6 +40,11 @@
 
 .app__main--plain { background: var(--c-bg); }   /* 회색 배경이 필요한 화면 */
 
+/* 추가됨 (2026-09-27) — 하단 탭바가 없는 화면(active='')인데도 .app__main의 탭바용 하단 여백이
+   그대로 남아 마지막 콘텐츠 밑에 불필요한 빈 공간이 생기는 화면 전용 오버라이드(예: mypage/edit.html
+   회원 탈퇴 버튼 아래). 탭바가 있는 화면과 섞어 쓰면 안 되므로 페이지 쪽에서 명시적으로 붙인다. */
+.app:has(.page--flush-bottom) .app__main { padding-bottom: var(--s-4); }
+
 /* 페이지 안에서 좌우 공통 여백 */
 .page { padding: var(--s-5); }
 .page--tight { padding: var(--s-4); }
@@ -120,15 +125,31 @@
   line-height: 1;
 }
 
-/* 다크 상단바 (사장님 / 운영자 모드) */
+/* 다크 상단바 (사장님 / 운영자 모드) — 변경됨 (2026-09-25, UI/UX 개편) — 예전엔 무채색
+   --c-dark(#1C1C1C)를 썼는데, 그 변수는 할인 배지·가계부 등 다른 곳에서도 널리 쓰여서 여기 전용으로
+   바꾸지 않고 직접 오버라이드한다.
+   1차로 --c-primary(#0F2B8C) 단색을 썼더니 채도가 높아 "쨍하고 겉도는" 느낌이 든다는 피드백 —
+   대시보드 히어로(.dash-hero)는 그라데이션(#00123D→#1442B8, 160deg)이라 입체감이 있는데 상단바만
+   평면 단색이라 같은 네이비 계열이어도 질감이 안 맞았다. 히어로와 같은 각도(160deg)로, 그 그라데이션의
+   가장 어두운 구간(0~35% 지점)만 잘라 쓴다 — 대시보드에서는 상단바가 히어로 그라데이션의 연장처럼
+   자연스럽게 이어지고, 히어로가 없는 다른 점주 화면(재고관리 등)에서도 채도가 낮아 차분하다. */
 .topbar--dark {
-  background: var(--c-dark);
+  background: linear-gradient(160deg, #00123D 0%, #071D66 100%);
   border-bottom: none;
   color: #fff;
 }
 .topbar--dark .topbar__title { color: #fff; }
 .topbar--dark .topbar__back  { color: #fff; }
 .topbar--dark .topbar__action{ color: #fff; }
+/* "점주 모드" 등 dark 상단바의 badge--accent(원래 주황)는 네이비 배경 위에서 튀지 않게, 이미 있는
+   .topbar__mode-btn과 같은 반투명 유리 톤으로 맞춘다 — 다른 화면의 badge--accent는 그대로 주황. */
+.topbar--dark .badge--accent {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
 .topbar--dark .topbar__mode-btn {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);

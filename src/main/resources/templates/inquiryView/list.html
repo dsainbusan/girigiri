@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('내 문의내역', ~{:: #content}, 'home', false, '', null)}">
+      th:replace="~{common/layout :: layout('내 문의내역', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'home'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 고객지원으로</a>

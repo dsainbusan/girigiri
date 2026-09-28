@@ -6,20 +6,36 @@
 	점주용 공지사항 목록 — 슈퍼어드민이 작성한 공지(NoticeEntity)를 읽기 전용으로 보여준다.
 	WBS 3.0 "공지사항 게시판 관리" (원래 김태훈 담당 → 문창호가 인수, 2026-09-16).
 	지금 실제로 게시중(displayStatus == PUBLISHED)인 것만 최신순으로 노출한다.
+
+	변경됨 (2026-09-26, UI/UX 개편) — 제목+날짜만 있던 밋밋한 .card 목록을 대시보드 알림 카드
+	(.todo-banner__card)로 교체 — 새 컴포넌트를 만들지 않고 이미 검증된 걸 재사용했다.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<div th:if="${#lists.isEmpty(notices)}" class="card u-center u-sub" style="padding: var(--s-8) var(--s-4); line-height: 1.7">
-		아직 등록된 공지사항이 없어요.
+	<div th:if="${#lists.isEmpty(notices)}" class="dash-card empty-card">
+		<div class="empty-card__icon" aria-hidden="true">
+			<svg class="icon"><use href="#i-megaphone"/></svg>
+		</div>
+		<p class="empty-card__title">아직 등록된 공지사항이 없어요.</p>
+		<p class="empty-card__sub">운영팀 공지가 올라오면 이 자리에 표시돼요.</p>
 	</div>
 
-	<a th:each="notice : ${notices}" th:href="@{/store/notices/{id}(id=${notice.id})}" class="card"
-	   style="display:block; margin-bottom: var(--s-3)">
-		<p class="u-bold" th:text="${notice.title}">공지 제목</p>
-		<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 6px"
-		   th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')} + ' 등록'">2026-09-16 등록</p>
-	</a>
+	<div class="todo-banner" th:unless="${#lists.isEmpty(notices)}">
+		<a th:each="notice : ${notices}" th:href="@{/store/notices/{id}(id=${notice.id})}" class="todo-banner__card">
+			<div class="todo-banner__icon">
+				<svg class="icon"><use href="#i-megaphone"/></svg>
+			</div>
+			<div class="todo-banner__body">
+				<div class="todo-banner__title" th:text="${notice.title}">공지 제목</div>
+				<div class="todo-banner__desc"
+				     th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')} + ' 등록'">2026-09-16 등록</div>
+			</div>
+			<div class="todo-banner__action">
+				<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+			</div>
+		</a>
+	</div>
 
 	<!-- 이미 공지사항 화면이라 상단바의 공지사항 벨은 필요 없어서 숨긴다. -->
 	<script th:inline="none">

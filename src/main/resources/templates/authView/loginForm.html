@@ -60,10 +60,9 @@
 
 	<p class="u-mut u-center" style="font-size:var(--fs-xs);margin:var(--s-4) 0">가입하면 이용약관과 개인정보처리방침에 동의하게 돼요</p>
 
-	<div class="card" style="background:var(--c-primary-weak)">
-		<p class="u-bold">사장님이신가요?</p>
-		<p class="u-sub" style="font-size:var(--fs-sm);margin-top:4px">로그인 후 마이페이지에서 점주 신청을 하시면, 운영자 승인 후 점주 모드를 이용하실 수 있어요.</p>
-	</div>
+	<p class="u-center u-mut" style="font-size:var(--fs-xs);margin-top:var(--s-2)">
+		사장님이신가요? <a th:href="@{/#owners}" style="color:var(--c-primary);font-weight:var(--fw-bold);margin-left:4px">입점 및 점주 안내 &rsaquo;</a>
+	</p>
 
 	<!--/* 로그인 화면은 여러 경로(보호된 페이지 리다이렉트, 헤더 "로그인" 링크 등)에서 들어온다 —
 	     history.back()이 어디로 갈지 예측 불가라 뒤로가기를 항상 홈(/)으로 고정한다.

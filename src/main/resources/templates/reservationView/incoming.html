@@ -3,36 +3,23 @@
       th:replace="~{common/layout :: layout('예약 확인', ~{:: #content}, 'incoming', true, '점주 모드', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<!-- 추가됨 (2026-08-21) — 왜: 아래 취소 완료 배너(.banner--danger)가 reservation.css에 정의돼
-		있는데 이 화면엔 그 스타일시트를 안 불러오고 있어서, 빠뜨렸던 걸 여기서 같이 고친다. -->
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
-	<!-- 추가됨 (2026-09-17) — 아래 "새 주문/픽업 대기중" 토글에 store.css의 .stat-toggle-tabs
-		(대시보드 요약/통계 탭과 같은 컴포넌트)를 재사용한다. -->
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<!-- 변경됨 (2026-09-17) — 왜: 대시보드의 "주문·픽업 바로가기" 카드를 없애면서, 거기 있던
-		QR 픽업 확인/완료된 거래 내역/매장 취소를 여기 상단 유틸리티 카드로 옮겼다. QR 픽업 확인은
-		원래 아래 "픽업 대기중" 섹션에 항목이 있을 때만 조건부로 뜨는 버튼이 있었는데, 대시보드에
-		있던 것처럼 언제든 들어갈 수 있는 진입점도 필요해서 여기 추가한다(아래 조건부 버튼은 그대로
-		둠 — 픽업 대기중인 걸 알고 바로 들어가는 지름길로 남겨도 나쁘지 않아서). -->
-	<div class="card" style="margin-bottom:var(--s-3)">
-		<a th:href="@{/reservation/settings}" class="u-bold" style="font-size:var(--fs-sm)"><svg class="icon" style="width:15px;height:15px"><use href="#i-settings"/></svg> 주문 마감 설정 (준비시간 · 마감시간)</a>
-		<!-- 변경됨 (2026-09-17, 2차) — 텍스트 링크를 가운뎃점으로 묶었더니 왼쪽으로 쏠려 오른쪽이
-			비어 보인다는 피드백. 칩(pill) 버튼 3개로 바꿔서 카드 폭을 고르게 채우고 각각 누를 수
-			있는 영역이라는 것도 더 잘 드러나게 했다. 매장 취소만 위험 톤(danger-weak 배경 +
-			danger-strong 텍스트, 배지 컴포넌트와 같은 WCAG 대비 조합)으로 구분한다. -->
-		<div class="chip-row" style="margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak)">
-			<a th:href="@{/reservation/pickup}" class="chip">QR 픽업 확인</a>
-			<a th:href="@{/reservation/completed}" class="chip">완료된 거래 내역</a>
-			<a th:href="@{/reservation/store-cancel}" class="chip" style="background:var(--c-danger-weak); color:var(--c-danger-strong)">매장 취소</a>
+	<!-- 상단 헤더 바 (실시간 주문 상태 + 전체 내역 바로가기) -->
+	<div class="incoming-header-bar">
+		<div class="incoming-header-bar__title">
+			<span class="live-dot" aria-hidden="true"></span>
+			<span>실시간 주문 접수</span>
 		</div>
+		<a th:href="@{/reservation/orders}" class="incoming-header-bar__link" title="전체 예약 내역 및 매장 신뢰도">
+			<svg class="icon"><use href="#i-list"/></svg>
+			<span>전체 내역</span>
+			<svg class="icon arrow"><use href="#i-chevron-right"/></svg>
+		</a>
 	</div>
 
-	<!-- 추가됨 — 왜: 상단바 뒤로가기(common/header.html)는 공용 컴포넌트라 브라우저 history 기반으로
-		동작한다(app.js의 data-back). 이 화면에선 어디서 들어왔든 항상 점주 대시보드로 돌아가야 해서,
-		공용 헤더는 안 건드리고 이 화면에서만 그 버튼의 동작을 오버라이드한다. app.js가 data-back을
-		읽어서 history.back()을 바인딩하기 전에(app.js는 body 맨 끝에서 로드됨) data-back 속성을 먼저
-		지워서, app.js가 이 버튼엔 바인딩을 안 하게 막고 여기서 직접 이동시킨다. -->
+	<!-- 상단바 뒤로가기 오버라이드: 항상 점주 대시보드로 이동 -->
 	<script th:inline="none">
 	(function () {
 		var backBtn = document.querySelector('.topbar__back');
@@ -44,117 +31,170 @@
 	})();
 	</script>
 
-	<!-- 방금 수락 처리한 직후 안내 배너. 새로고침하면 사라지는 1회성 flash. -->
+	<!-- 주문 수락 직후 안내 배너 -->
 	<div th:if="${acceptedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
 		<div>
-			<p class="banner__title">✅ 확인 완료</p>
+			<p class="banner__title">✅ 주문 확인 완료</p>
 			<p class="banner__desc" th:text="${acceptedMessage}">예약을 확인했어요. 이제 손님이 픽업하러 올 수 있어요.</p>
 		</div>
 	</div>
 
-	<!-- 방금 취소 처리한 직후 안내 배너. (2026-08-21 추가) -->
+	<!-- 주문 취소 직후 안내 배너 -->
 	<div th:if="${cancelledMessage != null}" class="banner banner--danger" style="margin-bottom:var(--s-3)">
 		<div>
-			<p class="banner__title">🚫 취소 완료</p>
-			<p class="banner__desc" th:text="${cancelledMessage}">예약을 취소했어요. 결제하신 금액은 환불돼요.</p>
+			<p class="banner__title">🚫 주문 취소 완료</p>
+			<p class="banner__desc" th:text="${cancelledMessage}">예약을 취소했어요. 결제하신 금액은 환불됩니다.</p>
 		</div>
 	</div>
 
-	<!-- 새 주문 / 픽업 대기중 토글 (2026-09-17) — 세로로 쭉 이어져 있던 두 섹션을 대시보드
-		요약/통계와 같은 .stat-toggle-tabs로 나눴다. 건수가 있을 때만 탭에 뱃지 숫자를 붙인다. -->
-	<div class="stat-toggle-tabs">
-		<button type="button" class="stat-toggle-tab is-active" data-target="panel-new-orders">
+	<!-- 새 주문 / 픽업 대기중 탭 토글 -->
+	<div class="stat-toggle-tabs" role="tablist" style="margin-bottom:var(--s-3)">
+		<button type="button" role="tab" class="stat-toggle-tab is-active" data-target="panel-new-orders" id="tab-new-orders" aria-selected="true">
 			새 주문
-			<span th:if="${!#lists.isEmpty(incoming)}" class="badge badge--discount" style="margin-left:4px" th:text="${#lists.size(incoming)}">2</span>
+			<span th:if="${!#lists.isEmpty(incoming)}" class="tab-badge tab-badge--accent" th:text="${#lists.size(incoming)}">0</span>
 		</button>
-		<button type="button" class="stat-toggle-tab" data-target="panel-waiting-pickup">
+		<button type="button" role="tab" class="stat-toggle-tab" data-target="panel-waiting-pickup" id="tab-waiting-pickup" aria-selected="false">
 			픽업 대기중
-			<span th:if="${!#lists.isEmpty(ready)}" class="badge badge--discount" style="margin-left:4px" th:text="${#lists.size(ready)}">1</span>
+			<span th:if="${!#lists.isEmpty(ready)}" class="tab-badge tab-badge--primary" th:text="${#lists.size(ready)}">0</span>
 		</button>
 	</div>
 
+	<!-- 1. 새 주문 패널 -->
 	<div id="panel-new-orders" class="stat-panel">
-
-	<div class="card">
-		<p class="u-sub">결제가 끝난 새 주문들이에요. 확인되면 "수락", 어려우면 바로 "취소"할 수 있어요.</p>
-	</div>
-
-	<div th:if="${#lists.isEmpty(incoming)}" class="empty-state">
-		아직 확인할 새 주문이 없어요.
-	</div>
-
-	<div class="card" th:each="r : ${incoming}" style="margin-top:var(--s-3)">
-		<p class="u-bold" style="font-size:var(--fs-lg)">
-			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
-		</p>
-		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
-		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
-		<p class="u-sub">주문 시각: <strong th:text="${r.reservedAtDisplay}">08월 21일 15:00</strong></p>
-
-		<div class="btn-row" style="display:flex; gap:var(--s-2); margin-top:var(--s-3)">
-			<form th:action="@{/reservation/{id}/accept(id=${r.reservationId})}" method="post" style="flex:1 1 0; min-width:0">
-				<button type="submit" class="btn btn--block">수락</button>
-			</form>
-			<div style="flex:1 1 0; min-width:0">
-				<button type="button" class="btn btn--outline btn--block reject-toggle-btn"
-						style="color:var(--c-danger); border-color:var(--c-danger)"
-						th:attr="data-target='reject-panel-' + ${r.reservationId}">취소</button>
-			</div>
+		<!-- 안내 가이드 -->
+		<div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--c-surface); border:1px solid var(--c-line-weak); border-radius:var(--r-lg); margin-bottom:var(--s-3); font-size:var(--fs-xs); color:var(--c-text-sub)">
+			<span style="font-size:16px; line-height:1">⚡</span>
+			<span>결제가 완료된 새 주문입니다. 확인 후 <strong>수락</strong> 또는 사유 선택 후 <strong>취소</strong>해 주세요.</span>
 		</div>
 
-		<!-- 취소 사유 선택 패널. 평소엔 숨겨져 있다가 "취소" 버튼을 누르면 펼쳐진다. -->
-		<div class="reject-panel" th:id="'reject-panel-' + ${r.reservationId}" style="display:none; margin-top:var(--s-3); padding-top:var(--s-3); border-top:1px solid var(--c-line-weak)">
-			<p class="u-bold" style="font-size:var(--fs-sm); margin-bottom:var(--s-2)">취소 사유</p>
-			<div class="chip-row" style="flex-wrap:wrap; margin-bottom:var(--s-3)">
-				<button type="button" class="chip reject-chip is-active" data-reason="매장 사정으로 취소">매장 사정으로 취소</button>
-				<button type="button" class="chip reject-chip" data-reason="재고 부족/품절">재고 부족/품절</button>
-				<button type="button" class="chip reject-chip" data-reason="준비 시간 부족">준비 시간 부족</button>
-				<button type="button" class="chip reject-chip" data-reason="">기타 (직접 입력)</button>
+		<!-- 주문 비어있을 때 -->
+		<div th:if="${#lists.isEmpty(incoming)}" class="ticket-empty">
+			<div class="ticket-empty__icon">
+				<svg><use href="#i-bell"/></svg>
 			</div>
-			<form th:action="@{/reservation/{id}/store-cancel(id=${r.reservationId})}" method="post">
-				<input type="text" name="reason" class="input reject-reason-input" style="margin-bottom:var(--s-3)"
-				       placeholder="취소 사유 (예: 재고 부족)" value="매장 사정으로 취소">
-				<button type="submit" class="btn btn--block btn--danger">취소 처리</button>
-			</form>
+			<p class="ticket-empty__title">새로운 주문이 없습니다</p>
+			<p class="ticket-empty__desc">손님이 상품을 예약하면 실시간으로 여기에 표시됩니다.</p>
 		</div>
-	</div>
 
+		<!-- 주문 티켓 목록 -->
+		<div class="order-ticket order-ticket--incoming" th:each="r : ${incoming}">
+			<!-- 헤더: 주문 시각 & 픽업 코드 -->
+			<div class="order-ticket__head">
+				<span class="order-ticket__time">
+					<svg class="icon" style="width:13px;height:13px"><use href="#i-bell"/></svg>
+					<span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span>
+				</span>
+				<span class="order-ticket__code-badge" th:text="${r.pickupCode}">PICK-1001</span>
+			</div>
+
+			<!-- 바디: 상품 정보 & 금액 -->
+			<div class="order-ticket__body">
+				<div class="order-ticket__title-row">
+					<span class="order-ticket__product" th:text="${r.productName}">식빵 마감세트</span>
+					<span class="order-ticket__qty-badge">
+						<span th:text="${r.quantity}">1</span>개
+					</span>
+				</div>
+				<div class="order-ticket__price-row">
+					<span class="order-ticket__price-label">결제 금액</span>
+					<span class="order-ticket__price-val">
+						<strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원
+					</span>
+				</div>
+			</div>
+
+			<!-- 액션: 수락 및 취소 토글 -->
+			<div class="order-ticket__actions">
+				<form th:action="@{/reservation/{id}/accept(id=${r.reservationId})}" method="post" style="flex:2; min-width:0; margin:0">
+					<button type="submit" class="btn-accept" style="width:100%">
+						<span>✓ 주문 수락</span>
+					</button>
+				</form>
+				<button type="button" class="btn-reject-toggle reject-toggle-btn"
+				        th:attr="data-target='reject-panel-' + ${r.reservationId}">
+					취소
+				</button>
+			</div>
+
+			<!-- 취소 사유 아코디언 패널 -->
+			<div class="reject-panel" th:id="'reject-panel-' + ${r.reservationId}" style="display:none">
+				<p class="reject-panel__title">취소 사유 선택</p>
+				<div class="reject-chip-row">
+					<button type="button" class="reject-chip is-active" data-reason="매장 사정으로 취소">매장 사정</button>
+					<button type="button" class="reject-chip" data-reason="재고 부족/품절">재고 부족</button>
+					<button type="button" class="reject-chip" data-reason="준비 시간 부족">시간 부족</button>
+					<button type="button" class="reject-chip" data-reason="">직접 입력</button>
+				</div>
+				<form th:action="@{/reservation/{id}/store-cancel(id=${r.reservationId})}" method="post">
+					<input type="text" name="reason" class="input reject-reason-input" style="margin-bottom:var(--s-2); font-size:var(--fs-xs)"
+					       placeholder="취소 사유를 입력해주세요" value="매장 사정으로 취소" required>
+					<button type="submit" class="btn-reject-submit">취소 처리 확정</button>
+				</form>
+			</div>
+		</div>
 	</div>
 	<!-- /panel-new-orders -->
 
-	<!-- 추가됨 — 왜: 수락(ready)까지는 됐는데 손님이 아직 QR/코드를 안 보여줘서 픽업 처리가 안 된
-		예약을 볼 방법이 없었다. "손님이 아직 안 왔나?" 확인용 — 실제 픽업 처리(QR 스캔/코드입력)는
-		여기서 바로 안 하고 /reservation/pickup으로 보낸다(그 화면 로직을 중복 구현하지 않기 위해). -->
+	<!-- 2. 픽업 대기중 패널 -->
 	<div id="panel-waiting-pickup" class="stat-panel is-hidden">
+		<!-- 안내 가이드 -->
+		<div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--c-surface); border:1px solid var(--c-line-weak); border-radius:var(--r-lg); margin-bottom:var(--s-3); font-size:var(--fs-xs); color:var(--c-text-sub)">
+			<span style="font-size:16px; line-height:1">🛍️</span>
+			<span>수락 완료되어 손님 방문을 기다리는 주문입니다. 방문 시 <strong>QR 스캔</strong> 또는 <strong>코드 확인</strong>을 진행해 주세요.</span>
+		</div>
 
-	<div class="card">
-		<p class="u-bold">픽업 대기중 (수락됨 · 손님 미방문)</p>
-		<p class="u-sub" style="font-size:var(--fs-sm); margin-top:2px">수락은 됐지만 아직 QR/코드로 픽업 처리가 안 된 예약이에요.</p>
-	</div>
+		<!-- 대기 주문 비어있을 때 -->
+		<div th:if="${#lists.isEmpty(ready)}" class="ticket-empty">
+			<div class="ticket-empty__icon">
+				<svg><use href="#i-box"/></svg>
+			</div>
+			<p class="ticket-empty__title">픽업 대기 중인 주문이 없습니다</p>
+			<p class="ticket-empty__desc">새 주문을 수락하면 손님이 수령하기 전까지 여기에 보관됩니다.</p>
+		</div>
 
-	<div th:if="${#lists.isEmpty(ready)}" class="empty-state">
-		픽업 대기중인 예약이 없어요.
-	</div>
+		<!-- 픽업 대기 티켓 목록 -->
+		<div class="order-ticket order-ticket--ready" th:each="r : ${ready}">
+			<div class="order-ticket__head">
+				<span class="order-ticket__time">
+					<svg class="icon" style="width:13px;height:13px"><use href="#i-box"/></svg>
+					<span th:text="${r.reservedAtDisplay}">08월 21일 15:00</span>
+					<span style="color:var(--c-primary); font-weight:var(--fw-bold); margin-left:2px;">(수락 완료)</span>
+				</span>
+				<span class="order-ticket__code-badge" th:text="${r.pickupCode}">PICK-1001</span>
+			</div>
 
-	<div class="card" th:each="r : ${ready}" style="margin-top:var(--s-3)">
-		<p class="u-bold" style="font-size:var(--fs-lg)">
-			<span th:text="${r.productName}">식빵 마감세트</span> × <span th:text="${r.quantity}">1</span>개
-		</p>
-		<p class="u-sub" style="margin-top:2px">결제 금액: <strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원</p>
-		<p class="u-sub">픽업 코드: <strong th:text="${r.pickupCode}">PICK-1001</strong></p>
-		<p class="u-sub">주문 시각: <strong th:text="${r.reservedAtDisplay}">08월 21일 15:00</strong></p>
-	</div>
+			<div class="order-ticket__body">
+				<div class="order-ticket__title-row">
+					<span class="order-ticket__product" th:text="${r.productName}">식빵 마감세트</span>
+					<span class="order-ticket__qty-badge">
+						<span th:text="${r.quantity}">1</span>개
+					</span>
+				</div>
+				<div class="order-ticket__price-row">
+					<span class="order-ticket__price-label">결제 금액</span>
+					<span class="order-ticket__price-val">
+						<strong th:text="${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')}">3,000</strong>원
+					</span>
+				</div>
+			</div>
 
-	<a th:if="${!#lists.isEmpty(ready)}" th:href="@{/reservation/pickup}" class="btn btn--block" style="margin-top:var(--s-3)">
-		QR/코드로 픽업 처리하러 가기
-	</a>
+			<a th:href="@{/reservation/pickup}" class="btn-pickup-shortcut">
+				<svg class="icon" style="width:14px;height:14px"><use href="#i-camera"/></svg>
+				<span>손님 방문 시 픽업 확인 (QR/코드)</span>
+			</a>
+		</div>
 
+		<!-- 대기 목록이 있을 때 하단 전체 QR 스캐너 바로가기 버튼 -->
+		<a th:if="${!#lists.isEmpty(ready)}" th:href="@{/reservation/pickup}" class="btn btn--block btn--primary" style="margin-top:var(--s-4); display:flex; align-items:center; justify-content:center; gap:8px">
+			<svg class="icon" style="width:18px;height:18px"><use href="#i-camera"/></svg>
+			<span>전체 QR 픽업 스캐너 열기</span>
+		</a>
 	</div>
 	<!-- /panel-waiting-pickup -->
 
 	<script th:inline="none">
 	(function () {
-		// 새 주문 / 픽업 대기중 탭 토글 (dashboard.html의 .stat-toggle-tabs 그룹 처리와 동일 로직).
+		// 새 주문 / 픽업 대기중 탭 토글
 		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
 			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
 			var panels = tabs
@@ -162,22 +202,33 @@
 				.filter(Boolean);
 			tabs.forEach(function (tab, i) {
 				tab.addEventListener('click', function () {
-					tabs.forEach(function (t) { t.classList.remove('is-active'); });
+					tabs.forEach(function (t) {
+						t.classList.remove('is-active');
+						t.setAttribute('aria-selected', 'false');
+					});
 					panels.forEach(function (p) { p.classList.add('is-hidden'); });
 					tab.classList.add('is-active');
+					tab.setAttribute('aria-selected', 'true');
 					if (panels[i]) { panels[i].classList.remove('is-hidden'); }
 				});
 			});
 		});
 
+		// 취소 패널 토글 버튼
 		document.querySelectorAll('.reject-toggle-btn').forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				var panel = document.getElementById(btn.getAttribute('data-target'));
 				if (panel) {
-					panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+					var isHidden = (panel.style.display === 'none' || panel.style.display === '');
+					panel.style.display = isHidden ? 'block' : 'none';
+					if (isHidden) {
+						panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+					}
 				}
 			});
 		});
+
+		// 취소 사유 칩 선택
 		document.querySelectorAll('.reject-panel').forEach(function (panel) {
 			var chips = panel.querySelectorAll('.reject-chip');
 			var reasonInput = panel.querySelector('.reject-reason-input');
@@ -186,8 +237,10 @@
 					chips.forEach(function (c) { c.classList.remove('is-active'); });
 					chip.classList.add('is-active');
 					var preset = chip.getAttribute('data-reason');
-					reasonInput.value = preset;
-					if (!preset) {
+					if (preset) {
+						reasonInput.value = preset;
+					} else {
+						reasonInput.value = '';
 						reasonInput.focus();
 					}
 				});

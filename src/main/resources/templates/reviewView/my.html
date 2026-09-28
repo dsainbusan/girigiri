@@ -1,8 +1,24 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('내가 쓴 리뷰', ~{:: #content}, 'home', false, '', null)}">
+      th:replace="~{common/layout :: layout('내가 쓴 리뷰', ~{:: #content}, 'my', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+
+	<!-- 상단바 뒤로가기: 마이페이지로 복귀 -->
+	<script th:inline="none">
+	(function () {
+		var backBtn = document.querySelector('.topbar__back');
+		if (!backBtn) { return; }
+		backBtn.removeAttribute('data-back');
+		backBtn.addEventListener('click', function () {
+			if (document.referrer && document.referrer.includes('/mypage')) {
+				history.back();
+			} else {
+				location.href = '/mypage';
+			}
+		});
+	})();
+	</script>
 
 	<!-- 강노은: 리뷰 수정/삭제 직후 1회성 안내 (flash) — 3초 뒤 자동으로 사라진다(data-auto-dismiss, app.js). -->
 	<div th:if="${reviewMessage != null}" class="banner" style="margin-bottom:var(--s-3)" data-auto-dismiss="3000">
@@ -12,8 +28,11 @@
 		</div>
 	</div>
 
-	<h1 style="font-size:18px">내가 쓴 리뷰</h1>
-	<p class="u-sub" style="font-size:13px;margin-top:2px">가게별로 하나씩, 총 <b th:text="${#lists.size(reviews)}">0</b>개 남겼어요.</p>
+	<!-- 리뷰가 있을 때만 상단 카운트 표시 -->
+	<div class="u-row" style="justify-content:space-between; margin-bottom:var(--s-2);" th:if="${!#lists.isEmpty(reviews)}">
+		<span class="u-sub" style="font-size:13px">가게별로 하나씩 작성할 수 있어요</span>
+		<span class="u-bold" style="font-size:13px; color:var(--c-primary);" th:text="'총 ' + ${#lists.size(reviews)} + '개'">총 0개</span>
+	</div>
 
 	<div style="display:flex;flex-direction:column;gap:0;margin-top:14px">
 		<div th:each="r : ${reviews}" class="list-row" style="align-items:flex-start">
@@ -95,9 +114,22 @@
 				</div>
 			</div>
 		</div>
-		<div th:if="${#lists.isEmpty(reviews)}">
-			<p class="u-sub">아직 쓴 리뷰가 없어요. 다녀온 가게에 리뷰를 남겨보세요!</p>
-			<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">홈</a>
+		<!-- 리뷰가 없을 때 빈 화면 카드 (출처 모를 '홈' 버튼 제거 및 정돈된 UI/UX) -->
+		<div th:if="${#lists.isEmpty(reviews)}" class="card" style="text-align:center; padding:48px 20px; border-radius:var(--r-xl); background:var(--c-surface); border:1px solid var(--c-line-weak);">
+			<div style="width:56px; height:56px; border-radius:50%; background:#FEF3C7; color:#D97706; display:inline-flex; align-items:center; justify-content:center; margin-bottom:var(--s-3);">
+				<svg class="icon" style="width:28px; height:28px;"><use href="#i-star"/></svg>
+			</div>
+			<h3 style="font-size:var(--fs-md); font-weight:var(--fw-bold); margin-bottom:6px;">아직 작성한 리뷰가 없어요</h3>
+			<p class="u-sub" style="font-size:var(--fs-xs); line-height:1.5; margin-bottom:var(--s-4);">다녀온 가게에 따뜻한 첫 리뷰를 남겨보세요!</p>
+			<div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+				<a th:href="@{/reservation/my(tab='picked')}" class="btn btn--primary" style="display:inline-flex; align-items:center; gap:6px; padding:10px 22px; border-radius:var(--r-full); font-size:var(--fs-xs); font-weight:var(--fw-bold);">
+					<svg class="icon" style="width:14px; height:14px;"><use href="#i-document"/></svg>
+					<span>픽업 내역에서 리뷰 작성하기</span>
+				</a>
+				<a th:href="@{/app}" style="font-size:var(--fs-xs); color:var(--c-text-mut); text-decoration:none; padding:4px 8px; margin-top:2px;">
+					마감 할인 가게 둘러보기 &rsaquo;
+				</a>
+			</div>
 		</div>
 	</div>
 

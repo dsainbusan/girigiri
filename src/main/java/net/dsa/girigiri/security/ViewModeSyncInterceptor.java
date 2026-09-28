@@ -33,13 +33,20 @@ public class ViewModeSyncInterceptor implements HandlerInterceptor {
 				if (!"OWNER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "OWNER_MODE");
 				}
-			} else if (uri.equals("/mypage")) {
-				// 추가됨 (2026-09-22) — 왜: 대시보드(점주 모드)에서 "마이" 탭을 누르면 하단 탭바가
-				// /mypage 하나를 공유하는데, 여기서 무조건 USER_MODE로 되돌려버리면 컨트롤러가 받는
-				// 시점엔 이미 viewMode가 바뀌어 있어 "점주 모드에서 왔는지"를 알 방법이 없었다(마이페이지가
-				// 항상 유저용 화면·탭바로만 보이던 원인). /mypage 딱 이 경로만 지금 모드를 그대로 둔다 —
-				// /mypage/edit 등 하위 경로와 /user/**·/app은 그대로 USER_MODE로 맞춘다(아래 분기).
-			} else if (uri.startsWith("/mypage") || uri.startsWith("/user") || "/app".equals(uri)) {
+			} else if (uri.startsWith("/mypage") || uri.startsWith("/user/alerts")
+					|| uri.startsWith("/user/settings") || uri.startsWith("/user/support")
+					|| uri.startsWith("/user/inquiries")) {
+				// 추가됨 (2026-09-22), 확장됨 (2026-09-26) — 왜: 처음엔 "마이" 탭 하나(/mypage)만 예외로
+				// 뒀는데, 점주 모드 마이페이지의 알림 설정·고객 지원·회원정보 수정·환경설정 메뉴가 전부
+				// /mypage/**·/user/alerts·/user/support(하위 /user/inquiries 포함)·/user/settings라
+				// 이 메뉴 중 아무거나 눌렀다가 뒤로가기로 돌아와도 이미 session.viewMode가 USER_MODE로
+				// 바뀐 뒤라 마이페이지가 유저용 레이아웃(하단 탭바 포함)으로 뒤바뀌어 있었다 — "버튼
+				// 눌렀다가 뒤로가기하면 일반 모드로 전환돼버린다"는 버그 리포트. 이 화면들은 실제로
+				// 점주·일반 계정이 똑같이 쓰는 공통 "내 계정" 화면이라(강노은/송채현이 role로 내부
+				// 분기만 하지 화면 자체를 나누지 않음) 모드를 강제로 바꿀 이유가 없다 — 지금 모드를
+				// 그대로 둔다. 진짜 "손님으로서" 하는 활동(찜·가계부·내 리뷰·예약내역 등)은 아래
+				// 분기에서 여전히 USER_MODE로 맞춘다 — 그건 실제로 유저 역할 전환이 맞는 동작이다.
+			} else if (uri.startsWith("/user") || "/app".equals(uri)) {
 				if (!"USER_MODE".equals(session.getAttribute("viewMode"))) {
 					session.setAttribute("viewMode", "USER_MODE");
 				}

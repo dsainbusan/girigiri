@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('언어 설정', ~{:: #content}, 'my', false, '', null)}">
+      th:replace="~{common/layout :: layout('언어 설정', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'my'}, false, '', null)}">
 <body>
 <!--/*
 	환경설정 > 언어 설정 (2026-09-22, 문창호). 지금은 고른 값을 저장만 하고(UserEntity.language)

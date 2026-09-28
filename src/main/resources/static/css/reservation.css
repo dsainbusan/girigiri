@@ -198,3 +198,908 @@
 /* 모달(.modal-overlay/.modal-box*)은 2026-09-16에 components.css로 승격했다 — 원래 이
    체크아웃 화면 전용으로만 만들었던 걸(위 이력 참고) common/layout.html의 공용 confirm/alert
    모달이 재사용한다. 이 화면(checkout.html)은 그 공용 CSS를 그대로 쓴다. */
+
+/* =====================================================================
+   픽업 확인 (reservation/pickup.html) 전용 스타일 — 2026-09-25 UI/UX 개편
+   탭 분리형 모바일 바코드/QR 스캐너 디자인
+   ===================================================================== */
+
+/* 탭 전환 */
+.pickup-tabs {
+	display: flex;
+	background: var(--c-bg);
+	padding: 4px;
+	border-radius: var(--r-md);
+	margin-bottom: var(--s-3);
+	gap: 4px;
+	border: 1px solid var(--c-line);
+}
+.pickup-tab {
+	flex: 1;
+	border: none;
+	background: none;
+	padding: 9px 0;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-mut-strong);
+	border-radius: var(--r-sm);
+	cursor: pointer;
+	transition: all .15s ease;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+.pickup-tab:hover {
+	color: var(--c-text);
+}
+.pickup-tab.is-active {
+	background: var(--c-surface);
+	color: var(--c-primary);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 스캐너 카드 & 뷰파인더 */
+.scanner-card {
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-3);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+	border: 1px solid var(--c-line);
+}
+.scanner-viewport {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	max-height: 290px;
+	margin: 0 auto;
+	background: #090d16;
+	border-radius: var(--r-lg);
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+#qr-reader {
+	width: 100% !important;
+	height: 100% !important;
+	border: none !important;
+}
+#qr-reader video {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
+	border-radius: var(--r-lg);
+}
+#qr-reader img[alt="Info icon"],
+#qr-reader__header_message,
+#qr-reader__status_span,
+#qr-reader__scan_region {
+	border: none !important;
+}
+
+/* 카메라 대기 상태 플레이스홀더 */
+.scanner-idle {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: var(--s-4);
+	z-index: 2;
+	width: 100%;
+}
+.scanner-idle__icon {
+	width: 58px;
+	height: 58px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.08);
+	color: #94a3b8;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: var(--s-2);
+}
+.scanner-idle__icon svg {
+	width: 28px;
+	height: 28px;
+}
+.scanner-idle__title {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: #f8fafc;
+	margin-bottom: 4px;
+}
+.scanner-idle__desc {
+	font-size: var(--fs-xs);
+	color: #94a3b8;
+	margin-bottom: var(--s-3);
+	line-height: 1.4;
+	max-width: 240px;
+}
+.scanner-idle__btn {
+	padding: 9px 22px;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	border-radius: var(--r-full);
+	box-shadow: 0 4px 12px rgba(15, 43, 140, 0.4);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* 스캔 오버레이 (가이드라인 + 레이저) */
+.scanner-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	z-index: 3;
+}
+.scanner-reticle {
+	position: relative;
+	width: 66%;
+	aspect-ratio: 1 / 1;
+}
+.reticle-corner {
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	border: 3.5px solid #38bdf8;
+}
+.reticle-corner--tl { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 8px; }
+.reticle-corner--tr { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 8px; }
+.reticle-corner--bl { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 8px; }
+.reticle-corner--br { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 8px; }
+
+.scanner-laser {
+	position: absolute;
+	left: 4px;
+	right: 4px;
+	height: 2.5px;
+	background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+	box-shadow: 0 0 12px #38bdf8;
+	animation: laserSweep 2s ease-in-out infinite alternate;
+}
+@keyframes laserSweep {
+	0% { top: 6px; opacity: 0.9; }
+	100% { top: calc(100% - 8px); opacity: 0.9; }
+}
+
+.scanner-badge {
+	position: absolute;
+	top: 12px;
+	background: rgba(15, 23, 42, 0.8);
+	backdrop-filter: blur(8px);
+	color: #f8fafc;
+	padding: 4px 12px;
+	border-radius: var(--r-full);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.pulse-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #22c55e;
+	box-shadow: 0 0 6px #22c55e;
+	animation: pulseDot 1.4s ease-in-out infinite;
+}
+@keyframes pulseDot {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.scanner-stop-btn {
+	position: absolute;
+	bottom: 12px;
+	pointer-events: auto;
+	background: rgba(15, 23, 42, 0.8);
+	backdrop-filter: blur(8px);
+	color: #f8fafc;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: var(--r-full);
+	padding: 5px 14px;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	cursor: pointer;
+	transition: all .2s;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.scanner-stop-btn:hover {
+	background: rgba(15, 23, 42, 0.95);
+}
+
+/* 직접 입력 카드 */
+.manual-input-card {
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-4);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+	border: 1px solid var(--c-line);
+}
+.manual-input-header {
+	margin-bottom: var(--s-3);
+}
+.manual-input-title {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	margin-bottom: 2px;
+}
+.manual-input-desc {
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut-strong);
+}
+.manual-field-group {
+	display: flex;
+	gap: var(--s-2);
+}
+.manual-code-input {
+	flex: 1;
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	padding: 10px 14px;
+	border-radius: var(--r-md);
+}
+.manual-code-input::placeholder {
+	font-weight: var(--fw-normal);
+	letter-spacing: normal;
+	text-transform: none;
+}
+.manual-submit-btn {
+	padding: 0 20px;
+	font-weight: var(--fw-bold);
+	white-space: nowrap;
+	border-radius: var(--r-md);
+}
+
+/* 스캔 확인 카드 (인식 후 대기) */
+.pickup-verify-card {
+	margin-top: var(--s-3);
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-4);
+	border: 1.5px solid var(--c-primary);
+	box-shadow: 0 6px 20px rgba(15, 43, 140, 0.08);
+	animation: slideUpFade 0.25s ease-out;
+}
+@keyframes slideUpFade {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.pickup-verify-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--s-3);
+	padding-bottom: var(--s-2);
+	border-bottom: 1px dashed var(--c-line);
+}
+.pickup-verify-badge {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+	background: var(--c-primary-weak);
+	padding: 3px 8px;
+	border-radius: var(--r-sm);
+}
+.pickup-verify-code {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-black);
+	color: var(--c-text-sub);
+	font-family: monospace;
+	letter-spacing: 0.5px;
+}
+.pickup-verify-body {
+	margin-bottom: var(--s-4);
+}
+.pickup-verify-product {
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-black);
+	color: var(--c-text);
+	margin-bottom: 4px;
+}
+.pickup-verify-meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+}
+.pickup-verify-store {
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut);
+	margin-top: 4px;
+}
+.pickup-verify-actions {
+	display: flex;
+	gap: var(--s-2);
+}
+
+/* 대기 목록 카드 */
+.pickup-queue-card {
+	margin-top: var(--s-3);
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-4);
+	border: 1px solid var(--c-line);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+.pickup-queue-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--s-3);
+}
+.pickup-queue-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+}
+.pickup-queue-badge {
+	font-size: var(--fs-xs);
+	background: var(--c-primary);
+	color: var(--c-primary-on);
+	padding: 2px 8px;
+	border-radius: var(--r-full);
+	font-weight: var(--fw-bold);
+}
+.btn-text-danger {
+	background: none;
+	border: none;
+	color: var(--c-text-mut);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	cursor: pointer;
+	padding: 4px 6px;
+	border-radius: var(--r-xs);
+	transition: color 0.15s;
+}
+.btn-text-danger:hover {
+	color: var(--c-danger);
+}
+
+/* 대기 목록 아이템 티켓 */
+.pickup-queue-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--s-2);
+}
+.pickup-queue-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--c-bg);
+	border: 1px solid var(--c-line);
+	border-radius: var(--r-md);
+	padding: 12px 14px;
+	transition: background 0.15s;
+}
+.queue-item-info {
+	flex: 1;
+	min-width: 0;
+}
+.queue-item-title-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+.queue-item-name {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.queue-item-qty {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+	background: var(--c-primary-border);
+	padding: 1px 6px;
+	border-radius: var(--r-xs);
+	flex-shrink: 0;
+}
+.queue-item-sub-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut-strong);
+}
+.queue-item-code {
+	font-family: monospace;
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+}
+.queue-item-price {
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+}
+.queue-item-remove-btn {
+	background: none;
+	border: none;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	color: var(--c-text-mut);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: all 0.15s;
+	margin-left: var(--s-2);
+}
+.queue-item-remove-btn:hover {
+	background: var(--c-danger-weak);
+	color: var(--c-danger);
+}
+.queue-item-remove-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* 픽업 합계 요약 */
+.pickup-queue-summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: var(--s-3);
+	padding-top: var(--s-3);
+	border-top: 1px solid var(--c-line);
+}
+.summary-label {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+}
+.summary-value {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-black);
+	color: var(--c-primary);
+}
+
+/* 빈 상태 */
+.pickup-empty-card {
+	margin-top: var(--s-3);
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-5) var(--s-4);
+	text-align: center;
+	border: 1px dashed var(--c-line);
+}
+.pickup-empty-icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: var(--c-bg);
+	color: var(--c-text-mut);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto var(--s-2);
+}
+.pickup-empty-icon svg {
+	width: 24px;
+	height: 24px;
+}
+.pickup-empty-title {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	margin-bottom: 4px;
+}
+.pickup-empty-desc {
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut);
+	line-height: 1.4;
+	max-width: 260px;
+	margin: 0 auto;
+}
+
+/* 메인 일괄 제출 버튼 */
+.pickup-submit-btn {
+	padding: 14px 0;
+	font-size: var(--fs-md);
+	font-weight: var(--fw-black);
+	border-radius: var(--r-lg);
+	box-shadow: 0 4px 14px rgba(15, 43, 140, 0.2);
+	transition: all .2s;
+}
+.pickup-submit-btn:disabled {
+	box-shadow: none;
+}
+
+/* 일괄 처리 결과 카드 */
+.pickup-result-card {
+	border-radius: var(--r-xl);
+	padding: var(--s-4);
+	border: 1px solid var(--c-line);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+.pickup-result-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: var(--s-2);
+}
+.pickup-result-icon {
+	font-size: 22px;
+}
+.pickup-result-title {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-black);
+	margin: 0;
+}
+.pickup-result-list {
+	list-style: none;
+	padding: 0;
+	margin: var(--s-2) 0 0;
+	font-size: var(--fs-xs);
+	line-height: 1.5;
+}
+.pickup-result-list li {
+	padding: 4px 0;
+	color: var(--c-danger-strong);
+}
+
+/* =====================================================================
+   예약 확인 (reservation/incoming.html) 전용 스타일 — 2026-09-25 UI/UX 개편
+   점주용 주문 접수 / 픽업 대기 티켓 디자인
+   ===================================================================== */
+
+/* 상단 헤더 바 (2026-09-27 UI 개편: 답답한 5개 버튼 바 제거 후 단일 헤더바로 정리) */
+.incoming-header-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--s-1) 0 var(--s-2);
+	margin-bottom: var(--s-2);
+}
+.incoming-header-bar__title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	letter-spacing: -0.02em;
+}
+.live-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #10B981;
+	box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+	animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+	0% {
+		box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+	}
+}
+.incoming-header-bar__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+	background: var(--c-primary-weak);
+	border: 1px solid var(--c-primary-border);
+	padding: 6px 12px;
+	border-radius: var(--r-full);
+	text-decoration: none;
+	transition: all 0.15s ease;
+}
+.incoming-header-bar__link:hover {
+	background: var(--c-primary);
+	color: var(--c-primary-on);
+	border-color: var(--c-primary);
+}
+.incoming-header-bar__link .icon {
+	width: 14px;
+	height: 14px;
+}
+.incoming-header-bar__link .arrow {
+	width: 12px;
+	height: 12px;
+	opacity: 0.7;
+	transition: transform 0.15s ease;
+}
+.incoming-header-bar__link:hover .arrow {
+	transform: translateX(2px);
+	opacity: 1;
+}
+
+/* 주문 카드 (티켓 스타일) */
+.order-ticket {
+	background: var(--c-surface);
+	border: 1px solid var(--c-line);
+	border-radius: var(--r-xl);
+	padding: var(--s-4);
+	margin-top: var(--s-3);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+	position: relative;
+	overflow: hidden;
+	transition: box-shadow 0.2s ease;
+}
+.order-ticket:hover {
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.order-ticket--ready {
+	border-left: 4px solid var(--c-primary);
+}
+.order-ticket--incoming {
+	border-left: 4px solid var(--c-accent);
+}
+.order-ticket__head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--s-3);
+	padding-bottom: var(--s-2);
+	border-bottom: 1px dashed var(--c-line);
+}
+.order-ticket__time {
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut);
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-weight: var(--fw-medium);
+}
+.order-ticket__code-badge {
+	font-family: monospace;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-black);
+	color: var(--c-primary);
+	background: var(--c-primary-weak);
+	padding: 2px 8px;
+	border-radius: var(--r-sm);
+	letter-spacing: 0.5px;
+}
+.order-ticket__body {
+	margin-bottom: var(--s-3);
+}
+.order-ticket__title-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+.order-ticket__product {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-black);
+	color: var(--c-text);
+	line-height: 1.3;
+}
+.order-ticket__qty-badge {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+	background: var(--c-primary-border);
+	padding: 2px 8px;
+	border-radius: var(--r-xs);
+	white-space: nowrap;
+}
+.order-ticket__price-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: var(--fs-sm);
+	margin-top: 4px;
+}
+.order-ticket__price-label {
+	color: var(--c-text-mut);
+	font-size: var(--fs-xs);
+}
+.order-ticket__price-val {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-black);
+	color: var(--c-text);
+}
+
+/* 수락/취소 액션 버튼 */
+.order-ticket__actions {
+	display: flex;
+	gap: var(--s-2);
+	margin-top: var(--s-3);
+}
+.btn-accept {
+	flex: 2;
+	background: var(--c-primary);
+	color: var(--c-primary-on);
+	font-weight: var(--fw-black);
+	font-size: var(--fs-sm);
+	padding: 11px 0;
+	border-radius: var(--r-md);
+	border: none;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(15, 43, 140, 0.25);
+	transition: all 0.15s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+.btn-accept:hover {
+	background: var(--c-primary-strong);
+}
+.btn-reject-toggle {
+	flex: 1;
+	background: none;
+	border: 1px solid var(--c-line);
+	color: var(--c-text-mut-strong);
+	font-weight: var(--fw-bold);
+	font-size: var(--fs-xs);
+	padding: 11px 0;
+	border-radius: var(--r-md);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+.btn-reject-toggle:hover {
+	color: var(--c-danger);
+	border-color: var(--c-danger-border);
+	background: var(--c-danger-weak);
+}
+
+/* 취소 사유 패널 */
+.reject-panel {
+	margin-top: var(--s-3);
+	padding-top: var(--s-3);
+	border-top: 1px dashed var(--c-line);
+	animation: slideUpFade 0.2s ease-out;
+}
+.reject-panel__title {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+	margin-bottom: var(--s-2);
+}
+.reject-chip-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: var(--s-3);
+}
+.reject-chip {
+	font-size: var(--fs-xs);
+	padding: 5px 10px;
+	border-radius: var(--r-full);
+	border: 1px solid var(--c-line);
+	background: var(--c-bg);
+	color: var(--c-text-sub);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+.reject-chip.is-active {
+	background: var(--c-danger);
+	color: #fff;
+	border-color: var(--c-danger);
+	font-weight: var(--fw-bold);
+}
+.btn-reject-submit {
+	width: 100%;
+	padding: 10px 0;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	background: var(--c-danger);
+	color: #fff;
+	border: none;
+	border-radius: var(--r-md);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+.btn-reject-submit:hover {
+	background: var(--c-danger-strong);
+}
+
+/* 픽업 대기중 카드 특별 버튼 */
+.btn-pickup-shortcut {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 9px 14px;
+	background: var(--c-primary-weak);
+	color: var(--c-primary);
+	border: 1px solid var(--c-primary-border);
+	border-radius: var(--r-md);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	text-decoration: none;
+	width: 100%;
+	margin-top: var(--s-3);
+	transition: all 0.15s;
+}
+.btn-pickup-shortcut:hover {
+	background: var(--c-primary);
+	color: var(--c-primary-on);
+}
+
+/* 탭 패널 빈 상태 */
+.ticket-empty {
+	background: var(--c-surface);
+	border-radius: var(--r-xl);
+	padding: var(--s-6) var(--s-4);
+	text-align: center;
+	border: 1px dashed var(--c-line);
+	margin-top: var(--s-3);
+}
+.ticket-empty__icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: var(--c-bg);
+	color: var(--c-text-mut);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto var(--s-2);
+}
+.ticket-empty__icon svg {
+	width: 24px;
+	height: 24px;
+}
+.ticket-empty__title {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	margin-bottom: 2px;
+}
+.ticket-empty__desc {
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut);
+	line-height: 1.4;
+}
+
+/* 탭 뱃지 톤 */
+.tab-badge {
+	font-size: 11px;
+	font-weight: var(--fw-bold);
+	padding: 1px 7px;
+	border-radius: var(--r-full);
+	margin-left: 5px;
+	vertical-align: middle;
+}
+.tab-badge--accent {
+	background: var(--c-accent);
+	color: #fff;
+}
+.tab-badge--primary {
+	background: var(--c-primary);
+	color: var(--c-primary-on);
+}
+
+

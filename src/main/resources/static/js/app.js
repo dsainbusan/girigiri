@@ -276,6 +276,7 @@
     var okBtn = document.getElementById("girigiri-modal-ok");
     var cancelBtn = document.getElementById("girigiri-modal-cancel");
     var iconEl = document.getElementById("girigiri-modal-icon");
+    var iconUseEl = iconEl.querySelector("use");
 
     function closeModal() {
       modalEl.style.display = "none";
@@ -283,12 +284,18 @@
       cancelBtn.onclick = null;
     }
 
+    // 변경됨 (2026-09-27, UI/UX 개편) — 아이콘 색과 확인 버튼 색이 따로 놀았다(둘 다 tone을 보지만
+    // 버튼은 항상 기본 .btn 남색이었음). 이제 danger 톤이면 아이콘·버튼 둘 다 빨강으로 맞춘다.
+    // opts.icon으로 심볼도 바꿀 수 있다(계정 탈퇴 등은 경고 삼각형 대신 휴지통 — i-trash 참고).
     function openModal(opts) {
       titleEl.textContent = opts.title || "";
       titleEl.hidden = !opts.title;
       descEl.textContent = opts.desc || "";
-      iconEl.classList.toggle("modal-box__icon--neutral", opts.tone === "neutral");
+      var isDanger = opts.tone !== "neutral";
+      iconEl.classList.toggle("modal-box__icon--neutral", !isDanger);
+      if (iconUseEl) iconUseEl.setAttribute("href", "#" + (opts.icon || "i-warning"));
       okBtn.textContent = opts.okLabel || "확인";
+      okBtn.classList.toggle("btn--danger", isDanger);
       cancelBtn.hidden = !opts.showCancel;
       if (opts.showCancel) cancelBtn.textContent = opts.cancelLabel || "취소";
       inputEl.hidden = !opts.withInput;
@@ -299,14 +306,17 @@
       }
     }
 
-    // alert() 대체 — 버튼 1개("확인"). tone:"neutral"이면 경고(빨강) 대신 브랜드 그린 아이콘.
+    // alert() 대체 — 버튼 1개("확인"). tone:"neutral"이면 경고(빨강) 대신 브랜드 남색 아이콘.
     window.girigiriAlert = function (message, opts) {
       opts = opts || {};
-      openModal({ desc: message, showCancel: false, tone: opts.tone || "neutral" });
+      openModal({ desc: message, showCancel: false, tone: opts.tone || "neutral", icon: opts.icon });
       okBtn.onclick = function () { closeModal(); if (opts.onClose) opts.onClose(); };
     };
 
     // confirm() 대체 — 버튼 2개, "확인"을 눌러야 onConfirm이 호출된다.
+    // 변경됨 (2026-09-27) — tone 기본값이 실수로 "neutral"이라 삭제·탈퇴 같은 위험한 확인들도
+    // 전부 차분한 남색 아이콘으로 떴었다(원래 의도는 위 주석처럼 "neutral일 때만 예외적으로
+    // 남색"). opts.tone을 그대로 넘겨서 명시적으로 'neutral'을 준 경우만 차분한 톤이 되게 한다.
     window.girigiriConfirm = function (message, onConfirm, opts) {
       opts = opts || {};
       openModal({
@@ -315,15 +325,18 @@
         showCancel: true,
         okLabel: opts.okLabel || "확인",
         cancelLabel: opts.cancelLabel || "취소",
-        tone: opts.tone || "neutral"
+        tone: opts.tone,
+        icon: opts.icon
       });
       okBtn.onclick = function () { closeModal(); onConfirm(); };
       cancelBtn.onclick = closeModal;
     };
 
     // prompt() 대체 — 지금 유일한 쓰임(대시보드 구제율 목표, 1~100 숫자)에 맞춘 숫자 입력 전용.
+    // 목표 숫자를 정하는 건 위험한 동작이 아니라서 명시적으로 neutral 톤을 준다(안 주면 위
+    // girigiriConfirm과 달리 여기는 기본이 위험(빨강) 아이콘이라 그대로 뒀으면 잘못 보였을 것).
     window.girigiriPromptNumber = function (opts, onConfirm) {
-      openModal({ title: opts.title, desc: opts.desc, showCancel: true, withInput: true, inputValue: opts.value });
+      openModal({ title: opts.title, desc: opts.desc, showCancel: true, withInput: true, inputValue: opts.value, tone: "neutral" });
       inputEl.type = "number";
       inputEl.min = opts.min != null ? opts.min : "";
       inputEl.max = opts.max != null ? opts.max : "";
@@ -345,9 +358,11 @@
     document.querySelectorAll("form[data-confirm]").forEach(function (form) {
       form.addEventListener("submit", function (e) {
         e.preventDefault();
+        // data-confirm-icon(선택) — 계정 탈퇴처럼 휴지통 아이콘이 더 맞는 경우에만 지정.
+        // 안 주면 기본 경고 삼각형(i-warning) 그대로.
         window.girigiriConfirm(form.getAttribute("data-confirm"), function () {
           form.submit();
-        });
+        }, { icon: form.getAttribute("data-confirm-icon") });
       });
     });
   })();
