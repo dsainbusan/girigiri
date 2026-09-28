@@ -117,7 +117,8 @@
 	     btn--ghost(크림 배경, 앱 배경용)는 이 흰 모달 카드 위에서 붕 떠 보여서 btn--outline으로 바꿨다. -->
 	<div id="postcodeOverlay" role="dialog" aria-modal="true" aria-label="매장 주소 검색"
 	     style="display:none;position:fixed;inset:0;background:var(--overlay-scrim);z-index:var(--z-modal);align-items:center;justify-content:center">
-		<div style="background:var(--c-surface);border-radius:var(--r-md);overflow:hidden;width:90%;max-width:420px">
+		<!-- 2026-09-28 — 앱 최대폭 420→600px 변경에 맞춰 하드코딩 420px 대신 var(--app-max) 사용 -->
+		<div style="background:var(--c-surface);border-radius:var(--r-md);overflow:hidden;width:90%;max-width:var(--app-max)">
 			<div class="u-row" style="justify-content:flex-end;padding:4px 4px 0">
 				<button type="button" id="postcodeCloseBtn" class="btn btn--outline btn--sm">닫기</button>
 			</div>
