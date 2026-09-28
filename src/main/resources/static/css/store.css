@@ -7,36 +7,10 @@
    th:style로 인라인 지정한다 — 여기 있는 CSS는 위치/크기/색상 토큰만 담당.
    ===================================================================== */
 
-/* ---------- 통계 카드 탭 토글 (오늘 현황 vs 최근 7일) ---------- */
-.stat-toggle-tabs {
-  display: flex;
-  background: var(--c-bg);
-  padding: 3px;
-  border-radius: var(--r-md);
-  margin-bottom: var(--s-3);
-  gap: 3px;
-}
-.stat-toggle-tab {
-  flex: 1;
-  border: none;
-  background: none;
-  padding: 7px 0;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  color: var(--c-text-mut);
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: all .15s ease;
-  text-align: center;
-}
-.stat-toggle-tab:hover {
-  color: var(--c-text);
-}
-.stat-toggle-tab.is-active {
-  background: var(--c-surface);
-  color: var(--c-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
-}
+/* .stat-toggle-tabs/.stat-toggle-tab(+--underline)는 2026-09-24 components.css로 이동
+   (WBS CSS 1단계 정리 — ledger.css의 .seg-tabs와 값이 거의 동일해서 .seg-tabs로 통합, 마크업도
+   .seg-tabs/.seg-tab로 변경됨). 이 화면에만 있는 부가 요소(아래 __dot 알림 점, .stat-panel
+   페이드인)만 여기 남는다. */
 /* 추가됨 (2026-09-22, UI/UX 감사) — "통계 분석" 탭 존재를 처음 오는 사장님에게 알리는 점.
    한 번 누르면(dashboard.html의 stats-tab-btn 클릭 리스너) is-hidden이 붙어 사라진다. */
 .stat-toggle-tab__dot {
@@ -55,29 +29,6 @@
 @keyframes fadeIn {
   from { opacity: 0.5; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* ---------- 밑줄 탭 (2026-09-17) — "요약/통계" 최상위 탭과 그 안의 "오늘/최근 7일" 하위 탭이
-   똑같은 pill 스타일로 바로 붙어있으니 "같은 걸 두 번 누르나?" 싶게 헷갈렸다는 피드백. 하위 탭에만
-   이 수정자 클래스를 얹어서 배경 없는 밑줄 스타일로 구분한다 — 상위 탭이 1차 네비게이션, 이건 그
-   안의 보조 컨트롤이라는 위계가 보이도록. 구조(.stat-toggle-tabs/.stat-toggle-tab/JS)는 그대로라
-   최상위 탭에서 재사용하던 토글 스크립트를 그대로 쓸 수 있다. */
-.stat-toggle-tabs--underline {
-  background: none;
-  padding: 0;
-  border-radius: 0;
-  border-bottom: 1px solid var(--c-line);
-  gap: 0;
-}
-.stat-toggle-tabs--underline .stat-toggle-tab {
-  border-radius: 0;
-  padding: 8px 0;
-  border-bottom: 2px solid transparent;
-}
-.stat-toggle-tabs--underline .stat-toggle-tab.is-active {
-  background: none;
-  box-shadow: none;
-  border-bottom-color: var(--c-primary);
 }
 
 /* ---------- 페이지네이션 (2026-09-17, 리뷰 관리) — 슈퍼어드민의 .pagination과 같은 구조·
@@ -1661,14 +1612,16 @@ a.stat-card:hover .stat-card__go--gear {
    ===================================================================== */
 .dash-stats { --plot-h: 110px; --label-h: 22px; }
 
-/* 하위 토글(밑줄형): 높이 44px, 선택 시 3px 네이비 밑줄. 비선택 글씨는 크림 위 대비가 낮은 --c-text-mut 대신 --c-text-sub. */
+/* 하위 토글(밑줄형): 높이 44px, 선택 시 3px 네이비 밑줄. 비선택 글씨는 크림 위 대비가 낮은 --c-text-mut 대신 --c-text-sub.
+   2026-09-24 — 기반 클래스가 .stat-toggle-tab에서 .seg-tab으로 통합되면서 이 스코프 선택자도 같이 바꿨다
+   (WBS CSS 1단계 정리, B: 세그먼트 탭 통합). */
 .dash-stats__tabs { margin-bottom: var(--s-4); }
-.dash-stats__tabs .stat-toggle-tab {
+.dash-stats__tabs .seg-tab {
   min-height: 44px; padding: 0; font-size: var(--fs-sm);
   color: var(--c-text-sub); border-bottom: 3px solid transparent;
 }
-.dash-stats__tabs .stat-toggle-tab.is-active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
-.dash-stats__tabs .stat-toggle-tab:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
+.dash-stats__tabs .seg-tab.is-active { color: var(--c-primary); border-bottom-color: var(--c-primary); }
+.dash-stats__tabs .seg-tab:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 
 /* 섹션 제목 옆 보조 텍스트: 업무 요약(11px, 흐린 색)보다 크고 진하게 — 통계 숫자 옆이라 읽혀야 한다. */
 .dash-stats .dash-section-more { font-size: var(--fs-sm); color: var(--c-text-sub); }

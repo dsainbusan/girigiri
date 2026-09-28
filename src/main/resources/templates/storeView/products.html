@@ -83,14 +83,15 @@
 		</div>
 	</a>
 
-	<!-- 2·3. 판매중/판매대기 — 대시보드에서 쓰던 .stat-toggle-tabs pill 토글을 그대로 재사용해서
+	<!-- 2·3. 판매중/판매대기 — 대시보드에서 쓰던 .seg-tabs pill 토글을 그대로 재사용해서
 	     세로로 쌓여있던 두 목록을 탭으로 분리한다(2026-09-25, UI/UX 개편). 탭이 가리키는 두 패널은
 	     기존 #selling-section/#wait-section을 그대로 쓴다 — 그 안의 내용·id·10초 폴링/발행/수정
-	     스크립트는 전혀 안 건드린다(그 스크립트들은 hidden 여부와 무관하게 innerHTML만 갈아끼움). -->
-	<div class="stat-toggle-tabs" role="tablist" aria-label="재고 상태">
-		<button type="button" role="tab" id="products-tab-selling" class="stat-toggle-tab is-active"
+	     스크립트는 전혀 안 건드린다(그 스크립트들은 hidden 여부와 무관하게 innerHTML만 갈아끼움).
+	     2026-09-24 — 클래스가 .stat-toggle-tabs에서 .seg-tabs로 통합됨(WBS CSS 1단계 정리, B). -->
+	<div class="seg-tabs" role="tablist" aria-label="재고 상태">
+		<button type="button" role="tab" id="products-tab-selling" class="seg-tab is-active"
 		        data-target="selling-section" aria-selected="true">판매중</button>
-		<button type="button" role="tab" id="products-tab-wait" class="stat-toggle-tab"
+		<button type="button" role="tab" id="products-tab-wait" class="seg-tab"
 		        data-target="wait-section" aria-selected="false">판매대기</button>
 	</div>
 
@@ -432,13 +433,14 @@
 		   style="font-size: var(--fs-sm); text-decoration: underline;">자동 등록 템플릿</a>
 	</div>
 
-	<!-- 판매중/판매대기 pill 탭 토글 (2026-09-25) — dashboard.html의 .stat-toggle-tabs 그룹별 처리
+	<!-- 판매중/판매대기 pill 탭 토글 (2026-09-25) — dashboard.html의 .seg-tabs 그룹별 처리
 	     스크립트와 동일한 패턴. #wait-section/#selling-section은 이미 자기 id로 다른 스크립트들이
-	     참조하고 있어서 새 래퍼 없이 data-target으로 그 id를 직접 가리키기만 한다. -->
+	     참조하고 있어서 새 래퍼 없이 data-target으로 그 id를 직접 가리키기만 한다.
+	     2026-09-24 — 클래스가 .stat-toggle-tabs에서 .seg-tabs로 통합됨(WBS CSS 1단계 정리, B). -->
 	<script th:inline="none">
 	(function () {
-		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+		document.querySelectorAll('.seg-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
 			var panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);

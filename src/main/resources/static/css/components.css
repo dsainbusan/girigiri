@@ -29,6 +29,17 @@
   transition: filter .15s ease;
 }
 .btn:active { filter: brightness(.94); }
+/* 추가됨 (2026-08-21, 원래 reservation.css) — 왜: 품절/주문 마감 등으로 th:disabled 처리된
+   버튼이 눌리지도 않으면서 색은 그대로 초록이라 "눌러도 되는 버튼"처럼 보였다. components.css의
+   .btn엔 disabled 상태 스타일이 아예 없어서(공통 파일이라 여기서 건드리진 않고), 이 화면(예약)에서
+   쓰는 버튼만 회색으로 바뀌게 이 파일에 추가한다.
+   2026-09-24 components.css로 이동 (원래 reservation.css) — 모든 화면의 disabled 버튼에 공통
+   적용하기 위해 옮김 (WBS CSS 1단계 정리, 조사 결과는 세션 기록 참고). */
+.btn:disabled {
+  background: var(--c-line-weak);
+  color: var(--c-text-mut);
+  cursor: not-allowed;
+}
 .btn--block  { display: flex; width: 100%; }
 /* 2026-09-21 UI/UX 감사 — 기본 .btn 텍스트(--c-primary-on, 크림)를 그대로 물려받으면
    주황 배경 위에서 2.47:1로 WCAG AA(4.5:1) 미달이었다. 밝은 채도라 크림보다 --c-text(짙은 색)가
@@ -63,6 +74,14 @@
 .card--flat   { box-shadow: none; }
 .card--shadow { border-color: transparent; box-shadow: var(--shadow-card); }
 .card + .card { margin-top: var(--s-3); }
+/* 추가됨 (2026-09-16, 매장 신뢰도 자동 정지, 원래 reservation.css) — 왜: 정지된 매장의 체크아웃
+   화면에서 수량 스테퍼/쿠폰 선택/결제 예정 금액 카드가 예약 버튼만 막힌 채로 멀쩡히 조작 가능해
+   보이는 게 이상하다는 피드백(채채)으로 추가. checkout.html에서 storeBlocked면 이 클래스를
+   카드에 얹는다.
+   2026-09-24 components.css로 이동 (원래 reservation.css). */
+.card.is-disabled {
+  opacity: .55;
+}
 
 /* ---------------- Chip (카테고리 필터 등) ---------------- */
 /* 2026-09-17 리스킨 — background가 --c-bg(크림)라 .app__main(이제 같은 크림) 위에서 경계가
@@ -108,6 +127,12 @@
 /* 추가됨 (2026-09-22, UI/UX 감사) — 실패/경고 상태(예: GPS 위치 확인 불가)가 badge--discount(주황,
    "할인" 의미)를 빌려 쓰고 있었다. "주황=할인"이라는 학습된 의미를 지키려면 실패엔 이 variant가 필요. */
 .badge--danger   { background: var(--c-danger-weak);  color: var(--c-danger-strong); }
+/* 추가됨 (2026-08-21, 원래 reservation.css) — 왜: 노쇼·취소 탭에서 "취소"와 "노쇼" 배지가 똑같이
+   파란색(badge--info)이라 구분이 안 됐다. "취소"는 대부분 정상적인 흐름(손님/매장 사정)이라
+   중립적인 회색, "노쇼"는 손님이 안 나타난 페널티 성격이라 badge--discount(빨강)를 그대로 쓴다.
+   색상 대비 수정(2026-09-16) — --c-text-mut(2.28:1)가 WCAG AA 미달이라 -strong 토큰으로 진하게.
+   2026-09-24 components.css로 이동 (원래 reservation.css). */
+.badge--muted    { background: var(--c-line-weak);    color: var(--c-text-mut-strong); }
 
 /* .field(flex-direction:column)의 직계 자식 배지(signup.html/mypageView edit.html의 GPS 상태 배지)만
    align-self:flex-start를 준다 — 기본 align-items:stretch 때문에 부모 폭까지 늘어나던 문제. 처음엔
@@ -161,6 +186,16 @@
 /* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 11px(--fs-xs)에 --c-danger는 흰 바탕
    실측 대비 ≈3.8:1로 AA(4.5:1) 미달 → --c-danger-strong으로 교체 */
 .store-card__left.is-urgent { color: var(--c-danger-strong); }
+/* 추가됨 (2026-09-16, 채채 요청 — 매장 신뢰도 자동 정지, 원래 home.css) — 왜: 정지된 매장 카드가
+   평소랑 똑같이 보여서 눌러서 체크아웃까지 가봐야 정지된 걸 알 수 있었다. common/components.html의
+   storeCard fragment가 store.blocked=true면 이 클래스를 얹는다(카드 자체는 계속 보여주되 흐리게)
+   — 체크아웃 화면의 .card.is-disabled와 같은 생각.
+   2026-09-24 components.css로 이동 (원래 home.css, 이 파일은 이 규칙 하나만 있어서 삭제) — storeCard
+   fragment는 home.html뿐 아니라 searchView/results.html에서도 쓰이는데 그 화면은 home.css를
+   안 불러와서 지금까지 정지 매장이 안 흐려지고 있었다. 공통 파일로 옮기면서 같이 고쳐진다. */
+.store-card.is-blocked {
+  opacity: .55;
+}
 
 /* ---------------- Banner (절약 강조 등) ---------------- */
 .banner {
@@ -175,6 +210,19 @@
 .banner__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary); }
 .banner__desc  { font-size: var(--fs-xs); color: var(--c-primary-strong); }
 .banner--info { background: var(--c-info-weak); border-color: var(--c-info-border); }
+/* 추가됨 (2026-08-21, 원래 reservation.css) — 왜: 예약 확인 화면에서 "취소" 처리 직후 안내 배너를
+   초록(banner 기본색)이 아니라 빨간 계열로 보여주고 싶은데 위험/취소용 변형이 없어서 추가했다.
+   2026-09-24, docs/design-system.md WCAG 부채 항목 — --c-danger on -weak 배경 실측 대비 ≈3.4:1로
+   AA(4.5:1) 미달이라 텍스트를 --c-danger-strong으로 교체.
+   2026-09-24 components.css로 이동 (원래 reservation.css). */
+.banner--danger {
+  background: var(--c-danger-weak);
+  border-color: var(--c-danger);
+}
+.banner--danger .banner__title,
+.banner--danger .banner__desc {
+  color: var(--c-danger-strong);
+}
 
 /* ---------------- Stat card (대시보드) ---------------- */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
@@ -353,6 +401,24 @@
 }
 .review-upload__remove:hover { border-color: var(--c-danger); }
 
+/* ---------------- Switch (토글 스위치) ----------------
+   2026-09-24 components.css로 이동·통합 (WBS CSS 1단계 정리, D) — 원래 settings.css의
+   .settings-toggle과 alertView/settings.html 인라인 <style>의 .toggle이 트랙/썸 크기·색·
+   트랜지션까지 완전히 같은 걸 각자 화면에 복붙해 두고 있었다("팀원이 아직 공용 토글 컴포넌트가
+   없어서"라는 원래 주석 그대로). :focus-visible 아웃라인은 settings.css 쪽에만 있던 걸 살렸다
+   — alertView 쪽도 접근성이 더 좋아짐. 감싸는 행 마크업(.list-menu-item--toggle, .toggle-row)은
+   화면마다 달라서 그대로 두고, 스위치 자체만 공용화한다. */
+.switch { position: relative; display: inline-block; width: 44px; height: 26px; flex: none; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch__track { position: absolute; inset: 0; background: var(--c-line); border-radius: 999px; transition: background .15s ease; }
+.switch__track::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  background: var(--c-surface); border-radius: 50%; transition: transform .15s ease;
+}
+.switch input:checked ~ .switch__track { background: var(--c-primary); }
+.switch input:checked ~ .switch__track::before { transform: translateX(18px); }
+.switch input:focus-visible ~ .switch__track { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
 /* ---------------- Tabs (탭 전환) ----------------
    강노은: 원래 supportView/home.html(고객센터)에만 있던 페이지 전용 스타일이었는데, 가게 상세
    페이지(정보/상품/리뷰)에도 똑같은 탭이 필요해져서 공용으로 옮겼다(위 review-upload/support-empty와
@@ -365,6 +431,63 @@
   background: none; border-top: none; border-left: none; border-right: none;
 }
 .tab.is-active { color: var(--c-text); border-color: var(--c-text); }
+/* --primary 변형 (2026-09-24 components.css로 이동, 원래 reservation.css의 .tab-bar/.tab-item —
+   WBS CSS 1단계 정리 C). 마이페이지 예약 목록(진행중/픽업완료/노쇼·취소)은 활성 색이 --c-primary
+   (네이비)라 기본 .tab(--c-text, 검정)과 달랐다. 겉모습을 그대로 유지하려고 색만이 아니라
+   패딩·기본 굵기·바깥 여백까지 원래 .tab-item 값으로 덮어쓴다. */
+.tabs--primary { margin-bottom: var(--s-3); }
+.tabs--primary .tab { padding: var(--s-3) 0; font-weight: var(--fw-regular); }
+.tabs--primary .tab.is-active { color: var(--c-primary); border-color: var(--c-primary); font-weight: var(--fw-bold); }
+
+/* ---------------- Segment tabs (알약형 세그먼트 토글) ----------------
+   2026-09-17 리스킨 — 카드 밖 페이지에 바로 놓여서 background(--c-bg)가 크림이 된 뒤로
+   .app__main과 같은 색이라 안 보였다 — 네이비 톤 테두리 추가.
+   2026-09-24 components.css로 이동 (원래 ledger.css의 .seg-tabs/.seg-tab, store.css의
+   .stat-toggle-tabs/.stat-toggle-tab과 값이 거의 동일해서 하나로 통합 — WBS CSS 1단계 정리).
+   store.css의 .stat-toggle-tab__dot(알림 점)처럼 한쪽에만 있던 부가 요소는 그 도메인 파일에
+   그대로 남아있다. */
+.seg-tabs {
+  display: flex; background: var(--c-bg); padding: 3px; border-radius: var(--r-md);
+  margin: var(--s-4) 0 var(--s-3); gap: 3px;
+  border: 1px solid var(--c-primary-border);
+}
+.seg-tab {
+  flex: 1; border: none; background: none; padding: 7px 0;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-mut);
+  border-radius: var(--r-sm); cursor: pointer; transition: all .15s ease; text-align: center;
+}
+.seg-tab:hover { color: var(--c-text); }
+.seg-tab.is-active { background: var(--c-surface); color: var(--c-primary); box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+
+/* 탭 안에서 또 나뉘는 하위 토글(예: "뱃지" 탭 안의 뱃지 도감/랭킹 전환). 같은 .seg-tabs
+   메커니즘을 그대로 재사용하되, 화면 최상단 주 탭과 헷갈리지 않게 더 작고 옅은 톤으로. */
+.seg-tabs--sub {
+  background: var(--c-bg);
+  padding: 2px;
+  margin: var(--s-4) 0 var(--s-3);
+}
+.seg-tabs--sub .seg-tab { padding: 6px 0; font-size: 12px; }
+
+/* 밑줄 스타일 하위 토글 (2026-09-17) — 현황/상세 토글(pill) 바로 아래 내역/분석/목표/뱃지 탭이
+   똑같은 pill 스타일이라 토글 2개가 겹쳐 보인다는 피드백. 배경/모서리를 없애고 밑줄로만 활성
+   상태를 표시해 상위 토글과 시각적으로 구분한다. */
+.seg-tabs--underline {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--c-line);
+  gap: 0;
+}
+.seg-tabs--underline .seg-tab {
+  border-radius: 0;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+}
+.seg-tabs--underline .seg-tab.is-active {
+  background: none;
+  box-shadow: none;
+  border-bottom-color: var(--c-primary);
+}
 
 /* ---------------- Modal (2026-09-16, 공용으로 승격) ----------------
    원래 reservationView/checkout.html 전용이었던 확인 팝업 스타일 — 네이티브 confirm()/alert()를

@@ -20,8 +20,9 @@
 	변경됨 (2026-09-17) — 왜: 화면이 세로로 너무 길다는 피드백. 처리할 일 배너·영업 상태는 늘 보이게
 	위에 두고, 그 아래를 "요약"(핵심지표 4개·정산·리뷰관리·주문픽업 바로가기 — 다른 화면으로 가는
 	진입점 모음)과 "통계"(오늘/최근7일 토글 카드 — 숫자를 들여다보는 화면)로 최상위 탭 하나 더
-	나눴다. 안에 있던 "오늘 ↔ 최근 7일" 토글과 같은 .stat-toggle-tabs 컴포넌트를 그대로 재사용 —
-	이미 여러 그룹을 각자 독립적으로 처리하도록 짜여 있어서(아래 스크립트) JS는 안 건드려도 된다.
+	나눴다. 안에 있던 "오늘 ↔ 최근 7일" 토글과 같은 .seg-tabs 컴포넌트(2026-09-24 전 .stat-toggle-tabs,
+	WBS CSS 1단계 정리로 통합)를 그대로 재사용 — 이미 여러 그룹을 각자 독립적으로 처리하도록
+	짜여 있어서(아래 스크립트) JS는 안 건드려도 된다.
 */-->
 <div id="content" th:fragment="content" class="page page--dashboard">
 	<link rel="stylesheet" th:href="@{/css/store.css?v=20260922c}">
@@ -60,9 +61,9 @@
 
 		<!-- 최상위 탭: 업무 요약 ↔ 통계 분석 (한 스크롤에 과도한 정보 방지) -->
 		<div class="dash-tabs-wrap">
-			<div class="stat-toggle-tabs">
-				<button type="button" class="stat-toggle-tab is-active" data-target="panel-overview">업무 요약</button>
-				<button type="button" class="stat-toggle-tab" data-target="panel-stats">통계 분석</button>
+			<div class="seg-tabs">
+				<button type="button" class="seg-tab is-active" data-target="panel-overview">업무 요약</button>
+				<button type="button" class="seg-tab" data-target="panel-stats">통계 분석</button>
 			</div>
 		</div>
 
@@ -252,10 +253,10 @@
 		<div id="panel-stats" class="stat-panel is-hidden dash-stats">
 
 			<!-- 하위 토글: 오늘 판매 현황 | 최근 7일 통계 (밑줄형 — 위 "업무 요약 | 통계 분석" pill 탭과 구분) -->
-			<div class="stat-toggle-tabs stat-toggle-tabs--underline dash-stats__tabs" role="tablist" aria-label="통계 기간">
-				<button type="button" role="tab" id="tab-today" class="stat-toggle-tab is-active" data-target="panel-today"
+			<div class="seg-tabs seg-tabs--underline dash-stats__tabs" role="tablist" aria-label="통계 기간">
+				<button type="button" role="tab" id="tab-today" class="seg-tab is-active" data-target="panel-today"
 				        aria-selected="true" aria-controls="panel-today">오늘 판매 현황</button>
-				<button type="button" role="tab" id="tab-weekly" class="stat-toggle-tab" data-target="panel-weekly"
+				<button type="button" role="tab" id="tab-weekly" class="seg-tab" data-target="panel-weekly"
 				        aria-selected="false" aria-controls="panel-weekly">최근 7일 통계</button>
 			</div>
 
@@ -472,10 +473,11 @@
 			back.style.display = 'none';
 		}
 
-		// 1. 탭 토글 — 페이지에 여러 개(.stat-toggle-tabs) 있을 수 있어서 그룹별로 독립 처리한다.
+		// 1. 탭 토글 — 페이지에 여러 개(.seg-tabs) 있을 수 있어서 그룹별로 독립 처리한다.
 		//    각 그룹이 제어하는 패널은 그 그룹 버튼의 data-target으로만 한정 → 그룹끼리 안 섞인다.
-		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+		//    2026-09-24 — 클래스가 .stat-toggle-tabs에서 .seg-tabs로 통합됨 (WBS CSS 1단계 정리, B).
+		document.querySelectorAll('.seg-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
 			var panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);
