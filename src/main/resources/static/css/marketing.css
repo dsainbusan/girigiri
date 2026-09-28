@@ -13,7 +13,13 @@ body.mkt {
 	/* 이 파일 전용 로컬 토큰 (2026-09-24, docs/design-system.md 부채 정리) — tokens.css에는
 	   브랜드 컬러만 두기로 한 이 파일의 원칙(상단 헤더 코멘트 참고)에 따라, 이 화면에서만
 	   반복되거나 tokens.css에 대응 값이 없는 색은 전역 토큰이 아니라 여기 로컬로 정의한다. */
-	--mkt-border: var(--mkt-border);       /* 카드/네비/마퀴 아이템 테두리 — 6곳 반복 */
+	/* 버그 수정 (2026-09-28) — 값이 var(--mkt-border) 자기 자신을 가리키는 순환 참조였다. 원인 확인:
+	   2026-09-24 하드코딩 색 토큰화 때 문자열 일괄치환(#EDE5D4 → var(--mkt-border))이 이 정의부
+	   줄 자체(당시엔 "--mkt-border: #EDE5D4;")까지 같이 바꿔버렸다 — git 이력(c3744b4 커밋)에도
+	   이 버그가 그대로 커밋돼 있었다. 순환 변수는 무효가 되어, 이걸 쓰는 border가 전부 통째로
+	   사라졌었다 — FAQ 질문 사이 선, 푸터 윗선(.mkt-footer), 네비 밑선, 통계/스텝 카드·마퀴 테두리까지.
+	   커밋 53744fa(토큰화 이전)에 남아있던 원래 리터럴 값 #EDE5D4로 복구. */
+	--mkt-border: #EDE5D4;       /* 카드/네비/마퀴 아이템 테두리 — 6곳 반복 */
 	--mkt-line: #DDD6C6;         /* 히어로 목업 카드의 장식용 텍스트 라인 */
 	--mkt-text-label: #4A4438;   /* 통계 라벨 — --c-text-sub보다 살짝 진한 별도 톤 */
 	--mkt-shadow-primary: rgba(15, 43, 140, .28); /* 2026-09-17 리브랜딩 전 구 네이비(rgba(1,42,140,*))
@@ -130,8 +136,8 @@ body.mkt {
 	overflow: hidden;
 	padding: 88px 0 100px;
 	background:
-		radial-gradient(720px 420px at 88% -10%, var(--c-primary-weak) 0%, transparent 70%),
-		var(--c-surface);
+			radial-gradient(720px 420px at 88% -10%, var(--c-primary-weak) 0%, transparent 70%),
+			var(--c-surface);
 }
 .mkt-hero__grid {
 	display: grid;
@@ -202,7 +208,7 @@ body.mkt {
 .mkt-mock__map {
 	height: 180px;
 	background:
-		linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);
+			linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);
 	position: relative;
 }
 .mkt-mock__pin {
