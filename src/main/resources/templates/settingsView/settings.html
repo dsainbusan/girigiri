@@ -55,15 +55,16 @@
 	<div class="settings-section">
 		<p class="settings-section__title">약관 및 동의</p>
 		<div class="card settings-card">
+			<!-- 2026-09-24 — .settings-toggle에서 공용 .switch로 통합 (WBS CSS 1단계 정리, D). -->
 			<form th:action="@{/user/settings/marketing}" method="post" class="list-menu-item list-menu-item--toggle">
 				<span class="list-menu-item__body">
 					<span class="list-menu-item__title">마케팅 정보 수신 동의</span>
 					<span class="list-menu-item__desc">이벤트·혜택 알림을 받아요</span>
 				</span>
-				<label class="settings-toggle">
+				<label class="switch">
 					<input type="checkbox" name="marketingAgreed" value="true" th:checked="${settings.marketingAgreed}"
 					       role="switch" th:attr="aria-checked=${settings.marketingAgreed}">
-					<span class="settings-toggle__track"></span>
+					<span class="switch__track"></span>
 				</label>
 			</form>
 			<a th:href="@{/policy/terms}" class="list-menu-item">
@@ -86,10 +87,10 @@
 					<span class="list-menu-item__title">정산 알림</span>
 					<span class="list-menu-item__desc">정산 완료·실패를 알려드려요</span>
 				</span>
-				<label class="settings-toggle">
+				<label class="switch">
 					<input type="checkbox" name="enabled" value="true" th:checked="${settings.storeSettlementAlertEnabled}"
 					       role="switch" th:attr="aria-checked=${settings.storeSettlementAlertEnabled}">
-					<span class="settings-toggle__track"></span>
+					<span class="switch__track"></span>
 				</label>
 			</form>
 			<form th:action="@{/user/settings/store-alerts/automation}" method="post"
@@ -98,10 +99,10 @@
 					<span class="list-menu-item__title">매장 자동화 알림</span>
 					<span class="list-menu-item__desc">POS 재고 자동 등록 결과를 알려드려요</span>
 				</span>
-				<label class="settings-toggle">
+				<label class="switch">
 					<input type="checkbox" name="enabled" value="true" th:checked="${settings.storeAutomationAlertEnabled}"
 					       role="switch" th:attr="aria-checked=${settings.storeAutomationAlertEnabled}">
-					<span class="settings-toggle__track"></span>
+					<span class="switch__track"></span>
 				</label>
 			</form>
 		</div>

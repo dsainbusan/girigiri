@@ -401,6 +401,24 @@
 }
 .review-upload__remove:hover { border-color: var(--c-danger); }
 
+/* ---------------- Switch (토글 스위치) ----------------
+   2026-09-24 components.css로 이동·통합 (WBS CSS 1단계 정리, D) — 원래 settings.css의
+   .settings-toggle과 alertView/settings.html 인라인 <style>의 .toggle이 트랙/썸 크기·색·
+   트랜지션까지 완전히 같은 걸 각자 화면에 복붙해 두고 있었다("팀원이 아직 공용 토글 컴포넌트가
+   없어서"라는 원래 주석 그대로). :focus-visible 아웃라인은 settings.css 쪽에만 있던 걸 살렸다
+   — alertView 쪽도 접근성이 더 좋아짐. 감싸는 행 마크업(.list-menu-item--toggle, .toggle-row)은
+   화면마다 달라서 그대로 두고, 스위치 자체만 공용화한다. */
+.switch { position: relative; display: inline-block; width: 44px; height: 26px; flex: none; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch__track { position: absolute; inset: 0; background: var(--c-line); border-radius: 999px; transition: background .15s ease; }
+.switch__track::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  background: var(--c-surface); border-radius: 50%; transition: transform .15s ease;
+}
+.switch input:checked ~ .switch__track { background: var(--c-primary); }
+.switch input:checked ~ .switch__track::before { transform: translateX(18px); }
+.switch input:focus-visible ~ .switch__track { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
 /* ---------------- Tabs (탭 전환) ----------------
    강노은: 원래 supportView/home.html(고객센터)에만 있던 페이지 전용 스타일이었는데, 가게 상세
    페이지(정보/상품/리뷰)에도 똑같은 탭이 필요해져서 공용으로 옮겼다(위 review-upload/support-empty와
