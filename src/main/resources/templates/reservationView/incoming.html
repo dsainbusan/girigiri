@@ -48,12 +48,12 @@
 	</div>
 
 	<!-- 새 주문 / 픽업 대기중 탭 토글 -->
-	<div class="stat-toggle-tabs" role="tablist" style="margin-bottom:var(--s-3)">
-		<button type="button" role="tab" class="stat-toggle-tab is-active" data-target="panel-new-orders" id="tab-new-orders" aria-selected="true">
+	<div class="seg-tabs" role="tablist" style="margin-bottom:var(--s-3)">
+		<button type="button" role="tab" class="seg-tab is-active" data-target="panel-new-orders" id="tab-new-orders" aria-selected="true">
 			새 주문
 			<span th:if="${!#lists.isEmpty(incoming)}" class="tab-badge tab-badge--accent" th:text="${#lists.size(incoming)}">0</span>
 		</button>
-		<button type="button" role="tab" class="stat-toggle-tab" data-target="panel-waiting-pickup" id="tab-waiting-pickup" aria-selected="false">
+		<button type="button" role="tab" class="seg-tab" data-target="panel-waiting-pickup" id="tab-waiting-pickup" aria-selected="false">
 			픽업 대기중
 			<span th:if="${!#lists.isEmpty(ready)}" class="tab-badge tab-badge--primary" th:text="${#lists.size(ready)}">0</span>
 		</button>
@@ -194,9 +194,10 @@
 
 	<script th:inline="none">
 	(function () {
-		// 새 주문 / 픽업 대기중 탭 토글
-		document.querySelectorAll('.stat-toggle-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.stat-toggle-tab'));
+		// 새 주문 / 픽업 대기중 탭 토글 (2026-09-24 — .stat-toggle-tabs에서 .seg-tabs로 통합,
+		// WBS CSS 1단계 정리 B)
+		document.querySelectorAll('.seg-tabs').forEach(function (group) {
+			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
 			var panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);

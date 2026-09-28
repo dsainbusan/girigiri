@@ -414,6 +414,56 @@
 }
 .tab.is-active { color: var(--c-text); border-color: var(--c-text); }
 
+/* ---------------- Segment tabs (알약형 세그먼트 토글) ----------------
+   2026-09-17 리스킨 — 카드 밖 페이지에 바로 놓여서 background(--c-bg)가 크림이 된 뒤로
+   .app__main과 같은 색이라 안 보였다 — 네이비 톤 테두리 추가.
+   2026-09-24 components.css로 이동 (원래 ledger.css의 .seg-tabs/.seg-tab, store.css의
+   .stat-toggle-tabs/.stat-toggle-tab과 값이 거의 동일해서 하나로 통합 — WBS CSS 1단계 정리).
+   store.css의 .stat-toggle-tab__dot(알림 점)처럼 한쪽에만 있던 부가 요소는 그 도메인 파일에
+   그대로 남아있다. */
+.seg-tabs {
+  display: flex; background: var(--c-bg); padding: 3px; border-radius: var(--r-md);
+  margin: var(--s-4) 0 var(--s-3); gap: 3px;
+  border: 1px solid var(--c-primary-border);
+}
+.seg-tab {
+  flex: 1; border: none; background: none; padding: 7px 0;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-mut);
+  border-radius: var(--r-sm); cursor: pointer; transition: all .15s ease; text-align: center;
+}
+.seg-tab:hover { color: var(--c-text); }
+.seg-tab.is-active { background: var(--c-surface); color: var(--c-primary); box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+
+/* 탭 안에서 또 나뉘는 하위 토글(예: "뱃지" 탭 안의 뱃지 도감/랭킹 전환). 같은 .seg-tabs
+   메커니즘을 그대로 재사용하되, 화면 최상단 주 탭과 헷갈리지 않게 더 작고 옅은 톤으로. */
+.seg-tabs--sub {
+  background: var(--c-bg);
+  padding: 2px;
+  margin: var(--s-4) 0 var(--s-3);
+}
+.seg-tabs--sub .seg-tab { padding: 6px 0; font-size: 12px; }
+
+/* 밑줄 스타일 하위 토글 (2026-09-17) — 현황/상세 토글(pill) 바로 아래 내역/분석/목표/뱃지 탭이
+   똑같은 pill 스타일이라 토글 2개가 겹쳐 보인다는 피드백. 배경/모서리를 없애고 밑줄로만 활성
+   상태를 표시해 상위 토글과 시각적으로 구분한다. */
+.seg-tabs--underline {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--c-line);
+  gap: 0;
+}
+.seg-tabs--underline .seg-tab {
+  border-radius: 0;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+}
+.seg-tabs--underline .seg-tab.is-active {
+  background: none;
+  box-shadow: none;
+  border-bottom-color: var(--c-primary);
+}
+
 /* ---------------- Modal (2026-09-16, 공용으로 승격) ----------------
    원래 reservationView/checkout.html 전용이었던 확인 팝업 스타일 — 네이티브 confirm()/alert()를
    앱 톤 모달로 바꾸면서(디자인 리팩토링 2차), common/layout.html의 공용 모달(#girigiri-modal)이
