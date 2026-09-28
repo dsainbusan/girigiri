@@ -130,12 +130,12 @@ BEM(`.block__element--modifier`), 상태는 `.is-*`. 오너: 송보미.
 |---|---|---|---|
 | 아이콘 | `.icon` (18px, fill currentColor), `.icon--dim` | — | `<svg class="icon"><use href="#i-bell"/></svg>` |
 | 버튼 | `.btn` | `--block` `--accent` `--danger` `--dark` `--outline` `--ghost` `--sm` · 소셜 `--kakao` `--google` `--line` `--naver` | 네이비 + 크림 글자, `--r-md`, 15×20px, black. `--accent`/`--danger` 글자는 `--c-text`. 화면(섹션)당 채움 버튼 하나 |
-| 카드 | `.card` | `--flat` `--shadow` · `.is-disabled`(reservation) | 흰 바탕, `--c-line-weak` 테두리, `--r-lg` |
+| 카드 | `.card` | `--flat` `--shadow` `.is-disabled` | 흰 바탕, `--c-line-weak` 테두리, `--r-lg` |
 | 칩 | `.chip`, `.chip-row` | `.is-active` | 카테고리 필터, 가로 스크롤 |
-| 배지 | `.badge` | `--discount`/`--accent`(주황) `--success`(네이비) `--info` `--danger` · `--muted`(reservation) | 배경 `-weak` + 글자 `-strong`. 실패는 `--danger`, 할인만 주황 |
+| 배지 | `.badge` | `--discount`/`--accent`(주황) `--success`(네이비) `--info` `--danger` `--muted` | 배경 `-weak` + 글자 `-strong`. 실패는 `--danger`, 할인만 주황 |
 | 가격 | `.price`, `__orig`, `__sale` | — | 판매가가 카드의 유일한 black |
-| 가게 카드 | `.store-card` + `__thumb __body __top __name __meta __like __left` | `__like.is-liked`, `__left.is-urgent`, `.is-blocked`(home) | 임박 빨강은 백엔드가 `urgent`로 판정했을 때만. 찜 버튼 히트영역 42px |
-| 배너 | `.banner`, `__title`, `__desc` | `--info` · `--danger`(reservation) | 크림 틴트 + 네이비 테두리 |
+| 가게 카드 | `.store-card` + `__thumb __body __top __name __meta __like __left` | `__like.is-liked`, `__left.is-urgent`, `.is-blocked` | 임박 빨강은 백엔드가 `urgent`로 판정했을 때만. 찜 버튼 히트영역 42px |
+| 배너 | `.banner`, `__title`, `__desc` | `--info` `--danger` | 크림 틴트 + 네이비 테두리 |
 | 지표 카드 | `.stat-grid`, `.stat-card` + `__label __value __delta` | — | 2열 |
 | 진행 막대 | `.progress`, `__bar` | `__bar.is-near`/`.is-achieved`(ledger), `.progress--xs`(ledger) | |
 | 섹션 제목 | `.section-title`, `__count` | — | fs-lg black, 개수는 주황 |
@@ -147,7 +147,9 @@ BEM(`.block__element--modifier`), 상태는 `.is-*`. 오너: 송보미.
 | 썸네일 대체 | `.thumb-placeholder` | — | 4:3 |
 | 별점 입력 | `.star-input` | — | 라디오 + ★, 채움 주황 |
 | 사진 업로드 | `.review-upload` + `__input __badge __text __choose __preview(-img) __filename __remove`, `.review-upload-hint` | `.is-dragover` | 동작은 app.js |
-| 탭 | `.tabs`, `.tab` | `.is-active` | 동작은 app.js `[data-tabs]` |
+| 탭 (밑줄) | `.tabs`, `.tab` | `.is-active`, `.tabs--primary`(활성 색 `--c-primary` + 패딩/굵기 변형 — 마이페이지 예약 목록 전용) | 동작은 app.js `[data-tabs]` (서버 렌더링 링크 탭은 `th:classappend`로 직접 처리) |
+| 탭 (세그먼트) | `.seg-tabs`, `.seg-tab` | `.is-active`, `--sub`(작은 하위 토글), `--underline`(밑줄형 하위 토글) | 알약형. 2026-09-24 ledger.css `.seg-tabs`/store.css `.stat-toggle-tabs` 통합. `.stat-toggle-tab__dot`(알림 점)는 store.css에 그대로 |
+| 토글 스위치 | `.switch`, `.switch__track` | `input:checked`, `input:focus-visible` | 44×26px. 2026-09-24 settings.css `.settings-toggle` + alertView 인라인 `.toggle` 통합 |
 | 모달 | `.modal-overlay`, `.modal-box` + `__icon(--neutral) __title __desc __actions __field` | — | 네이티브 `confirm()/alert()/prompt()` 대신 공용 `#girigiri-modal` |
 
 ### 레이아웃 (`layout.css`)
@@ -173,18 +175,19 @@ BEM(`.block__element--modifier`), 상태는 `.is-*`. 오너: 송보미.
 | 파일 | 담당 | 화면 | 주요 클래스 |
 |---|---|---|---|
 | `auth.css` | — | 로그인/가입 | `.oauth-btn(__ico)` 소셜 버튼 아이콘 위치, `.oauth-or` 구분선, `.oauth-email` |
-| `home.css` | — | 홈 목록 | `.store-card.is-blocked` (신뢰도 정지 매장 흐리게) |
 | `chat.css` | 송채현 | 마이페이지 챗봇 | `.chat-fab`, `.chat-panel(__header __title __messages __input-row __input __send-btn …)`, `.chat-bubble--bot/--user`, `.chat-quick-reply`, `.chat-typing`, `.chat-escalate-link` |
 | `mypage.css` | 문창호 | 마이페이지 메뉴 | `.list-menu-item(__icon __title __body __desc __value __arrow)`, `--danger` |
-| `settings.css` | 문창호 | 환경설정 | `.settings-section(__title)`, `.settings-card`, `.settings-toggle(__track)`, `.list-menu-item--toggle/--radio`, `.settings-check` |
+| `settings.css` | 문창호 | 환경설정 | `.settings-section(__title)`, `.settings-card`, `.list-menu-item--toggle/--radio`, `.settings-check` |
 | `search.css` | 강노은 | 검색 결과 | `.range-slider(__track __fill)` 듀얼 슬라이더, `.range-inputs(__unit)` |
-| `reservation.css` | — | 예약/체크아웃/QR 픽업 | `.btn:disabled`, `.card.is-disabled`, `.badge--muted`, `.banner--danger`, `.qty-stepper(…)`, `.tab-bar/.tab-item`, `.empty-state`, `.scan-status(.status-loading/-ok/-warn)`, `#cart-list`, `#batch-result-list` |
-| `ledger.css` | 문창호 | 절약 가계부 | `.ledger-hero(…)`, `.ledger-tier-chip`, `.seg-tabs(--sub --underline)/.seg-tab/.seg-panel`, `.ledger-bar-chart(…)`, `.ledger-history-*`, `.ledger-badge-*`(도감·카드·필터), `.ledger-modal-*`(바텀시트), `.ledger-rank-*`, `.ledger-share-card`(SNS 캡처), `.ledger-eco-banner`, `.ledger-explore-nudge` |
-| `store.css` | — | 점주 대시보드·상품·정산·매출 리포트 (2,179줄) | `.dash-hero`, `.dash-stats/.dash-metric/.dash-chart/.dash-legend/.dash-subhead`, `.stat-toggle-tabs(--underline)`, `.donut/.tally`, `.bar-chart`, `.todo-banner`, `.pos-strip/.pos-sim`, `.stock-item/.stock-sheet/.stock-dialog`, `.quick-edit-*/.qe-*`, `.settle-*`(정산서), `.sales-*`(매출 리포트), `.report-*`, `.pagination`(앱 버전) |
-| `marketing.css` | — | 소개 홈 `/` | `.mkt-nav/.mkt-logo(__badge)`, `.mkt-btn(--primary --ghost --sm --block)`, `.mkt-hero/.mkt-eyebrow/.mkt-mock/.mkt-chip`, `.mkt-marquee`(제휴사), `.mkt-section(--tint)`, `.mkt-stats/.mkt-steps`, `.mkt-owner`(점주 CTA), `.mkt-footer` |
+| `reservation.css` | — | 예약/체크아웃/QR 픽업 | `.qty-stepper(…)`, `.empty-state`, `.scan-status(.status-loading/-ok/-warn)`, `#cart-list`, `#batch-result-list`, `#coupon-select:disabled` |
+| `ledger.css` | 문창호 | 절약 가계부 | `.ledger-hero(…)`, `.ledger-tier-chip`, `.seg-panel`(패널 페이드인 — 탭 자체는 components.css `.seg-tabs`), `.ledger-bar-chart(…)`, `.ledger-history-*`, `.ledger-badge-*`(도감·카드·필터), `.ledger-modal-*`(바텀시트), `.ledger-rank-*`, `.ledger-share-card`(SNS 캡처), `.ledger-eco-banner`, `.ledger-explore-nudge` |
+| `store.css` | — | 점주 대시보드·상품·정산·매출 리포트 (2,179줄) | `.dash-hero`, `.dash-stats/.dash-metric/.dash-chart/.dash-legend/.dash-subhead`, `.stat-toggle-tab__dot`(알림 점 — 탭 자체는 components.css `.seg-tabs`), `.stat-panel`(패널 페이드인), `.donut/.tally`, `.bar-chart`, `.todo-banner`, `.pos-strip/.pos-sim`, `.stock-item/.stock-sheet/.stock-dialog`, `.quick-edit-*/.qe-*`, `.settle-*`(정산서), `.sales-*`(매출 리포트), `.report-*`, `.pagination`(앱 버전) |
+| `marketing.css` | — | 소개 홈 `/` | `.mkt-nav/.mkt-logo(__badge)`, `.mkt-btn(--primary --ghost --sm --block)`, `.mkt-hero/.mkt-eyebrow/.mkt-mock/.mkt-chip`, `.mkt-marquee`(제휴사), `.mkt-section(--tint)`, `.mkt-stats/.mkt-steps`, `.mkt-owner`(점주 CTA), `.mkt-footer`. 같은 화면에 `liquid-glass.css`(상단 네비 굴절 유리 효과), `reveal-words.css`(스크롤 리빌), `faq.css`(FAQ 섹션, 프래그먼트는 `common/faq.html`)도 같이 로드 |
+
+> `home.css`는 2026-09-24 삭제됨 — 유일한 규칙 `.store-card.is-blocked`가 components.css로 이동 (WBS CSS 1단계 정리 A).
 
 ### 반복되는 패턴 (새로 만들 때 이걸 재사용)
-- **세그먼트 토글**: 앱 전반은 `.seg-tabs`(ledger)와 `.stat-toggle-tabs`(store)가 같은 역할. 상위 토글은 알약, 하위 토글은 `--underline`(밑줄)로 구분한다.
+- **세그먼트 토글**: 알약형은 components.css의 `.seg-tabs`/`.seg-tab`(2026-09-24 이전엔 ledger `.seg-tabs`와 store `.stat-toggle-tabs`로 중복돼 있었음, WBS CSS 1단계 정리 B로 통합) 하나로 공용화됨. 상위 토글은 알약, 하위 토글은 `--underline`(밑줄)로 구분한다.
 - **바텀시트 모달**: `.ledger-modal-overlay/.ledger-modal-sheet`, store의 `.stock-sheet`/`.quick-edit-panel`. 모바일은 아래에서 올라오고, 600px 이상은 가운데 모달. 애니메이션 `cubic-bezier(0.16, 1, 0.3, 1)` 0.2~0.25s.
 - **클릭 가능한 카드 표시**: 모바일이라 hover만으로는 부족하다 → 오른쪽 `›` 화살표(`.ledger-hero__chevron`, `.list-row__arrow`)를 함께 붙인다.
 - **hover 효과**: 흐리게(opacity) 하지 말고 흰 배경 + 그림자로 살짝 뜨게.
@@ -271,9 +274,20 @@ Subscrr 레퍼런스에서 가져온 추가 규칙. **기존 색 값은 그대�
 - `.dash-hero` 그라데이션(store.css) → [6. 다크 존](#6-다크-존--알약-추가-예정--아직-코드에-없음)의 `--zone-bg` 단색으로 대체 후보 (미정리, 점주 도메인).
 
 ### 중복 (승격 후보)
-- [ ] `.btn:disabled`가 `reservation.css`에만 있다 → 모든 화면의 비활성 버튼에 필요 → `components.css`로.
-- [ ] `.badge--muted`, `.banner--danger`(reservation) → 다른 화면에서도 쓰면 `components.css`로.
-- [ ] 탭 3종: `.tabs/.tab`(공통) · `.tab-bar/.tab-item`(reservation) · `.seg-tabs`(ledger) · `.stat-toggle-tabs`(store) → 밑줄 탭 1종 + 알약 세그먼트 1종으로 정리.
+
+**1단계 완료 (2026-09-24, WBS CSS 정리 A~D, `refactor/css-common-phase1` → `dev` 병합됨)**
+- [x] A. `.btn:disabled`/`.card.is-disabled`/`.badge--muted`/`.banner--danger`(원래 reservation.css 전용) → `components.css`로 이동, 모든 화면에 공통 적용. `.store-card.is-blocked`(원래 home.css, 파일 자체를 삭제)도 같이 이동 — 부수 효과로 `searchView/results.html`의 정지 매장 표시 버그도 같이 고쳐짐.
+- [x] B. 세그먼트 탭(알약형): `.seg-tabs`(ledger) + `.stat-toggle-tabs`(store, 거의 동일한 값)를 `components.css`의 `.seg-tabs` 하나로 통합. `.stat-toggle-tab__dot`(store 전용 알림 점)만 store.css에 남음.
+- [x] C. 밑줄 탭: `.tabs/.tab`(공통) + `.tab-bar/.tab-item`(reservation, 활성 색만 `--c-primary`로 달랐음)을 `.tabs`/`.tabs--primary`(변형)로 통합.
+- [x] D. 토글 스위치: `.settings-toggle`(settings.css) + `alertView/settings.html` 인라인 `.toggle` → `components.css`의 `.switch`로 통합. `:focus-visible`이 없던 alertView 쪽 접근성도 개선됨.
+
+**2단계 후보 (아직 안 함)**
 - [ ] 빈 상태 3종: `.support-empty`(공통) · `.empty-state`(reservation) · `.ledger-empty` → `.support-empty`로 통일.
-- [ ] 토글 스위치: `.settings-toggle`(settings)과 `alertView/settings.html` 인라인 스타일이 복제 → 세 번째가 생기면 공통화.
 - [ ] 목록 행: `.list-row`(공통) vs `.list-menu-item`(mypage) — 용도 구분을 이 문서에 적거나 하나로.
+- [ ] 탭 패널 페이드인: `.seg-panel`(ledger, `@keyframes ledgerFadeIn`) vs `.stat-panel`(store, `@keyframes fadeIn`) — 구조·타이밍 동일, 키프레임 이름만 다름. 1단계 B에서 탭 자체(`.seg-tabs`)는 합쳤지만 패널은 범위 밖이라 남겨둠.
+- [ ] 바텀시트 모달: `.ledger-modal-overlay/.ledger-modal-sheet`(ledger) vs `.stock-sheet`/`.quick-edit-panel`(store) — 이 문서 "반복되는 패턴"에 이미 기록돼 있던 중복, 아직 미착수.
+- [ ] 스코프 오버라이드 전수조사: 1단계 B에서 `store.css`의 `.dash-stats__tabs .stat-toggle-tab`처럼 공용 클래스를 감싸는 화면별 스코프 규칙이 하나 발견돼서 `.seg-tab`으로 같이 고쳤다. 이런 패턴(`.어떤화면 .공용클래스 { ... }`)이 다른 화면에도 더 있을 수 있어서 2단계 착수 전에 전수 검색 필요.
+- [ ] 하드코딩 색 정리는 이번 1단계 범위 밖 — `store.css`(점주 대시보드)는 아직 미정리 상태 그대로. `components.css`/`layout.css`/`ledger.css`/`reservation.css`는 이미 별도 세션에서 정리됨(위 "토큰 대신 하드코딩된 값" 표 참고).
+
+**혼동 주의 (이름은 비슷하지만 다른 것 — 합치지 말 것)**
+- `components.css`의 `.btn:disabled`(실제 `<button disabled>` 속성 기반, 1단계에서 이동)와 `store.css`의 `.btn.is-disabled`(진짜 버튼이 아니라 `<span>`을 비활성 버튼처럼 보이게 하는 클래스 기반 스타일) — 메커니즘이 완전히 달라서 같은 `disabled` 이름이지만 통합 대상 아님.
