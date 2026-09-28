@@ -42,22 +42,16 @@
 		변경됨 (2026-09-16, 매장 신뢰도 자동 정지) — 왜: 정지된 매장은 버튼만 막고 수량/쿠폰/금액은
 		멀쩡히 조작되는 게 이상하다는 채채 피드백으로, storeBlocked면 이 스테퍼·쿠폰·금액 카드
 		셋 다 th:disabled로 실제 조작을 막고 .is-disabled로 시각적으로도 흐리게 처리한다(soldOut처럼
-		카드 자체를 숨기지는 않는다 — 상품 정보/예정 금액은 참고로 계속 보여준다). -->
-	<div class="card qty-stepper" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
-		<span class="u-sub">예약 수량</span>
-		<div class="qty-stepper__control">
-			<button type="button" class="qty-stepper__btn" id="qty-minus" aria-label="수량 감소" th:disabled="${storeBlocked}">−</button>
-			<!-- 변경됨 (2026-08-24) — 왜: 원래 +/- 버튼으로만 수량을 바꿀 수 있었는데, 숫자를 직접 타이핑해서
-				바꾸고 싶다는 요청으로 span 대신 number input으로 바꿨다. 타이핑 중간 상태(예: 지우고 다시
-				입력)에서 매번 범위를 강제로 맞추면 입력이 튕기니, 실제 보정은 change/blur 시점에만
-				한다(아래 스크립트의 commitTypedValue 참고) — +/- 버튼은 그대로 즉시 반영된다. -->
-			<input type="number" class="qty-stepper__value" id="qty-value" th:value="${quantity}"
-				   inputmode="numeric" min="1" th:max="${remainingQuantity}" aria-label="예약 수량 직접 입력" th:disabled="${storeBlocked}">
-			<button type="button" class="qty-stepper__btn" id="qty-plus" aria-label="수량 증가" th:disabled="${storeBlocked}">+</button>
-		</div>
+		카드 자체를 숨기지는 않는다 — 상품 정보/예정 금액은 참고로 계속 보여준다).
+		수정됨 (2026-09-28, 채채 확인 — 수량 이중 선택 UX 문제) — 왜: 이 스테퍼는 원래 상품 상세
+		페이지(productView/detail.html)에서 고른 수량이 이 화면까지 안 넘어오던 버그 때문에 여기서라도
+		직접 고칠 수 있게 만든 임시 방편이었다. 그 버그를 상세 페이지 쪽에서 고쳐서(#reserve-quantity
+		DOMContentLoaded 수정) 이제 상세에서 고른 수량이 정상적으로 넘어오는데, 그러면 이 화면에서
+		또 +/- 로 고르게 하는 건 "같은 걸 두 번 고르는" 느낌이라 혼란스럽다는 피드백. +/- 조작 UI는
+		없애고, 상세 페이지에서 고른 수량을 그대로 텍스트로만 보여주도록 바꿨다. -->
+	<div class="card" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
+		<p class="u-sub">예약 수량: <strong th:text="${quantity}">1</strong>개</p>
 	</div>
-	<!-- 최대 수량에 닿았을 때만 보이는 안내 문구. 평소엔 숨겨져 있다 -->
-	<p id="qty-max-hint" class="u-mut u-center" th:unless="${soldOut}" style="display:none; font-size:var(--fs-xs); margin-top:var(--s-1)">최대 수량이에요</p>
 
 	<!-- 추가됨 (2026-09-07, 채채 확인 — 체크아웃 쿠폰 연동, WBS "할인코드 적용/검증") — 왜: 지금까지는
 		쿠폰을 "받기"만 할 수 있고 실제 결제에서 쓸 방법이 없었다. 지금 이 회원이 쓸 수 있는(미사용+
@@ -78,8 +72,26 @@
 		<p class="text-muted text-muted--sm" th:if="${#lists.isEmpty(usableCoupons)}" style="margin-top:var(--s-1)">지금 쓸 수 있는 쿠폰이 없어요.</p>
 	</div>
 
+	<!-- 수정됨 (2026-09-28, 채채 확인 — 계산 과정을 한 줄로 몰아넣으니 좁은 화면에서 줄바꿈되고
+		오히려 안 읽힌다는 피드백) — 왜: "12,800원 − 1,280원(쿠폰 할인) = 11,520원"처럼 가로로 한
+		문장에 다 넣으면 모바일 폭에서 중간에 끊겨 보인다. 영수증처럼 항목별로 한 줄씩 세로로
+		나열하는 구조(상품 금액 / 쿠폰 할인(있을 때만) / 결제 예정 금액)로 바꿨다. 쿠폰 할인액
+		(coupon-discount-display)은 여전히 쿠폰 선택 바로 밑에도 따로 있다(2026-09-22 UI/UX 감사,
+		선택 즉시 피드백용) — 이 카드의 쿠폰 할인 줄(discount-row)은 그 값을 최종 결제 예정 금액
+		바로 위에서 한 번 더, 이번엔 "계산 과정"으로 보여주는 역할이라 겹쳐도 의도적으로 둔다. -->
 	<div class="card" th:unless="${soldOut}" th:classappend="${storeBlocked} ? ' is-disabled' : ''" style="margin-top:var(--s-3)">
-		<p class="u-sub">결제 예정 금액: <strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong></p>
+		<div class="u-row" style="justify-content:space-between">
+			<span class="u-sub">상품 금액</span>
+			<span id="subtotal-price-display" th:text="${#numbers.formatInteger(discountedPrice * quantity, 0, 'COMMA')} + '원'">12,800원</span>
+		</div>
+		<div class="u-row" id="discount-row" style="justify-content:space-between;margin-top:var(--s-1);display:none">
+			<span class="u-sub">쿠폰 할인</span>
+			<span id="discount-price-display">-0원</span>
+		</div>
+		<div class="u-row" style="justify-content:space-between;margin-top:var(--s-2)">
+			<span class="u-sub">결제 예정 금액</span>
+			<strong id="total-price-display" th:text="${totalPrice} + '원'">3000원</strong>
+		</div>
 	</div>
 
 	<!--
@@ -307,21 +319,21 @@
 		}
 
 		var soldOut = /*[[${soldOut}]]*/ false;
-		if (soldOut) { return; }   // 품절이면 스테퍼 자체가 화면에 없으니 아무것도 안 한다
+		if (soldOut) { return; }   // 품절이면 이 아래 카드들 자체가 화면에 없으니 아무것도 안 한다
 
-		var max = /*[[${remainingQuantity}]]*/ 1;
-		var unitPrice = /*[[${discountedPrice}]]*/ 0;
+		// 수정됨 (2026-09-28, 채채 확인 — 수량 이중 선택 UX 문제) — 왜: 수량은 더 이상 이 화면에서
+		// 조작하지 않는다(상세 페이지에서 고른 값을 hidden input(qty-hidden-input)에 그대로 담아
+		// 서버가 넘겨준 ${quantity}로 고정). 그래서 qty는 이제 쿠폰 선택에 따른 결제 예정 금액
+		// 미리보기 계산에만 쓰이고, +/- 버튼·직접입력·수량 clamp 로직은 전부 지웠다.
 		var qty = /*[[${quantity}]]*/ 1;
-		if (max < 1) { max = 1; }
-		if (qty > max) { qty = max; }
-		if (qty < 1) { qty = 1; }
-
-		var valueEl = document.getElementById('qty-value');
-		var minusBtn = document.getElementById('qty-minus');
-		var plusBtn = document.getElementById('qty-plus');
+		var unitPrice = /*[[${discountedPrice}]]*/ 0;
 		var totalEl = document.getElementById('total-price-display');
-		var hiddenInput = document.getElementById('qty-hidden-input');
-		var maxHint = document.getElementById('qty-max-hint');
+		// 수정됨 (2026-09-28, 채채 확인 — 세로 영수증 형태로 변경) — "쿠폰 할인" 줄 자체를 있을 때만
+		// 보여주고(display none/flex 토글), 값은 discount-price-display에 넣는다. subtotal-price-display
+		// ("상품 금액")는 쿠폰과 무관하게 항상 같은 값이라 Thymeleaf가 이미 서버에서 렌더링해뒀고
+		// JS에서 따로 갱신하지 않는다.
+		var discountRowEl = document.getElementById('discount-row');
+		var discountPriceEl = document.getElementById('discount-price-display');
 		// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 화면 표시용 할인 미리보기 계산에만 쓴다.
 		// 실제 최종 결제금액은 이 값을 그대로 믿지 않고 /reservation/prepare에서 서버가 다시 계산해서
 		// 확정한다(위 startPayment 참고) — 여기서 discountRate를 조작해도 실제 결제금액엔 영향 없다.
@@ -336,12 +348,19 @@
 		}
 
 		function render() {
-			valueEl.value = qty;
 			var subtotal = unitPrice * qty;
 			var rate = selectedCouponRate();
 			var discountAmount = Math.floor(subtotal * rate / 100);
 			var finalTotal = Math.max(subtotal - discountAmount, 0);
 			totalEl.textContent = finalTotal.toLocaleString() + '원';
+			if (discountRowEl && discountPriceEl) {
+				if (rate > 0) {
+					discountPriceEl.textContent = '-' + discountAmount.toLocaleString() + '원';
+					discountRowEl.style.display = 'flex';
+				} else {
+					discountRowEl.style.display = 'none';
+				}
+			}
 			if (couponDiscountEl) {
 				if (rate > 0) {
 					couponDiscountEl.textContent = '쿠폰 할인 -' + discountAmount.toLocaleString() + '원 적용';
@@ -350,43 +369,11 @@
 					couponDiscountEl.style.display = 'none';
 				}
 			}
-			hiddenInput.value = qty;
-			minusBtn.disabled = (qty <= 1);
-			plusBtn.disabled = (qty >= max);
-			maxHint.style.display = (qty >= max) ? 'block' : 'none';
 		}
 
 		if (couponSelectEl) {
 			couponSelectEl.addEventListener('change', render);
 		}
-
-		minusBtn.addEventListener('click', function () {
-			if (qty > 1) { qty -= 1; render(); }
-		});
-		plusBtn.addEventListener('click', function () {
-			if (qty < max) { qty += 1; render(); }
-		});
-
-		// 추가됨 (2026-08-24) — 왜: 숫자를 직접 타이핑해서 수량을 바꾸고 싶다는 요청. 입력 중(input
-		// 이벤트)엔 매번 범위를 강제로 맞추지 않는다 — 예를 들어 "12"를 입력하려고 "1"을 지우는
-		// 순간 빈 문자열이 되는데, 그때마다 1로 되돌려버리면 두 자리 숫자를 아예 입력할 수 없게 된다.
-		// 실제 보정(1~남은수량 범위로 clamp)은 change/blur 시점, 즉 입력을 끝낸 순간에만 한다.
-		// (서버는 이미 재고 이상 예약 시 OutOfStockException으로 한 번 더 막고 있어서, 여기서는
-		// UI상 남은 수량을 넘지 않게만 막아주면 된다 — 위 qty-stepper 스테퍼 버튼과 동일한 원칙.)
-		function commitTypedValue() {
-			var typed = parseInt(valueEl.value, 10);
-			if (isNaN(typed) || typed < 1) { typed = 1; }
-			if (typed > max) { typed = max; }
-			qty = typed;
-			render();
-		}
-		valueEl.addEventListener('change', commitTypedValue);
-		valueEl.addEventListener('blur', commitTypedValue);
-		valueEl.addEventListener('keydown', function (e) {
-			if (e.key === 'Enter') {
-				valueEl.blur();   // 엔터 치면 바로 확정되게 (blur가 commitTypedValue를 실행시킨다)
-			}
-		});
 
 		render();
 	});

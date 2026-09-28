@@ -59,10 +59,15 @@
 			품절된 상품이에요.
 		</p>
 
+		<!-- 수정됨 (2026-09-28, 채채 확인 — 절약 금액이 수량 늘려도 그대로) — 왜: 총 결제 금액은
+			수량 반영하도록 고쳤는데, 이 절약 배너(savedAmount)는 여전히 상품 1개 기준 절약액
+			(originalPrice - discountedPrice)에 고정돼 있었다. 수량을 늘리면 절약 금액도 그만큼
+			늘어나는 게 맞아서, id를 달아 아래 스크립트의 render()에서 "1개당 절약액 × 수량"으로
+			다시 계산하도록 고쳤다. -->
 		<div class="banner" style="margin-top:14px" th:if="${savedAmount} > 0">
 			<svg class="icon" style="width:16px;height:16px"><use href="#i-money"/></svg>
 			<div class="u-grow">
-				<div class="banner__title" th:text="'이 상품으로 ' + ${#numbers.formatInteger(savedAmount, 0, 'COMMA')} + '원 절약해요'">이 상품으로 6,100원 절약해요</div>
+				<div class="banner__title" id="saved-amount-display" th:text="'이 상품으로 ' + ${#numbers.formatInteger(savedAmount, 0, 'COMMA')} + '원 절약해요'">이 상품으로 6,100원 절약해요</div>
 			</div>
 		</div>
 
@@ -71,12 +76,33 @@
 
 	<script th:inline="javascript">
 		/*<![CDATA[*/
-		(function () {
+		// 수정됨 (2026-09-28, 채채 확인 — 예약 수량 미반영 버그) — 왜: 이 스크립트가 있는 #content(main)가
+		// 실제 화면에서 하단 고정 액션바(#actionbar, quantity hidden input인 #reserve-quantity가 들어있는
+		// 곳)보다 먼저 그려진다(common/layout.html 구조상 main -> actionbar 순서, checkout.html 스크립트의
+		// 동일한 주석 참고). 즉시실행함수(IIFE)로 스크립트를 바로 실행하면 아직 actionbar가 렌더링되기 전이라
+		// document.getElementById('reserve-quantity')가 null을 반환했다 — 그래서 스테퍼로 수량을 3으로
+		// 올려도 화면 숫자(qty-val)만 바뀌고 실제 제출되는 hidden input 값은 계속 1로 남아있었고, 그
+		// 1이 그대로 다음 화면(예약 확인)까지 넘어가 수량이 초기화된 것처럼 보였다. DOMContentLoaded로
+		// 감싸서 actionbar까지 다 그려진 뒤에 엘리먼트를 찾도록 고쳤다.
+		//
+		// 추가됨 (2026-09-28, 채채 확인 — 총 결제 금액 미반영) — 왜: 위 버그를 고치고 나니, 수량을
+		// 스테퍼로 늘려도 액션바의 "총 결제 금액"이 상품 1개 단가(product.discountedPrice)에 그대로
+		// 고정돼 있는 게 눈에 띄었다 — hidden input 값(qtyInput)만 갱신하고 화면에 보이는 금액은
+		// 갱신하는 코드가 아예 없었다. unitPrice * qty로 다시 계산해서 #total-price-display에
+		// 반영하도록 추가했다(체크아웃 페이지의 결제 예정 금액 계산과 같은 방식).
+		document.addEventListener('DOMContentLoaded', function () {
 			var remaining = /*[[${product.remainingQuantity}]]*/ 1;
+			var unitPrice = /*[[${product.discountedPrice}]]*/ 0;
+			// 추가됨 (2026-09-28, 채채 확인 — 절약 금액이 수량 늘려도 그대로) — 상품 1개당 절약액
+			// (정가 − 할인가). savedAmount 모델 값과 같은 계산이지만, 여기선 수량을 곱해야 해서
+			// 단가 자체를 따로 받아둔다.
+			var savedPerUnit = /*[[${product.originalPrice - product.discountedPrice}]]*/ 0;
 			var qtyVal = document.getElementById('qty-val');
 			var qtyInput = document.getElementById('reserve-quantity');
 			var minusBtn = document.getElementById('qty-minus');
 			var plusBtn = document.getElementById('qty-plus');
+			var totalEl = document.getElementById('total-price-display');
+			var savedEl = document.getElementById('saved-amount-display');
 			var qty = 1;
 
 			// 강노은: 품절이면 수량 스테퍼 자체가 화면에 없다(위 th:if 참고) — null 가드.
@@ -85,6 +111,8 @@
 			function render() {
 				qtyVal.textContent = qty;
 				if (qtyInput) qtyInput.value = qty;
+				if (totalEl) totalEl.textContent = (unitPrice * qty).toLocaleString() + '원';
+				if (savedEl) savedEl.textContent = '이 상품으로 ' + (savedPerUnit * qty).toLocaleString() + '원 절약해요';
 			}
 
 			minusBtn.addEventListener('click', function () {
@@ -93,7 +121,7 @@
 			plusBtn.addEventListener('click', function () {
 				if (qty < remaining) { qty++; render(); }
 			});
-		})();
+		});
 		/*]]>*/
 	</script>
 </div>
@@ -101,7 +129,7 @@
 <div id="actionbar" th:fragment="actionbar" class="bottom-cta">
 	<div class="bottom-cta__price">
 		<small>총 결제 금액</small>
-		<strong th:text="${product.discountedPrice} + '원'">5,900원</strong>
+		<strong id="total-price-display" th:text="${product.discountedPrice} + '원'">5,900원</strong>
 	</div>
 	<!--/* 강노은: 품절(재고 0)이면 "예약하기" 자체를 비활성화한다 — 서버(ReservationService)도
 	     OutOfStockException으로 막아주긴 하지만, 눌러보기 전에 화면에서 바로 알 수 있어야 한다. */-->
