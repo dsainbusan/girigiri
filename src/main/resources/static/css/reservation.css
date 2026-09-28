@@ -69,28 +69,8 @@
 	margin: 0;
 }
 
-/* 탭바 (마이페이지 예약 목록: 진행중/픽업완료/노쇼·취소) */
-.tab-bar {
-	display: flex;
-	border-bottom: 1px solid var(--c-line);
-	margin-bottom: var(--s-3);
-}
-
-.tab-item {
-	flex: 1;
-	text-align: center;
-	padding: var(--s-3) 0;
-	font-size: var(--fs-sm);
-	color: var(--c-text-mut);
-	text-decoration: none;
-	border-bottom: 2px solid transparent;
-}
-
-.tab-item.active {
-	color: var(--c-primary);
-	font-weight: var(--fw-bold);
-	border-bottom-color: var(--c-primary);
-}
+/* .tab-bar/.tab-item(마이페이지 예약 목록 탭)는 2026-09-24 components.css로 이동해서
+   .tabs/.tabs--primary/.tab로 통합됨 (WBS CSS 1단계 정리, C). */
 
 /* 빈 목록 안내 문구 */
 .empty-state {

@@ -413,6 +413,13 @@
   background: none; border-top: none; border-left: none; border-right: none;
 }
 .tab.is-active { color: var(--c-text); border-color: var(--c-text); }
+/* --primary 변형 (2026-09-24 components.css로 이동, 원래 reservation.css의 .tab-bar/.tab-item —
+   WBS CSS 1단계 정리 C). 마이페이지 예약 목록(진행중/픽업완료/노쇼·취소)은 활성 색이 --c-primary
+   (네이비)라 기본 .tab(--c-text, 검정)과 달랐다. 겉모습을 그대로 유지하려고 색만이 아니라
+   패딩·기본 굵기·바깥 여백까지 원래 .tab-item 값으로 덮어쓴다. */
+.tabs--primary { margin-bottom: var(--s-3); }
+.tabs--primary .tab { padding: var(--s-3) 0; font-weight: var(--fw-regular); }
+.tabs--primary .tab.is-active { color: var(--c-primary); border-color: var(--c-primary); font-weight: var(--fw-bold); }
 
 /* ---------------- Segment tabs (알약형 세그먼트 토글) ----------------
    2026-09-17 리스킨 — 카드 밖 페이지에 바로 놓여서 background(--c-bg)가 크림이 된 뒤로
