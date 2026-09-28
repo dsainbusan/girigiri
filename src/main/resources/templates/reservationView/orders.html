@@ -83,8 +83,10 @@
 		<p class="order-log__cancel" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
 	</div>
 
-	<!-- 페이지네이션 (2026-09-28) — 예약이 쌓이면 스크롤이 끝없이 길어진다는 피드백. 1페이지뿐이면
-	     굳이 안 보여준다. 번호는 고정폭(420px)에 맞춰 컨트롤러가 잘라준 윈도우만 그린다. -->
+	<!-- 페이지네이션 (2026-09-28, 2026-09-28 앱 최대폭 420→600px 변경에 맞춰 문구 갱신) — 예약이
+	     쌓이면 스크롤이 끝없이 길어진다는 피드백. 1페이지뿐이면 굳이 안 보여준다. 번호는 앱 최대폭
+	     (var(--app-max))에 맞춰 컨트롤러가 잘라준 윈도우만 그린다(ReservationIncomingController
+	     .LIST_PAGE_WINDOW). -->
 	<div class="pagination" th:if="${totalPages > 1}">
 		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/reservation/orders(page=${page - 1})}">&lsaquo;</a>
 		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"

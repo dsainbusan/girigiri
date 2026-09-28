@@ -46,13 +46,16 @@ public class ReservationIncomingController {
 	// 추가됨 (2026-09-28) — 목록이 수십 건 쌓이면 한 화면에 다 나와서 스크롤이 끝없이 길어진다는
 	// 피드백. 카드 한 장이 꽤 큰 편이라 리뷰 관리(StoreReviewService.PAGE_SIZE)와 같은 5개로 잡는다.
 	private static final int LIST_PAGE_SIZE = 5;
-	private static final int LIST_PAGE_WINDOW = 5;
+	private static final int LIST_PAGE_WINDOW = 7;
 
 	/**
 	 * 목록 화면 공통 페이징 — 화면에 뿌릴 page/totalPages/번호 윈도우를 model에 담고, 범위를
 	 * 보정한 현재 페이지를 돌려준다(호출부에서 PaginationUtil.paginate에 그대로 넘기면 된다).
-	 * 번호 윈도우: 고정폭 420px라 페이지가 열 개를 넘으면 번호를 전부 나열할 수 없어 현재 페이지
-	 * 주변 5개만 그린다.
+	 * 번호 윈도우: 앱 최대폭(var(--app-max))이 페이지가 열 개를 넘으면 번호를 전부 나열할 수
+	 * 없을 만큼은 좁아서 현재 페이지 주변 몇 개만 그린다. (2026-09-28 — 앱 최대폭을 420→600px로
+	 * 넓히면서 한 줄에 더 들어갈 여유가 생겨 5개→7개로 늘림. .pagination 항목(store.css)이
+	 * min-width 32px+gap 4px라 화살표 2개+숫자 7개 기준 약 248px로, 600px 컨테이너(좌우 패딩
+	 * 제외 시 약 568px 가용폭)에 여유 있게 들어간다.)
 	 */
 	private int applyPaging(Model model, int page, int totalItems) {
 		int totalPages = PaginationUtil.totalPages(totalItems, LIST_PAGE_SIZE);
