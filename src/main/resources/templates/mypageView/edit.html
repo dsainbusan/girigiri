@@ -87,7 +87,7 @@
 		<div class="field" style="margin-top: var(--s-4);">
 			<label class="field__label" for="phone">휴대폰 번호 <span class="u-mut">(선택)</span></label>
 			<input class="input" type="tel" id="phone" name="phone" inputmode="numeric"
-			       th:value="${user?.phone}" placeholder="010-1234-5678" maxlength="13"
+			       th:value="${user?.phone}" placeholder="01012345678" maxlength="13"
 			       pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}">
 		</div>
 
@@ -175,26 +175,40 @@
 			</a>
 		</div>
 
-		<!-- Case 3: 점주 승인이 완료된 경우 -->
+		<!-- Case 3: 점주 승인이 완료된 경우 — 변경됨 (2026-09-28) — 이모지(✅) + 텍스트 한 줄뿐이라
+		     Case 1/2(아이콘 뱃지+CTA 버튼)에 비해 성의 없어 보인다는 피드백으로 아이콘 뱃지+매장명
+		     정보 줄+CTA 버튼 구조로 개선. 처음엔 아이콘 사각형과 매장명 줄을 각각 흰 박스로 따로
+		     띄웠는데, 흰 박스 두 개가 따로 놀아서 붕 떠 보인다는 재피드백으로 하나의 흰 카드 안에
+		     제목 줄 + 점선 구분선 + 매장명 줄을 담는 구조로 합쳤다(order-ticket__head의 점선 구분과
+		     같은 톤). 아이콘도 별도 배경 없이 색만 입혀서 흰 면적을 줄였다. -->
 		<div th:if="${store != null and store.approvalStatus == 'APPROVED'}">
-			<div class="u-row" style="gap: var(--s-2);">
-				<span style="font-size: 20px;">✅</span>
-				<h3 style="font-size: var(--fs-md); color: var(--c-primary);">점주 승인 완료</h3>
+			<div style="background: var(--c-surface); border: 1px solid var(--c-line-weak); border-radius: var(--r-lg); padding: var(--s-3) var(--s-4);">
+				<div class="u-row" style="gap: 8px; align-items: center;">
+					<svg class="icon" style="width:20px;height:20px; color: var(--c-primary); flex-shrink:0;"><use href="#i-check-circle"/></svg>
+					<h3 style="font-size: var(--fs-md);">점주 승인 완료</h3>
+				</div>
+				<div class="u-row" style="gap: 6px; align-items:center; margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--c-line-weak);">
+					<svg class="icon" style="width:14px;height:14px; color: var(--c-text-mut); flex-shrink:0;"><use href="#i-storefront"/></svg>
+					<span class="u-sub" style="font-size: var(--fs-xs); flex-shrink:0;">등록 매장</span>
+					<strong style="font-size: var(--fs-sm); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" th:text="${store.storeName}">매장명</strong>
+				</div>
 			</div>
-			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px;">
-				등록 매장: <strong th:text="${store.storeName}">매장명</strong>
-			</p>
+			<a th:href="@{/store/edit}" class="btn btn--block btn--outline btn--sm" style="margin-top: var(--s-3);">
+				매장 정보 관리 &rsaquo;
+			</a>
 		</div>
 	</div>
 
-	<!-- 회원 탈퇴 — 변경됨 (2026-09-27) — 밑줄 텍스트 링크라 너무 작고 눈에 안 띄었다. 위 "연결 해제"와
-	     같은 outline 버튼 톤으로 올리되(danger 색), block/full-width는 아니라서 실수로 누르기 쉬운
-	     주요 액션처럼 보이진 않는다 — 눈에는 띄지만 그램플 대비 "가장 큰 버튼"까지는 안 되게. -->
+	<!-- 회원 탈퇴 — 변경됨 (2026-09-28) — outline(테두리만) 톤은 "실수로 누르기 쉬운 주요 액션처럼
+	     보이지 않게" 일부러 낮춘 것이었는데(2026-09-27), 재검토 결과 이 버튼은 클릭 즉시 탈퇴되는 게
+	     아니라 확인 모달(#withdraw-choice-modal 또는 data-confirm)을 한 번 더 거치는 구조라, 트리거
+	     버튼 자체를 흐릿하게 둘 필요가 없었다 — 오히려 "여기부터는 위험한 영역"이라는 신호를 명확히
+	     주는 쪽이 신중한 클릭을 유도한다. 확인 모달의 .btn--danger(진한 빨강 배경 + 크림 텍스트)와
+	     같은 톤으로 통일. -->
 	<div style="margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--c-line-weak); text-align: center;">
 		<!-- 복수 계정 연동 중일 때: 스마트 분기 모달 트리거 -->
 		<div th:if="${canUnlink}">
-			<button type="button" id="btn-open-withdraw-choice" class="btn btn--outline btn--sm"
-			        style="color: var(--c-danger); border-color: var(--c-danger);">
+			<button type="button" id="btn-open-withdraw-choice" class="btn btn--danger btn--sm">
 				회원 탈퇴
 			</button>
 		</div>
@@ -204,8 +218,7 @@
 		<form th:unless="${canUnlink}" th:action="@{/mypage/withdraw}" method="post"
 		      data-confirm="정말 탈퇴하시겠어요? 계정 정보가 모두 삭제되며 되돌릴 수 없습니다."
 		      data-confirm-icon="i-trash">
-			<button type="submit" class="btn btn--outline btn--sm"
-			        style="color: var(--c-danger); border-color: var(--c-danger);">
+			<button type="submit" class="btn btn--danger btn--sm">
 				회원 탈퇴
 			</button>
 		</form>

@@ -10,6 +10,7 @@ import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
+import net.dsa.girigiri.util.PaginationUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,6 +43,29 @@ public class ReservationIncomingController {
 	private final LookupService lookupService;
 	private final StoreAccessService storeAccessService;
 
+	// 추가됨 (2026-09-28) — 목록이 수십 건 쌓이면 한 화면에 다 나와서 스크롤이 끝없이 길어진다는
+	// 피드백. 카드 한 장이 꽤 큰 편이라 리뷰 관리(StoreReviewService.PAGE_SIZE)와 같은 5개로 잡는다.
+	private static final int LIST_PAGE_SIZE = 5;
+	private static final int LIST_PAGE_WINDOW = 5;
+
+	/**
+	 * 목록 화면 공통 페이징 — 화면에 뿌릴 page/totalPages/번호 윈도우를 model에 담고, 범위를
+	 * 보정한 현재 페이지를 돌려준다(호출부에서 PaginationUtil.paginate에 그대로 넘기면 된다).
+	 * 번호 윈도우: 고정폭 420px라 페이지가 열 개를 넘으면 번호를 전부 나열할 수 없어 현재 페이지
+	 * 주변 5개만 그린다.
+	 */
+	private int applyPaging(Model model, int page, int totalItems) {
+		int totalPages = PaginationUtil.totalPages(totalItems, LIST_PAGE_SIZE);
+		int safePage = Math.max(0, Math.min(page, totalPages - 1));
+		int windowStart = Math.max(0, Math.min(safePage - 2, totalPages - LIST_PAGE_WINDOW));
+
+		model.addAttribute("page", safePage);
+		model.addAttribute("totalPages", totalPages);
+		model.addAttribute("pageWindowStart", windowStart);
+		model.addAttribute("pageWindowEnd", Math.min(totalPages - 1, windowStart + LIST_PAGE_WINDOW - 1));
+		return safePage;
+	}
+
 	private Long resolveCurrentStoreId(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		return storeAccessService.getMyStore(userId).getId();
@@ -73,6 +97,7 @@ public class ReservationIncomingController {
 	public String completed(@RequestParam(required = false) String date,
 	                        @RequestParam(required = false) String from,
 	                        @RequestParam(required = false) String to,
+	                        @RequestParam(defaultValue = "0") int page,
 	                        HttpSession session, Model model) {
 		LocalDate d = parseLocalDate(date);
 		LocalTime f = parseLocalTime(from);
@@ -81,9 +106,13 @@ public class ReservationIncomingController {
 		List<ReservationCompletedItemDto> items =
 				reservationService.getCompletedTransactions(resolveCurrentStoreId(session), d, f, t);
 
-		// 날짜별 그룹 (서비스가 pickedAt DESC로 넘겨줘서 최신 날짜가 먼저 들어온다)
+		// 건수·합계는 필터에 걸린 전체 기준이고, 목록만 페이지 단위로 자른다.
+		int safePage = applyPaging(model, page, items.size());
+
+		// 날짜별 그룹 (서비스가 pickedAt DESC로 넘겨줘서 최신 날짜가 먼저 들어온다). 이미 정렬된
+		// 리스트를 자른 뒤에 묶으므로 페이지 안에서도 날짜 순서가 그대로 유지된다.
 		Map<String, List<ReservationCompletedItemDto>> groups = new LinkedHashMap<>();
-		for (ReservationCompletedItemDto it : items) {
+		for (ReservationCompletedItemDto it : PaginationUtil.paginate(items, safePage, LIST_PAGE_SIZE)) {
 			groups.computeIfAbsent(it.pickedDate(), k -> new ArrayList<>()).add(it);
 		}
 
@@ -104,10 +133,12 @@ public class ReservationIncomingController {
 	 * (ReservationService.getOrdersForStore)을 그대로 재사용한다.
 	 */
 	@GetMapping("/orders")
-	public String orders(HttpSession session, Model model) {
+	public String orders(@RequestParam(defaultValue = "0") int page, HttpSession session, Model model) {
 		Long storeId = resolveCurrentStoreId(session);
 		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(storeId);
-		model.addAttribute("orders", orders);
+
+		int safePage = applyPaging(model, page, orders.size());
+		model.addAttribute("orders", PaginationUtil.paginate(orders, safePage, LIST_PAGE_SIZE));
 		model.addAttribute("totalCount", orders.size());
 		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(storeId));
 		return "reservationView/orders";

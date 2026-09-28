@@ -45,9 +45,16 @@ public class StoreReviewService {
 	// 추가. 카드 하나가 답글 폼까지 포함해 꽤 크므로(테이블 행이 아니다) 슈퍼어드민 목록(10개)보다
 	// 작게 5개로 잡는다.
 	private static final int PAGE_SIZE = 5;
+	// 추가됨 (2026-09-28) — 왜: 번호를 1..N 전부 그리던 탓에 9페이지(리뷰 41건)부터 페이지네이션 바가
+	// 고정폭 420px를 가로로 넘쳤다(실측 9페이지 386px > 380px). 현재 페이지 주변 5개만 그린다.
+	private static final int PAGE_WINDOW = 5;
 
-	/** 화면에 그대로 넘기는 한 페이지 분량 — items(이번 페이지 리뷰)/page(0-base 현재 페이지)/totalPages. */
-	public record PagedReviews(List<ReviewRowDto> items, int page, int totalPages) {}
+	/**
+	 * 화면에 그대로 넘기는 한 페이지 분량 — items(이번 페이지 리뷰)/page(0-base 현재 페이지)/totalPages,
+	 * 그리고 번호 버튼으로 그릴 구간(windowStart..windowEnd, 둘 다 0-base 포함).
+	 */
+	public record PagedReviews(List<ReviewRowDto> items, int page, int totalPages,
+	                           int windowStart, int windowEnd) {}
 
 	/**
 	 * 이미 다 불러온 리뷰 목록(ReviewService.getReviews, 강노은 담당)을 페이지 단위로 자른다.
@@ -60,7 +67,9 @@ public class StoreReviewService {
 		int from = safePage * PAGE_SIZE;
 		int to = Math.min(from + PAGE_SIZE, all.size());
 		List<ReviewRowDto> items = from >= all.size() ? List.of() : all.subList(from, to);
-		return new PagedReviews(items, safePage, totalPages);
+		int windowStart = Math.max(0, Math.min(safePage - 2, totalPages - PAGE_WINDOW));
+		int windowEnd = Math.min(totalPages - 1, windowStart + PAGE_WINDOW - 1);
+		return new PagedReviews(items, safePage, totalPages, windowStart, windowEnd);
 	}
 
 	@Transactional

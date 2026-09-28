@@ -44,8 +44,11 @@ public class EmailUserPrincipal implements UserDetails, UserPrincipal {
 	// 경로 어디서도 이 값을 안 읽고 있었음). DaoAuthenticationProvider는 인증 성공 판정 전에
 	// isEnabled()를 확인해서 false면 DisabledException을 던지고 formLogin의 failureUrl로 보낸다 —
 	// Spring Security의 표준 훅이라 여기 하나만 고치면 이메일 로그인 경로는 해결된다.
+	// 변경됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — 왜: 탈퇴 시 users 로우가 바로
+	// 지워지지 않고 deletedAt만 채워지므로, 정지 계정과 같은 방식(isEnabled=false)으로 탈퇴 계정의
+	// 이메일 로그인도 막아야 한다. 소셜 로그인 쪽은 SocialUserProvisioningService에서 동일하게 처리.
 	@Override
 	public boolean isEnabled() {
-		return !UserEntity.STATUS_SUSPENDED.equals(user.getStatus());
+		return !UserEntity.STATUS_SUSPENDED.equals(user.getStatus()) && user.getDeletedAt() == null;
 	}
 }

@@ -111,7 +111,7 @@
 	     굳이 안 보여준다. -->
 	<div class="pagination" th:if="${totalPages > 1}">
 		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/store/reviews(page=${page - 1})}">&lsaquo;</a>
-		<a th:each="p : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${p == page} ? ' is-active'"
+		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}" th:classappend="${p == page} ? ' is-active'"
 		   th:text="${p + 1}" th:href="@{/store/reviews(page=${p})}"></a>
 		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/store/reviews(page=${page + 1})}">&rsaquo;</a>
 	</div>

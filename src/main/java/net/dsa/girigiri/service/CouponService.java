@@ -138,6 +138,7 @@ public class CouponService {
 	public void markUsed(Long couponId) {
 		couponRepository.findById(couponId).ifPresent(coupon -> {
 			coupon.setUsed(true);
+			coupon.setUsedAt(LocalDateTime.now());
 			couponRepository.save(coupon);
 		});
 	}
@@ -158,6 +159,7 @@ public class CouponService {
 		couponRepository.findById(couponId).ifPresentOrElse(
 				coupon -> {
 					coupon.setUsed(false);
+					coupon.setUsedAt(null);
 					couponRepository.save(coupon);
 				},
 				() -> log.warn("> [CouponService] 복구하려는 쿠폰을 찾을 수 없어요 - couponId={}", couponId)

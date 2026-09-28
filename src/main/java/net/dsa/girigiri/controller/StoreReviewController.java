@@ -45,6 +45,8 @@ public class StoreReviewController {
 		model.addAttribute("reviews", paged.items());
 		model.addAttribute("page", paged.page());
 		model.addAttribute("totalPages", paged.totalPages());
+		model.addAttribute("pageWindowStart", paged.windowStart());
+		model.addAttribute("pageWindowEnd", paged.windowEnd());
 		model.addAttribute("averageRating", reviewService.getAverageRating(store.getId()));
 		model.addAttribute("reviewCount", reviewService.getReviewCount(store.getId()));
 		// 리뷰 작성자 닉네임을 누르면 보여줄 간단 정보(뱃지·가입기간·이 매장 방문 횟수). 민감정보

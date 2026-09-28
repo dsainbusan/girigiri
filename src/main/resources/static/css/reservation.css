@@ -836,11 +836,13 @@
 .order-ticket:hover {
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
-.order-ticket--ready {
-	border-left: 4px solid var(--c-primary);
-}
+/* 변경됨 (2026-09-28) — 왜: 새 주문(--incoming)만 --c-accent(주황)를 썼는데, 이 색은 이미 이
+   앱에서 "마감임박/할인" 의미로 쓰이는 색이라(tokens.css) 여기서 갑자기 나오면 혼동을 준다.
+   게다가 새 주문/픽업대기중은 탭으로 나뉘어 절대 동시에 화면에 안 뜨므로(stat-panel 토글) 테두리
+   색으로 구분해줄 필요 자체가 없었다 — 그냥 둘 다 네이비로 통일. */
+.order-ticket--ready,
 .order-ticket--incoming {
-	border-left: 4px solid var(--c-accent);
+	border-left: 4px solid var(--c-primary);
 }
 .order-ticket__head {
 	display: flex;
@@ -1062,6 +1064,209 @@
 	font-size: var(--fs-xs);
 	color: var(--c-text-mut);
 	line-height: 1.4;
+}
+
+/* =====================================================================
+   전체 예약 (reservation/orders.html) 전용 스타일 — 2026-09-28 UI 개편
+   ---------------------------------------------------------------------
+   왜: 한 카드 안에 "주문자: / 결제 금액: / 픽업 코드:" 가 전부 <strong> 붙은 채로
+   줄간격 없이 5줄 쌓여 있어서 숨막힌다는 피드백. 조회 전용 화면이라 incoming의
+   .order-ticket(액션 버튼 포함)과는 목적이 달라 별도 클래스로 둔다.
+   방침: (1) 라벨은 흐리게·값만 읽히게 해서 굵기 대비를 만들고, (2) 라벨/값을 좌우로
+   갈라 카드 가운데에 여백을 내고, (3) 금액 한 줄만 강조하고 나머지는 톤을 낮춘다.
+   ===================================================================== */
+
+/* 상단 요약 카드 */
+.orders-summary {
+	background: var(--c-surface);
+	border: 1px solid var(--c-line-weak);
+	border-radius: var(--r-xl);
+	padding: var(--s-4) var(--s-5);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+.orders-summary__top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--s-3);
+}
+.orders-summary__label {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-medium);
+	color: var(--c-text-sub);
+	letter-spacing: -0.01em;
+}
+.orders-summary__count {
+	font-size: var(--fs-xl);
+	font-weight: var(--fw-black);
+	color: var(--c-text);
+	letter-spacing: -0.03em;
+	white-space: nowrap;
+}
+.orders-summary__count-unit {
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+	margin-left: 1px;
+}
+.orders-summary__meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: var(--s-3);
+	padding-top: var(--s-3);
+	border-top: 1px dashed var(--c-line-weak);
+	font-size: var(--fs-xs);
+	color: var(--c-text-mut-strong);
+}
+/* 요약 줄에서 숫자만 눈에 띄게 (취소율 · 합계 금액) */
+.orders-summary__em {
+	font-weight: var(--fw-bold);
+	color: var(--c-primary);
+}
+.orders-summary__em--warn {
+	color: var(--c-danger-strong);
+}
+
+/* 예약 한 건 카드 */
+.order-log {
+	background: var(--c-surface);
+	border: 1px solid var(--c-line-weak);
+	border-radius: var(--r-xl);
+	padding: var(--s-4) var(--s-5);
+	margin-top: var(--s-3);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+	transition: box-shadow 0.2s ease;
+}
+.order-log:hover {
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.order-log__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-2);
+	margin-bottom: 10px;
+}
+.order-log__time {
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	color: var(--c-text-mut-strong);
+	letter-spacing: -0.01em;
+}
+.order-log__title-row {
+	display: flex;
+	align-items: baseline;
+	gap: var(--s-2);
+}
+.order-log__product {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	line-height: 1.4;
+	letter-spacing: -0.02em;
+	word-break: keep-all;
+}
+.order-log__qty {
+	flex-shrink: 0;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-sub);
+	background: var(--c-bg);
+	padding: 2px 9px;
+	border-radius: var(--r-pill);
+	white-space: nowrap;
+}
+
+/* 금액 — 이 카드에서 유일하게 굵게 강조하는 줄 */
+.order-log__price-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--s-3);
+	margin-top: 10px;
+}
+.order-log__key {
+	flex-shrink: 0;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	color: var(--c-text-mut-strong);
+	letter-spacing: -0.01em;
+}
+.order-log__price {
+	font-size: var(--fs-md);
+	font-weight: var(--fw-bold);
+	color: var(--c-text);
+	letter-spacing: -0.02em;
+	white-space: nowrap;
+}
+
+/* 하단: 주문자 · 픽업 코드 — 참고 정보라 톤을 한 단계 낮춘다 */
+.order-log__foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--s-3);
+	margin-top: var(--s-3);
+	padding-top: 10px;
+	border-top: 1px dashed var(--c-line-weak);
+}
+.order-log__buyer {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	font-size: var(--fs-xs);
+	color: var(--c-text-sub);
+}
+.order-log__buyer .icon {
+	width: 13px;
+	height: 13px;
+	flex-shrink: 0;
+	color: var(--c-text-mut);
+}
+.order-log__buyer-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.order-log__code {
+	flex-shrink: 0;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	color: var(--c-text-mut-strong);
+	letter-spacing: 0.02em;
+}
+/* 날짜 그룹 머리말 (완료된 거래 내역) — 라벨 + 끝까지 이어지는 머리카락선 */
+.order-log-date {
+	display: flex;
+	align-items: center;
+	gap: var(--s-2);
+	margin: var(--s-5) 0 var(--s-1);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-bold);
+	color: var(--c-text-mut-strong);
+	letter-spacing: -0.01em;
+}
+/* 선 색은 --c-line-weak이 아니라 --c-line — 이 머리말만 흰 카드가 아니라 크림색 페이지 배경
+   위에 놓여서, -weak(#F1ECE1)로는 배경(#F6F0E3)과 거의 구분이 안 된다. */
+.order-log-date::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--c-line);
+	opacity: 0.6;
+}
+.order-log__cancel {
+	margin-top: var(--s-3);
+	padding: 8px 12px;
+	border-radius: var(--r-sm);
+	background: var(--c-danger-weak);
+	color: var(--c-danger-strong);
+	font-size: var(--fs-xs);
+	line-height: 1.5;
 }
 
 /* 탭 뱃지 톤 */

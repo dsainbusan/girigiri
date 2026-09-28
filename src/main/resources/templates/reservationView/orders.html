@@ -11,6 +11,7 @@
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
 
 	<!-- 점주 화면(대시보드 또는 예약확인)으로 뒤로가기 -->
 	<script th:inline="none">
@@ -28,36 +29,68 @@
 	})();
 	</script>
 
-	<div class="card" style="display:flex; justify-content:space-between; align-items:center">
-		<div>
-			<span class="u-sub">지금까지의 전체 예약</span>
-			<div style="font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 2px;">
-				<th:block th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
-					매장 취소율 <strong th:style="${storeReliability.cancelRatePercent() > 0} ? 'color: var(--c-danger);' : 'color: var(--c-primary);'" th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</strong>
-					<span th:text="'(취소 ' + ${storeReliability.storeCancelledCount()} + '건 / 전체 ' + ${storeReliability.totalReservationCount()} + '건)'">(취소 0건 / 전체 0건)</span>
-				</th:block>
-				<th:block th:if="${storeReliability == null or storeReliability.totalReservationCount() == 0}">
-					매장 취소율 <strong style="color: var(--c-primary);">0%</strong> <span>(취소 이력 없음)</span>
-				</th:block>
-			</div>
+	<div class="orders-summary">
+		<div class="orders-summary__top">
+			<span class="orders-summary__label">지금까지의 전체 예약</span>
+			<span class="orders-summary__count">
+				<span th:text="${totalCount}">0</span><span class="orders-summary__count-unit">건</span>
+			</span>
 		</div>
-		<span class="u-bold" style="font-size: var(--fs-lg);" th:text="${totalCount} + '건'">0건</span>
+		<div class="orders-summary__meta">
+			<th:block th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
+				<span>매장 취소율</span>
+				<span class="orders-summary__em"
+				      th:classappend="${storeReliability.cancelRatePercent() > 0} ? 'orders-summary__em--warn' : ''"
+				      th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+				<span th:text="'· 취소 ' + ${storeReliability.storeCancelledCount()} + '건 / 전체 ' + ${storeReliability.totalReservationCount()} + '건'">· 취소 0건 / 전체 0건</span>
+			</th:block>
+			<th:block th:if="${storeReliability == null or storeReliability.totalReservationCount() == 0}">
+				<span>매장 취소율</span>
+				<span class="orders-summary__em">0%</span>
+				<span>· 취소 이력 없음</span>
+			</th:block>
+		</div>
 	</div>
 
 	<div th:if="${totalCount == 0}" class="empty-state">아직 들어온 예약이 없어요.</div>
 
-	<div class="card" th:each="o : ${orders}" style="margin-top: var(--s-3)">
-		<div class="u-row" style="justify-content:space-between; align-items:flex-start">
-			<h3 th:text="${o.productName} + ' × ' + ${o.quantity} + '개'">식빵 마감세트 × 1개</h3>
+	<div class="order-log" th:each="o : ${orders}">
+		<div class="order-log__head">
+			<span class="order-log__time" th:text="${o.reservedAtDisplay}">08월 21일 15:00</span>
 			<span class="badge"
 			      th:classappend="${o.statusVariant == 'ready' or o.statusVariant == 'done'} ? 'badge--success' : (${o.statusVariant == 'noshow'} ? 'badge--discount' : (${o.statusVariant == 'cancelled'} ? 'badge--muted' : 'badge--info'))"
 			      th:text="${o.statusLabel}">픽업 가능</span>
 		</div>
-		<p class="u-sub">주문자: <strong th:text="${o.buyerName}">닉네임</strong></p>
-		<p class="u-sub">결제 금액: <strong th:text="${#numbers.formatInteger(o.totalPrice, 0, 'COMMA')} + '원'">3,000원</strong></p>
-		<p class="u-sub">픽업 코드: <strong th:text="${o.pickupCode}">PICK-XXXXXXXX</strong></p>
-		<p class="u-sub" style="font-size: var(--fs-xs)">주문 <span th:text="${o.reservedAtDisplay}">08월 21일 15:00</span></p>
-		<p class="u-sub" style="font-size: var(--fs-xs); color: var(--c-danger)" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
+
+		<div class="order-log__title-row">
+			<span class="order-log__product" th:text="${o.productName}">식빵 마감세트</span>
+			<span class="order-log__qty" th:text="${o.quantity} + '개'">1개</span>
+		</div>
+
+		<div class="order-log__price-row">
+			<span class="order-log__key">결제 금액</span>
+			<span class="order-log__price" th:text="${#numbers.formatInteger(o.totalPrice, 0, 'COMMA')} + '원'">3,000원</span>
+		</div>
+
+		<div class="order-log__foot">
+			<span class="order-log__buyer">
+				<svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+				<span class="order-log__buyer-name" th:text="${o.buyerName}">닉네임</span>
+			</span>
+			<span class="order-log__code" th:text="${o.pickupCode}">PICK-XXXXXXXX</span>
+		</div>
+
+		<p class="order-log__cancel" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
+	</div>
+
+	<!-- 페이지네이션 (2026-09-28) — 예약이 쌓이면 스크롤이 끝없이 길어진다는 피드백. 1페이지뿐이면
+	     굳이 안 보여준다. 번호는 고정폭(420px)에 맞춰 컨트롤러가 잘라준 윈도우만 그린다. -->
+	<div class="pagination" th:if="${totalPages > 1}">
+		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/reservation/orders(page=${page - 1})}">&lsaquo;</a>
+		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
+		   th:classappend="${p == page} ? ' is-active'"
+		   th:text="${p + 1}" th:href="@{/reservation/orders(page=${p})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/reservation/orders(page=${page + 1})}">&rsaquo;</a>
 	</div>
 </div>
 </body>

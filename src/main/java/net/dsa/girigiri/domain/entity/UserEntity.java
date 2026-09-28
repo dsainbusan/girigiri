@@ -149,4 +149,17 @@ public class UserEntity {
 	@LastModifiedDate
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
+
+	// 추가됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — 왜: 예전엔 MypageService.withdraw()가
+	// users 로우를 그 자리에서 바로 hard delete했는데, 개인정보보호법상 탈퇴 회원 정보를 즉시
+	// 물리삭제해버리면 나중에 분쟁 대응(전자상거래법상 거래기록 보존)에 필요한 최소 정보조차 못 남긴다.
+	// 그래서 탈퇴 시점엔 이 값만 채우고(= soft delete), 법정 보존기간이 지나면 UserPurgeScheduler가
+	// 실제로 삭제한다. null이면 활성 회원, 값이 있으면 탈퇴 처리된 시각.
+	//
+	// ⚠️ 로그인 경로(SocialUserProvisioningService, EmailUserPrincipal#isEnabled)는 이 값을 확인해서
+	// 탈퇴 회원을 막도록 같이 고쳤다 — 이 필드를 참조하는 새 조회 로직을 추가할 땐 반드시
+	// deletedAt IS NULL(또는 getDeletedAt() == null) 조건을 같이 걸 것. 아직 모든 화면(리뷰 작성자
+	// 표시, 알림 등)을 다 훑진 못했다 — 후속 작업으로 필요.
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
 }

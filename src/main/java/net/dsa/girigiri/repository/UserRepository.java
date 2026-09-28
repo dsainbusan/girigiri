@@ -5,6 +5,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +13,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
 	Optional<UserEntity> findByOauthProviderAndOauthId(String oauthProvider, String oauthId);
+
+	// UserPurgeScheduler 전용 — soft delete(deletedAt)된 지 법정 보존기간이 지난 회원을 실제로
+	// 지우기 위한 대상 조회.
+	List<UserEntity> findByDeletedAtBefore(LocalDateTime cutoff);
 
 	Optional<UserEntity> findFirstByRole(String role);
 

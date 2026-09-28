@@ -2,8 +2,10 @@ package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.domain.entity.UserArchiveEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.UserArchiveRepository;
 import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.PhoneUtil;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +38,7 @@ public class MypageService {
 	private final StoreAccessService storeAccessService;
 	private final PasswordEncoder passwordEncoder;
 	private final UserBadgeRepository userBadgeRepository;
+	private final UserArchiveRepository userArchiveRepository;
 
 	public enum ProfileUpdateResult { SUCCESS, INVALID_NICKNAME, INVALID_PHONE, PHONE_TAKEN }
 
@@ -135,11 +139,43 @@ public class MypageService {
 		return true;
 	}
 
+	/**
+	 * 변경됨 (2026-09-22, 보미 피드백 반영 — soft delete 정책) — 왜: 예전엔 여기서 users 로우를
+	 * 바로 hard delete했는데, 개인정보보호법상 다른 법령(전자상거래법 등)이 요구하는 보존기간 동안은
+	 * 최소한의 식별 정보를 분리보관해야 한다. 이제는 (1) 최소 정보를 user_archive에 남기고
+	 * (2) users 로우 자체는 deletedAt만 채워서 소프트 삭제한다 — 실제 물리 삭제는
+	 * UserPurgeScheduler가 보존기간이 지난 뒤에 처리한다.
+	 *
+	 * user_badge는 여전히 여기서 지운다 — users를 참조하는 FK가 없는 건 예전과 같지만, 지금은
+	 * users 로우 자체가 (소프트 삭제 상태로) 남아있어서 "고아 데이터 방지" 때문이 아니라, 탈퇴 회원의
+	 * 뱃지 기록이 더 이상 어디에도 쓰이지 않는 데이터라 정리 차원에서 지운다.
+	 *
+	 * 추가됨 (2026-09-28, 코드 리뷰 — 문창호) — 왜: soft delete로 users 로우를 그대로 남기면서
+	 * oauth_provider+oauth_id/phone 값도 원본 그대로 둬서, 탈퇴한 사람이 같은 소셜 계정·전화번호로
+	 * 다시 가입하려 하면 findByOauthProviderAndOauthId/existsByPhone이 이 탈퇴 행을 그대로 찾아내
+	 * "이미 가입됨"/"탈퇴한 계정"으로 막아버렸다(실제 DB로 재현 확인함 — 보존기간 5년 내내 재가입
+	 * 불가). 진짜 값은 이미 위에서 user_archive에 남겼으니, users 쪽은 유니크 제약만 피하도록
+	 * oauthId를 이 행 전용 더미값으로 바꾸고 phone은 비운다(uk_users_phone은 NULL 여러 개를 허용).
+	 */
 	@Transactional
 	public void withdraw(Long userId) {
-		// user_badge는 users를 참조하는 FK가 없어서 먼저 지워둔다 — 안 그러면 탈퇴 후에도
-		// 고아 행으로 남아 사라진 유저의 뱃지 기록이 DB에 계속 쌓인다.
+		UserEntity user = userRepository.findById(userId).orElseThrow();
+		LocalDateTime now = LocalDateTime.now();
+
+		userArchiveRepository.save(UserArchiveEntity.builder()
+				.originalUserId(user.getId())
+				.oauthProvider(user.getOauthProvider())
+				.email(user.getEmail())
+				.phone(user.getPhone())
+				.joinedAt(user.getCreatedAt())
+				.withdrawnAt(now)
+				.build());
+
 		userBadgeRepository.deleteByUserId(userId);
-		userRepository.deleteById(userId);
+
+		user.setOauthId("withdrawn_" + user.getId());
+		user.setPhone(null);
+		user.setDeletedAt(now);
+		userRepository.save(user);
 	}
 }
