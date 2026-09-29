@@ -11,14 +11,21 @@
   email 필드가 없어서(전화번호·사업자번호만 있음) 매장 쪽엔 이메일 컬럼을 안 만든다, 이 연락처 컬럼이
   그 역할을 대신한다.
 
-  "관리" 컬럼(예전엔 "액션"): 대기 행엔 승인(SuperAdminController#approveStore) + 수정 + 삭제, 나머지는
-  수정 + 삭제만. 수정은 기존 /superadmin/stores/{id}/edit 화면 재사용. 삭제(SuperAdminController#deleteStore,
+  "관리" 컬럼(예전엔 "액션"): 대기 행엔 승인(SuperAdminStoreController#approveStore) + 반려 + 수정 + 삭제,
+  나머지는 수정 + 삭제만. 수정은 기존 /superadmin/stores/{id}/edit 화면 재사용. 삭제(SuperAdminController#deleteStore,
   신규)는 withdrawMember(회원 강제 탈퇴)와 동일한 가드 — 미완료 예약이 있으면 막고(?deleteError), 통과하면
   그 매장의 상품도 같이 지운다(FK 연관관계 매핑이 없어 고아로 남는 걸 방지).
   수정됨 (2026-09-08, 코드 감사) — 미지급/이월대기 정산(settlement PENDING/CARRIED)이 있어도 삭제를
   막는다(그 돈이 지급 파이프라인에서 사라지는 걸 방지) — 같은 ?deleteError로 안내. 상품 외에
   menu_item/listing_template/likes/review/review_summary/report도 같이 지운다.
-  TODO(송보미): 반려(REJECTED) 액션은 아직 없음 — 필요해지면 승인 버튼 옆에 추가할 것.
+
+  추가됨 (2026-09-29, 담당: 송보미) — 반려(SuperAdminStoreController#rejectStore) 액션 신설. STATUS_REJECTED
+  상수는 findStores()가 목록에서 걸러내는 값으로 이미 있었지만 실제로 그 상태로 만드는 버튼이 없었다
+  (코드 감사에서 발견). 사유는 브라우저 prompt()로 받는다 — 슈퍼어드민은 confirm()만 쓰던 시스템이라
+  (members.html 등) 이 화면에서만 새 UI 패턴(모달 등)을 들여오지 않고 같은 네이티브 다이얼로그로
+  맞췄다. Cancel을 누르면 그대로 중단, OK면 사유가 비어 있어도 반려는 진행된다(사유는 선택 입력 —
+  SuperAdminStoreService#reject 참고). 반려 사유를 DB 컬럼으로 남기지는 않고(스키마 변경 필요 — 팀
+  합의 필요) 신청자에게 알림으로만 전달한다.
 
   매장명 링크가 이제 filter를 같이 실어 보낸다 — "매장 상세의 '← 매장 목록'이 원래 보던 탭(대기 등)
   으로 정확히 돌아가게 해달라"는 요청. SuperAdminController#storeDetail이 받아 모델에 얹고,
@@ -67,7 +74,10 @@
 
   <p class="result-count">매장 <b th:text="${stores.size()}">0</b>곳 조회되었습니다.</p>
 
-  <form id="bulk-form" method="post" th:action="@{/superadmin/stores/bulk-suspend(q=${q}, filter=${filter})}"></form>
+  <!-- 2026-09-29 추가(담당: 송보미) — bulk-reason 히든 필드. members.html과 동일 패턴. -->
+  <form id="bulk-form" method="post" th:action="@{/superadmin/stores/bulk-suspend(q=${q}, filter=${filter})}">
+    <input type="hidden" id="bulk-reason" name="reason">
+  </form>
   <div class="section-row">
     <button class="btn btn--outline-danger btn--sm" type="submit" form="bulk-form"
             th:formaction="@{/superadmin/stores/bulk-suspend(q=${q}, filter=${filter})}">선택 매장 정지</button>
@@ -128,6 +138,11 @@
                   onsubmit="return confirm('이 매장의 입점을 승인할까요? 승인 즉시 손님에게 노출됩니다.')">
               <button class="chip-btn" type="submit">승인</button>
             </form>
+            <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/reject(id=${store.id})}" method="post"
+                  onsubmit="var r = prompt('반려 사유를 입력해 주세요 (비워도 반려는 진행돼요)'); if (r === null) { return false; } this.reason.value = r; return true;">
+              <input type="hidden" name="reason">
+              <button class="chip-btn chip-btn--danger" type="submit">반려</button>
+            </form>
             <a class="chip-btn chip-btn--neutral" th:href="@{/superadmin/stores/{id}/edit(id=${store.id})}">수정</a>
             <form th:action="@{/superadmin/stores/{id}/delete(id=${store.id})}" method="post"
                   onsubmit="return confirm('이 매장을 삭제할까요? 등록된 상품도 함께 삭제되고 되돌릴 수 없어요.')">
@@ -143,12 +158,20 @@
   <script th:inline="none">
     // 추가됨 (2026-09-22, UI/UX 감사) — 개별 행 삭제엔 confirm()이 있는데 피해 범위가 더 큰
     // 일괄 정지엔 없었다. members.html과 동일한 방식 — submitter의 formaction으로 판별.
+    // 변경됨 (2026-09-29, 담당: 송보미) — confirm() 대신 prompt()로 정지 사유를 받아 #bulk-reason에
+    // 채운다(members.html과 동일 이유 — SuperAdminStoreService#bulkSuspend 참고).
     var bulkForm = document.getElementById('bulk-form');
+    var bulkReasonInput = document.getElementById('bulk-reason');
     if (bulkForm) {
       bulkForm.addEventListener('submit', function (e) {
         var action = e.submitter && e.submitter.getAttribute('formaction');
-        if (action && action.indexOf('bulk-suspend') !== -1 && !confirm('선택한 매장을 정지할까요?')) {
-          e.preventDefault();
+        if (action && action.indexOf('bulk-suspend') !== -1) {
+          var r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)');
+          if (r === null) {
+            e.preventDefault();
+            return;
+          }
+          bulkReasonInput.value = r;
         }
       });
     }

@@ -1,6 +1,7 @@
 package net.dsa.girigiri.controller;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.dto.SupportReportsDataDto;
@@ -71,21 +72,25 @@ public class SuperAdminSupportController {
 		return "superAdminView/reports";
 	}
 
+	// 변경됨 (2026-09-29) — 왜: "role=ADMIN인 첫 계정"으로 답변자를 대신하던 스톱갭을 없애고
+	// 세션의 실제 로그인 관리자(userId)를 답변 작성자로 쓴다. SuperAdminAccessInterceptor가
+	// 이미 role=ADMIN을 보장하므로 안전하다.
 	@PostMapping("/inquiries/{id}/reply")
-	public String replyToInquiry(@PathVariable Long id, @RequestParam String content) {
-		supportService.replyToInquiry(id, content);
+	public String replyToInquiry(@PathVariable Long id, @RequestParam String content, HttpSession session) {
+		Long adminId = (Long) session.getAttribute("userId");
+		supportService.replyToInquiry(adminId, id, content);
 		return "redirect:/superadmin/inquiries/" + id;
 	}
 
 	/**
 	 * 문의 목록에서 글을 클릭하면 상세 페이지(작성자/사진/댓글)로 이동한다. 컨슈머용
 	 * inquiryView/detail.html과 같은 InquiryService 메서드를 그대로 재사용한다 — 댓글의 canDelete
-	 * 계산에 필요한 (userId, role)은 replyToInquiry와 동일한 스톱갭(role=ADMIN 첫 계정)을 쓴다.
+	 * 계산에 필요한 (userId, role)은 세션의 실제 로그인 관리자 값을 쓴다(2026-09-29, 스톱갭 제거).
 	 */
 	@GetMapping("/inquiries/{id}")
-	public String inquiryDetail(@PathVariable Long id, Model model) {
+	public String inquiryDetail(@PathVariable Long id, Model model, HttpSession session) {
 		InquiryEntity inquiry = inquiryService.getInquiry(id);
-		Long adminId = supportService.findAdminIdOrNull();
+		Long adminId = (Long) session.getAttribute("userId");
 
 		model.addAttribute("inquiry", inquiry);
 		model.addAttribute("authorName", inquiryService.getAuthorName(inquiry.getUserId()));

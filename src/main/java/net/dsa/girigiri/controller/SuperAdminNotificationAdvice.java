@@ -33,7 +33,10 @@ import java.util.Map;
 		SuperAdminNoticeController.class,
 		SuperAdminSupportController.class,
 		SuperAdminCouponController.class,
-		SuperAdminReservationController.class
+		SuperAdminReservationController.class,
+		// 추가됨 (2026-09-29, 담당: 송보미) — 정산 화면 신설. 위 클래스 주석의 경고(새 컨트롤러
+		// 추가 시 여기도 같이 챙길 것)를 그대로 따름.
+		SuperAdminSettlementController.class
 })
 @RequiredArgsConstructor
 public class SuperAdminNotificationAdvice {

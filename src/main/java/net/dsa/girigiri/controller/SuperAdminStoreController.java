@@ -114,9 +114,10 @@ public class SuperAdminStoreController {
 	 */
 	@PostMapping("/stores/bulk-suspend")
 	public String bulkSuspendStores(@RequestParam(required = false) List<Long> ids,
+	                                 @RequestParam(required = false) String reason,
 	                                 @RequestParam(required = false) String q,
 	                                 @RequestParam(required = false) String filter) {
-		storeService.bulkSuspend(ids);
+		storeService.bulkSuspend(ids, reason);
 		return "redirect:" + buildStoresRedirectUri(q, filter);
 	}
 
@@ -139,6 +140,14 @@ public class SuperAdminStoreController {
 	@PostMapping("/stores/{id}/approve")
 	public String approveStore(@PathVariable Long id) {
 		storeService.approve(id);
+		return "redirect:/superadmin/stores";
+	}
+
+	// 추가됨 (2026-09-29, 담당: 송보미) — 승인 버튼 옆 반려 버튼. reason은 선택 입력(비워도 반려는
+	// 되고, 신청자에게 가는 알림 문구만 달라진다 — SuperAdminStoreService#reject 참고).
+	@PostMapping("/stores/{id}/reject")
+	public String rejectStore(@PathVariable Long id, @RequestParam(required = false) String reason) {
+		storeService.reject(id, reason);
 		return "redirect:/superadmin/stores";
 	}
 

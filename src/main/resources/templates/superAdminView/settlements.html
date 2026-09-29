@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--/*
+  정산 지급. /superadmin/settlements 로 접속. (2026-09-29 신설, 담당: 송보미)
+
+  코드 감사에서 "결제·취소·환불은 보이는데 정산 지급을 확인·대사할 방법이 없다"고 지적된 화면.
+  계산·확정 로직(SettlementBatchService/SettlementService, 문창호 WBS 2.0)은 전혀 건드리지 않고,
+  그 결과(SettlementRepository)를 보여주고 markPaid()만 호출한다 — SettlementBatchService 클래스
+  주석에 이미 "지급 처리 화면은 슈퍼어드민(송보미) 영역"이라고 남겨져 있던 대로다.
+
+  구성:
+  1) 지급 대기(status=PENDING) 목록 — 체크박스로 골라 "선택 건 지급 완료 처리". 은행 기업뱅킹
+     대량이체는 이 화면이 대신 해주지 않는다(범위 밖) — "이체 목록 Excel 다운로드"로 은행 양식에
+     맞는 파일을 받아 직접 이체한 뒤, 이체를 마친 건을 체크해서 지급 완료 처리한다.
+  2) 최근 정산 이력(상태 무관 최근 100건) — 조회 전용, 지급 대기가 아닌 것까지 포함해서 "이 매장
+     정산이 지금 어느 단계인지" 한눈에 확인 가능.
+
+  체크박스+bulk-form 패턴은 members.html/stores.html과 동일 — 표 밖의 빈 <form id="pay-form">에
+  체크박스·메모 입력·제출 버튼이 form="pay-form"으로 연결된다.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('정산', ~{:: #content}, 'settlements', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <p class="text-muted text-muted--sm" th:if="${paidCount != null}" th:text="${paidCount} + '건을 지급 완료로 처리했어요.'">지급 처리 결과</p>
+
+  <form id="pay-form" method="post" th:action="@{/superadmin/settlements/pay}"
+        onsubmit="return confirm('선택한 건을 지급 완료로 표시할까요? 실제 은행 이체는 미리 마쳤어야 해요.')"></form>
+
+  <h3 class="subhead">지급 대기</h3>
+  <div class="toolbar">
+    <p class="result-count result-count--inline">지급 대기 <b th:text="${pending.size()}">0</b>건</p>
+    <div class="toolbar__spacer"></div>
+    <a class="link-action" th:href="@{/superadmin/settlements/export}"><svg class="icon"><use href="#i-download"/></svg>이체 목록 Excel 다운로드</a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:5%"><col><col style="width:18%"><col style="width:13%"><col style="width:13%"><col style="width:11%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
+          <th>매장</th>
+          <th>정산 주간</th>
+          <th>지급액</th>
+          <th>지급 예정일</th>
+          <th>계좌</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(pending)}">
+          <td colspan="6" class="table-empty">지급 대기 중인 정산이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="row : ${pending}"
+            th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
+          <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${row.id}" form="pay-form"></td>
+          <td class="cell-name" th:text="${row.storeName}">매장명</td>
+          <td th:text="${row.periodLabel}">2026-09-01 ~ 2026-09-07</td>
+          <td th:text="'₩' + ${#numbers.formatInteger(row.payout, 0, 'COMMA')}">₩0</td>
+          <td th:text="${#temporals.format(row.scheduledPayoutDate, 'yyyy-MM-dd')}">2026-09-10</td>
+          <td>
+            <span class="badge badge--open" th:if="${row.bankInfoRegistered}">등록됨</span>
+            <span class="badge badge--danger" th:unless="${row.bankInfoRegistered}">미등록</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-row mt-8" th:if="${!#lists.isEmpty(pending)}">
+    <div class="field-group" style="flex:1">
+      <label class="field-group__label" for="transferMemo">이체 확인 메모 (선택)</label>
+      <input class="field" type="text" id="transferMemo" name="memo" form="pay-form" maxlength="200"
+             placeholder="예: 2026-09-29 오전 기업뱅킹 이체 완료">
+    </div>
+    <button class="btn btn--outline-danger btn--sm" type="submit" form="pay-form">선택 건 지급 완료 처리</button>
+  </div>
+
+  <h3 class="subhead mt-24">최근 정산 이력 <span class="text-muted text-muted--sm">(최근 100건, 상태 무관)</span></h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col><col style="width:18%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:18%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>정산 주간</th>
+          <th>지급액</th>
+          <th>상태</th>
+          <th>지급 완료일</th>
+          <th>이체 메모</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(recent)}">
+          <td colspan="6" class="table-empty">정산 이력이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="row : ${recent}"
+            th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
+          <td class="cell-name" th:text="${row.storeName}">매장명</td>
+          <td th:text="${row.periodLabel}">2026-09-01 ~ 2026-09-07</td>
+          <td th:text="'₩' + ${#numbers.formatInteger(row.payout, 0, 'COMMA')}">₩0</td>
+          <td>
+            <span class="badge badge--warning" th:if="${row.status == 'PENDING'}" th:text="${row.statusLabel}">지급 대기</span>
+            <span class="badge badge--success" th:if="${row.status == 'PAID'}" th:text="${row.statusLabel}">지급 완료</span>
+            <span class="badge badge--neutral" th:if="${row.status == 'CARRIED' or row.status == 'ROLLED'}" th:text="${row.statusLabel}">이월</span>
+          </td>
+          <td th:text="${row.paidAt != null} ? ${#temporals.format(row.paidAt, 'yyyy-MM-dd HH:mm')} : '-'">-</td>
+          <td th:text="${row.transferMemo} ?: '-'">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

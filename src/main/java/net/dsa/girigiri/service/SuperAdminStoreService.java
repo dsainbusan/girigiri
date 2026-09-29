@@ -3,6 +3,7 @@ package net.dsa.girigiri.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.StoreRecentStatsDto;
+import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.SettlementEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
@@ -54,6 +55,8 @@ public class SuperAdminStoreService {
 	private final ReviewRepository reviewRepository;
 	private final ReviewSummaryRepository reviewSummaryRepository;
 	private final ReportRepository reportRepository;
+	// 추가됨 (2026-09-29, 담당: 송보미) — reject()에서 반려 사유를 신청자에게 알림으로 전달하는 용도.
+	private final NotificationService notificationService;
 
 	// 변경됨 — 왜: "승인대기/매장목록을 따로 나누지 말고 전체 하나로, 대기 매장은 필터로 보게 해달라"는
 	// 요청 — REJECTED만 빼고 전부 한 리스트로 묶은 뒤, filter=PENDING일 때만 대기 매장으로 좁힌다.
@@ -85,12 +88,27 @@ public class SuperAdminStoreService {
 
 	// 추가됨 (2026-09-08) — 왜: "선택 매장 정지/정지 해제" 요청. SuperAdminMemberService.bulkSuspend/
 	// bulkUnsuspend와 동일한 패턴.
+	// 변경됨 (2026-09-29, 담당: 송보미) — 정지 사유를 매장주에게 알림으로 전달(SuperAdminMemberService와
+	// 동일 이유 — 코드 감사로 사유 입력 부재 확인). owner_id가 없는 매장(이론상)은 조용히 건너뛴다.
 	@Transactional
-	public void bulkSuspend(List<Long> ids) {
+	public void bulkSuspend(List<Long> ids, String reason) {
 		if (ids != null && !ids.isEmpty()) {
 			List<StoreEntity> targets = storeRepository.findAllById(ids);
 			targets.forEach(s -> s.setStatus(StoreEntity.STATUS_SUSPENDED));
 			storeRepository.saveAll(targets);
+
+			String trimmedReason = reason == null ? "" : reason.trim();
+			String message = trimmedReason.isEmpty()
+					? "매장 이용이 정지됐어요. 자세한 사유는 1:1 문의로 확인해 주세요."
+					: "매장 이용이 정지됐어요. 사유: " + trimmedReason;
+			for (StoreEntity store : targets) {
+				if (store.getOwnerId() != null) {
+					// sourceKey 없음 — SuperAdminMemberService#notifySuspended와 같은 이유(정지→해제→
+					// 재정지가 가능해서 id 기준 고정 키로 dedup하면 두 번째 알림이 씹힌다).
+					notificationService.createNotification(store.getOwnerId(), NotificationEntity.TYPE_ACCOUNT_SUSPENDED,
+							message, "/user/support", null);
+				}
+			}
 		}
 	}
 
@@ -126,6 +144,32 @@ public class SuperAdminStoreService {
 			owner.setRole(UserEntity.ROLE_OWNER);
 			userRepository.save(owner);
 		});
+	}
+
+	/**
+	 * 추가됨 (2026-09-29, 담당: 송보미) — 왜: STATUS_REJECTED 상수는 findStores()가 목록에서
+	 * 걸러내는 값으로 이미 있었지만, 실제로 그 상태로 만드는 버튼/흐름이 어디에도 없었다(입점
+	 * 대기 매장을 승인 아니면 방치·삭제밖에 할 수 없었음 — 코드 감사로 확인). 반려 사유를 DB에
+	 * 남기는 컬럼은 아직 없어서(스키마 변경 필요 — 팀 합의 필요) 우선 알림 메시지에 담아
+	 * 신청자에게 바로 전달한다. approve()와 반대로 role은 건드리지 않는다 — 반려된 신청자는
+	 * 애초에 아직 OWNER로 올라간 적이 없다.
+	 */
+	@Transactional
+	public void reject(Long id, String reason) {
+		StoreEntity store = lookupService.getStore(id);
+		store.setApprovalStatus(StoreEntity.STATUS_REJECTED);
+		storeRepository.save(store);
+
+		if (store.getOwnerId() == null) {
+			log.warn("> [SuperAdminStoreService] owner_id가 없는 매장을 반려함 - storeId={}", id);
+			return;
+		}
+		String trimmedReason = reason == null ? "" : reason.trim();
+		String message = trimmedReason.isEmpty()
+				? "입점 신청이 반려됐어요. 자세한 사유는 1:1 문의로 확인해 주세요."
+				: "입점 신청이 반려됐어요. 사유: " + trimmedReason;
+		notificationService.createNotification(store.getOwnerId(), NotificationEntity.TYPE_STORE_REJECTED,
+				message, "/user/support", "store-reject-" + id);
 	}
 
 	@Transactional(readOnly = true)

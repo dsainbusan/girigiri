@@ -1,6 +1,5 @@
 package net.dsa.girigiri.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.SupportReportsDataDto;
 import net.dsa.girigiri.domain.entity.ComplaintEntity;
@@ -87,22 +86,14 @@ public class SuperAdminSupportService {
 	}
 
 	/**
-	 * "답변" 버튼 처리. 슈퍼어드민 세션/식별자가 아직 없어(문창호 role 분리 작업 전) 답변 작성자를
-	 * 특정할 수 없다 — 임시로 role=ADMIN인 첫 계정을 답변자로 쓴다. role 분리가 끝나면 세션의 실제
-	 * 운영자 계정으로 교체할 것.
+	 * "답변" 버튼 처리. 답변 작성자는 컨트롤러가 세션에서 꺼내 넘겨준 실제 로그인 관리자
+	 * (adminId)다 — 2026-09-29, "role=ADMIN인 첫 계정"으로 대신하던 스톱갭 제거.
 	 */
 	@Transactional
-	public void replyToInquiry(Long id, String content) {
+	public void replyToInquiry(Long adminId, Long id, String content) {
 		if (content != null && !content.isBlank()) {
-			UserEntity admin = userRepository.findFirstByRole(UserEntity.ROLE_ADMIN)
-					.orElseThrow(() -> new EntityNotFoundException("운영자 계정을 찾을 수 없습니다."));
-			inquiryService.addComment(admin.getId(), id, content.trim());
+			inquiryService.addComment(adminId, id, content.trim());
 		}
-	}
-
-	@Transactional(readOnly = true)
-	public Long findAdminIdOrNull() {
-		return userRepository.findFirstByRole(UserEntity.ROLE_ADMIN).map(UserEntity::getId).orElse(null);
 	}
 
 	@Transactional(readOnly = true)

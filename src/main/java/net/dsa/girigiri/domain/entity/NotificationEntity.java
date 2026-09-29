@@ -47,6 +47,17 @@ public class NotificationEntity {
 	// (ReservationService#cancelByStore 참고).
 	public static final String TYPE_STORE_CANCEL_COUPON = "STORE_CANCEL_COUPON";   // 매장 취소 보상 쿠폰 지급
 
+	// 추가됨 (송보미, 2026-09-29) — 왜: 슈퍼어드민 매장 입점 반려 기능 신설(SuperAdminStoreService#reject
+	// 참고) — 승인 대기 매장을 반려하면 신청자에게 사유를 알림으로 전달한다. 위 다른 타입들과 동일하게
+	// 스키마 변경 없이 타입 문자열만 추가.
+	public static final String TYPE_STORE_REJECTED = "STORE_REJECTED";            // 입점 신청 반려
+
+	// 추가됨 (송보미, 2026-09-29) — 왜: 회원/매장 정지에 사유 입력이 없어서 당사자가 왜 정지됐는지
+	// 알 방법이 없었다(코드 감사로 확인). 회원 계정 정지(SuperAdminMemberService#suspend)와 매장
+	// 정지(SuperAdminStoreService#bulkSuspend) 둘 다 이 타입 하나를 공유하고, 실제 사유는 message에
+	// 담는다 — 스키마 변경 없이 타입 문자열만 추가.
+	public static final String TYPE_ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED";      // 계정/매장 정지 안내
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
