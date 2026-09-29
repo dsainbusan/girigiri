@@ -8,6 +8,7 @@ import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.ReviewService;
+import net.dsa.girigiri.service.StoreAnnouncementService;
 import net.dsa.girigiri.service.StoreDetailService;
 import net.dsa.girigiri.util.CategoryDisplayUtil;
 import net.dsa.girigiri.util.DiscountRateCalculator;
@@ -34,6 +35,7 @@ public class StoreDetailController {
 	private final LookupService lookupService;
 	private final StoreDetailService storeDetailService;
 	private final ReservationService reservationService;
+	private final StoreAnnouncementService storeAnnouncementService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, HttpSession session, Model model) {
@@ -71,6 +73,8 @@ public class StoreDetailController {
 		// 결제 완료된 주문을 가게 사정으로 얼마나 자주 취소하는지" 참고할 수 있게 보여준다. 새 계산
 		// 로직이 아니라 원래 있던 ReservationService.getStoreCancelStats(매장 취소율) 그대로 재사용.
 		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(id));
+		// 추가됨 (2026-09-29) — 배민 스타일 슬림 띠 배너: 점주가 노출 중으로 지정한 공지 1건만 단정하게 전달한다.
+		model.addAttribute("storeAnnouncements", storeAnnouncementService.getExposedForConsumer(id));
 		return "storeView/detail";
 	}
 

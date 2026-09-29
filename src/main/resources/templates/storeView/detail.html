@@ -49,6 +49,31 @@
 			</span>
 		</div>
 
+		<!-- 📢 매장 공지 아코디언 (2026-09-29 신규) — 배민 스타일의 1줄 콤팩트 띠 배너.
+		     가장 최신 공지 1건만 단정하게 노출하며, 탭하면 그 자리에서 부드럽게 펼쳐져 전체 공지를 읽을 수 있다. -->
+		<details class="store-notice-ticker" th:if="${!#lists.isEmpty(storeAnnouncements)}" th:with="notice=${storeAnnouncements[0]}">
+			<summary class="store-notice-ticker__summary">
+				<svg class="icon store-notice-ticker__ico"><use href="#i-megaphone"/></svg>
+				<span class="store-notice-ticker__text" th:text="${notice.title}">매장 공지 내용입니다.</span>
+				<svg class="icon store-notice-ticker__arrow"><use href="#i-chevron-right"/></svg>
+			</summary>
+			<div class="store-notice-ticker__body">
+				<div class="store-notice-ticker__item">
+					<div class="store-notice-ticker__title-row">
+						<span class="store-notice-ticker__item-title" th:text="${notice.title}">공지 제목</span>
+						<span class="store-notice-ticker__date" th:text="${#temporals.format(notice.createdAt, 'yyyy-MM-dd')}">2026-09-29</span>
+					</div>
+					<p class="store-notice-ticker__content" th:text="${notice.content}">공지 내용</p>
+				</div>
+				<div class="store-notice-ticker__fold">
+					<button type="button" class="store-notice-ticker__fold-btn" onclick="this.closest('details').removeAttribute('open')">
+						접기
+						<svg class="icon" style="width:12px;height:12px;transform:rotate(-90deg)"><use href="#i-chevron-right"/></svg>
+					</button>
+				</div>
+			</div>
+		</details>
+
 		<div class="tabs" data-tabs style="margin-top:var(--s-4)">
 			<button type="button" class="tab" th:classappend="${defaultTab == 'info'} ? ' is-active'" data-tab="info">정보</button>
 			<button type="button" class="tab" th:classappend="${defaultTab == 'product'} ? ' is-active'" data-tab="product">

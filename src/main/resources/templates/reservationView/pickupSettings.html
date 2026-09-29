@@ -77,6 +77,36 @@
 				지나면 오늘은 주문이 마감돼요.</p>
 		</div>
 
+		<!-- 3. 마감 무렵 재고 확인 (2026-09-29 posConnect에서 이전) -->
+		<div class="edit-section-card">
+			<div class="edit-section-card__header">
+				<div class="edit-section-card__title-group">
+					<svg class="icon edit-section-card__icon"><use href="#i-bell"/></svg>
+					<h3 class="edit-section-card__title">마감 무렵 재고 확인</h3>
+				</div>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin: 0">
+				매일 이 시각에 재고를 확인해서 "오늘의 구제"를 물어봐요. <b>마감 1~1.5시간 전을 권장</b>해요.
+			</p>
+			<div id="prompt-time-info" class="info-collapse__full is-hidden">
+				<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 6px; line-height: 1.6">
+					그때 남은 재고가 곧 폐기분이고, 할인율도 그 시각 기준으로 정해져서 더 깊게 잡혀요(자동값 −50%).
+					한 번 올린 상품 가격은 이후 자동으로 안 바뀌어요.<br>
+					<b>마감 10분 전부터는 발행이 닫혀요</b>(손님이 픽업할 시간이 없어서) — 그 안에 [바로 올리기] 하세요.<br>
+					비워 두면 자동 생성을 안 해요.
+				</p>
+			</div>
+			<button type="button" class="info-collapse__toggle" data-info-toggle="prompt-time-info" style="margin-top: 4px">
+				<span>자세히 보기</span>
+				<svg class="icon"><use href="#i-chevron-right"/></svg>
+			</button>
+			<div class="field" style="margin-top: var(--s-3)">
+				<label class="field__label" for="promptTime">알림 시각</label>
+				<input class="input" type="time" id="promptTime" name="promptTime" th:value="${promptTime}">
+				<p class="u-mut" style="font-size:var(--fs-xs); margin-top: 4px">설정한 시각에 마감세일 등록 알림 및 판매 대기 초안이 자동으로 생성돼요.</p>
+			</div>
+		</div>
+
 		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">저장</button>
 	</form>
 
@@ -97,6 +127,16 @@
 			radio.addEventListener('change', updateTimeInputState);
 		});
 		updateTimeInputState();
+
+		// 자세히 보기 접기/펼치기 토글
+		document.querySelectorAll('[data-info-toggle]').forEach(function (btn) {
+			var target = document.getElementById(btn.getAttribute('data-info-toggle'));
+			if (!target) return;
+			btn.addEventListener('click', function () {
+				target.classList.toggle('is-hidden');
+				btn.classList.toggle('is-open');
+			});
+		});
 	})();
 	</script>
 </div>

@@ -78,6 +78,7 @@ public class ReservationSettingsController {
 		model.addAttribute("operatingHours", store.getOperatingHours());
 		model.addAttribute("closingTimeDisplay", closingTime != null ? closingTime.toString() : null);
 		model.addAttribute("pickupTimeMode", pickupTimeMode);
+		model.addAttribute("promptTime", store.getPosDraftPromptTime() != null ? store.getPosDraftPromptTime().toString() : "");
 		return "reservationView/pickupSettings";
 	}
 
@@ -90,11 +91,12 @@ public class ReservationSettingsController {
 	public String saveSettings(@RequestParam int prepTimeMinutes,
 							   @RequestParam(required = false) String lastPickupTime,
 							   @RequestParam(defaultValue = "manual") String pickupTimeMode,
+							   @RequestParam(required = false) String promptTime,
 							   HttpSession session,
 							   RedirectAttributes redirectAttributes) {
 		StoreEntity store = lookupService.getStore(resolveCurrentStoreId(session));
 
-		reservationService.updatePickupSettings(store, prepTimeMinutes, lastPickupTime, pickupTimeMode);
+		reservationService.updatePickupSettings(store, prepTimeMinutes, lastPickupTime, pickupTimeMode, promptTime);
 		redirectAttributes.addFlashAttribute("savedMessage", "주문 마감 설정을 저장했어요.");
 		return "redirect:/reservation/settings";
 	}

@@ -551,3 +551,133 @@
 .modal-box__field {
   width: 100%; text-align: center; margin-bottom: var(--s-4);
 }
+
+/* ---------------- Store Notice Ticker (배민형 매장 공지 아코디언) ----------------
+   2026-09-29 신규 — 매장 상세 상단 1줄 슬림 공지 배너.
+   평소엔 1줄 말줄임(ellipsis) 띠 배너로 공간을 최소화하고,
+   클릭 시 그 자리에서 부드럽게 아코디언처럼 펼쳐져 전체 공지를 읽을 수 있다. */
+.store-notice-ticker {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  margin-top: var(--s-3);
+  padding: 10px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.store-notice-ticker:hover {
+  border-color: var(--c-primary);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .07);
+}
+.store-notice-ticker[open] {
+  border-color: var(--c-primary);
+  box-shadow: 0 3px 12px rgba(15, 23, 42, .08);
+}
+.store-notice-ticker__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.store-notice-ticker__summary::-webkit-details-marker {
+  display: none;
+}
+.store-notice-ticker__summary::marker {
+  display: none;
+}
+.store-notice-ticker__ico {
+  width: 15px;
+  height: 15px;
+  color: var(--c-primary);
+  flex-shrink: 0;
+}
+.store-notice-ticker__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--c-text);
+  line-height: 1.4;
+}
+.store-notice-ticker__badge {
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  color: var(--c-text-mut);
+  background: var(--c-bg);
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+.store-notice-ticker__arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--c-text-mut);
+  flex-shrink: 0;
+  transition: transform .2s ease;
+}
+.store-notice-ticker[open] .store-notice-ticker__arrow {
+  transform: rotate(90deg);
+}
+.store-notice-ticker__body {
+  border-top: 1px solid var(--c-line-weak);
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  animation: noticeFadeIn .2s ease-in-out;
+}
+.store-notice-ticker__item + .store-notice-ticker__item {
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px dashed var(--c-line-weak);
+}
+.store-notice-ticker__item-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+.store-notice-ticker__date {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+  flex-shrink: 0;
+}
+.store-notice-ticker__content {
+  font-size: var(--fs-sm);
+  color: var(--c-text-sub);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 4px 0 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.store-notice-ticker__fold {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--s-3);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--c-line-weak);
+}
+.store-notice-ticker__fold-btn {
+  background: none;
+  border: none;
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.store-notice-ticker__fold-btn:hover {
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+@keyframes noticeFadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

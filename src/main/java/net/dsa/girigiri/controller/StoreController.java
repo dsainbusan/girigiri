@@ -8,6 +8,7 @@ import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.service.StoreAccessService;
+import net.dsa.girigiri.service.StoreAnnouncementService;
 import net.dsa.girigiri.service.StoreService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,7 @@ public class StoreController {
 	private final StoreService storeService;
 	private final ReviewService reviewService;
 	private final ReservationService reservationService;
+	private final StoreAnnouncementService storeAnnouncementService;
 
 	@Value("${kakao.map.js-key}")
 	private String kakaoMapJsKey;
@@ -135,6 +137,9 @@ public class StoreController {
 
 		// 추가됨 (2026-09-27) — 대시보드 "매장 관리" 전체 내역 및 신뢰도 표시용
 		model.addAttribute("storeReliability", store == null ? null : reservationService.getStoreCancelStats(store.getId()));
+
+		// 추가됨 (2026-09-29) — "매장 공지" 메뉴 카드의 등록 개수 표시용
+		model.addAttribute("announcementCount", store == null ? 0 : storeAnnouncementService.countForStore(store.getId()));
 
 		return "storeView/dashboard";
 	}

@@ -557,6 +557,11 @@ public class ReservationService {
 				.filter(n -> n != null && !n.isBlank())
 				.orElse("알 수 없음");
 
+		String dateGroupLabel = r.getReservedAt() != null
+				? r.getReservedAt().format(COMPLETED_DATE_FORMAT)
+				: "날짜 미기록";
+		String pickedAtDisplay = r.getPickedAt() != null ? r.getPickedAt().format(LIST_DISPLAY_FORMAT) : null;
+
 		return new ReservationOrderItemDto(
 				r.getId(),
 				buyerName,
@@ -567,7 +572,11 @@ public class ReservationService {
 				resolveStatusBadge(r),
 				orderStatusVariant(r),
 				r.getReservedAt() != null ? r.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
-				orderCancelInfo(r)
+				orderCancelInfo(r),
+				dateGroupLabel,
+				pickedAtDisplay,
+				r.getReservedAt(),
+				r.getPickedAt()
 		);
 	}
 
@@ -1387,6 +1396,11 @@ public class ReservationService {
 	 */
 	@Transactional
 	public void updatePickupSettings(StoreEntity store, int prepTimeMinutes, String lastPickupTime, String pickupTimeMode) {
+		updatePickupSettings(store, prepTimeMinutes, lastPickupTime, pickupTimeMode, null);
+	}
+
+	@Transactional
+	public void updatePickupSettings(StoreEntity store, int prepTimeMinutes, String lastPickupTime, String pickupTimeMode, String promptTime) {
 		// 방어적으로 최소값 보정 (0/음수/공란 입력 방지) — 준비시간이 0 이하면 픽업 가능 시각 계산이 의미없어진다.
 		store.setPrepTimeMinutes(Math.max(prepTimeMinutes, 1));
 
@@ -1397,6 +1411,10 @@ public class ReservationService {
 			case "close" -> store.setLastPickupTime(parseClosingTimeOrNull(store.getOperatingHours()));
 			default -> store.setLastPickupTime(
 					(lastPickupTime == null || lastPickupTime.isBlank()) ? null : LocalTime.parse(lastPickupTime));
+		}
+
+		if (promptTime != null) {
+			store.setPosDraftPromptTime(promptTime.isBlank() ? null : LocalTime.parse(promptTime.trim()));
 		}
 
 		storeRepository.save(store);

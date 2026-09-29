@@ -1472,11 +1472,11 @@ a.stat-card:hover .stat-card__go--gear {
   margin-bottom: var(--s-4);
 }
 
-/* 카테고리별 3/3/3 그룹 그리드 컨테이너 */
+/* 카테고리별 4/4 (1줄 4개 대칭) 그룹 그리드 컨테이너 */
 .dash-categorized-grid {
   background: var(--c-surface);
   border-radius: 18px;
-  padding: 14px 12px;
+  padding: 16px 12px 14px;
   border: 1px solid var(--c-line-weak);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   margin-bottom: var(--s-4);
@@ -1504,13 +1504,19 @@ a.stat-card:hover .stat-card__go--gear {
 }
 .dash-grid-group__row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+}
+@media (max-width: 520px) {
+  .dash-grid-group__row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 }
 .dash-grid-group__divider {
   height: 1px;
   background: var(--c-line-weak);
-  margin: 12px 0 10px;
+  margin: 14px 0 12px;
 }
 .dash-menu-cell {
   display: flex;
@@ -1543,17 +1549,17 @@ a.stat-card:hover .stat-card__go--gear {
   border: 1px solid var(--c-line-weak);
   color: var(--c-primary);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .dash-menu-icon .icon {
   width: 20px;
   height: 20px;
 }
 .dash-menu-cell:hover .dash-menu-icon {
-  transform: scale(1.06);
+  transform: scale(1.08);
   border-color: var(--c-primary-border);
   color: var(--c-primary);
-  box-shadow: 0 2px 6px rgba(15, 43, 140, 0.08);
+  box-shadow: 0 3px 8px rgba(15, 43, 140, 0.12);
 }
 
 .dash-menu-text {
@@ -1562,12 +1568,13 @@ a.stat-card:hover .stat-card__go--gear {
   color: var(--c-text);
   text-align: center;
   line-height: 1.25;
+  white-space: nowrap;
 }
 .dash-menu-sub {
   font-size: 11px;
   color: var(--c-text-mut);
   line-height: 1.2;
-  margin-top: 2px;
+  margin-top: 3px;
   white-space: nowrap;
 }
 
@@ -1649,8 +1656,22 @@ a.stat-card:hover .stat-card__go--gear {
   margin-bottom: var(--s-4);
 }
 
-/* 알약 행 */
-.dash-pills { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+/* 도넛 + 범례 + 알약 좌측 정렬 블록 (도넛 왼쪽 선과 알약 시작선 수직 일치) */
+.dash-stats-block {
+  width: 100%;
+  max-width: 394px;
+  margin: 0;
+}
+
+/* 알약 행 — 도넛 왼쪽 선과 수직으로 정확히 일치 */
+.dash-pills {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
 .dash-pill { display: inline-flex; align-items: center; gap: 4px; }
 .dash-pill svg { width: 13px; height: 13px; flex: none; }
 /* 목표 수정 연필: 터치 영역 44px, 음수 마진으로 행 높이는 알약 기준 유지 */
@@ -1664,32 +1685,69 @@ a.stat-card:hover .stat-card__go--gear {
 .dash-icon-btn:hover { background: var(--c-bg); color: var(--c-primary); }
 .dash-icon-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
 
-/* 도넛 + 범례를 좌우로 (2026-09-22 스크롤 줄이기) — 예전엔 도넛 아래에 범례가 따로 쌓여 세로를 많이 먹었다.
-   도넛은 120px로 줄이고 안쪽 글씨를 읽히게 한다(안쪽 지름 88px). */
-.dash-overview { display: flex; align-items: center; gap: var(--s-4); margin: var(--s-3) 0 var(--s-3); }
+/* 도넛 + 범례를 좌우로 */
+.dash-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin: 0 0 var(--s-3);
+  width: 100%;
+}
 .dash-donut { flex: none; }
-.dash-stats .donut { width: 120px; height: 120px; }
-.dash-stats .donut::after { inset: 16px; }
-.dash-stats .donut__value { font-size: 24px; }
+.dash-stats .donut { width: 126px; height: 126px; }
+.dash-stats .donut::after { inset: 17px; }
+.dash-stats .donut__value { font-size: 25px; }
 .dash-stats .donut__label,
 .dash-stats .donut__note { font-size: var(--fs-xs); color: var(--c-text-sub); }
 
 /* 범례: 도넛 오른쪽 세로 목록 */
-.dash-legend { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.dash-legend {
+  flex: 0 1 240px;
+  width: 100%;
+  max-width: 240px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
 .dash-legend__cell {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
-  padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-bg);
+  box-sizing: border-box;
 }
 .dash-legend__name { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-text-sub); }
 .dash-legend__num { font-size: var(--fs-lg); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; }
 .dash-legend__num small { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-sub); margin-left: 2px; }
 .dash-legend__row {
-  display: flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-3); border-radius: var(--r-md); background: var(--c-bg);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--c-bg);
 }
 .dash-legend__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .dash-legend__text b { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
 .dash-legend__text small { font-size: var(--fs-xs); color: var(--c-text-sub); }
+
+@media (max-width: 480px) {
+  .dash-overview {
+    gap: var(--s-3);
+    justify-content: space-between;
+  }
+  .dash-legend {
+    flex: 1;
+    max-width: none;
+  }
+}
 
 .dash-note {
   display: flex; justify-content: space-between; gap: var(--s-2);
@@ -2464,5 +2522,109 @@ a.stat-card:hover .stat-card__go--gear {
 .review-reply__content { font-size: var(--fs-sm); margin-top: var(--s-1); color: var(--c-text); }
 .review-reply__actions { display: flex; gap: 6px; margin-top: var(--s-2); }
 
-
-
+/* =====================================================================
+   Store Announcement Cards (점주 공지사항 관리 카드 리디자인)
+   2026-09-29 개편 — .stock-item의 좁은 텍스트+거대 버튼 문제를 해결하고
+   공지 내용 중심의 쾌적한 100% 폭 카드 레이아웃으로 변경.
+   ===================================================================== */
+.announcement-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
+  transition: border-color .2s ease, box-shadow .2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.announcement-card + .announcement-card {
+  margin-top: var(--s-3);
+}
+.announcement-card--active {
+  border: 1.5px solid var(--c-primary);
+  background: #FCFBF8;
+  box-shadow: 0 3px 10px rgba(15, 43, 140, .08);
+}
+.announcement-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.announcement-card__time {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mut);
+}
+.announcement-card__title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+  margin: 0;
+  line-height: 1.4;
+}
+.announcement-card__content {
+  font-size: var(--fs-sm);
+  color: var(--c-text-sub);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--c-bg);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-line-weak);
+}
+.announcement-card__foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--c-line-weak);
+}
+.announcement-card__btn {
+  padding: 5px 14px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  color: var(--c-text);
+  transition: all .15s ease;
+}
+.announcement-card__btn:hover {
+  background: var(--c-bg);
+  border-color: var(--c-text-sub);
+}
+.announcement-card__btn--del {
+  color: var(--c-danger-strong);
+  border-color: var(--c-danger-border);
+}
+.announcement-card__btn--del:hover {
+  background: var(--c-danger-weak);
+  border-color: var(--c-danger-strong);
+}
+.announcement-card__expose-btn {
+  padding: 4px 12px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-primary);
+  background: var(--c-primary-weak);
+  color: var(--c-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .15s ease;
+}
+.announcement-card__expose-btn:hover {
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+}

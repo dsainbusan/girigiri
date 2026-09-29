@@ -1,99 +1,186 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('전체 예약', ~{:: #content}, '', true, '점주 모드', null)}">
+      th:replace="~{common/layout :: layout('전체 주문 내역', ~{:: #content}, '', true, '점주 모드', null)}">
 <body>
 <!--/*
-	점주용 "전체 예약" 목록 (2026-09-15 추가). 마이페이지 "내 매장 신뢰도" 카드에서 진입 —
-	상태(대기/확정/픽업가능/픽업완료/취소/노쇼) 구분 없이 지금까지의 예약을 전부 최신순으로 보여준다.
-	ReservationIncomingController#orders가 담아주는 ${orders}(ReservationOrderItemDto 목록,
-	ReservationService.getOrdersForStore 재사용 — 슈퍼어드민 "매장 주문 내역"과 같은 계산).
-	조회 전용이라 취소/수락 같은 처리 버튼은 없다(그건 들어온 예약/완료 내역 화면의 몫).
+	점주용 "전체 주문 내역" (2026-09-15 신규, 2026-09-29 완료영수증 화면 흡수 통합).
+	상태 필터 탭(전체/픽업완료/취소·노쇼) + 날짜/시간대 검색 + 일자별 그룹핑 + 총액 영수증 집계가 한 화면에 통합됨.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/reservation.css}">
 	<link rel="stylesheet" th:href="@{/css/store.css}">
 
-	<!-- 점주 화면(대시보드 또는 예약확인)으로 뒤로가기 -->
-	<script th:inline="none">
-	(function () {
-		var backBtn = document.querySelector('.topbar__back');
-		if (!backBtn) { return; }
-		backBtn.removeAttribute('data-back');
-		backBtn.addEventListener('click', function () {
-			if (document.referrer && (document.referrer.includes('/store/dashboard') || document.referrer.includes('/reservation/incoming'))) {
-				location.href = document.referrer;
-			} else {
-				location.href = '/store/dashboard';
-			}
-		});
-	})();
-	</script>
+	<!-- 1. 상태 필터 탭 (전체 / 픽업 완료 / 취소·노쇼) -->
+	<div class="seg-tabs" role="tablist" style="margin-bottom: var(--s-3)">
+		<a th:href="@{/reservation/orders(status='all', date=${filterDate}, from=${filterFrom}, to=${filterTo})}"
+		   class="seg-tab" th:classappend="${currentStatus == 'all'} ? ' is-active' : ''">
+			전체 <span style="font-size: 11px; opacity: 0.8" th:text="'(' + ${countAll} + ')'"></span>
+		</a>
+		<a th:href="@{/reservation/orders(status='picked', date=${filterDate}, from=${filterFrom}, to=${filterTo})}"
+		   class="seg-tab" th:classappend="${currentStatus == 'picked'} ? ' is-active' : ''">
+			픽업 완료 <span style="font-size: 11px; opacity: 0.8" th:text="'(' + ${countPicked} + ')'"></span>
+		</a>
+		<a th:href="@{/reservation/orders(status='cancelled', date=${filterDate}, from=${filterFrom}, to=${filterTo})}"
+		   class="seg-tab" th:classappend="${currentStatus == 'cancelled'} ? ' is-active' : ''">
+			취소·노쇼 <span style="font-size: 11px; opacity: 0.8" th:text="'(' + ${countCancelled} + ')'"></span>
+		</a>
+	</div>
 
+	<!-- 2. 스마트 요약 카드 (상태별 맞춤 지표) -->
 	<div class="orders-summary">
 		<div class="orders-summary__top">
-			<span class="orders-summary__label">지금까지의 전체 예약</span>
+			<span class="orders-summary__label" th:text="${currentStatus == 'picked'} ? '픽업 완료된 거래' : (${currentStatus == 'cancelled'} ? '취소 · 노쇼 내역' : '지금까지의 전체 예약')">지금까지의 전체 예약</span>
 			<span class="orders-summary__count">
 				<span th:text="${totalCount}">0</span><span class="orders-summary__count-unit">건</span>
 			</span>
 		</div>
 		<div class="orders-summary__meta">
-			<th:block th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
-				<span>매장 취소율</span>
-				<span class="orders-summary__em"
-				      th:classappend="${storeReliability.cancelRatePercent() > 0} ? 'orders-summary__em--warn' : ''"
-				      th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
-				<span th:text="'· 취소 ' + ${storeReliability.storeCancelledCount()} + '건 / 전체 ' + ${storeReliability.totalReservationCount()} + '건'">· 취소 0건 / 전체 0건</span>
+			<!-- 픽업 완료 탭일 때: 총 결제 금액(영수증 총액) 표시 -->
+			<th:block th:if="${currentStatus == 'picked'}">
+				<span>합계 금액</span>
+				<span class="orders-summary__em" th:text="${#numbers.formatInteger(totalAmount, 0, 'COMMA')} + '원'">0원</span>
+				<span>· 결제 완료 정산 기준</span>
 			</th:block>
-			<th:block th:if="${storeReliability == null or storeReliability.totalReservationCount() == 0}">
-				<span>매장 취소율</span>
-				<span class="orders-summary__em">0%</span>
-				<span>· 취소 이력 없음</span>
+
+			<!-- 전체 또는 취소 탭일 때: 매장 취소율 통계 표시 -->
+			<th:block th:if="${currentStatus != 'picked'}">
+				<th:block th:if="${storeReliability != null and storeReliability.totalReservationCount() > 0}">
+					<span>매장 취소율</span>
+					<span class="orders-summary__em"
+					      th:classappend="${storeReliability.cancelRatePercent() > 0} ? 'orders-summary__em--warn' : ''"
+					      th:text="${#numbers.formatDecimal(storeReliability.cancelRatePercent(), 1, 0)} + '%'">0%</span>
+					<span th:text="'· 취소 ' + ${storeReliability.storeCancelledCount()} + '건 / 전체 ' + ${storeReliability.totalReservationCount()} + '건'">· 취소 0건 / 전체 0건</span>
+				</th:block>
+				<th:block th:if="${storeReliability == null or storeReliability.totalReservationCount() == 0}">
+					<span>매장 취소율</span>
+					<span class="orders-summary__em">0%</span>
+					<span>· 취소 이력 없음</span>
+				</th:block>
 			</th:block>
 		</div>
 	</div>
 
-	<div th:if="${totalCount == 0}" class="empty-state">아직 들어온 예약이 없어요.</div>
-
-	<div class="order-log" th:each="o : ${orders}">
-		<div class="order-log__head">
-			<span class="order-log__time" th:text="${o.reservedAtDisplay}">08월 21일 15:00</span>
-			<span class="badge"
-			      th:classappend="${o.statusVariant == 'ready' or o.statusVariant == 'done'} ? 'badge--success' : (${o.statusVariant == 'noshow'} ? 'badge--discount' : (${o.statusVariant == 'cancelled'} ? 'badge--muted' : 'badge--info'))"
-			      th:text="${o.statusLabel}">픽업 가능</span>
+	<!-- 3. 접이식 날짜·시간대 정밀 검색 필터 (완료 영수증 검색 통합) -->
+	<div class="edit-section-card" style="margin-top: var(--s-3); margin-bottom: var(--s-3)">
+		<div class="edit-section-card__header" style="cursor: pointer; user-select: none;" id="btn-toggle-date-filter">
+			<div class="edit-section-card__title-group">
+				<svg class="icon edit-section-card__icon"><use href="#i-search"/></svg>
+				<h3 class="edit-section-card__title" style="font-size: var(--fs-sm)">
+					날짜 · 시간대 조회
+					<span th:if="${filterActive}" class="badge badge--primary" style="font-size: 10px; margin-left: 6px">필터 적용중</span>
+				</h3>
+			</div>
+			<svg class="icon" id="icon-toggle-date-filter" style="width: 14px; height: 14px; transition: transform 0.2s"><use href="#i-chevron-right"/></svg>
 		</div>
-
-		<div class="order-log__title-row">
-			<span class="order-log__product" th:text="${o.productName}">식빵 마감세트</span>
-			<span class="order-log__qty" th:text="${o.quantity} + '개'">1개</span>
-		</div>
-
-		<div class="order-log__price-row">
-			<span class="order-log__key">결제 금액</span>
-			<span class="order-log__price" th:text="${#numbers.formatInteger(o.totalPrice, 0, 'COMMA')} + '원'">3,000원</span>
-		</div>
-
-		<div class="order-log__foot">
-			<span class="order-log__buyer">
-				<svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
-				<span class="order-log__buyer-name" th:text="${o.buyerName}">닉네임</span>
-			</span>
-			<span class="order-log__code" th:text="${o.pickupCode}">PICK-XXXXXXXX</span>
-		</div>
-
-		<p class="order-log__cancel" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
+		<form method="get" th:action="@{/reservation/orders}" id="date-filter-form" th:classappend="${filterActive} ? '' : ' is-hidden'">
+			<input type="hidden" name="status" th:value="${currentStatus}">
+			<div class="field" style="margin-top: var(--s-2)">
+				<label class="field__label" for="f-date">날짜</label>
+				<input class="input" type="date" id="f-date" name="date" th:value="${filterDate}">
+			</div>
+			<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-2)">
+				<div class="field" style="flex:1">
+					<label class="field__label" for="f-from">시작 시각</label>
+					<input class="input" type="time" id="f-from" name="from" th:value="${filterFrom}">
+				</div>
+				<div class="field" style="flex:1">
+					<label class="field__label" for="f-to">끝 시각</label>
+					<input class="input" type="time" id="f-to" name="to" th:value="${filterTo}">
+				</div>
+			</div>
+			<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">선택한 날짜와 시간대 안에 들어온 주문만 필터링해요.</p>
+			<div class="u-row" style="gap: var(--s-2); margin-top: var(--s-3)">
+				<button type="submit" class="btn btn--block btn--sm">조회하기</button>
+				<a th:href="@{/reservation/orders(status=${currentStatus})}" class="btn btn--outline btn--block btn--sm">초기화</a>
+			</div>
+		</form>
 	</div>
 
-	<!-- 페이지네이션 (2026-09-28, 2026-09-28 앱 최대폭 420→600px 변경에 맞춰 문구 갱신) — 예약이
-	     쌓이면 스크롤이 끝없이 길어진다는 피드백. 1페이지뿐이면 굳이 안 보여준다. 번호는 앱 최대폭
-	     (var(--app-max))에 맞춰 컨트롤러가 잘라준 윈도우만 그린다(ReservationIncomingController
-	     .LIST_PAGE_WINDOW). -->
+	<!-- 빈 상태 안내 -->
+	<div th:if="${totalCount == 0}" class="dash-card empty-card" style="margin-top: var(--s-3)">
+		<div class="empty-card__icon" aria-hidden="true">
+			<svg class="icon"><use href="#i-list"/></svg>
+		</div>
+		<p class="empty-card__title" th:text="${filterActive} ? '이 조건에 맞는 주문이 없어요.' : '해당하는 주문 내역이 없어요.'">해당하는 주문 내역이 없어요.</p>
+	</div>
+
+	<!-- 4. 일자별 그룹 주문 목록 카드 -->
+	<div th:each="group : ${groups}">
+		<p class="order-log-date" th:text="${group.key}">08월 26일 (화)</p>
+
+		<div class="order-log" th:each="o : ${group.value}">
+			<div class="order-log__head">
+				<span class="order-log__time" th:text="${o.statusVariant == 'done' and o.pickedAtDisplay != null} ? ('픽업 ' + o.pickedAtDisplay) : ('주문 ' + o.reservedAtDisplay)">08월 21일 15:00</span>
+				<span class="badge"
+				      th:classappend="${o.statusVariant == 'ready' or o.statusVariant == 'done'} ? 'badge--success' : (${o.statusVariant == 'noshow'} ? 'badge--discount' : (${o.statusVariant == 'cancelled'} ? 'badge--muted' : 'badge--info'))"
+				      th:text="${o.statusLabel}">픽업 가능</span>
+			</div>
+
+			<div class="order-log__title-row">
+				<span class="order-log__product" th:text="${o.productName}">식빵 마감세트</span>
+				<span class="order-log__qty" th:text="${o.quantity} + '개'">1개</span>
+			</div>
+
+			<div class="order-log__price-row">
+				<span class="order-log__key">결제 금액</span>
+				<span class="order-log__price" th:text="${#numbers.formatInteger(o.totalPrice, 0, 'COMMA')} + '원'">3,000원</span>
+			</div>
+
+			<div class="order-log__foot">
+				<span class="order-log__buyer">
+					<svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>
+					<span class="order-log__buyer-name" th:text="${o.buyerName}">닉네임</span>
+				</span>
+				<span class="order-log__code" th:text="${o.pickupCode}">PICK-XXXXXXXX</span>
+			</div>
+
+			<p class="order-log__cancel" th:if="${o.cancelInfo != null}" th:text="${o.cancelInfo}">매장 취소 · 재고 부족</p>
+		</div>
+	</div>
+
+	<!-- 5. 페이지네이션 (필터 쿼리 유지) -->
 	<div class="pagination" th:if="${totalPages > 1}">
-		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/reservation/orders(page=${page - 1})}">&lsaquo;</a>
+		<a th:classappend="${page <= 0} ? ' is-disabled'"
+		   th:href="@{/reservation/orders(page=${page - 1}, status=${currentStatus}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}">&lsaquo;</a>
 		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
-		   th:classappend="${p == page} ? ' is-active'"
-		   th:text="${p + 1}" th:href="@{/reservation/orders(page=${p})}"></a>
-		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/reservation/orders(page=${page + 1})}">&rsaquo;</a>
+		   th:classappend="${p == page} ? ' is-active'" th:text="${p + 1}"
+		   th:href="@{/reservation/orders(page=${p}, status=${currentStatus}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'"
+		   th:href="@{/reservation/orders(page=${page + 1}, status=${currentStatus}, date=${filterDate}, from=${filterFrom}, to=${filterTo})}">&rsaquo;</a>
 	</div>
+
+	<script th:inline="none">
+	(function () {
+		// 뒤로가기는 항상 점주 대시보드로
+		var backBtn = document.querySelector('.topbar__back');
+		if (backBtn) {
+			backBtn.removeAttribute('data-back');
+			backBtn.addEventListener('click', function () {
+				if (document.referrer && (document.referrer.includes('/store/dashboard') || document.referrer.includes('/reservation/incoming'))) {
+					location.href = document.referrer;
+				} else {
+					location.href = '/store/dashboard';
+				}
+			});
+		}
+
+		// 날짜·시간대 필터 접기/펼치기
+		var toggleBtn = document.getElementById('btn-toggle-date-filter');
+		var filterForm = document.getElementById('date-filter-form');
+		var toggleIcon = document.getElementById('icon-toggle-date-filter');
+		if (toggleBtn && filterForm) {
+			if (!filterForm.classList.contains('is-hidden') && toggleIcon) {
+				toggleIcon.style.transform = 'rotate(90deg)';
+			}
+			toggleBtn.addEventListener('click', function () {
+				var isHidden = filterForm.classList.toggle('is-hidden');
+				if (toggleIcon) {
+					toggleIcon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(90deg)';
+				}
+			});
+		}
+	})();
+	</script>
 </div>
 </body>
 </html>

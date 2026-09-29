@@ -358,11 +358,16 @@
     document.querySelectorAll("form[data-confirm]").forEach(function (form) {
       form.addEventListener("submit", function (e) {
         e.preventDefault();
-        // data-confirm-icon(선택) — 계정 탈퇴처럼 휴지통 아이콘이 더 맞는 경우에만 지정.
-        // 안 주면 기본 경고 삼각형(i-warning) 그대로.
+        // data-confirm-icon(선택), data-confirm-title, data-confirm-tone('neutral'|'danger'), data-confirm-ok 지원
         window.girigiriConfirm(form.getAttribute("data-confirm"), function () {
           form.submit();
-        }, { icon: form.getAttribute("data-confirm-icon") });
+        }, {
+          icon: form.getAttribute("data-confirm-icon"),
+          title: form.getAttribute("data-confirm-title"),
+          tone: form.getAttribute("data-confirm-tone"),
+          okLabel: form.getAttribute("data-confirm-ok"),
+          cancelLabel: form.getAttribute("data-confirm-cancel")
+        });
       });
     });
   })();

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('매장 공지', ~{:: #content}, '', true, '점주 모드', null)}">
+<body>
+<!--/*
+	점주가 자기 매장 공지를 등록/수정/삭제하는 목록 화면. 2026-09-29 신규.
+	슈퍼어드민 공지를 읽는 storeView/notices.html과는 다른 기능이다 — 여기서는 점주가 직접 쓴다.
+	손님은 이 내용을 매장 상세 페이지(정보 탭)에서 읽는다.
+*/-->
+<div id="content" th:fragment="content" class="page">
+	<link rel="stylesheet" th:href="@{/css/store.css}">
+
+	<p class="u-sub" style="font-size: var(--fs-xs); margin-bottom: var(--s-3)">
+		손님 매장 상세 페이지 상단 배너에 걸릴 공지를 관리해요.
+	</p>
+
+	<a th:href="@{/store/announcements/new}" class="btn btn--block" style="margin-bottom: var(--s-4)">+ 새 공지 작성</a>
+
+	<div th:if="${#lists.isEmpty(announcements)}" class="dash-card empty-card">
+		<div class="empty-card__icon" aria-hidden="true">
+			<svg class="icon"><use href="#i-megaphone"/></svg>
+		</div>
+		<p class="empty-card__title">아직 등록한 공지가 없어요</p>
+		<p class="u-sub" style="font-size: var(--fs-xs); margin-top: 4px">손님에게 알릴 영업 안내나 공지를 작성해 보세요.</p>
+	</div>
+
+	<div style="display: flex; flex-direction: column; gap: var(--s-3)">
+		<div th:each="a : ${announcements}"
+		     class="announcement-card"
+		     th:classappend="${a.exposed} ? ' announcement-card--active' : ''">
+
+			<!-- 상단: 노출 상태(좌) + 등록일시(우) -->
+			<div class="announcement-card__head">
+				<div>
+					<span th:if="${a.exposed}" class="badge badge--success" style="font-size:11px; padding:3px 10px; border-radius:var(--r-pill)">
+						● 손님 화면에 노출 중
+					</span>
+					<form th:if="${!a.exposed}"
+					      th:action="@{/store/announcements/{id}/expose(id=${a.id}, page=${page})}"
+					      method="post"
+					      th:attr="data-confirm='&quot;' + ${a.title} + '&quot; 공지를 손님 화면 상단 배너에 노출할까요? 기존에 노출 중이던 공지는 자동으로 내려가요.'"
+					      data-confirm-title="매장 공지 노출"
+					      data-confirm-tone="neutral"
+					      data-confirm-icon="i-megaphone"
+					      data-confirm-ok="노출하기"
+					      style="display:inline">
+						<button type="submit" class="announcement-card__expose-btn" title="이 공지를 손님 화면 상단 배너에 걸기">
+							손님 화면에 노출하기 👆
+						</button>
+					</form>
+				</div>
+				<span class="announcement-card__time" th:text="${#temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm')} + ' 등록'">2026-09-29 15:51 등록</span>
+			</div>
+
+			<!-- 본문: 제목 + 내용 (100% 폭, 쾌적하고 넉넉한 공간) -->
+			<h3 class="announcement-card__title" th:text="${a.title}">공지 제목</h3>
+			<p class="announcement-card__content" th:text="${a.content}">공지 내용</p>
+
+			<!-- 하단 푸터: 콤팩트 수정/삭제 버튼 -->
+			<div class="announcement-card__foot">
+				<a th:href="@{/store/announcements/{id}/edit(id=${a.id})}" class="announcement-card__btn">수정</a>
+				<form th:action="@{/store/announcements/{id}/delete(id=${a.id}, page=${page})}" method="post"
+				      th:attr="data-confirm='&quot;' + ${a.title} + '&quot; 공지를 삭제할까요? 손님 화면에서도 바로 사라져요.'"
+				      data-confirm-title="공지 삭제"
+				      data-confirm-icon="i-trash"
+				      data-confirm-ok="삭제">
+					<button type="submit" class="announcement-card__btn announcement-card__btn--del">삭제</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- 페이지네이션 (2026-09-29) — 공지가 6건 이상 쌓이면 5건 단위로 페이지 분할. 1페이지뿐이면 숨김 -->
+	<div class="pagination" th:if="${totalPages > 1}">
+		<a th:classappend="${page <= 0} ? ' is-disabled'" th:href="@{/store/announcements(page=${page - 1})}">&lsaquo;</a>
+		<a th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
+		   th:classappend="${p == page} ? ' is-active'"
+		   th:text="${p + 1}" th:href="@{/store/announcements(page=${p})}"></a>
+		<a th:classappend="${page >= totalPages - 1} ? ' is-disabled'" th:href="@{/store/announcements(page=${page + 1})}">&rsaquo;</a>
+	</div>
+
+	<!-- 뒤로가기는 항상 점주 대시보드로 (2026-09-29) — 대시보드 메뉴에서만 진입한다. -->
+	<script th:inline="none">
+	(function () {
+		var back = document.querySelector('.topbar__back[data-back]');
+		if (!back) { return; }
+		back.removeAttribute('data-back');
+		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
+	})();
+	</script>
+</div>
+</body>
+</html>

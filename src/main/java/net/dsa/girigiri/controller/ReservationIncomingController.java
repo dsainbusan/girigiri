@@ -100,49 +100,83 @@ public class ReservationIncomingController {
 	public String completed(@RequestParam(required = false) String date,
 	                        @RequestParam(required = false) String from,
 	                        @RequestParam(required = false) String to,
-	                        @RequestParam(defaultValue = "0") int page,
-	                        HttpSession session, Model model) {
+	                        @RequestParam(defaultValue = "0") int page) {
+		StringBuilder sb = new StringBuilder("redirect:/reservation/orders?status=picked");
+		if (date != null && !date.isBlank()) sb.append("&date=").append(date);
+		if (from != null && !from.isBlank()) sb.append("&from=").append(from);
+		if (to != null && !to.isBlank()) sb.append("&to=").append(to);
+		if (page > 0) sb.append("&page=").append(page);
+		return sb.toString();
+	}
+
+	/**
+	 * 점주용 "전체 예약" 목록 (2026-09-15 추가, 2026-09-29 완료영수증 화면 흡수 통합).
+	 * 상태 탭(전체/픽업완료/취소·노쇼) + 날짜/시간대 검색 + 일자별 그룹핑 + 총액 집계가 한 화면에 통합된다.
+	 */
+	@GetMapping("/orders")
+	public String orders(@RequestParam(required = false) String status,
+	                     @RequestParam(required = false) String date,
+	                     @RequestParam(required = false) String from,
+	                     @RequestParam(required = false) String to,
+	                     @RequestParam(defaultValue = "0") int page,
+	                     HttpSession session, Model model) {
+		Long storeId = resolveCurrentStoreId(session);
+
+		// 1. 전체 매장 주문 목록 (탭별 개수 집계용)
+		List<ReservationOrderItemDto> allOrders = reservationService.getOrdersForStore(storeId);
+		long countAll = allOrders.size();
+		long countPicked = allOrders.stream().filter(o -> "done".equals(o.statusVariant())).count();
+		long countCancelled = allOrders.stream()
+				.filter(o -> "cancelled".equals(o.statusVariant()) || "noshow".equals(o.statusVariant()))
+				.count();
+
+		// 2. 상태 필터 적용 (all, picked, cancelled 등)
+		String statusFilter = (status == null || status.isBlank() || "all".equalsIgnoreCase(status)) ? null : status;
+		List<ReservationOrderItemDto> targetList = statusFilter != null
+				? reservationService.getOrdersForStore(storeId, statusFilter)
+				: allOrders;
+
+		// 3. 날짜·시간대 필터 적용
 		LocalDate d = parseLocalDate(date);
 		LocalTime f = parseLocalTime(from);
 		LocalTime t = parseLocalTime(to);
 
-		List<ReservationCompletedItemDto> items =
-				reservationService.getCompletedTransactions(resolveCurrentStoreId(session), d, f, t);
+		List<ReservationOrderItemDto> filtered = targetList.stream()
+				.filter(o -> {
+					if (d == null && f == null && t == null) return true;
+					java.time.LocalDateTime refTime = (o.pickedAt() != null) ? o.pickedAt() : o.reservedAt();
+					if (refTime == null) return false;
+					if (d != null && !refTime.toLocalDate().equals(d)) return false;
+					LocalTime time = refTime.toLocalTime();
+					if (f != null && time.isBefore(f)) return false;
+					if (t != null && time.isAfter(t)) return false;
+					return true;
+				})
+				.toList();
 
-		// 건수·합계는 필터에 걸린 전체 기준이고, 목록만 페이지 단위로 자른다.
-		int safePage = applyPaging(model, page, items.size());
+		// 4. 페이징 및 일자별 그룹 묶기
+		int safePage = applyPaging(model, page, filtered.size());
+		List<ReservationOrderItemDto> paged = PaginationUtil.paginate(filtered, safePage, LIST_PAGE_SIZE);
 
-		// 날짜별 그룹 (서비스가 pickedAt DESC로 넘겨줘서 최신 날짜가 먼저 들어온다). 이미 정렬된
-		// 리스트를 자른 뒤에 묶으므로 페이지 안에서도 날짜 순서가 그대로 유지된다.
-		Map<String, List<ReservationCompletedItemDto>> groups = new LinkedHashMap<>();
-		for (ReservationCompletedItemDto it : PaginationUtil.paginate(items, safePage, LIST_PAGE_SIZE)) {
-			groups.computeIfAbsent(it.pickedDate(), k -> new ArrayList<>()).add(it);
+		Map<String, List<ReservationOrderItemDto>> groups = new LinkedHashMap<>();
+		for (ReservationOrderItemDto it : paged) {
+			groups.computeIfAbsent(it.dateGroupLabel(), k -> new ArrayList<>()).add(it);
 		}
 
+		long totalAmount = filtered.stream().mapToLong(ReservationOrderItemDto::totalPrice).sum();
+
 		model.addAttribute("groups", groups);
-		model.addAttribute("totalCount", items.size());
-		model.addAttribute("totalAmount", items.stream().mapToLong(ReservationCompletedItemDto::totalPrice).sum());
+		model.addAttribute("orders", paged);
+		model.addAttribute("totalCount", filtered.size());
+		model.addAttribute("totalAmount", totalAmount);
+		model.addAttribute("countAll", countAll);
+		model.addAttribute("countPicked", countPicked);
+		model.addAttribute("countCancelled", countCancelled);
+		model.addAttribute("currentStatus", statusFilter != null ? statusFilter : "all");
 		model.addAttribute("filterDate", date == null ? "" : date);
 		model.addAttribute("filterFrom", from == null ? "" : from);
 		model.addAttribute("filterTo", to == null ? "" : to);
 		model.addAttribute("filterActive", d != null || f != null || t != null);
-		return "reservationView/completed";
-	}
-
-	/**
-	 * 추가됨 (2026-09-15) — 마이페이지 "내 매장 신뢰도" 카드에서 취소율만 보여주고 그 뒤의 예약
-	 * 목록으로는 못 들어갔다는 요청으로 추가. 상태(대기/확정/픽업가능/픽업완료/취소/노쇼)와 무관하게
-	 * 지금까지의 전체 예약을 최신순으로 보여준다 — 슈퍼어드민 "매장 주문 내역"과 같은 계산
-	 * (ReservationService.getOrdersForStore)을 그대로 재사용한다.
-	 */
-	@GetMapping("/orders")
-	public String orders(@RequestParam(defaultValue = "0") int page, HttpSession session, Model model) {
-		Long storeId = resolveCurrentStoreId(session);
-		List<ReservationOrderItemDto> orders = reservationService.getOrdersForStore(storeId);
-
-		int safePage = applyPaging(model, page, orders.size());
-		model.addAttribute("orders", PaginationUtil.paginate(orders, safePage, LIST_PAGE_SIZE));
-		model.addAttribute("totalCount", orders.size());
 		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(storeId));
 		return "reservationView/orders";
 	}
