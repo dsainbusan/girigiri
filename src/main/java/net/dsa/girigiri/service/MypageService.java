@@ -5,6 +5,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserArchiveEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.SocialAccountRepository;
 import net.dsa.girigiri.repository.UserArchiveRepository;
 import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
@@ -39,6 +40,7 @@ public class MypageService {
 	private final PasswordEncoder passwordEncoder;
 	private final UserBadgeRepository userBadgeRepository;
 	private final UserArchiveRepository userArchiveRepository;
+	private final SocialAccountRepository socialAccountRepository;
 
 	public enum ProfileUpdateResult { SUCCESS, INVALID_NICKNAME, INVALID_PHONE, PHONE_TAKEN }
 
@@ -172,6 +174,14 @@ public class MypageService {
 				.build());
 
 		userBadgeRepository.deleteByUserId(userId);
+
+		// 추가됨 (2026-09-29, 코드 리뷰 — 문창호) — 왜: oauthId를 더미값으로 바꿔도 재가입이 여전히
+		// 막히는 게 실제로 재현됐다. SocialUserProvisioningService.findOrCreate()가 users를 바로
+		// 조회하기 전에 1:N 소셜 연동 테이블(user_social_accounts)을 먼저 조회하는데, 거기 남아있는
+		// providerId는 원래 구글/카카오 ID 그대로라 탈퇴한 이 계정을 다시 찾아내 버린다. 이 테이블은
+		// UserEntity보다 나중에(2026-09-22~24) 추가된 기능이라 soft-delete 패치가 만들어질 때는
+		// 존재를 몰랐던 것으로 보인다 — 로그인 연동 정보이므로 탈퇴 시 통째로 지운다.
+		socialAccountRepository.deleteAll(socialAccountRepository.findAllByUserId(userId));
 
 		user.setOauthId("withdrawn_" + user.getId());
 		user.setPhone(null);

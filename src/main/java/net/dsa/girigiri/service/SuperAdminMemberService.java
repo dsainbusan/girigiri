@@ -10,6 +10,7 @@ import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ComplaintRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.SocialAccountRepository;
 import net.dsa.girigiri.repository.UserArchiveRepository;
 import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
@@ -43,6 +44,7 @@ public class SuperAdminMemberService {
 	private final StoreAccessService storeAccessService;
 	private final UserBadgeRepository userBadgeRepository;
 	private final UserArchiveRepository userArchiveRepository;
+	private final SocialAccountRepository socialAccountRepository;
 
 	// 변경됨 — 왜: 필터 탭을 "전체/일반 회원/점주 회원/정지 회원"으로 바꿔달라는 요청 — 역할 기준
 	// 필터가 USER/ADMIN(운영자)에서 USER(일반 회원)/OWNER(점주 회원)로 바뀌었다. 운영자 계정은 수가
@@ -187,6 +189,10 @@ public class SuperAdminMemberService {
 				.build());
 
 		userBadgeRepository.deleteByUserId(id);
+
+		// MypageService#withdraw와 동일한 이유(2026-09-29) — 1:N 소셜 연동 테이블에 남은 옛 providerId가
+		// 탈퇴한 계정을 다시 찾아내 재가입을 막는 걸 방지.
+		socialAccountRepository.deleteAll(socialAccountRepository.findAllByUserId(id));
 
 		user.setOauthId("withdrawn_" + user.getId());
 		user.setPhone(null);

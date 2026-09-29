@@ -2,6 +2,7 @@ package net.dsa.girigiri;
 
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.SocialAccountRepository;
 import net.dsa.girigiri.repository.UserArchiveRepository;
 import net.dsa.girigiri.repository.UserBadgeRepository;
 import net.dsa.girigiri.repository.UserRepository;
@@ -52,6 +53,11 @@ class MypageServiceWithdrawTest {
 
 	@Mock
 	private UserArchiveRepository userArchiveRepository;
+
+	// 추가됨 (2026-09-29, 코드 리뷰 — 문창호) — withdraw()가 1:N 소셜 연동 테이블도 정리하도록
+	// 고치면서 새로 생긴 의존성. @Mock 없이는 @InjectMocks가 null을 넣어 NPE가 난다.
+	@Mock
+	private SocialAccountRepository socialAccountRepository;
 
 	@InjectMocks
 	private MypageService mypageService;
