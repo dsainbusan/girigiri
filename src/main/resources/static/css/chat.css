@@ -1,9 +1,14 @@
 /* =====================================================================
-   chat.css — 고객 지원 챗봇 위젯 (마이페이지 전용)
+   chat.css — 고객 지원 챗봇 위젯 (마이페이지 + 비회원용 마케팅 홈/FAQ)
    담당: 송채현 (WBS 6.5 고객 지원 챗봇)
 
-   챗봇은 로그인한 사용자에게만 마이페이지 안에서 노출된다(REQ-F-120) — 그래서 이 파일도
-   mypageView/mypage.html의 #content 안에서만 <link>로 불러온다(다른 화면에는 없음).
+   원래 로그인 사용자에게만 마이페이지 안에서 노출되던 위젯이었다(REQ-F-120). 2026-09-29 —
+   비회원도 쓸 수 있는 채팅 상담(GuestChatController, /support/chat/message)을 추가하면서
+   마케팅 홈(marketingView/home.html)에서도 이 파일을 <link>로 불러온다. 토큰(--c-*, --s-*,
+   --r-*, --fs-* 등)은 전부 tokens.css에만 의존하고 layout.css/components.css의 클래스는 쓰지
+   않아서(아이콘도 인라인 svg로 통일 — 아래 .chat-fab svg 참고) 마케팅 홈처럼 그 두 파일을 안
+   불러오는 화면에서도 그대로 동작한다. 마케팅 홈 전용 위치·크기는 .chat-fab--page/
+   .chat-panel--page 수정자가 담당 — 기본 규칙은 마이페이지(420/600px 앱 셸) 전용 그대로다.
    ===================================================================== */
 
 /* 챗봇 플로팅 버튼 — 마이페이지 화면 우측 하단에 고정.
@@ -34,6 +39,30 @@
 	z-index: 40;
 }
 
+/* 2026-09-29 — FAB/닫기 버튼 아이콘을 <use href="#i-chat">에서 인라인 <svg>로 바꾸면서
+   (common/chatWidget.html 참고 — 마케팅 홈엔 아이콘 스프라이트가 없어서) 크기를 여기서 직접
+   잡아준다. 기존엔 components.css의 .icon(18×18, fill:currentColor)이 이 역할을 했는데, 마케팅
+   홈은 components.css를 안 불러오는 별도 디자인 시스템이라 챗봇 자체 CSS(chat.css) 안에서
+   해결해야 두 화면 모두에서 동일하게 동작한다. 마이페이지에서 보이던 크기와 완전히 같다. */
+.chat-fab svg,
+.chat-panel__icon-btn svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+	display: inline-block;
+	vertical-align: -3px;
+}
+
+/* 2026-09-29 — 마케팅 홈처럼 420/600px 앱 셸(.app, var(--app-max))이 없는 화면에서 쓰는 수정자.
+   기본 .chat-fab의 right 계산식은 "가운데 떠 있는 앱 컨테이너의 오른쪽 끝"을 가정하는데, 마케팅
+   홈은 데스크톱 풀와이드 레이아웃이라 그 가정 자체가 안 맞는다 — 그냥 화면 오른쪽 아래 24px에
+   고정한다(흔한 채팅 위젯 위치). 두 클래스를 같이 줘서(.chat-fab.chat-fab--page) 지정도로
+   덮어쓴다 — marketing.css의 .mkt-btn.mkt-btn--primary와 같은 패턴. */
+.chat-fab.chat-fab--page {
+	right: 24px;
+	bottom: 24px;
+}
+
 .chat-panel {
 	position: fixed;
 	left: 50%;
@@ -47,6 +76,37 @@
 	background: var(--c-surface);
 	flex-direction: column;
 	/* 기본 숨김은 마크업의 인라인 style(display:none)이 맡고, 열릴 때 JS가 display:flex로 바꾼다 */
+}
+
+/* 2026-09-29 — 마케팅 홈용 수정자. 데스크톱에선 화면을 다 덮는 대신 우측 하단에 뜨는 380×560
+   카드로, 900px 이하(마케팅 홈 자체의 모바일 브레이크포인트 — marketing.css 참고)에서는 기존
+   .chat-panel처럼 전체 화면으로 되돌린다. .chat-panel.chat-panel--page로 지정도를 올려서 기본
+   .chat-panel의 left:50%/max-width:var(--app-max) 등을 덮어쓴다. */
+.chat-panel.chat-panel--page {
+	left: auto;
+	right: 24px;
+	top: auto;
+	bottom: 24px;
+	transform: none;
+	width: 380px;
+	max-width: 380px;
+	height: 560px;
+	border-radius: var(--r-lg);
+	box-shadow: 0 20px 50px -15px rgba(15, 23, 42, .35);
+	overflow: hidden;
+}
+@media (max-width: 900px) {
+	.chat-panel.chat-panel--page {
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 100%;
+		max-width: 100%;
+		height: 100%;
+		height: 100dvh;
+		border-radius: 0;
+	}
 }
 
 .chat-panel__header {

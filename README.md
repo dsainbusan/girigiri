@@ -40,6 +40,18 @@ SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 SUPABASE_STORAGE_BUCKET=receipts
 
+# 2026-09-29追加 — 顧客サポートチャットボット(Gemini API)のキー。用途別に分離している:
+# マイページ(ログインユーザー)チャットボットはGEMINI_API_KEY_MEMBER、マーケティングホーム/FAQ
+# (非会員)チャットボットはGEMINI_API_KEY_GUESTを使う(GeminiClient.KeyProfile参照)。会員キーが
+# 429(割当量超過)の時だけ非会員キーに1回だけ代替される。GEMINI_API_KEY_GUESTを空にしておくと
+# 非会員チャットもGEMINI_API_KEY_MEMBERをそのまま使う(ログに"[guest] 専用キー未設定 - member
+# キーで代替"という警告が残る)。
+# 旧バージョン互換: 以前の名前GEMINI_API_KEY だけ入っている.envもそのまま動く — 空にしておくと
+# GEMINI_API_KEY_MEMBERがこの値をそのまま引き継ぐ(application.propertiesの入れ子デフォルト値参照)。
+# 無料キーは https://aistudio.google.com/apikey で発行できる。
+GEMINI_API_KEY_MEMBER=
+GEMINI_API_KEY_GUEST=
+
 ENV
 
 # 4. 実行
@@ -88,6 +100,17 @@ SPRING_DATASOURCE_PASSWORD=changeme
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 SUPABASE_STORAGE_BUCKET=receipts
+
+# 2026-09-29 추가 — 고객 지원 챗봇(Gemini API) 키. 용도별로 분리되어 있다 — 마이페이지(로그인
+# 사용자) 챗봇은 GEMINI_API_KEY_MEMBER, 마케팅 홈/FAQ(비회원) 챗봇은 GEMINI_API_KEY_GUEST를 쓴다
+# (GeminiClient.KeyProfile 참고). 회원 키가 429(할당량 초과)일 때만 비회원 키로 1회 대체된다.
+# GEMINI_API_KEY_GUEST를 비워두면 비회원 채팅도 GEMINI_API_KEY_MEMBER를 그대로 쓴다(로그에
+# "[guest] 전용 키 미설정 - member 키로 대체" 경고가 남는다).
+# 구버전 호환: 예전 이름 GEMINI_API_KEY만 채워둔 .env도 그대로 동작한다 — 비워두면
+# GEMINI_API_KEY_MEMBER가 이 값을 그대로 이어받는다(application.properties의 중첩 기본값 참고).
+# 무료 키는 https://aistudio.google.com/apikey 에서 발급받을 수 있다.
+GEMINI_API_KEY_MEMBER=
+GEMINI_API_KEY_GUEST=
 
 ENV
 

@@ -97,6 +97,12 @@ public class WebSecurityConfig {
 			, "/auth/emailSignup/verify-otp"
 			, "/auth/emailSignup/prepare-link"
 			, "/auth/emailLogin"
+			// 추가됨 (2026-09-29, 담당: 송채현) — 마케팅 홈/FAQ의 비회원용 챗봇(GuestChatController)
+			// API. 기존 챗봇(/mypage/chat/**)은 로그인 사용자 전용이라 여기 없고, 이 경로만 별도로
+			// 공개한다 — CSRF는 이미 위에서 비활성 상태(csrf().disable())라 추가 설정 없이 그대로
+			// POST 가능. ProfileCompletionInterceptor는 세션에 userId가 없으면 통과하므로(코드 확인
+			// 완료) 비회원 요청을 별도로 막지 않는다.
+			, "/support/chat/**"
 	);
 
 	@Bean

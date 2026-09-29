@@ -25,3 +25,14 @@
   const fromHash = tabs.find((t) => "#" + t.getAttribute("aria-controls") === location.hash);
   if (fromHash) select(fromHash);
 })();
+
+/* 2026-09-29 추가 — "채팅 상담" 버튼(common/faq.html의 [data-open-chat])을 누르면 비회원용
+   챗봇 패널을 연다. 실제 열기 로직은 common/chatWidget.html이 가지고 있고(패널 표시, 포커스
+   이동 등) 여기서는 그 프래그먼트가 전역에 노출한 window.girigiriOpenChat()만 호출한다 — DOM
+   구조를 다시 알 필요 없이 위젯을 완전히 블랙박스로 재사용하기 위함. faq.js는 chatWidget보다
+   먼저 로드될 수도 있어서(head의 <script defer>) 클릭 시점에만 함수 존재를 확인한다. */
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-open-chat]") && typeof window.girigiriOpenChat === "function") {
+    window.girigiriOpenChat();
+  }
+});

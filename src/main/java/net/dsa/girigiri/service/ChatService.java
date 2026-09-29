@@ -4,17 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dsa.girigiri.domain.dto.ChatMessageDto;
 import net.dsa.girigiri.domain.dto.ChatRequestDto;
 import net.dsa.girigiri.domain.dto.ChatResponseDto;
 import net.dsa.girigiri.domain.dto.ReservationCancelStatusDto;
 import net.dsa.girigiri.util.GeminiClient;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 고객 지원 챗봇 서비스.
@@ -46,6 +49,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * 추가됨 (강노은, 2026-09-03) — 채현님 요청으로 지도 탐색/찜하기/리뷰 FAQ를 채워 넣었다
  * ([서비스 이용 안내]의 "매장 탐색"/"찜하기"/"리뷰" 항목). 마이페이지/절약가계부는 문창호님
  * 담당이라 그대로 비워뒀다.
+ *
+ * 추가됨 (2026-09-29) — 마케팅 홈/FAQ(로그인 전 방문자)에서도 챗봇을 쓸 수 있도록 sendGuestMessage()를
+ * 추가했다. 기존 sendMessage()/ChatController(/mypage/chat/message)는 전혀 건드리지 않았다 —
+ * 비회원 전용 컨트롤러(GuestChatController, /support/chat/message)만 이 새 메서드를 호출한다.
  */
 @Slf4j
 @Service
@@ -74,25 +81,25 @@ public class ChatService {
 	private static final long RATE_LIMIT_WINDOW_MILLIS = 60_000L; // 1분
 	private final Map<Long, Deque<Long>> requestTimestampsByUser = new ConcurrentHashMap<>();
 
-	private static final String CUSTOMER_SYSTEM_PROMPT = """
-			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
-			'기리기리(끼리끼리)'의 고객 지원 챗봇입니다. 친절하고 간결한 한국어 존댓말로 답하세요.
+	// 추가됨 (2026-09-29, 담당: 송채현) — 왜: 비회원 채팅(/support/chat/message)은 로그인 없이
+	// 누구나 부를 수 있어서 회원용(계정당 분당 10회)보다 어뷰징에 훨씬 취약하다. guestKey(세션ID,
+	// 없으면 IP)별로 더 낮은 한도(분당 5회)를 두고, 계정이라는 단위 자체가 없어 여러 명이 동시에
+	// 몰리면 순식간에 Gemini 무료 할당량을 다 써서 회원 챗봇까지 같이 막힐 수 있으므로 비회원
+	// 전체를 합산한 하루 상한도 따로 둔다.
+	private static final int GUEST_RATE_LIMIT_MAX_REQUESTS = 5;
+	private static final long GUEST_RATE_LIMIT_WINDOW_MILLIS = 60_000L; // 1분
+	private static final int GUEST_DAILY_MAX_REQUESTS = 500;
+	private static final int GUEST_HISTORY_MAX_TURNS = 10;
+	private final Map<String, Deque<Long>> requestTimestampsByGuestKey = new ConcurrentHashMap<>();
+	private final AtomicInteger guestDailyRequestCount = new AtomicInteger(0);
+	private volatile LocalDate guestDailyCountResetDate = LocalDate.now();
 
-			[답변 규칙]
-			- 아래 [서비스 이용 안내]에 없는 내용은 지어내지 말고, "그 부분은 정확히 확인이 어려워요.
-			  마이페이지의 1:1 문의 게시판으로 문의해주시면 확인해드릴게요."라고 답하세요.
-			- 실제 결제 취소/환불 처리, 계정 정지 해제처럼 시스템을 직접 조작해야 하는 요청은 챗봇이
-			  처리할 수 없으니, 화면의 해당 버튼을 이용하거나 1:1 문의 게시판을 이용하도록 안내만
-			  하세요. 직접 처리해준 것처럼 답하면 안 됩니다.
-			- 서비스와 무관한 질문(일반 상식, 다른 회사 서비스 등)에는 정중히 답변을 거절하세요.
-			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
-			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
-			- 예약 취소가 지금 가능한지, 취소까지 얼마나 남았는지를 물어보면 아래 안내 문구로
-			  대충 답하지 말고, 제공된 예약 조회 함수를 호출해서 실제 데이터를 확인한 뒤 그 결과
-			  그대로 답하세요. 이 함수는 조회만 할 뿐 실제로 예약을 취소하지는 않으니, 취소가
-			  가능하다고 확인되면 마이페이지에서 취소하는 방법을 안내해주세요.
-
-			[서비스 이용 안내]
+	// 추가됨 (2026-09-29, 담당: 송채현) — 왜: 비회원용 GUEST_SYSTEM_PROMPT를 새로 만들면서 이 블록을
+	// 그대로 복붙하면, 나중에 서비스 안내 내용이 바뀔 때마다(예: 강노은/문창호님 파트 업데이트) 두
+	// 군데를 항상 같이 고쳐야 하는 위험이 생긴다. 회원용/비회원용 손님 프롬프트 둘 다 이 상수 하나를
+	// 공유하도록 뽑아냈다 — 사장님용(OWNER_SYSTEM_PROMPT)은 손님용과 안내 내용 자체가 달라서
+	// 그대로 둔다.
+	private static final String SERVICE_GUIDE = """
 			- 회원가입/로그인: 구글/카카오/라인 소셜 로그인 또는 이메일(비밀번호) 가입을 지원해요. 소셜 로그인은 처음
 			  로그인하면 자동으로 계정이 만들어져요. 이메일 가입은 사이트에서 직접 비밀번호를 설정해서 가입하는 방식이에요.
 			- 매장 탐색: 홈 화면 지도에서 내 주변 마감세일 중인 가게를 확인할 수 있어요. 위치
@@ -119,6 +126,58 @@ public class ChatService {
 			  다만 월별 절약 그래프, 카테고리별 분석, 절약 목표 설정 같은 상세 가계부 기능은
 			  아직 준비 중이에요.
 			""";
+
+	private static final String CUSTOMER_SYSTEM_PROMPT = """
+			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
+			'기리기리(끼리끼리)'의 고객 지원 챗봇입니다. 친절하고 간결한 한국어 존댓말로 답하세요.
+
+			[답변 규칙]
+			- 아래 [서비스 이용 안내]에 없는 내용은 지어내지 말고, "그 부분은 정확히 확인이 어려워요.
+			  마이페이지의 1:1 문의 게시판으로 문의해주시면 확인해드릴게요."라고 답하세요.
+			- 실제 결제 취소/환불 처리, 계정 정지 해제처럼 시스템을 직접 조작해야 하는 요청은 챗봇이
+			  처리할 수 없으니, 화면의 해당 버튼을 이용하거나 1:1 문의 게시판을 이용하도록 안내만
+			  하세요. 직접 처리해준 것처럼 답하면 안 됩니다.
+			- 서비스와 무관한 질문(일반 상식, 다른 회사 서비스 등)에는 정중히 답변을 거절하세요.
+			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
+			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
+			- 예약 취소가 지금 가능한지, 취소까지 얼마나 남았는지를 물어보면 아래 안내 문구로
+			  대충 답하지 말고, 제공된 예약 조회 함수를 호출해서 실제 데이터를 확인한 뒤 그 결과
+			  그대로 답하세요. 이 함수는 조회만 할 뿐 실제로 예약을 취소하지는 않으니, 취소가
+			  가능하다고 확인되면 마이페이지에서 취소하는 방법을 안내해주세요.
+
+			[서비스 이용 안내]
+			""" + SERVICE_GUIDE;
+
+	// 추가됨 (2026-09-29, 담당: 송채현) — 왜: 마케팅 홈/FAQ(비로그인 방문자)에서도 챗봇을 쓸 수 있게
+	// 하면서 CUSTOMER_SYSTEM_PROMPT를 그대로 재사용하지 않고 별도로 뒀다. 이유 셋:
+	// ① 예약 조회 함수(getMyActiveReservations)는 비회원에게 아예 안 실어주므로(toolExecutor=null,
+	//    sendGuestMessage 참고) 그 함수를 쓰라는 규칙이 남아있으면 모델이 없는 함수를 호출하려
+	//    시도할 수 있어 삭제. ② "모르는 건 마이페이지 1:1 문의"는 비회원은 마이페이지 자체가
+	//    없으니 "로그인 후 마이페이지 1:1 문의"로 바꿔 안내. ③ 마케팅 홈이 접점이라 사장님 입점
+	//    문의가 섞여 들어올 수 있어서, 그럴 땐 홈페이지 '파트너 되기' 섹션의 입점 신청을 안내하는
+	// 문장을 추가했다.
+	private static final String GUEST_SYSTEM_PROMPT = """
+			당신은 동네 가게의 마감 임박 음식을 손님이 미리 예약·결제하고 매장에서 픽업하는 서비스
+			'기리기리(끼리끼리)'의 고객 지원 챗봇입니다. 지금 대화하는 사람은 로그인하지 않은
+			방문자입니다. 친절하고 간결한 한국어 존댓말로 답하세요.
+
+			[답변 규칙]
+			- 아래 [서비스 이용 안내]에 없는 내용은 지어내지 말고, "그 부분은 정확히 확인이 어려워요.
+			  로그인 후 마이페이지의 1:1 문의를 이용해 주세요."라고 답하세요.
+			- 실제 결제 취소/환불 처리, 계정 정지 해제처럼 시스템을 직접 조작해야 하는 요청은 챗봇이
+			  처리할 수 없으니, 로그인 후 화면의 해당 버튼을 이용하거나 1:1 문의를 이용하도록
+			  안내만 하세요. 직접 처리해준 것처럼 답하면 안 됩니다.
+			- 지금은 로그인 전이라 이 사람의 예약 내역을 조회할 방법이 없습니다. 본인 예약 관련
+			  질문에는 일반적인 안내만 드리고, 정확한 확인은 로그인 후 마이페이지에서 가능하다고
+			  안내하세요.
+			- 사장님으로 입점하고 싶다는 문의가 오면, 홈페이지의 '파트너 되기' 섹션에서 입점 신청을
+			  할 수 있다고 안내하세요.
+			- 서비스와 무관한 질문(일반 상식, 다른 회사 서비스 등)에는 정중히 답변을 거절하세요.
+			- 채팅 화면은 마크다운을 지원하지 않으니, 별표(**)나 #, - 같은 마크다운 문법은 절대
+			  쓰지 말고 순수 텍스트로만 답하세요. 강조하고 싶으면 그냥 문장으로 풀어서 쓰세요.
+
+			[서비스 이용 안내]
+			""" + SERVICE_GUIDE;
 
 	private static final String OWNER_SYSTEM_PROMPT = """
 			당신은 동네 가게의 마감 임박 음식을 손님에게 예약·픽업으로 판매하는 서비스
@@ -181,7 +240,7 @@ public class ChatService {
 				isOwnerMode ? null : () -> buildReservationStatusJson(userId);
 
 		GeminiClient.ChatResult result = geminiClient.sendMessage(
-				systemPrompt, request.getHistory(), request.getMessage(), toolExecutor);
+				GeminiClient.KeyProfile.MEMBER, systemPrompt, request.getHistory(), request.getMessage(), toolExecutor);
 
 		if (!result.success()) {
 			log.warn("> [ChatService] Gemini API 응답 실패 - viewMode={}, 사유={}", viewMode, result.failReason());
@@ -189,6 +248,90 @@ public class ChatService {
 		}
 
 		return ChatResponseDto.success(result.reply());
+	}
+
+	/**
+	 * 비회원용 챗봇 메시지 처리 (2026-09-29 추가, 담당: 송채현). GuestChatController(/support/chat/message,
+	 * 로그인 불필요)에서만 호출된다 — 기존 sendMessage()/ChatController는 이 메서드를 전혀 참조하지
+	 * 않으므로 회원용 흐름은 그대로다.
+	 *
+	 * 회원용과 다른 점: ① 항상 GUEST_SYSTEM_PROMPT 사용 ② toolExecutor는 항상 null(비회원은 본인
+	 * 인증이 없어 "내 예약"을 조회할 방법이 없다 — GeminiClient.sendMessage의 3-arg 오버로드를 그대로
+	 * 쓰면 자동으로 null이라 회원 코드 경로와 완전히 분리된다) ③ 요청 제한이 userId가 아니라 guestKey
+	 * 기준이고 더 빡빡하다 ④ 비회원 전체 합산 하루 상한이 추가로 있다 ⑤ history를 최근
+	 * GUEST_HISTORY_MAX_TURNS턴까지만 잘라서 보낸다(프론트가 얼마나 길게 들고 있든 서버가 한 번 더
+	 * 방어).
+	 */
+	public ChatResponseDto sendGuestMessage(String guestKey, ChatRequestDto request) {
+		if (isGuestRateLimited(guestKey) || isGuestDailyLimitExceeded()) {
+			return ChatResponseDto.failed("요청이 너무 많아요. 잠시 후 다시 시도해 주세요.");
+		}
+		if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
+			return ChatResponseDto.failed("메시지를 입력해주세요.");
+		}
+		if (request.getMessage().length() > MAX_MESSAGE_LENGTH) {
+			return ChatResponseDto.failed("메시지가 너무 길어요. " + MAX_MESSAGE_LENGTH + "자 이내로 입력해주세요.");
+		}
+
+		List<ChatMessageDto> trimmedHistory = trimGuestHistory(request.getHistory());
+		GeminiClient.ChatResult result = geminiClient.sendMessage(
+				GeminiClient.KeyProfile.GUEST, GUEST_SYSTEM_PROMPT, trimmedHistory, request.getMessage());
+
+		if (!result.success()) {
+			log.warn("> [ChatService] 비회원 Gemini API 응답 실패 - guestKey={}, 사유={}", guestKey, result.failReason());
+			// 추가됨 (2026-09-29) — 왜: 비회원 키의 429(할당량 초과)는 회원용과 다른 문구로 안내한다.
+			// GeminiClient가 guest 프로필에는 키 대체를 아예 시도하지 않으므로(스펙: "guest 키만
+			// 사용, 대체 없음") 429는 곧 "지금 쓸 수 있는 비회원용 할당량이 다 떨어졌다"는 뜻이고,
+			// 회원 챗봇의 "사용자가 많아서 지연" 문구를 그대로 쓰면 마치 재시도하면 금방 풀릴 것처럼
+			// 오해를 줄 수 있어 구분했다.
+			if (result.quotaExceeded()) {
+				return ChatResponseDto.failed("지금 상담이 많아 답변이 어려워요. 잠시 후 다시 시도해 주세요.");
+			}
+			return ChatResponseDto.failed(result.failReason());
+		}
+		return ChatResponseDto.success(result.reply());
+	}
+
+	/** 회원용 isRateLimited()와 같은 방식이지만 키가 Long userId 대신 String guestKey다. */
+	private boolean isGuestRateLimited(String guestKey) {
+		Deque<Long> timestamps = requestTimestampsByGuestKey.computeIfAbsent(guestKey, key -> new ArrayDeque<>());
+		long now = System.currentTimeMillis();
+		synchronized (timestamps) {
+			while (!timestamps.isEmpty() && now - timestamps.peekFirst() > GUEST_RATE_LIMIT_WINDOW_MILLIS) {
+				timestamps.pollFirst();
+			}
+			if (timestamps.size() >= GUEST_RATE_LIMIT_MAX_REQUESTS) {
+				return true;
+			}
+			timestamps.addLast(now);
+			return false;
+		}
+	}
+
+	/**
+	 * 비회원 전체 합산 하루 요청 수가 GUEST_DAILY_MAX_REQUESTS를 넘으면 true. 날짜가 바뀌면 자동으로
+	 * 0부터 다시 센다. guestKey별 한도(isGuestRateLimited)를 먼저 통과한 요청만 여기로 오므로, 이미
+	 * 막힌 요청까지 이 카운트에 얹혀서 실제보다 빨리 하루 상한에 도달하는 일은 없다.
+	 */
+	private boolean isGuestDailyLimitExceeded() {
+		LocalDate today = LocalDate.now();
+		if (!today.equals(guestDailyCountResetDate)) {
+			synchronized (this) {
+				if (!today.equals(guestDailyCountResetDate)) {
+					guestDailyCountResetDate = today;
+					guestDailyRequestCount.set(0);
+				}
+			}
+		}
+		return guestDailyRequestCount.incrementAndGet() > GUEST_DAILY_MAX_REQUESTS;
+	}
+
+	/** history가 GUEST_HISTORY_MAX_TURNS턴을 넘으면 최근 턴만 남긴다. */
+	private List<ChatMessageDto> trimGuestHistory(List<ChatMessageDto> history) {
+		if (history == null || history.size() <= GUEST_HISTORY_MAX_TURNS) {
+			return history;
+		}
+		return history.subList(history.size() - GUEST_HISTORY_MAX_TURNS, history.size());
 	}
 
 	/**

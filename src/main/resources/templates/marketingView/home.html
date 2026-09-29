@@ -27,6 +27,10 @@
 	<link rel="stylesheet" th:href="@{/css/faq.css}">
 	<link rel="stylesheet" th:href="@{/css/tokens.css}">
 	<link rel="stylesheet" th:href="@{/css/marketing.css}">
+	<!-- 2026-09-29 추가 — 비회원용 채팅 상담(GuestChatController) 위젯. chat.css는 tokens.css에만
+	     기대고 layout.css/components.css 클래스는 안 써서 이 독립 문서에서도 그대로 동작한다
+	     (common/chatWidget.html 헤더 주석 참고). -->
+	<link rel="stylesheet" th:href="@{/css/chat.css}">
 	<script th:src="@{/js/faq.js}" defer></script>
 </head>
 <body class="mkt">
@@ -281,6 +285,10 @@
 		}
 	})();
 </script>
+
+<!-- 2026-09-29 추가 — 비회원용 채팅 상담. mode='guest' + endpoint='/support/chat/message',
+     user는 비회원이라 항상 null. common/chatWidget.html 헤더 주석 참고. -->
+<div th:replace="~{common/chatWidget :: chatWidget('guest', '/support/chat/message', null)}"></div>
 
 </body>
 </html>
