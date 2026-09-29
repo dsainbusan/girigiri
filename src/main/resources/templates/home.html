@@ -205,15 +205,38 @@
 		// 매장이 하나도 없을 때는 서울시청 좌표를 기본값으로 둔다.
 		var FALLBACK_CENTER = { latitude: 37.5665, longitude: 126.9780 };
 
+		// 강노은: 지도 중심을 사용자 위치로 — 위의 DOMContentLoaded 스크립트가 Geolocation 허용 시
+		// ?lat=&lng=를 붙여 페이지를 다시 불러오므로, URL에 좌표가 있으면 그걸 최우선으로 쓴다.
+		// 없으면(권한 거부/미지원) 기존처럼 첫 매장 좌표 → 서울시청 순으로 폴백.
+		var urlParams = new URLSearchParams(window.location.search);
+		var userLat = parseFloat(urlParams.get('lat'));
+		var userLng = parseFloat(urlParams.get('lng'));
+		var hasUserLocation = !isNaN(userLat) && !isNaN(userLng);
+
 		kakao.maps.load(function () {
 			var container = document.getElementById('kakao-map');
-			var center = stores.length > 0 ? stores[0] : FALLBACK_CENTER;
+			var center = hasUserLocation
+				? { latitude: userLat, longitude: userLng }
+				: (stores.length > 0 ? stores[0] : FALLBACK_CENTER);
 			var map = new kakao.maps.Map(container, {
 				center: new kakao.maps.LatLng(center.latitude, center.longitude),
 				level: 4
 			});
 
 			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
+
+			// 강노은: "내 위치" 표시 — 매장 핀과 헷갈리지 않게 파란 점(구글맵 스타일)으로 따로 표시.
+			// 클릭 동작은 없음(그냥 내 현재 위치 표식용).
+			if (hasUserLocation) {
+				new kakao.maps.CustomOverlay({
+					position: new kakao.maps.LatLng(userLat, userLng),
+					content: '<div style="width:16px;height:16px;border-radius:50%;background:#4285F4;'
+						+ 'border:3px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.45);"></div>',
+					map: map,
+					yAnchor: 0.5,
+					zIndex: 10
+				});
+			}
 
 			// 커스텀 마커 (2026-09-16, 디자인 리팩토링 / 2026-09-17 네이비 리스킨) — 카카오맵 기본
 			// 빨간 물방울 핀 그대로 쓰고 있었다("지도 API 튜토리얼 그대로"인 느낌의 흔한 원인).
