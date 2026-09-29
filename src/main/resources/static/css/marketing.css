@@ -196,86 +196,51 @@ body.mkt {
 	flex-wrap: wrap;
 }
 
-/* 히어로 우측 목업 — 실제 스크린샷 대신 지도+카드 UI를 흉내낸 장식용 카드 */
+/* 히어로 우측 목업 — 2026-09-29까지는 지도+카드 UI를 흉내낸 장식용 CSS 카드였으나, 실제 데모
+   영상(girigiri-demo.mp4)으로 교체. 왜: 가짜 UI보다 실제 화면이 신뢰도·전환에 더 도움이 됨.
+   .mkt-mock__map/__pin/__body/__card/__thumb/__lines/__line/__badge 규칙은 이제 안 쓰여서 삭제
+   (grep으로 다른 템플릿에서도 안 쓰는 것 확인함 — home.html 전용이었음). */
 .mkt-mock {
 	position: relative;
-	max-width: 340px;
+	max-width: 300px;
 	margin: 0 auto;
 }
 .mkt-mock__frame {
-	background: var(--c-surface);
-	border-radius: 28px;
-	box-shadow: 0 30px 70px -20px rgba(15, 23, 42, .28), 0 0 0 1px var(--mkt-border);
+	/* 2026-09-29 — 실제 폰처럼 보이도록 390:844(대부분 스마트폰 화면 비율) 틀 + 검정 베젤로 변경.
+	   기존 그림자에 0 0 0 2px #2a2a2e를 더해 프레임 테두리(베젤) 느낌을 낸다. */
+	aspect-ratio: 390 / 844;
+	padding: 10px;
+	border-radius: 48px;
+	background: #0d0d0f;
+	position: relative;
 	overflow: hidden;
+	box-shadow: 0 30px 70px -20px rgba(15, 23, 42, .28), 0 0 0 1px var(--mkt-border), 0 0 0 2px #2a2a2e;
 	transform: rotate(2deg);
 }
-.mkt-mock__map {
-	height: 180px;
-	background:
-			linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-strong) 100%);
-	position: relative;
-}
-.mkt-mock__pin {
-	position: absolute;
-	top: 50%; left: 50%;
-	transform: translate(-50%, -60%);
-	width: 34px; height: 34px;
-	border-radius: 50% 50% 50% 0;
-	background: var(--c-primary-weak);
-	rotate: -45deg;
-	display: flex; align-items: center; justify-content: center;
-	box-shadow: 0 6px 16px rgba(0,0,0,.25);
-}
-.mkt-mock__pin svg { rotate: 45deg; width: 16px; height: 16px; color: var(--c-primary-strong); }
-.mkt-mock__body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-.mkt-mock__card {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 10px;
-	border-radius: 14px;
+.mkt-mock__video {
+	width: 100%;
+	height: 100%;
+	display: block;
+	object-fit: cover;
+	border-radius: 38px;
 	background: var(--c-bg);
 }
-.mkt-mock__thumb {
-	width: 44px; height: 44px; border-radius: 10px; flex: none;
-	background: var(--c-primary-weak);
-	display: flex; align-items: center; justify-content: center;
-	color: var(--c-primary-strong);
-}
-.mkt-mock__thumb svg { width: 22px; height: 22px; }
-.mkt-mock__lines { flex: 1; min-width: 0; }
-.mkt-mock__line { height: 8px; border-radius: 4px; background: var(--mkt-line); }
-.mkt-mock__line + .mkt-mock__line { margin-top: 6px; width: 60%; }
-.mkt-mock__badge {
-	flex: none;
-	font-size: 11px;
-	font-weight: 800;
-	/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 크림(--c-primary-weak)-on-오렌지는
-	   실측 대비 ~1.85:1로 AA 미달. .btn--accent(components.css)와 동일하게 --c-text로 교체 →
-	   실측 6.08:1, AA 통과. */
-	color: var(--c-text);
-	background: var(--c-accent);
-	padding: 3px 8px;
-	border-radius: 999px;
-}
-.mkt-chip {
+.mkt-mock__island {
+	/* 폰 상단 다이내믹 아일랜드 장식 — 실제 인터랙션은 없어서 aria-hidden인 .mkt-mock 안에 둔다 */
 	position: absolute;
-	background: var(--c-primary-weak);
+	top: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 30%;
+	height: 24px;
 	border-radius: 14px;
-	padding: 10px 14px;
-	box-shadow: 0 14px 30px -10px rgba(15,23,42,.22);
-	font-weight: 800;
-	font-size: 13px;
-	display: flex;
-	align-items: center;
-	gap: 6px;
+	background: #0d0d0f;
+	z-index: 1;
 }
-.mkt-chip--1 { top: -10px; right: -18px; color: var(--c-accent-strong); }
-.mkt-chip--2 { bottom: -18px; left: -26px; color: var(--c-primary-strong); }
+/* 2026-09-29 — "마감 32분 전"/"오늘도 구제 완료" 장식 칩(.mkt-chip 계열) 삭제 — home.html 참고.
+   실제 데모 영상 위에 CSS로 그린 가짜 배지를 얹는 게 군더더기라는 판단. */
 @media (max-width: 900px) {
 	.mkt-mock { margin-top: 40px; }
-	.mkt-chip--2 { left: -8px; }
-	.mkt-chip--1 { right: -6px; }
 }
 
 /* ---------------- Partners marquee ---------------- */
@@ -300,6 +265,9 @@ body.mkt {
 .mkt-marquee:hover .mkt-marquee__track { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
 	.mkt-marquee__track { animation: none; }
+	/* 2026-09-29 — 히어로 데모 영상(.mkt-mock__video)도 reduced-motion 대상이지만, CSS로는
+	   <video>의 autoplay 재생 자체를 멈출 수 없다(animation이 아니라 미디어 재생이라 여기서
+	   손댈 게 없음) — 실제 pause() 처리는 home.html 하단 스크립트가 한다. */
 }
 @keyframes mkt-marquee-scroll {
 	from { transform: translateX(0); }
