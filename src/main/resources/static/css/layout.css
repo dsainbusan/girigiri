@@ -196,7 +196,7 @@
 .bottomnav__ico { font-size: 18px; line-height: 1; }
 .bottomnav__item.is-active { color: var(--c-primary); font-weight: var(--fw-bold); }
 
-/* 하단 탭바 중앙 QR 스캔 플로팅 버튼 (점주 전용) */
+/* 하단 탭바 중앙 플로팅 버튼 — 점주: QR 스캔 / 유저: 홈 */
 .bottomnav__item--fab {
   position: relative;
   text-decoration: none;

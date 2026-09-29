@@ -32,14 +32,17 @@
     </a>
   </th:block>
   <th:block th:unless="${active == 'dashboard' or active == 'products' or active == 'incoming' or active == 'my-owner' or active == 'pickup'}">
-    <a class="bottomnav__item" th:classappend="${active=='home'}   ? ' is-active'" th:href="@{/app}">
-      <svg class="icon bottomnav__ico"><use href="#i-home"/></svg><span>홈</span>
-    </a>
     <a class="bottomnav__item" th:classappend="${active=='like'}   ? ' is-active'" th:href="@{/user/likes}">
       <svg class="icon bottomnav__ico"><use href="#i-heart"/></svg><span>찜</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='ledger'} ? ' is-active'" th:href="@{/user/ledger}">
       <svg class="icon bottomnav__ico"><use href="#i-ledger"/></svg><span>가계부</span>
+    </a>
+    <a class="bottomnav__item bottomnav__item--fab" th:classappend="${active=='home'} ? ' is-active'" th:href="@{/app}" title="홈">
+      <span class="bottomnav__fab-circle">
+        <svg class="icon bottomnav__fab-ico"><use href="#i-home"/></svg>
+      </span>
+      <span class="bottomnav__fab-label">홈</span>
     </a>
     <a class="bottomnav__item" th:classappend="${active=='alert'}  ? ' is-active'" th:href="@{/user/alerts}">
       <svg class="icon bottomnav__ico"><use href="#i-bell"/></svg><span>알림</span>
