@@ -175,7 +175,7 @@ BEM(`.block__element--modifier`), 상태는 `.is-*`. 오너: 송보미.
 | 파일 | 담당 | 화면 | 주요 클래스 |
 |---|---|---|---|
 | `auth.css` | — | 로그인/가입 | `.oauth-btn(__ico)` 소셜 버튼 아이콘 위치, `.oauth-or` 구분선, `.oauth-email` |
-| `chat.css` | 송채현 | 마이페이지 챗봇 | `.chat-fab`, `.chat-panel(__header __title __messages __input-row __input __send-btn …)`, `.chat-bubble--bot/--user`, `.chat-quick-reply`, `.chat-typing`, `.chat-escalate-link` |
+| `chat.css` | 송채현 | 챗봇 위젯(마이페이지·마케팅 홈) | `.chat-fab`, `.chat-fab--page`, `.chat-panel(__header __title __messages __input-row __input __send-btn …)`, `.chat-panel--page`, `.chat-bubble--bot/--user`, `.chat-quick-reply`, `.chat-typing`, `.chat-escalate-link` |
 | `mypage.css` | 문창호 | 마이페이지 메뉴 | `.list-menu-item(__icon __title __body __desc __value __arrow)`, `--danger` |
 | `settings.css` | 문창호 | 환경설정 | `.settings-section(__title)`, `.settings-card`, `.list-menu-item--toggle/--radio`, `.settings-check` |
 | `search.css` | 강노은 | 검색 결과 | `.range-slider(__track __fill)` 듀얼 슬라이더, `.range-inputs(__unit)` |
