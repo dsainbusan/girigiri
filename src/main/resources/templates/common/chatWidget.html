@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  common/chatWidget.html — 고객 지원 챗봇 위젯 (FAB + 패널 + JS)
+  담당: 송채현 (WBS 6.5 고객 지원 챗봇)
+
+  2026-09-29 추가 — 원래 mypageView/mypage.html 안에 통째로 있던 마크업+스크립트를 이 프래그먼트로
+  뽑아냈다. 왜: 마케팅 홈(비회원)에서도 같은 챗봇 UI를 쓰고 싶다는 요청(비회원용 채팅 상담)이 왔는데,
+  기존 위젯은 "/mypage/chat/message 고정 URL + 로그인 사용자 user 객체 필수"가 마크업/스크립트
+  곳곳에 박혀 있어서 그대로 복사하면 두 벌을 따로 유지보수해야 했다. endpoint/mode/user 세 파라미터로
+  회원(mypage)·비회원(마케팅 홈) 차이만 분기하고, 나머지 마크업·CSS(chat.css)·JS 로직은 완전히 같다.
+
+  사용법:
+    <link rel="stylesheet" th:href="@{/css/chat.css}">
+    <div th:replace="~{common/chatWidget :: chatWidget('member', '/mypage/chat/message', ${user})}"></div>   (마이페이지)
+    <div th:replace="~{common/chatWidget :: chatWidget('guest', '/support/chat/message', null)}"></div>       (마케팅 홈 등 비회원 화면)
+
+  - mode='member': 로그인 사용자용. user.role=='OWNER'면 사장님용 빠른 질문, 아니면 손님용 빠른 질문.
+    1:1 문의 링크는 /user/support로 바로 이동(이미 로그인돼 있으니).
+  - mode='guest' : 비로그인 방문자용. 빠른 질문은 서비스 소개 위주 4개로 고정. 1:1 문의 링크는
+    "로그인하고 1:1 문의하기"로 문구를 바꾸고 /auth/loginForm으로 보낸다.
+  - 아이콘(#i-chat, #i-close)은 마이페이지(common/layout.html 아이콘 스프라이트)엔 있지만 마케팅
+    홈(독립 문서, 스프라이트 없음)엔 없어서, <use href="#i-...">대신 인라인 <svg>로 통일했다 —
+    두 화면에서 완전히 같은 마크업 하나만 유지하면 된다. 크기(18×18)는 chat.css의 .chat-fab svg /
+    .chat-panel__icon-btn svg 규칙이 담당(기존 components.css의 .icon 유틸리티와 똑같이 맞춰둠 —
+    마케팅 홈은 components.css를 안 불러오므로 chat.css 안에서 자체적으로 해결해야 했다).
+-->
+<div th:fragment="chatWidget(mode, endpoint, user)">
+
+	<!-- 챗봇 플로팅 버튼. 마이페이지에선 앱 셸 컨테이너 기준 오른쪽에 붙고(.chat-fab, chat.css 기본
+	     규칙), 마케팅 홈처럼 앱 셸이 없는 화면에선 .chat-fab--page로 화면 오른쪽 아래 24px 고정 —
+	     호출부가 mode에 따라 이 수정자 클래스를 붙일지 결정한다. -->
+	<button type="button" id="chat-fab-btn"
+	        th:class="${mode == 'guest'} ? 'chat-fab chat-fab--page' : 'chat-fab'"
+	        title="고객 지원 챗봇 열기">
+		<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4.848 2.771A49.144 49.144 0 0 1 12 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97-1.94.284-3.916.455-5.922.505a.39.39 0 0 0-.266.112L8.78 21.53A.75.75 0 0 1 7.5 21v-3.955a48.842 48.842 0 0 1-2.652-.316c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97Z" clip-rule="evenodd"/></svg>
+	</button>
+
+	<div id="chat-panel" th:class="${mode == 'guest'} ? 'chat-panel chat-panel--page' : 'chat-panel'" style="display: none;">
+		<div class="chat-panel__header">
+			<span class="chat-panel__title">고객 지원 챗봇</span>
+			<div class="chat-panel__header-actions">
+				<button type="button" id="chat-reset-btn" class="chat-panel__icon-btn" title="새 대화 시작">↺</button>
+				<button type="button" id="chat-close-btn" class="chat-panel__icon-btn" title="닫기">
+					<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+				</button>
+			</div>
+		</div>
+		<div id="chat-messages" class="chat-panel__messages">
+			<div class="chat-bubble chat-bubble--bot" th:text="${mode == 'guest'}
+					? '안녕하세요! 로그인 없이도 기리기리 이용 방법을 물어보실 수 있어요.'
+					: '안녕하세요! 예약, 픽업, 결제·환불 관련해서 궁금한 점을 물어보세요.'">안녕하세요!</div>
+		</div>
+		<!-- 상담원 연결(=1:1 문의) 링크. 비회원은 /user/support가 로그인 필요 화면이라 로그인부터
+		     시키고, 회원은 바로 /user/support로 보낸다(원래 동작 그대로). -->
+		<a th:if="${mode == 'guest'}" th:href="@{/auth/loginForm}" class="chat-escalate-link">🙋 로그인하고 1:1 문의하기</a>
+		<a th:unless="${mode == 'guest'}" th:href="@{/user/support}" class="chat-escalate-link">🙋 1:1 문의하기</a>
+
+		<!-- 빠른 질문(퀵 리플라이). 회원은 기존과 동일하게 role별로 다른 8개, 비회원은 서비스 소개
+		     위주 4개 고정(예약 조회 등 로그인 전제 질문은 뺐다). -->
+		<div id="chat-quick-replies" class="chat-quick-replies">
+			<th:block th:if="${mode == 'guest'}">
+				<button type="button" class="chat-quick-reply" data-question="기리기리가 뭐예요?">기리기리가 뭐예요?</button>
+				<button type="button" class="chat-quick-reply" data-question="예약은 어떻게 하고 픽업은 어떻게 해요?">예약·픽업 방법</button>
+				<button type="button" class="chat-quick-reply" data-question="환불 규정이 어떻게 되나요?">환불 규정</button>
+				<button type="button" class="chat-quick-reply" data-question="가게 사장님인데 입점하고 싶어요.">입점하고 싶어요</button>
+			</th:block>
+			<th:block th:unless="${mode == 'guest'}">
+				<button type="button" class="chat-quick-reply" th:if="${user == null or user.role != 'OWNER'}" data-question="예약 취소는 언제까지 가능해요?">예약 취소 기한</button>
+				<button type="button" class="chat-quick-reply" th:if="${user == null or user.role != 'OWNER'}" data-question="픽업은 어떻게 하나요?">픽업 방법</button>
+				<button type="button" class="chat-quick-reply" th:if="${user == null or user.role != 'OWNER'}" data-question="환불은 어떻게 되나요?">환불 규정</button>
+				<button type="button" class="chat-quick-reply" th:if="${user == null or user.role != 'OWNER'}" data-question="영수증은 어디서 봐요?">영수증 확인</button>
+				<button type="button" class="chat-quick-reply" th:if="${user != null and user.role == 'OWNER'}" data-question="재고는 어떻게 등록해요?">재고 등록</button>
+				<button type="button" class="chat-quick-reply" th:if="${user != null and user.role == 'OWNER'}" data-question="노쇼 처리는 어떻게 되나요?">노쇼 처리</button>
+				<button type="button" class="chat-quick-reply" th:if="${user != null and user.role == 'OWNER'}" data-question="정산은 언제 되나요?">정산 시기</button>
+				<button type="button" class="chat-quick-reply" th:if="${user != null and user.role == 'OWNER'}" data-question="매출 리포트는 어디서 봐요?">매출 리포트</button>
+			</th:block>
+		</div>
+		<form id="chat-form" class="chat-panel__input-row">
+			<input type="text" id="chat-input" class="chat-panel__input" placeholder="메시지를 입력하세요" autocomplete="off" maxlength="500">
+			<button type="submit" id="chat-send-btn" class="chat-panel__send-btn">전송</button>
+		</form>
+	</div>
+
+	<script th:inline="javascript">
+		(function () {
+			// mode/endpoint는 호출부(mypage.html/marketingView/home.html)가 넘겨준 값을 그대로
+			// 문자열로 굳힌다 — 아래 로직은 이 두 값만 다르고 나머지는 완전히 동일하다.
+			var CHAT_ENDPOINT = /*[[${endpoint}]]*/ '/mypage/chat/message';
+
+			var chatHistory = [];
+			var panel = document.getElementById('chat-panel');
+			var fabBtn = document.getElementById('chat-fab-btn');
+			var closeBtn = document.getElementById('chat-close-btn');
+			var resetBtn = document.getElementById('chat-reset-btn');
+			var messagesEl = document.getElementById('chat-messages');
+			var form = document.getElementById('chat-form');
+			var input = document.getElementById('chat-input');
+			var sendBtn = document.getElementById('chat-send-btn');
+			var greetingText = messagesEl.textContent.trim();
+
+			if (!panel || !fabBtn) { return; }
+
+			// 2026-09-29 — 마케팅 홈은 app.js(girigiriAlert 정의부)를 안 불러오므로, 없으면 그냥
+			// 네이티브 alert()로 대체한다. 마이페이지에선 지금까지처럼 girigiriAlert를 그대로 쓴다.
+			function notify(message) {
+				if (typeof window.girigiriAlert === 'function') {
+					window.girigiriAlert(message);
+				} else {
+					alert(message);
+				}
+			}
+
+			// 추가됨 (2026-08-27) — 왜: 답변 기다리는 중에도 입력창/전송 버튼이 계속 눌려서, 사용자가
+			// 답변 오기 전에 연달아 여러 메시지를 보내면 응답이 뒤섞이거나 순서가 꼬일 수 있었다.
+			// 요청을 보내는 동안엔 입력을 막아서 한 번에 하나씩만 주고받도록 한다.
+			function setSending(isSending) {
+				input.disabled = isSending;
+				sendBtn.disabled = isSending;
+				sendBtn.textContent = isSending ? '전송중' : '전송';
+			}
+
+			function appendMessage(who, text) {
+				var bubble = document.createElement('div');
+				bubble.className = who === 'user' ? 'chat-bubble chat-bubble--user' : 'chat-bubble chat-bubble--bot';
+				bubble.textContent = text;
+				messagesEl.appendChild(bubble);
+				messagesEl.scrollTop = messagesEl.scrollHeight;
+				return bubble;
+			}
+
+			// 추가됨 (2026-09-15, WBS "응답 대기 중 로딩 표시(말풍선 ... 애니메이션)") — 정적인 "..."
+			// 텍스트 대신 점 3개가 통통 튀는 CSS 애니메이션을 넣는다. 응답이 오면 아래 fetch 로직이
+			// 그대로 loadingBubble.textContent를 덮어써서 이 마크업이 자연스럽게 답변 텍스트로 바뀐다.
+			function appendLoadingBubble() {
+				var bubble = document.createElement('div');
+				bubble.className = 'chat-bubble chat-bubble--bot';
+				bubble.innerHTML = '<span class="chat-typing"><span></span><span></span><span></span></span>';
+				messagesEl.appendChild(bubble);
+				messagesEl.scrollTop = messagesEl.scrollHeight;
+				return bubble;
+			}
+
+			function openPanel() {
+				panel.style.display = 'flex';
+				input.focus();
+			}
+			fabBtn.addEventListener('click', openPanel);
+			// 2026-09-29 — FAQ(common/faq.html)의 "채팅 상담으로 물어보기" 버튼도 이 패널을 열어야
+			// 하는데, faq.js는 이 스크립트의 내부 변수(panel 등)에 접근할 수 없다. 여는 함수 하나만
+			// 전역에 노출해서 faq.js가 그걸 호출하게 한다 — DOM ID를 또 하드코딩하거나 새 열기
+			// 로직을 중복 구현하지 않기 위함.
+			window.girigiriOpenChat = openPanel;
+
+			var chatbotRow = document.getElementById('btn-open-chatbot-row');
+			if (chatbotRow) {
+				chatbotRow.addEventListener('click', openPanel);
+			}
+
+			closeBtn.addEventListener('click', function () {
+				panel.style.display = 'none';
+			});
+
+			// "새 대화 시작" (REQ-F-125) — 서버엔 저장된 게 없어서 프론트가 들고 있는 history만 비우면 된다.
+			resetBtn.addEventListener('click', function () {
+				chatHistory = [];
+				messagesEl.innerHTML = '';
+				appendMessage('bot', greetingText);
+			});
+
+			// 추가됨 (2026-09-15, WBS "빠른 질문(퀵 리플라이) 버튼 노출") — 버튼을 누르면 그 질문을
+			// 입력창에 채우고 채팅 폼을 그대로 제출한다. 실제 전송/로딩/에러 처리는 전부 아래 form의
+			// submit 핸들러를 그대로 타므로 별도 전송 로직을 새로 만들지 않는다.
+			var quickReplyButtons = document.querySelectorAll('.chat-quick-reply');
+			quickReplyButtons.forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					if (sendBtn.disabled) { return; } // 이미 답변 기다리는 중이면 무시
+					input.value = btn.getAttribute('data-question');
+					form.requestSubmit();
+				});
+			});
+
+			form.addEventListener('submit', async function (e) {
+				e.preventDefault();
+				if (sendBtn.disabled) { return; } // 이미 응답 기다리는 중이면 무시 (중복 제출 방지)
+				var text = input.value.trim();
+				if (!text) {
+					// (WBS "빈 메시지 전송 방지") — 서버(ChatService)도 한 번 더 막아주지만, 프론트에서
+					// 아예 안 보내는 게 더 빠르고, alert로 명확하게 안내한다.
+					notify('메시지를 입력해주세요.');
+					return;
+				}
+
+				appendMessage('user', text);
+				input.value = '';
+				var loadingBubble = appendLoadingBubble();
+				setSending(true);
+
+				try {
+					var res = await fetch(CHAT_ENDPOINT, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ message: text, history: chatHistory })
+					});
+
+					if (res.status === 401) {
+						loadingBubble.textContent = '로그인이 필요해요.';
+						return;
+					}
+
+					var data = await res.json();
+					if (data.success) {
+						loadingBubble.textContent = data.reply;
+						chatHistory.push({ role: 'user', content: text });
+						chatHistory.push({ role: 'assistant', content: data.reply });
+					} else {
+						loadingBubble.textContent = data.errorMessage || '답변을 가져오지 못했어요. 다시 시도해주세요.';
+					}
+				} catch (err) {
+					loadingBubble.textContent = '답변을 가져오지 못했어요. 잠시 후 다시 시도해주세요.';
+				} finally {
+					setSending(false);
+					input.focus();
+				}
+			});
+		})();
+	</script>
+
+</div>
+</body>
+</html>

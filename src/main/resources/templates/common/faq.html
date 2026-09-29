@@ -17,13 +17,21 @@
   <div class="mkt__wrap faq__grid">
     <div class="faq__head">
       <div class="mkt-section__eyebrow">FAQ</div>
-      <h2 id="faq-title">자주 묻는 질문</h2>
-      <p>찾는 답이 없으면 <a th:href="@{/user/inquiries}" href="#">1:1 문의</a>로 남겨 주세요.</p>
+      <!-- 2026-09-29 — 다른 섹션 h2(우리가 만든 변화/이용 방법)와 통일감 주려고 reveal-words
+           스크롤 애니메이션 추가. faq.html은 marketingView/home.html에서만 include되고, 거기서
+           이미 reveal-words.css/js를 로드하고 있어서 별도 추가 없이 바로 동작함. -->
+      <h2 id="faq-title" class="reveal-words">자주 묻는 질문</h2>
+      <!-- 2026-09-29 — 비회원용 채팅 상담(GuestChatController)이 생기면서, 로그인이 있어야 하는
+           /user/inquiries로 곧장 보내는 대신 채팅 패널을 바로 연다. data-open-chat이 JS 훅
+           (faq.js 참고) — common/chatWidget.html이 노출하는 window.girigiriOpenChat()을 호출한다.
+           사진이 필요한 "받은 상품이 설명과 달라요" 항목의 1:1 문의 링크는 실제 문의 접수가
+           필요해서 그대로 /user/inquiries 링크로 둔다(아래 67행 부근). -->
+      <p>찾는 답이 없으면 <button type="button" class="faq__inquiry-link" data-open-chat>채팅 상담</button>으로 바로 물어보세요.</p>
     </div>
 
     <div class="faq__body">
       <div class="faq__tabs" role="tablist" aria-label="질문 대상">
-        <button class="faq__tab" role="tab" id="faq-tab-buyer" aria-controls="faq-buyer" aria-selected="true">기리기리 유저</button>
+        <button class="faq__tab" role="tab" id="faq-tab-buyer" aria-controls="faq-buyer" aria-selected="true">유저</button>
         <button class="faq__tab" role="tab" id="faq-tab-store" aria-controls="faq-store" aria-selected="false" tabindex="-1">가게 사장님</button>
       </div>
 

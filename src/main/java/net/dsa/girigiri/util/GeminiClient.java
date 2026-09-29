@@ -38,11 +38,20 @@ import java.util.List;
  * 되는 것도 이 구조 덕분이다 (서버에 별도로 "초기화해줘" 요청을 보낼 필요가 없다).
  *
  * 필요한 설정값(application.properties -> .env)은 README.md "로컬 실행" 섹션에 문서화할 것:
- *   GEMINI_API_KEY (필수), GEMINI_MODEL / GEMINI_MAX_TOKENS (선택, 기본값 있음)
+ *   GEMINI_API_KEY_MEMBER (필수, 회원용) / GEMINI_API_KEY_GUEST (필수, 비회원용) / GEMINI_MODEL /
+ *   GEMINI_MAX_TOKENS (선택, 기본값 있음)
  *
- * 주의: isConfigured()가 false인 동안엔 sendMessage()가 바로 실패 결과를 돌려준다(채팅 UI에는
- * "챗봇이 아직 준비중이에요" 안내가 뜬다) — PortOneClient와 동일한 패턴. 키를 발급받아 .env에
- * 채우기만 하면 코드 수정 없이 바로 동작한다.
+ * 주의: isConfigured(KeyProfile)가 false인 동안엔 sendMessage()가 바로 실패 결과를 돌려준다(채팅
+ * UI에는 "챗봇이 아직 준비중이에요" 안내가 뜬다) — PortOneClient와 동일한 패턴. 키를 발급받아
+ * .env에 채우기만 하면 코드 수정 없이 바로 동작한다.
+ *
+ * 변경됨 (2026-09-29, 담당: 송채현) — 왜: 무료 티어 하루/분당 할당량이 회원 챗봇(마이페이지)과
+ * 비회원 챗봇(마케팅 홈/FAQ)이 같은 키를 나눠 쓰면 한쪽이 몰릴 때 다른 쪽까지 같이 막혔다.
+ * "용도별 키 분리"로 바꿔서, 회원용/비회원용 키를 아예 따로 설정하고(KeyProfile.MEMBER/GUEST)
+ * 회원 쪽만 429(할당량 초과) 시 비회원 키로 1회 대체를 허용한다(반대는 안 함 — 비회원 트래픽이
+ * 회원용 할당량까지 쓰게 두지 않기 위함). 예전 GEMINI_API_KEY_2(범용 예비 키) 개념은 이 구조로
+ * 대체되어 제거했다. 기존 GEMINI_API_KEY 하나만 채워둔 팀원 .env는 안 깨지도록 그 값이 회원용
+ * 키의 기본값으로 그대로 읽힌다(application.properties의 gemini.api-key-member 참고).
  *
  * Gemini API는 대화 role을 "user"/"model" 두 가지로만 구분한다 (Claude/OpenAI 쪽의 "assistant"와
  * 다른 이름) — 그래서 ChatMessageDto.role이 "assistant"로 들어오면 여기서 "model"로 바꿔 보낸다.
@@ -81,22 +90,49 @@ public class GeminiClient {
 			.build();
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	private final String apiKey;
+	/**
+	 * 2026-09-29 추가, 담당: 송채현 — 회원 챗봇(마이페이지)과 비회원 챗봇(마케팅 홈/FAQ) 중 어느
+	 * 쪽이 이 호출의 주체인지. 키 선택·대체 로직(callWithKeyFallback)이 이 값 하나로만 갈라지게
+	 * 모아뒀다 — 호출하는 쪽(ChatService)은 "내가 회원용인지 비회원용인지"만 알려주면 된다.
+	 */
+	public enum KeyProfile { MEMBER, GUEST }
+
+	// 변경됨 (2026-09-29, 담당: 송채현) — 왜: 하나의 키를 회원/비회원이 나눠 쓰면 한쪽이 몰릴 때
+	// 다른 쪽까지 같이 막혔다. 용도별로 키를 완전히 분리했다 — memberApiKey는 마이페이지 챗봇,
+	// guestApiKey는 마케팅 홈/FAQ 챗봇 전용. member가 429일 때만 guest 키로 1회 대체를 시도하고
+	// (callWithKeyFallback), 반대(guest가 member 키를 빌려쓰는 것)는 하지 않는다 — 비회원 트래픽이
+	// 회원용 할당량까지 갉아먹지 않게 하기 위함.
+	private final String memberApiKey;
+	private final String guestApiKey;
 	private final String model;
 	private final int maxOutputTokens;
 
 	public GeminiClient(
-			@Value("${gemini.api-key:}") String apiKey,
+			@Value("${gemini.api-key-member:}") String memberApiKey,
+			@Value("${gemini.api-key-guest:}") String guestApiKey,
 			@Value("${gemini.model:gemini-flash-latest}") String model,
 			@Value("${gemini.max-tokens:1024}") int maxOutputTokens) {
-		this.apiKey = apiKey;
+		this.memberApiKey = memberApiKey;
+		this.guestApiKey = guestApiKey;
 		this.model = model;
 		this.maxOutputTokens = maxOutputTokens;
 	}
 
-	/** .env에 GEMINI_API_KEY가 채워져 있는지. */
-	public boolean isConfigured() {
-		return apiKey != null && !apiKey.isBlank();
+	/**
+	 * 해당 프로필로 챗봇을 쓸 수 있는지. MEMBER는 memberApiKey만 본다. GUEST는 guestApiKey가
+	 * 없어도 memberApiKey가 있으면 true다 — 2026-09-29 추가: GEMINI_API_KEY_GUEST를 아직 안
+	 * 채워둔 환경(팀원 개인 키가 없는 경우 등)에서 비회원 챗봇을 "준비중"으로 막아두지 않고
+	 * member 키로 대신 돌아가게 하기 위함(callWithKeyFallback의 같은 분기 참고).
+	 */
+	public boolean isConfigured(KeyProfile keyProfile) {
+		if (keyProfile == KeyProfile.GUEST) {
+			return hasKey(guestApiKey) || hasKey(memberApiKey);
+		}
+		return hasKey(memberApiKey);
+	}
+
+	private static boolean hasKey(String key) {
+		return key != null && !key.isBlank();
 	}
 
 	// 추가됨 (2026-08-31, 챗봇 기능 연동/function calling) — 왜: 예약 취소 가능 여부를 물어보면
@@ -135,8 +171,9 @@ public class GeminiClient {
 	 * 자동 재시도한다 — 그 외 실패(잘못된 키, 잘못된 모델명 등)는 재시도해도 어차피 똑같이 실패하니
 	 * 바로 실패를 돌려준다.
 	 */
-	public ChatResult sendMessage(String systemPrompt, List<ChatMessageDto> history, String userMessage) {
-		return sendMessage(systemPrompt, history, userMessage, null);
+	public ChatResult sendMessage(KeyProfile keyProfile, String systemPrompt, List<ChatMessageDto> history,
+			String userMessage) {
+		return sendMessage(keyProfile, systemPrompt, history, userMessage, null);
 	}
 
 	/**
@@ -145,10 +182,13 @@ public class GeminiClient {
 	 * 흐름은 영향이 없다). null이 아니면 Gemini에게 이 함수의 존재를 알려주고, 모델이 필요하다고
 	 * 판단해서 함수 호출을 요청하면 여기서 toolExecutor를 직접 실행해 실제 예약 데이터를 가져온
 	 * 뒤, 그 결과를 다시 Gemini에 보내 최종 답변 텍스트를 받아온다(최대 2번 왕복).
+	 *
+	 * 2026-09-29 — keyProfile 파라미터 추가(용도별 키 분리). 어느 키를 쓸지, 429일 때 대체를
+	 * 허용할지는 전부 callWithKeyFallback 한 군데에서 keyProfile만 보고 결정한다.
 	 */
-	public ChatResult sendMessage(String systemPrompt, List<ChatMessageDto> history, String userMessage,
-			ReservationToolExecutor toolExecutor) {
-		if (!isConfigured()) {
+	public ChatResult sendMessage(KeyProfile keyProfile, String systemPrompt, List<ChatMessageDto> history,
+			String userMessage, ReservationToolExecutor toolExecutor) {
+		if (!isConfigured(keyProfile)) {
 			return ChatResult.failed("챗봇이 아직 준비중이에요. 잠시 후 다시 시도해주세요.");
 		}
 
@@ -165,14 +205,15 @@ public class GeminiClient {
 		contents.add(toContentNode("user", userMessage));
 
 		boolean useTools = toolExecutor != null;
-		GeminiCallResult result = callWithRetry(buildRequestBody(systemPrompt, contents, useTools));
+		GeminiCallResult result = callWithKeyFallback(keyProfile, buildRequestBody(systemPrompt, contents, useTools));
 
 		if (!result.success()) {
-			return ChatResult.failed(result.failReason());
+			return ChatResult.failed(result.failReason(), result.quotaExceeded());
 		}
 
 		if (result.functionCallPart() != null) {
-			return handleFunctionCall(systemPrompt, contents, useTools, result.functionCallPart(), toolExecutor);
+			return handleFunctionCall(keyProfile, systemPrompt, contents, useTools, result.functionCallPart(),
+					toolExecutor);
 		}
 
 		if (result.text() == null || result.text().isEmpty()) {
@@ -187,8 +228,8 @@ public class GeminiClient {
 	 * 이 과정을 하나의 대화 맥락 안에서 처리하도록 설계돼 있어서(펑션콜 자체도 "모델의 한 턴"으로
 	 * 취급), 최종 응답도 systemInstruction/tools를 그대로 유지한 채 같은 대화의 연장으로 요청한다.
 	 */
-	private ChatResult handleFunctionCall(String systemPrompt, ArrayNode contents, boolean useTools,
-			JsonNode functionCallPart, ReservationToolExecutor toolExecutor) {
+	private ChatResult handleFunctionCall(KeyProfile keyProfile, String systemPrompt, ArrayNode contents,
+			boolean useTools, JsonNode functionCallPart, ReservationToolExecutor toolExecutor) {
 		String functionName = functionCallPart.path("functionCall").path("name").asText("");
 
 		String toolResultJson = RESERVATION_TOOL_NAME.equals(functionName) && toolExecutor != null
@@ -220,9 +261,9 @@ public class GeminiClient {
 		functionResponseTurn.set("parts", frParts);
 		contents.add(functionResponseTurn);
 
-		GeminiCallResult second = callWithRetry(buildRequestBody(systemPrompt, contents, useTools));
+		GeminiCallResult second = callWithKeyFallback(keyProfile, buildRequestBody(systemPrompt, contents, useTools));
 		if (!second.success()) {
-			return ChatResult.failed(second.failReason());
+			return ChatResult.failed(second.failReason(), second.quotaExceeded());
 		}
 		// 이론상 모델이 함수 결과를 받고 또 함수 호출을 요청할 수도 있는 스펙이지만, 지금 tool은
 		// 1개뿐이고 그마저도 "결과를 보고 다시 조회할" 이유가 없는 단순 조회라 여기서는 두 번째
@@ -294,14 +335,46 @@ public class GeminiClient {
 		return tools;
 	}
 
-	/** sendMessage()의 재시도 루프를 그대로 옮긴 것 — 함수 호출 왕복까지 지원하려고 재사용 가능하게 분리했다. */
-	private GeminiCallResult callWithRetry(ObjectNode body) {
-		String url = String.format(API_URL_TEMPLATE, model, apiKey);
+	/**
+	 * 2026-09-29 추가, 담당: 송채현 — "용도별 키 분리" 구조의 핵심. 두 가지 대체 상황을 구분해서
+	 * 처리한다:
+	 * ① MEMBER가 429(할당량 초과)면 딱 1회만 guest 키로 대체해본다 — 429는 잠깐 기다린다고
+	 *    풀리는 게 아니라 재시도가 무의미하고(아래 callWithRetry의 429 주석 참고), 다른 키(다른
+	 *    할당량)로 바꾸는 것만 효과가 있다. 429가 아닌 다른 실패(네트워크 오류, 잘못된 모델명 등)는
+	 *    키를 바꿔도 똑같이 실패할 가능성이 높아 대체하지 않는다.
+	 * ② GUEST는 원래 대체가 없어야 하지만(스펙: "비회원 채팅은 guest 키만 사용, 대체 없음" —
+	 *    회원용 할당량을 비회원 트래픽이 갉아먹지 않게 하려는 의도), GEMINI_API_KEY_GUEST 자체가
+	 *    아예 설정 안 된 환경(예: 개인 키가 아직 없는 팀원)에서는 예외적으로 member 키를 빌려
+	 *    쓴다 — 이건 "할당량을 나눠 쓰는" 게 아니라 "guest 전용 키가 없을 때의 임시 대체"라
+	 *    ①과는 성격이 달라서 경고 로그도 따로 남긴다.
+	 */
+	private GeminiCallResult callWithKeyFallback(KeyProfile keyProfile, ObjectNode body) {
+		if (keyProfile == KeyProfile.GUEST) {
+			if (!hasKey(guestApiKey)) {
+				log.warn("> [GeminiClient][guest] 전용 키 미설정 - member 키로 대체");
+				return callWithRetry(body, memberApiKey, "guest(대체:member 키, 전용 키 미설정)");
+			}
+			return callWithRetry(body, guestApiKey, "guest");
+		}
+
+		GeminiCallResult result = callWithRetry(body, memberApiKey, "member");
+		if (result.quotaExceeded() && hasKey(guestApiKey)) {
+			log.warn("> [GeminiClient][member] 회원용 키 할당량 초과 - 비회원용 키로 1회만 대체 시도");
+			result = callWithRetry(body, guestApiKey, "member(대체:guest 키)");
+		}
+		return result;
+	}
+
+	/** sendMessage()의 재시도 루프를 그대로 옮긴 것 — 함수 호출 왕복까지 지원하려고 재사용 가능하게 분리했다.
+	 * logTag(2026-09-29 추가)는 로그에만 쓰인다 — "지금 할당량을 쓰고 있는 게 회원 기능인지 비회원
+	 * 기능인지"를 남기기 위함([member]/[guest]/[member(대체:guest 키)] 형태). */
+	private GeminiCallResult callWithRetry(ObjectNode body, String apiKeyToUse, String logTag) {
+		String url = String.format(API_URL_TEMPLATE, model, apiKeyToUse);
 		String requestJson;
 		try {
 			requestJson = objectMapper.writeValueAsString(body);
 		} catch (IOException e) {
-			log.warn("> [GeminiClient] 요청 바디 생성 실패", e);
+			log.warn("> [GeminiClient][{}] 요청 바디 생성 실패", logTag, e);
 			return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 		}
 
@@ -318,8 +391,8 @@ public class GeminiClient {
 						httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
 				if (response.statusCode() == 503) {
-					log.warn("> [GeminiClient] 일시적 실패(재시도 대상) - attempt={}/{}, status={}, body={}",
-							attempt, MAX_ATTEMPTS, response.statusCode(), response.body());
+					log.warn("> [GeminiClient][{}] 일시적 실패(재시도 대상) - attempt={}/{}, status={}, body={}",
+							logTag, attempt, MAX_ATTEMPTS, response.statusCode(), response.body());
 					if (attempt < MAX_ATTEMPTS) {
 						sleepBeforeRetry(attempt);
 						continue;
@@ -336,13 +409,16 @@ public class GeminiClient {
 				// 써버리고 있었다(재현 확인: 메시지 몇 개만 연달아 보내도 바로 429 반복). 그래서
 				// 429는 재시도 없이 바로 실패 처리해서 할당량을 더 이상 낭비하지 않는다.
 				if (response.statusCode() == 429) {
-					log.warn("> [GeminiClient] 할당량 초과(재시도 안 함) - status=429, body={}", response.body());
-					return GeminiCallResult.failed(
+					log.warn("> [GeminiClient][{}] 할당량 초과(재시도 안 함) - status=429, body={}", logTag, response.body());
+					// 변경됨 (2026-09-29) — failed() 대신 quotaExceeded()로 바꿔서 callWithKeyFallback이
+					// "이 실패는 다른 키로 넘어가볼 만하다"를 구분할 수 있게 했다(그 외 실패는 키를
+					// 바꿔도 똑같이 실패할 가능성이 높아 바로 반환).
+					return GeminiCallResult.quotaExceeded(
 							"지금 챗봇 사용자가 많아서 답변이 지연되고 있어요. 잠시 후 다시 시도해주세요.");
 				}
 
 				if (response.statusCode() / 100 != 2) {
-					log.warn("> [GeminiClient] 응답 실패 - status={}, body={}", response.statusCode(), response.body());
+					log.warn("> [GeminiClient][{}] 응답 실패 - status={}, body={}", logTag, response.statusCode(), response.body());
 					return GeminiCallResult.failed(
 							"답변을 가져오지 못했어요 (status=" + response.statusCode() + "). 다시 시도해주세요.");
 				}
@@ -350,7 +426,7 @@ public class GeminiClient {
 				JsonNode responseBody = objectMapper.readTree(response.body());
 				JsonNode candidates = responseBody.path("candidates");
 				if (!candidates.isArray() || candidates.isEmpty()) {
-					log.warn("> [GeminiClient] 답변 후보가 없음 - 원본 응답={}", response.body());
+					log.warn("> [GeminiClient][{}] 답변 후보가 없음 - 원본 응답={}", logTag, response.body());
 					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 				}
 
@@ -372,7 +448,7 @@ public class GeminiClient {
 				}
 
 				if (text.isEmpty()) {
-					log.warn("> [GeminiClient] 답변 텍스트가 비어있음 - 원본 응답={}", response.body());
+					log.warn("> [GeminiClient][{}] 답변 텍스트가 비어있음 - 원본 응답={}", logTag, response.body());
 					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 				}
 
@@ -382,7 +458,7 @@ public class GeminiClient {
 					Thread.currentThread().interrupt();
 					return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 				}
-				log.warn("> [GeminiClient] 요청 중 예외 발생(재시도 대상) - attempt={}/{}", attempt, MAX_ATTEMPTS, e);
+				log.warn("> [GeminiClient][{}] 요청 중 예외 발생(재시도 대상) - attempt={}/{}", logTag, attempt, MAX_ATTEMPTS, e);
 				if (attempt < MAX_ATTEMPTS) {
 					sleepBeforeRetry(attempt);
 					continue;
@@ -395,18 +471,27 @@ public class GeminiClient {
 		return GeminiCallResult.failed("답변을 가져오지 못했어요. 다시 시도해주세요.");
 	}
 
-	/** callWithRetry()의 내부 결과 — 텍스트 답변인지, 함수 호출 요청인지, 실패인지 셋 중 하나. */
-	private record GeminiCallResult(boolean success, String failReason, String text, JsonNode functionCallPart) {
+	/**
+	 * callWithRetry()의 내부 결과 — 텍스트 답변인지, 함수 호출 요청인지, 실패인지 셋 중 하나.
+	 * quotaExceeded(2026-09-29 추가)는 실패 중에서도 429(할당량 초과)였는지만 따로 표시한다 —
+	 * callWithKeyFallback이 "다른 키로 넘어가볼 만한 실패"를 구분하는 용도.
+	 */
+	private record GeminiCallResult(boolean success, String failReason, String text, JsonNode functionCallPart,
+			boolean quotaExceeded) {
 		static GeminiCallResult failed(String reason) {
-			return new GeminiCallResult(false, reason, null, null);
+			return new GeminiCallResult(false, reason, null, null, false);
+		}
+
+		static GeminiCallResult quotaExceeded(String reason) {
+			return new GeminiCallResult(false, reason, null, null, true);
 		}
 
 		static GeminiCallResult text(String text) {
-			return new GeminiCallResult(true, null, text, null);
+			return new GeminiCallResult(true, null, text, null, false);
 		}
 
 		static GeminiCallResult functionCall(JsonNode part) {
-			return new GeminiCallResult(true, null, null, part);
+			return new GeminiCallResult(true, null, null, part, false);
 		}
 	}
 
@@ -435,14 +520,23 @@ public class GeminiClient {
 		return node;
 	}
 
-	/** success=true여야 reply가 채워져 있다. false면 failReason에 사람이 읽을 수 있는 실패 사유가 담긴다. */
-	public record ChatResult(boolean success, String reply, String failReason) {
+	/**
+	 * success=true여야 reply가 채워져 있다. false면 failReason에 사람이 읽을 수 있는 실패 사유가
+	 * 담긴다. quotaExceeded(2026-09-29 추가)는 그 실패가 429(할당량 초과)였는지만 따로 표시한다 —
+	 * ChatService가 비회원용으로 다른 문구("지금 상담이 많아 답변이 어려워요...")를 쓰고 싶을 때
+	 * failReason 문자열 내용을 직접 비교하지 않고 이 플래그로 판단하게 하기 위함.
+	 */
+	public record ChatResult(boolean success, String reply, String failReason, boolean quotaExceeded) {
 		public static ChatResult success(String reply) {
-			return new ChatResult(true, reply, null);
+			return new ChatResult(true, reply, null, false);
 		}
 
 		public static ChatResult failed(String reason) {
-			return new ChatResult(false, null, reason);
+			return new ChatResult(false, null, reason, false);
+		}
+
+		public static ChatResult failed(String reason, boolean quotaExceeded) {
+			return new ChatResult(false, null, reason, quotaExceeded);
 		}
 	}
 }
