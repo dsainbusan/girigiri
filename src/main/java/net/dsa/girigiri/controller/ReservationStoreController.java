@@ -1,22 +1,15 @@
 package net.dsa.girigiri.controller;
 
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.dto.CancellableReservationDto;
-import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
-import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.List;
 
 /**
  * 점주용 예약 관리 화면 — 매장 취소(재고 착오 등으로 사장님이 직접 취소).
@@ -25,6 +18,11 @@ import java.util.List;
  * "들어온 예약 확인/수락 + 완료 내역"은 ReservationIncomingController로, "픽업 설정"은
  * ReservationSettingsController로 옮기고 매장 취소만 여기 남겼다.
  * @RequestMapping("/reservation")은 그대로라 URL은 하나도 안 바뀐다.
+ *
+ * 변경됨 (2026-09-30) — 왜: 픽업코드를 직접 입력해서 취소하는 독립 화면(GET/POST /store-cancel,
+ * GET /store-cancel/lookup)을 지웠다. 어느 화면에서도 링크가 안 걸려 있던 고아 화면이었고(코드
+ * 감사에서 발견), "예약 확인" 화면(새 주문/픽업 대기중 두 탭 다)의 취소 버튼이 아래 storeCancelById
+ * (/{id}/store-cancel)로 같은 목적(수락 여부 무관 매장 취소)을 이미 커버해서 중복이었다.
  */
 @Controller
 @RequestMapping("/reservation")
@@ -41,84 +39,6 @@ public class ReservationStoreController {
 	private Long resolveCurrentStoreId(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		return storeAccessService.getMyStore(userId).getId();
-	}
-
-	/**
-	 * 사장님이 재고 착오 등으로 예약을 취소해야 할 때 쓰는 화면.
-	 * (2026-08-21 변경) 픽업 코드를 직접 타이핑하는 대신, 지금 취소 가능한 예약 목록에서 골라
-	 * 취소하도록 바꿨다 — 코드를 손으로 옮겨 적다 오타가 나거나, 이미 지나간 예약 번호를 잘못
-	 * 입력하는 걸 막을 수 있다.
-	 */
-	@GetMapping("/store-cancel")
-	public String storeCancelForm(HttpSession session, Model model) {
-		List<CancellableReservationDto> cancellable = reservationService.getCancellableReservations(resolveCurrentStoreId(session));
-		model.addAttribute("cancellable", cancellable);
-		return "reservationView/storeCancel";
-	}
-
-	/**
-	 * 매장 취소 화면에서, 픽업 코드를 입력하는 동안 어떤 예약(상품/수량/매장)을 취소하려는 건지
-	 * 미리 보여주는 조회 전용 API. pickupLookup과 비슷하지만 "취소 가능 상태" 기준이 다르다 —
-	 * 픽업은 ready 상태만 가능하지만, 매장 취소는 ReservationService.checkCancellableState와
-	 * 동일하게 pending/confirmed/ready 다 가능하다 (손님이 아직 픽업 전이면 매장 수락 여부와 상관없이
-	 * 언제든 매장이 취소 가능).
-	 */
-	@GetMapping("/store-cancel/lookup")
-	@ResponseBody
-	public PickupLookupResponseDto storeCancelLookup(@RequestParam String pickupCode) {
-		ReservationEntity reservation = reservationService.findByPickupCode(pickupCode).orElse(null);
-		if (reservation == null) {
-			return PickupLookupResponseDto.notFound();
-		}
-
-		// 변경됨 (2026-09-08, 코드 감사) — "취소 가능 상태" 판정을 여기 로컬 switch 대신
-		// ReservationService.blockedCancelMessage로 통일(4곳 중복 정리).
-		String blockedMessage = reservationService.blockedCancelMessage(reservation);
-		if (blockedMessage != null) {
-			return PickupLookupResponseDto.blocked(blockedMessage);
-		}
-
-		StoreEntity store = reservationService.findStoreById(reservation.getStoreId()).orElse(null);
-
-		return PickupLookupResponseDto.success(
-				store != null ? store.getStoreName() : "-",
-				reservation.getProductName(),
-				reservation.getReservedQuantity(),
-				reservation.getTotalPrice());
-	}
-
-	/**
-	 * 매장 취소 처리: 시간 제한 없이 언제든 가능하고, ReservationService.cancelByStore가 환불 처리까지 담당한다.
-	 * 결과 화면에서 "뭘 취소한 건지" 바로 보이게, 상품/매장 정보도 같이 조회해서 넘긴다.
-	 *
-	 * 추가됨 — 왜: pickupCode로만 예약을 찾아서, 다른 매장의 픽업 코드를 알기만 하면(또는 목록
-	 * 필터링 버그로 노출됐던 다른 매장 코드로) 취소시킬 수 있는 구멍이 있었다. 로그인한 점주의
-	 * 매장 소유가 아니면 막는다.
-	 */
-	@PostMapping("/store-cancel")
-	public String storeCancel(@RequestParam String pickupCode,
-							   @RequestParam(required = false) String reason,
-							   HttpSession session,
-							   Model model) {
-		ReservationEntity target = reservationService.findByPickupCode(pickupCode)
-				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
-
-		if (!target.getStoreId().equals(resolveCurrentStoreId(session))) {
-			throw new CancellationNotAllowedException("다른 매장의 예약은 취소할 수 없어요.");
-		}
-
-		ReservationEntity cancelled = reservationService.cancelByStore(target.getId(), reason);
-
-		StoreEntity store = reservationService.findStoreById(cancelled.getStoreId()).orElse(null);
-
-		model.addAttribute("pickupCode", cancelled.getPickupCode());
-		model.addAttribute("cancelReason", cancelled.getCancelReason());
-		model.addAttribute("productName", cancelled.getProductName());
-		model.addAttribute("quantity", cancelled.getReservedQuantity());
-		model.addAttribute("totalPrice", cancelled.getTotalPrice());
-		model.addAttribute("storeName", store != null ? store.getStoreName() : "-");
-
-		return "reservationView/storeCancelResult";
 	}
 
 	/**

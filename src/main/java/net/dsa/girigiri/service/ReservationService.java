@@ -2,7 +2,6 @@ package net.dsa.girigiri.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.dto.CancellableReservationDto;
 import net.dsa.girigiri.domain.dto.ReservationAllOrderRowDto;
 import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
 import net.dsa.girigiri.domain.dto.ReservationDetailDto;
@@ -970,32 +969,6 @@ public class ReservationService {
 		receiptService.generateReceipt(reservationId);
 
 		return saved;
-	}
-
-	/**
-	 * 매장 취소 화면용 "취소 가능한 예약" 목록 — checkCancellableState와 동일한 기준(픽업/취소/노쇼가
-	 * 아닌 예약)으로, 오래된 주문부터 보여준다. 픽업 코드를 직접 타이핑하지 않고 여기서 골라 취소한다.
-	 * 변경됨 — 왜: storeId 조건이 없어서 전체 매장 예약이 다 섞여서 나오던 버그를 고쳤다.
-	 */
-	public List<CancellableReservationDto> getCancellableReservations(Long storeId) {
-		List<ReservationEntity> cancellable =
-				reservationRepository.findByStoreIdAndStatusInOrderByReservedAtAsc(storeId, CANCELLABLE_STATUSES);
-		return cancellable.stream().map(this::toCancellableDto).toList();
-	}
-
-	private CancellableReservationDto toCancellableDto(ReservationEntity reservation) {
-		StoreEntity store = storeRepository.findById(reservation.getStoreId())
-				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
-
-		return new CancellableReservationDto(
-				reservation.getId(),
-				reservation.getPickupCode(),
-				reservation.getProductName(),
-				reservation.getReservedQuantity(),
-				reservation.getTotalPrice(),
-				store.getStoreName(),
-				resolveStatusBadge(reservation)
-		);
 	}
 
 	/**

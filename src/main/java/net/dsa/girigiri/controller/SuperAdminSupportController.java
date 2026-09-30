@@ -128,7 +128,7 @@ public class SuperAdminSupportController {
 	/**
 	 * 신고 상세에서 픽업 코드를 입력하는 동안, 어떤 예약을 취소하려는 건지 미리 보여주는 조회 전용
 	 * API — ReservationPickupController#pickupLookup과 같은 DTO(PickupLookupResponseDto) 재사용.
-	 * 점주용 매장 취소 조회(ReservationStoreController#storeCancelLookup)와 달리 매장 소유 제한이
+	 * 점주용 매장 취소(ReservationStoreController#storeCancelById)와 달리 매장 소유 제한이
 	 * 없다 — 신고는 어느 매장의 예약이든 대상이 될 수 있어서 운영자는 전체 매장을 조회할 수 있어야 한다.
 	 */
 	@GetMapping("/complaints/reservation-lookup")
