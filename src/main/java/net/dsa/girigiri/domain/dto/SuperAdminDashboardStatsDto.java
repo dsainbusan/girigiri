@@ -12,12 +12,18 @@ import java.util.List;
  * 탭 구분(report/store/user) 기준과 똑같이 둘로 쪼개서, 대시보드에서도 문의 카드를 매장/유저 둘로 나누고
  * 각각 자기 탭으로 보내게 했다.
  */
+/**
+ * 추가됨 (2026-09-29) — totalMemberCount/todaySignupCount. dashboard.html 상단 "오늘 플랫폼 지표"
+ * 카드가 데모 숫자였던 걸 실집계로 교체하면서 추가(전체 회원수 카드 + "오늘" 가입자 델타).
+ */
 public record SuperAdminDashboardStatsDto(
 		long pendingStoreInquiryCount,
 		long pendingUserInquiryCount,
 		long pendingComplaintCount,
 		List<DailySignupBarDto> weeklySignupBars,
 		List<CalendarDayDto> calendarDays,
-		String calendarMonthLabel
+		String calendarMonthLabel,
+		long totalMemberCount,
+		long todaySignupCount
 ) {
 }

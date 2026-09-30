@@ -16,7 +16,8 @@
   파라미터 (4개 전부 명시할 것 — 예전 layout()에서 badge 하나 빠뜨려 500 에러 났던 전례가 있어 계속 유지):
    - title   : <h1 class="page-title">로 본문 위에 자동으로 뜸(각 페이지에서 따로 안 그려도 됨) & <title>
    - content : 본문 프래그먼트 (~{:: #content})
-   - active  : gnb 활성 탭값 ('dashboard' | 'members' | 'stores' | 'reports' | 'notices' | 'codes')
+   - active  : gnb 활성 탭값 ('dashboard' | 'members' | 'stores' | 'orders' | 'settlements' | 'reports' |
+               'notices' | 'coupons' | 'codes')
    - badge   : topbar 브랜드 옆 작은 라벨(예: '슈퍼어드민'), 안 쓰면 ''
 
   통계 스트립(todayNewMemberCount/pendingStoreCount)과 알림 드로어(unreadNotificationCount/
@@ -104,6 +105,9 @@
            들어갈 수 있는 게 불편하다는 피드백 — 다른 항목들과 동일하게 gnb에 바로 노출한다. -->
       <li><a class="gnb__link" th:classappend="${active=='orders'} ? ' is-active'"
              th:href="@{/superadmin/orders}">주문 관리</a></li>
+      <!-- 추가됨 (2026-09-29, 담당: 송보미) — 정산 지급 화면 신설. 다른 nav 항목들과 동일한 패턴. -->
+      <li><a class="gnb__link" th:classappend="${active=='settlements'} ? ' is-active'"
+             th:href="@{/superadmin/settlements}">정산</a></li>
       <li><a class="gnb__link" th:classappend="${active=='reports'} ? ' is-active'"
              th:href="@{/superadmin/reports}">신고 · 문의</a></li>
       <li><a class="gnb__link" th:classappend="${active=='notices'} ? ' is-active'"

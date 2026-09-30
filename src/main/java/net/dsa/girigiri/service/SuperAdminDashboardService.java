@@ -11,7 +11,6 @@ import net.dsa.girigiri.domain.entity.InquiryCommentEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ComplaintRepository;
 import net.dsa.girigiri.repository.InquiryCommentRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
@@ -83,9 +82,14 @@ public class SuperAdminDashboardService {
 		List<CalendarDayDto> calendarDays = buildSignupCalendar(signupsByDate);
 		String calendarMonthLabel = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy년 M월"));
 
+		// 추가됨 (2026-09-29) — "오늘 플랫폼 지표"의 전체 회원수 카드를 실집계로 교체하면서 추가.
+		// todaySignupCount는 위에서 이미 만들어둔 signupsByDate를 그대로 재사용(추가 쿼리 없음).
+		long totalMemberCount = userRepository.count();
+		long todaySignupCount = signupsByDate.getOrDefault(LocalDate.now(), 0L);
+
 		return new SuperAdminDashboardStatsDto(
 				pendingStoreInquiryCount, pendingUserInquiryCount, pendingComplaintCount,
-				weeklySignupBars, calendarDays, calendarMonthLabel);
+				weeklySignupBars, calendarDays, calendarMonthLabel, totalMemberCount, todaySignupCount);
 	}
 
 	// getPlatformStats의 기간 필터 — 셋 다 reservedAt(주문 접수 시점) 기준으로 자른다. 값이 이 넷 중
@@ -233,14 +237,5 @@ public class SuperAdminDashboardService {
 			cursor = cursor.plusDays(1);
 		}
 		return days;
-	}
-
-	/**
-	 * 알림 패널(openNotification/readAllNotifications)용 — 슈퍼어드민 세션/식별자가 아직 없어
-	 * 임시로 role=ADMIN인 첫 계정을 "그 운영자"로 쓴다.
-	 */
-	@Transactional(readOnly = true)
-	public Long findAdminIdOrNull() {
-		return userRepository.findFirstByRole(UserEntity.ROLE_ADMIN).map(UserEntity::getId).orElse(null);
 	}
 }

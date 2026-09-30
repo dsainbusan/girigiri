@@ -1,6 +1,7 @@
 package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.PlatformStatsDto;
 import net.dsa.girigiri.domain.dto.StoreStatsRowDto;
@@ -40,6 +41,10 @@ public class SuperAdminController {
 	private final SuperAdminDashboardService dashboardService;
 	private final NotificationService notificationService;
 
+	// 변경됨 (2026-09-29) — 왜: "오늘 플랫폼 지표" 4개 카드(전체 회원수/거래량/구제량/매출)가
+	// 하드코딩된 데모 숫자였다(dashboard.html 상단 TODO 주석 참고). getPlatformStats(null)이
+	// "전체" 기간 거래량/구제량/매출/CO2를 이미 계산해주고 있어서(/superadmin/stats 화면과 동일
+	// 로직) 새 계산 없이 재사용하고, 회원수만 getDashboardStats()에 새로 추가했다.
 	@GetMapping("/dashboard")
 	public String dashboard(Model model) {
 		SuperAdminDashboardStatsDto stats = dashboardService.getDashboardStats();
@@ -50,6 +55,9 @@ public class SuperAdminController {
 		model.addAttribute("weeklySignupBars", stats.weeklySignupBars());
 		model.addAttribute("calendarDays", stats.calendarDays());
 		model.addAttribute("calendarMonthLabel", stats.calendarMonthLabel());
+		model.addAttribute("totalMemberCount", stats.totalMemberCount());
+		model.addAttribute("todaySignupCount", stats.todaySignupCount());
+		model.addAttribute("platformStats", dashboardService.getPlatformStats(null));
 
 		return "superAdminView/dashboard";
 	}
@@ -106,24 +114,25 @@ public class SuperAdminController {
 	/**
 	 * 알림 패널에서 알림 하나를 클릭했을 때. NotificationController#open(/user/alerts/{id})와
 	 * 동일한 패턴 — 읽음 처리 후 linkUrl로 보낸다(없으면 대시보드로).
+	 *
+	 * 변경됨 (2026-09-29) — 왜: "role=ADMIN인 첫 계정"을 운영자로 취급하던 스톱갭
+	 * (SuperAdminDashboardService.findAdminIdOrNull)을 제거하고 세션의 실제 로그인 계정(userId)을
+	 * 쓴다. SuperAdminAccessInterceptor(WebMvcConfig, /superadmin/** 전체 적용)가 이 시점에 이미
+	 * session.role==ADMIN을 강제해뒀으므로 userId도 항상 그 관리자 본인의 값이다. 운영자가 2명
+	 * 이상이 되면 스톱갭은 항상 같은 한 명에게로 알림 읽음 처리가 쏠리는 문제가 있었다.
 	 */
 	@GetMapping("/notifications/{id}")
-	public String openNotification(@PathVariable Long id) {
-		Long adminId = dashboardService.findAdminIdOrNull();
-		if (adminId == null) {
-			return "redirect:/superadmin/dashboard";
-		}
+	public String openNotification(@PathVariable Long id, HttpSession session) {
+		Long adminId = (Long) session.getAttribute("userId");
 		String linkUrl = notificationService.markRead(adminId, id);
 		return linkUrl != null && !linkUrl.isBlank() ? "redirect:" + linkUrl : "redirect:/superadmin/dashboard";
 	}
 
 	@PostMapping("/notifications/read-all")
 	public String readAllNotifications(@RequestHeader(value = "Referer", required = false) String referer,
-										HttpServletRequest request) {
-		Long adminId = dashboardService.findAdminIdOrNull();
-		if (adminId != null) {
-			notificationService.markAllRead(adminId);
-		}
+										HttpServletRequest request, HttpSession session) {
+		Long adminId = (Long) session.getAttribute("userId");
+		notificationService.markAllRead(adminId);
 		return "redirect:" + resolveReturnTo(referer, request);
 	}
 

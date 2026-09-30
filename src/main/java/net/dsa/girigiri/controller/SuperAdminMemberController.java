@@ -101,10 +101,11 @@ public class SuperAdminMemberController {
 	 */
 	@PostMapping("/members/bulk-suspend")
 	public String bulkSuspendMembers(@RequestParam(required = false) List<Long> ids,
+	                                  @RequestParam(required = false) String reason,
 	                                  @RequestParam(required = false) String q,
 	                                  @RequestParam(required = false) String filter,
 	                                  @RequestParam(required = false) Integer page) {
-		memberService.bulkSuspend(ids);
+		memberService.bulkSuspend(ids, reason);
 		return "redirect:" + buildMembersRedirectUri(q, filter, page, false);
 	}
 
@@ -211,10 +212,11 @@ public class SuperAdminMemberController {
 
 	@PostMapping("/members/{id}/suspend")
 	public String suspendMember(@PathVariable Long id,
+	                             @RequestParam(required = false) String reason,
 	                             @RequestParam(required = false) String q,
 	                             @RequestParam(required = false) String filter,
 	                             @RequestParam(required = false) Integer page) {
-		memberService.suspend(id);
+		memberService.suspend(id, reason);
 		return "redirect:" + buildMembersRedirectUri(q, filter, page, false);
 	}
 

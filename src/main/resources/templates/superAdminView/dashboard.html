@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <!--/*
   슈퍼어드민 통계 대시보드. /superadmin/dashboard 로 접속.
-  TODO(송보미): "오늘 플랫폼 지표" 카드는 데모 데이터 → Repository 연동(회원수/거래량/구제량/매출
-  실집계)으로 교체.
+  2026-09-29 — "오늘 플랫폼 지표" 카드를 실집계로 교체 완료(SuperAdminController#dashboard 참고).
+  회원수는 SuperAdminDashboardService#getDashboardStats에 새로 추가, 거래량/구제량/매출/CO2는
+  getPlatformStats(null)("전체" 기간, /superadmin/stats와 동일 계산)를 그대로 재사용한다.
+  거래량·매출 델타는 실제 기간별 증감(%) 데이터가 없어 지어내는 대신 "전체 누적"으로 표기한다 —
+  없는 값을 있는 것처럼 보이는 것보다 정직한 쪽을 택함.
   "최근 처리 대기"는 개별 예시 1건씩 보여주던 걸 "N건 대기 중" 요약으로 바꿨다 — 입점 신청/매장 문의/
   유저 문의/신고 접수 전부 SuperAdminController#dashboard가 계산한 실제 대기 건수(pendingStoreCount는
   기존 advice 재사용, pendingStoreInquiryCount·pendingUserInquiryCount는 reports()와 동일한 계산
@@ -32,29 +35,27 @@
 <body>
 <div id="content" th:fragment="content">
 
-  <!-- 추가됨 (2026-09-22, UI/UX 감사) — 아래 4개 카드는 위 TODO대로 아직 실집계 연동 전 데모
-       숫자다. 운영자가 실제 지표로 오인해 판단하는 걸 막으려고 배지로 명시한다(실데이터 연동되면 뗄 것). -->
-  <h2 class="subhead">오늘 플랫폼 지표 <span class="badge badge--neutral" style="font-size:11px">데모 데이터</span></h2>
+  <h2 class="subhead">오늘 플랫폼 지표</h2>
   <div class="stat-grid">
     <a class="stat-card stat-card--link" th:href="@{/superadmin/members}">
       <span class="stat-card__label">전체 회원수</span>
-      <span class="stat-card__value">12,480</span>
-      <span class="stat-card__delta stat-card__delta--up">+124 오늘</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(totalMemberCount, 0, 'COMMA')}">0</span>
+      <span class="stat-card__delta stat-card__delta--up" th:text="'+' + ${todaySignupCount} + ' 오늘'">+0 오늘</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">거래량</span>
-      <span class="stat-card__value">3,210건</span>
-      <span class="stat-card__delta stat-card__delta--up">+8.2%</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(platformStats.totalTransactionCount, 0, 'COMMA')} + '건'">0건</span>
+      <span class="stat-card__delta">전체 누적</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">구제량</span>
-      <span class="stat-card__value">1,987개</span>
-      <span class="stat-card__delta">CO2 412kg 절감</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(platformStats.totalRescuedQuantity, 0, 'COMMA')} + '개'">0개</span>
+      <span class="stat-card__delta" th:text="'CO2 ' + ${#numbers.formatDecimal(platformStats.totalCo2Kg, 1, 1)} + 'kg 절감'">CO2 0kg 절감</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">매출</span>
-      <span class="stat-card__value">₩8,420,000</span>
-      <span class="stat-card__delta stat-card__delta--down">-2.1%</span>
+      <span class="stat-card__value" th:text="'₩' + ${#numbers.formatInteger(platformStats.totalRevenue, 0, 'COMMA')}">₩0</span>
+      <span class="stat-card__delta">전체 누적</span>
     </a>
   </div>
 

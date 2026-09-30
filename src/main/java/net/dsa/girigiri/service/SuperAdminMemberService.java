@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.MemberActivityRowDto;
 import net.dsa.girigiri.domain.entity.ComplaintEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
+import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserArchiveEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
@@ -45,6 +46,8 @@ public class SuperAdminMemberService {
 	private final UserBadgeRepository userBadgeRepository;
 	private final UserArchiveRepository userArchiveRepository;
 	private final SocialAccountRepository socialAccountRepository;
+	// 추가됨 (2026-09-29, 담당: 송보미) — suspend/bulkSuspend에서 정지 사유를 당사자에게 알림으로 전달.
+	private final NotificationService notificationService;
 
 	// 변경됨 — 왜: 필터 탭을 "전체/일반 회원/점주 회원/정지 회원"으로 바꿔달라는 요청 — 역할 기준
 	// 필터가 USER/ADMIN(운영자)에서 USER(일반 회원)/OWNER(점주 회원)로 바뀌었다. 운영자 계정은 수가
@@ -81,14 +84,31 @@ public class SuperAdminMemberService {
 
 	/**
 	 * 표 왼쪽 체크박스로 여러 명을 골라 한 번에 정지시키는 일괄 액션.
+	 *
+	 * 변경됨 (2026-09-29, 담당: 송보미) — 왜: 정지 사유 입력이 없어서 당사자가 왜 정지됐는지 알 방법이
+	 * 없었다(코드 감사로 확인). 사유를 DB 컬럼으로 남기지는 않고(스키마 변경 필요 — 팀 합의 필요)
+	 * 알림 메시지로 바로 전달한다.
 	 */
 	@Transactional
-	public void bulkSuspend(List<Long> ids) {
+	public void bulkSuspend(List<Long> ids, String reason) {
 		if (ids != null && !ids.isEmpty()) {
 			List<UserEntity> targets = userRepository.findAllById(ids);
 			targets.forEach(u -> u.setStatus(UserEntity.STATUS_SUSPENDED));
 			userRepository.saveAll(targets);
+			targets.forEach(u -> notifySuspended(u.getId(), reason));
 		}
+	}
+
+	private void notifySuspended(Long userId, String reason) {
+		String trimmedReason = reason == null ? "" : reason.trim();
+		String message = trimmedReason.isEmpty()
+				? "이용이 정지됐어요. 자세한 사유는 1:1 문의로 확인해 주세요."
+				: "이용이 정지됐어요. 사유: " + trimmedReason;
+		// sourceKey를 안 주는 이유: 같은 회원이 정지→해제→재정지될 수 있어서, id 기준 고정 키를 쓰면
+		// 두 번째 정지 알림이 "중복 이벤트"로 오인돼 조용히 씹힌다(NotificationService#createNotification
+		// 참고) — 관리자가 직접 누르는 1회성 액션이라 스케줄러의 중복 실행 방지 목적의 dedup이 필요 없다.
+		notificationService.createNotification(userId, NotificationEntity.TYPE_ACCOUNT_SUSPENDED, message,
+				"/user/support", null);
 	}
 
 	@Transactional
@@ -139,10 +159,11 @@ public class SuperAdminMemberService {
 	}
 
 	@Transactional
-	public void suspend(Long id) {
+	public void suspend(Long id, String reason) {
 		UserEntity user = lookupService.getUser(id);
 		user.setStatus(UserEntity.STATUS_SUSPENDED);
 		userRepository.save(user);
+		notifySuspended(user.getId(), reason);
 	}
 
 	@Transactional
