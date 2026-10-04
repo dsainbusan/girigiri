@@ -1,7 +1,8 @@
 # 테이블 정의서 (テーブル定義書) — 기리기리(끼리끼리)
 
-- 작성 기준: `src/main/java/net/dsa/girigiri/domain/entity/*.java` (2026-09-16 갱신 — 코드 전수 조사, 12개 → **24개 테이블**)
-- `docs/schema.sql`(ERD용 DDL)도 이 문서와 함께 24개 테이블 전체로 동기화했다. 실제 ERD 다이어그램(`docs/girigiri.vuerd.json`)은 IntelliJ ERD Editor 플러그인에서 `docs/schema.sql`을 "SQL DDL Import"로 다시 불러와 재생성해야 한다 (`docs/schema.sql` 상단 사용법 참고) — 이 문서/DDL 갱신만으로는 `.vuerd.json` 파일 자체는 자동으로 안 바뀐다.
+- 작성 기준: `src/main/java/net/dsa/girigiri/domain/entity/*.java` (2026-10-05 갱신 — 코드 전수 재조사, 24개 → **26개 테이블**)
+- `docs/schema.sql`(ERD용 DDL)도 이 문서와 함께 26개 테이블 전체로 동기화했다. 실제 ERD 다이어그램(`docs/girigiri.vuerd.json`)은 IntelliJ ERD Editor 플러그인에서 `docs/schema.sql`을 "SQL DDL Import"로 다시 불러와 재생성해야 한다 (`docs/schema.sql` 상단 사용법 참고) — 이 문서/DDL 갱신만으로는 `.vuerd.json` 파일 자체는 자동으로 안 바뀐다.
+- **2026-10-05 변경 요약**: `report` 테이블 삭제(2026-09-07에 매출 리포트가 Supabase `sales` 테이블 기반으로 완전히 대체된 뒤 저장 코드가 전혀 없던 고아 테이블 — `ReportEntity`/`ReportRepository`도 코드에서 함께 삭제). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at`(soft delete, 2026-09-22) 컬럼 누락분 추가. 소셜 로그인 제공자 네이버→라인 정정(`oauth_provider`). 담당자 변경 반영(김태훈 이탈, 2026-09-16 — store/product/inquiry 답변 전부 문창호 인수).
 - **store.owner_id 관계 모델 결정 완료**: 안B(User가 storeId로 Store를 소유) 확정 (2026-08-21, `StoreEntity` 코드 주석). 안A(Store 독립 로그인 계정)용 레거시 컬럼(`login_id`/`password`)은 이미 코드에서 제거됨 — 이전 버전 문서에 남아있던 "미확정" 표시는 이번 갱신으로 정리했다.
 - CLAUDE.md 엔티티 설계(예상)에 있던 `Category`(카테고리 마스터)는 아직 별도 테이블 없이 `store.category` 자유 텍스트 컬럼으로만 존재한다. 절약 랭킹은 별도 테이블 없이 `users`/`user_badge` 집계로 처리.
 - NN=NOT NULL / PK=기본키 / FK=외래키(설계 의도 — 실제 DB엔 FK 제약 없음, `docs/schema.sql` 상단 참고) / UK=고유키(UNIQUE) / IDX=인덱스
@@ -15,7 +16,7 @@
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | id | 회원번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
-| 2 | oauth_provider | 인증 제공자 | VARCHAR(20) | O | | | O* | O* | | kakao / naver / google / email |
+| 2 | oauth_provider | 인증 제공자 | VARCHAR(20) | O | | | O* | O* | | kakao / google / line / email (2026-09-16, 네이버→라인으로 확정) |
 | 3 | oauth_id | 인증 식별자 | VARCHAR(100) | O | | | O* | O* | | provider가 email이면 이메일 값 자체가 들어감 |
 | 4 | password | 비밀번호 | VARCHAR(100) | | | | | | | 이메일 가입자만 값 존재(BCrypt). 소셜 계정은 NULL |
 | 5 | role | 권한 | VARCHAR(20) | O | | | | | | USER / OWNER / ADMIN |
@@ -35,12 +36,49 @@
 | 19 | agreed_at | 약관 동의 일시 | DATETIME | | | | | | | |
 | 20 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
 | 21 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
+| 22 | deleted_at | 탈퇴일시 | DATETIME | | | | | | | soft delete 기준(2026-09-22 추가) — NULL이면 활성 회원, 값 있으면 탈퇴 처리 시각. `UserPurgeScheduler`가 보존기간 후 실제 삭제 |
 
 \* UK/IDX는 `(oauth_provider, oauth_id)` **복합** 유니크·인덱스(`uk_users_oauth`) — `findByOauthProviderAndOauthId` 조회에 사용.
 
 ---
 
-## 2. store — 店舗
+## 2. user_social_accounts — ソーシャル連携
+
+회원 1:N 소셜 로그인 계정 연동(Account Linking, 2026-09-22 신규). 한 회원이 카카오/구글/라인/이메일 등 여러 로그인 수단을 동시에 가질 수 있다. `users`와 달리 실제 `@ManyToOne` 연관관계로 매핑돼 있다.
+
+| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | id | 연동계정번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
+| 2 | user_id | 회원번호 | BIGINT | O | | O | | | | users.id 참조 |
+| 3 | provider | 제공자 | VARCHAR(20) | O | | | O* | O* | | google / kakao / line / email |
+| 4 | provider_id | 제공자 식별자 | VARCHAR(100) | O | | | O* | O* | | OAuth2 공급자가 부여한 고유 ID. provider가 email이면 이메일 값 그대로 |
+| 5 | connected_email | 연동 계정 이메일 | VARCHAR(100) | | | | | | | 같은 provider로 2개 이상 연동됐을 때 화면에서 구분하기 위해 저장. 이메일 동의항목 없는 provider는 NULL |
+| 6 | connected_at | 연동일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할), 수정 불가 |
+
+\* UK/IDX는 `(provider, provider_id)` **복합** 유니크·인덱스(`uk_social_provider_id`) — 같은 소셜 계정이 중복 연동되는 걸 막음.
+
+---
+
+## 3. user_archive — 退会アーカイブ
+
+탈퇴 회원 최소 보관 기록(2026-09-22 신규, soft delete 정책 후속). 개인정보보호법상 보유기간이 지난 정보는 파기해야 하지만, 전자상거래법 등이 요구하는 보존기간 동안은 최소 식별정보를 분리보관해야 한다 — `users` 원본 로우가 나중에 실제 삭제돼도 거래 기록과 대조할 수 있게 최소 정보만 남긴다.
+
+| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | id | 번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
+| 2 | original_user_id | 원 회원번호 | BIGINT | O | | | O | | | 원래 users.id 값. 거래 기록과 사후 대조용, FK 미설정 |
+| 3 | oauth_provider | 가입 경로 | VARCHAR(20) | | | | | | | 탈퇴 당시 원본값 |
+| 4 | email | 이메일 | VARCHAR(100) | | | | | | | 탈퇴 당시 원본값 |
+| 5 | phone | 전화번호 | VARCHAR(20) | | | | | | | 탈퇴 당시 원본값 — users.phone은 탈퇴 즉시 NULL로 비워지므로 원본은 여기서만 보관 |
+| 6 | joined_at | 가입일 | DATETIME | | | | | | | 원래 users.created_at 값 |
+| 7 | withdrawn_at | 탈퇴일시 | DATETIME | O | | | | | | |
+| 8 | archived_at | 보관기록 생성일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할) |
+
+> ⚠️ 여기 담는 필드 구성과 보존기간(`UserPurgeScheduler`)은 실제 법무 검토 전 잠정값 — 서비스 약관/개인정보처리방침 확정 후 재검토 필요(엔티티 클래스 주석 명시).
+
+---
+
+## 4. store — 店舗
 
 점주(OWNER) 계정이 아니라, **점주 회원(`users`, role=OWNER)이 `owner_id`로 소유하는 매장 데이터**다 (안B 확정 — 위 상단 안내 참고).
 
@@ -80,7 +118,23 @@
 
 ---
 
-## 3. menu_item — POSメニュー
+## 5. store_announcement — 店舗お知らせ
+
+점주가 직접 쓰는 매장 공지(2026-09-29 신규) — 손님이 매장 상세(정보 탭)에서 읽는다. 슈퍼어드민이 전체 회원에게 쓰는 플랫폼 공지(`notice`)와는 완전히 다른 도메인이라 별도 테이블로 분리했다(이름도 "공지(Notice)" 대신 "안내(Announcement)"로 구분).
+
+| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | id | 공지번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
+| 2 | store_id | 매장번호 | BIGINT | O | | O | | | | store.id 참조 |
+| 3 | title | 제목 | VARCHAR(100) | O | | | | | | |
+| 4 | content | 내용 | VARCHAR(2000) | O | | | | | | |
+| 5 | is_exposed | 대표 공지 노출 여부 | BOOLEAN | O | | | | | true | 매장당 1개만 true로 유지(DB 제약 아닌 앱 로직) — 손님 매장상세엔 이 값이 true인 공지 1건만 노출 |
+| 6 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 7 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
+
+---
+
+## 6. menu_item — POSメニュー
 
 POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는 마감 상품인 `product`와는 다름). 점주가 상품/템플릿 등록 시 여기서 품목명·원가·사진을 자동완성으로 끌어다 쓴다. POS가 재고를 push하면(B안) 마감 무렵 이 재고 스냅샷으로 "오늘의 구제" 초안이 자동 생성된다.
 
@@ -101,7 +155,7 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 
 ---
 
-## 4. listing_template — 自動出品テンプレート
+## 7. listing_template — 自動出品テンプレート
 
 "오늘의 구제 자동 등록" 템플릿. 사장님이 한 번 등록해두면 `ListingDraftScheduler`가 매일 정해진 요일·시각에 이 템플릿으로 `product`(status='draft') 초안을 만들고 알림을 보낸다. WBS/CLAUDE.md에는 없는, 팀 논의로 추가된 신규 기능.
 
@@ -122,7 +176,7 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 
 ---
 
-## 5. product — 商品
+## 8. product — 商品
 
 매장이 등록한 마감세일 상품(재고).
 
@@ -145,7 +199,7 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 
 ---
 
-## 6. reservation — 予約履歴
+## 9. reservation — 予約履歴
 
 회원이 상품을 예약(선결제)한 이력. 1행 = 1예약, 상태를 컬럼으로 관리(이력 삭제 없음).
 
@@ -170,7 +224,7 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 
 ---
 
-## 7. payment — 決済
+## 10. payment — 決済
 
 PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fail()`/`cancel()`/`applyCancel()` 상태 전이 메서드로만 변경 가능(불법 상태 조합 방지).
 
@@ -190,7 +244,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 8. payment_cancel — 決済取消履歴
+## 11. payment_cancel — 決済取消履歴
 
 결제 취소/환불 **시도** 1건을 남기는 감사(audit) 로그. 같은 결제를 여러 번 취소 시도(예: 1차 환불 API 실패 → 재시도)해도 이력이 각각 남는다. 담당: 송채현, 송보미 제안(2026-08-25).
 
@@ -205,7 +259,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 9. receipt — 領収書
+## 12. receipt — 領収書
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -216,7 +270,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 10. coupon — クーポン
+## 13. coupon — クーポン
 
 회원 1명에게 발급된 쿠폰 1장. 담당: 송채현(2026-09-07 신규/재설계). 발급 경로 3가지 모두 **회원 1명당 1장 지급** 방식이라 공유 수량 풀 개념이 없다.
 
@@ -234,7 +288,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 11. coupon_policy — クーポン方針
+## 14. coupon_policy — クーポン方針
 
 웰컴/매장귀책보상 쿠폰의 할인율 정책값. **항상 1행만 존재**(id=1) — 없으면 서비스가 기본값(웰컴 10%/보상 15%)으로 자동 생성.
 
@@ -247,7 +301,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 12. coupon_campaign — 프로모션 캠페인
+## 15. coupon_campaign — 프로모션 캠페인
 
 슈퍼어드민이 이벤트마다 만드는 쿠폰 캠페인. 회원이 `code`를 앱에 입력해 발급받으며, 캠페인 1개당 회원 1명에게 1장만 발급된다.
 
@@ -263,7 +317,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 13. review — レビュー
+## 16. review — レビュー
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -280,7 +334,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 14. review_summary — レビューAI要約
+## 17. review_summary — レビューAI要約
 
 가게별 "AI 리뷰 요약" 캐시(가게당 최대 1행). 담당: 강노은. 매 요청마다 Gemini를 다시 부르지 않도록, 마지막 요약 생성 시점의 리뷰 개수를 저장해두고 리뷰 개수가 달라졌을 때만 재생성한다.
 
@@ -294,7 +348,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 15. likes — お気に入り
+## 18. likes — お気に入り
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -307,7 +361,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 16. notification — 通知
+## 19. notification — 通知
 
 인앱 알림함 1건. 담당: 강노은. `NotificationTriggerScheduler`가 주기적으로 스캔해서 생성하며, `source_key`로 같은 사건에 대한 중복 생성을 막는다(idempotent).
 
@@ -324,7 +378,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 17. notification_setting — 通知設定
+## 20. notification_setting — 通知設定
 
 사용자 1명당 1행. `UserEntity`(문창호 담당)에 컬럼을 얹지 않고 강노은이 별도 엔티티로 분리.
 
@@ -338,7 +392,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 18. notice — お知らせ
+## 21. notice — お知らせ
 
 슈퍼어드민이 작성하는 공지사항 (WBS 7.0, 송보미 담당). `published` 수동 on/off + 선택적 게시 기간(`publish_start_at`/`publish_end_at`) 조합으로 노출 여부가 결정된다.
 
@@ -355,7 +409,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 19. inquiry — 問い合わせ
+## 22. inquiry — 問い合わせ
 
 문의 게시판 글. `store_id`가 있으면 특정 매장 문의, NULL이면 서비스 전체 문의.
 
@@ -372,7 +426,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 20. inquiry_comment — 問い合わせコメント
+## 23. inquiry_comment — 問い合わせコメント
 
 문의 글에 달리는 댓글(작성자 추가 설명 또는 매장/운영자 답변).
 
@@ -386,7 +440,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 21. complaint — 通報
+## 24. complaint — 通報
 
 신고 접수(슈퍼어드민 "신고·문의" 화면). 신고 제출 화면(소비자용)이 아직 없고 비회원 신고도 있을 수 있어, 대상/신고자는 FK 강제 대신 표시용 스냅샷 문자열 + 선택적 id(있으면 상세 링크) 조합으로 저장한다. "report"라는 이름은 매장 판매/폐기 리포트(`report` 테이블)가 이미 쓰고 있어 `complaint`로 지었다.
 
@@ -407,30 +461,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 22. report — レポート
-
-매장별 일간 판매·폐기 리포트.
-
-| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | id | 리포트번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
-| 2 | store_id | 매장번호 | BIGINT | O | | O | | O* | | store.id 참조 |
-| 3 | report_date | 리포트 일자 | DATE | O | | | | O* | | |
-| 4 | registered_count | 등록 수량 | INT | | | | | | | |
-| 5 | sold_count | 판매 수량 | INT | | | | | | | |
-| 6 | expired_count | 폐기 수량 | INT | | | | | | | |
-| 7 | total_sales | 매출액 | INT | | | | | | | |
-| 8 | total_discount | 할인액 | INT | | | | | | | |
-| 9 | saved_co2 | CO₂ 절감량 | DOUBLE | | | | | | | |
-| 10 | excel_url | Excel 경로 | VARCHAR(255) | | | | | | | |
-| 11 | pdf_url | PDF 경로 | VARCHAR(255) | | | | | | | |
-| 12 | generated_at | 생성일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할) |
-
-\* `(store_id, report_date)` 복합 UK/IDX 권장(유지) — 매장당 일자별 리포트는 1건이어야 함, 아직 미적용.
-
----
-
-## 23. settlement — 週次精算
+## 25. settlement — 週次精算
 
 주간 정산 1건. 담당: 문창호(2026-09-01, WBS 2.0 "매장 정산 페이지"). "정산 확정"(계산, `SettlementScheduler` 매주 월 00:00)과 "지급"(슈퍼어드민 실제 송금 확인)을 분리한 구조.
 
@@ -460,7 +491,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 24. user_badge — バッジ獲得記録
+## 26. user_badge — バッジ獲得記録
 
 사용자가 실제로 획득(해금)한 뱃지 기록. 뱃지 조건은 매번 현재 통계로 재계산되지만(예: 이달 목표 달성률처럼 나중에 다시 거짓이 될 수 있음), "한 번 딴 뱃지는 영구 유지"되도록 조건을 처음 충족한 시점에 여기 기록해두고 이후로는 이 기록의 존재 여부로 해금 상태를 판정한다.
 
@@ -480,30 +511,32 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 | No | 테이블명 (물리) | 논리명 | 설명 | 주요 관계 | 담당(WBS) |
 |---|---|---|---|---|---|
-| 1 | users | 会員 | 일반회원/점주/운영자 통합 계정 (role로 구분) | 1:N → store(owner), reservation, review, likes, coupon, notification, inquiry, complaint, user_badge 등 | 문창호(인증) / 송보미(DB) |
-| 2 | store | 店舗 | 점주가 소유하는 매장 정보, 입점 승인 상태·정산 계좌 관리 | N:1 → users(owner) · 1:N → product, menu_item, listing_template, reservation, review, likes, report, settlement, inquiry | 김태훈(정보관리) / 문창호(라우팅·POS·정산) |
-| 3 | menu_item | POSメニュー | POS 연동 매장 영속 메뉴 카탈로그 | N:1 → store · 1:N → product(menu_item_id) | 문창호 |
-| 4 | listing_template | 自動出品テンプレート | "오늘의 구제" 자동 등록 템플릿 | N:1 → store · 1:N → product(template_id) | 문창호 |
-| 5 | product | 商品 | 매장이 등록한 마감세일 상품(재고) | N:1 → store, listing_template, menu_item · 1:N → reservation | 김태훈 |
-| 6 | reservation | 予約履歴 | 상품 예약·픽업 이력 (1건=1행, 상태 관리) | N:1 → users, product, store, coupon · 1:1 → receipt, payment | 송채현 |
-| 7 | payment | 決済 | PortOne 결제 요청·승인 이력 | 1:1 → reservation | 송채현 |
-| 8 | payment_cancel | 決済取消履歴 | 결제 취소/환불 시도 감사 로그 | N:1 → payment | 송채현 |
-| 9 | receipt | 領収書 | 결제 영수증 PDF 기록 | 1:1 → reservation | 송채현 |
-| 10 | coupon | クーポン | 회원에게 발급된 쿠폰 1장 | N:1 → users, coupon_campaign, reservation | 송채현 |
-| 11 | coupon_policy | クーポン方針 | 웰컴/보상 쿠폰 할인율 정책값(1행) | (관계 없음, 독립 테이블) | 송채현 |
-| 12 | coupon_campaign | プロモーションキャンペーン | 슈퍼어드민 발급 프로모션 코드 | 1:N → coupon | 송채현 |
-| 13 | review | レビュー | 매장 리뷰·별점·사진 | N:1 → users, store | 강노은 |
-| 14 | review_summary | レビューAI要約 | 가게별 AI 리뷰 요약 캐시(가게당 1행) | N:1 → store | 강노은 |
-| 15 | likes | お気に入り | 관심 매장 찜하기 | N:1 → users, store | 강노은 |
-| 16 | notification | 通知 | 인앱 알림함 | N:1 → users | 강노은 |
-| 17 | notification_setting | 通知設定 | 회원별 알림 on/off 설정(회원당 1행) | N:1 → users | 강노은 |
-| 18 | notice | お知らせ | 슈퍼어드민 공지사항 | (관계 없음, 독립 테이블) | 송보미 |
-| 19 | inquiry | 問い合わせ | 문의 게시판 글 | N:1 → users, store(nullable), reservation(nullable) · 1:N → inquiry_comment | 강노은(작성) / 김태훈(답변) |
-| 20 | inquiry_comment | 問い合わせコメント | 문의 댓글/답변 | N:1 → inquiry, users | 강노은 / 김태훈 |
-| 21 | complaint | 通報 | 슈퍼어드민 신고 접수·처리 | (스냅샷 위주, FK 미설정) | 송보미 |
-| 22 | report | レポート | 매장별 일간 판매·폐기 리포트 | N:1 → store | 문창호 |
-| 23 | settlement | 週次精算 | 매장별 주간 정산 | N:1 → store · 자기참조(merged_into_id) | 문창호 |
-| 24 | user_badge | バッジ獲得記録 | 가계부 뱃지 획득 기록 | N:1 → users | 문창호 |
+| 1 | users | 会員 | 일반회원/점주/운영자 통합 계정 (role로 구분), soft delete | 1:N → store(owner), reservation, review, likes, coupon, notification, inquiry, complaint, user_badge, user_social_accounts 등 | 문창호(인증) / 송보미(DB) |
+| 2 | user_social_accounts | ソーシャル連携 | 회원 1:N 소셜 계정 연동(Account Linking) | N:1 → users | 문창호 |
+| 3 | user_archive | 退会アーカイブ | 탈퇴 회원 최소 보관(법정 보존) | (FK 미설정, users.id 사후 대조용) | 문창호 |
+| 4 | store | 店舗 | 점주가 소유하는 매장 정보, 입점 승인 상태·정산 계좌 관리 | N:1 → users(owner) · 1:N → product, menu_item, listing_template, store_announcement, reservation, review, likes, settlement, inquiry | 문창호 |
+| 5 | store_announcement | 店舗お知らせ | 점주가 작성하는 매장 공지(대표 1건만 소비자 노출) | N:1 → store | 문창호 |
+| 6 | menu_item | POSメニュー | POS 연동 매장 영속 메뉴 카탈로그 | N:1 → store · 1:N → product(menu_item_id) | 문창호 |
+| 7 | listing_template | 自動出品テンプレート | "오늘의 구제" 자동 등록 템플릿 | N:1 → store · 1:N → product(template_id) | 문창호 |
+| 8 | product | 商品 | 매장이 등록한 마감세일 상품(재고) | N:1 → store, listing_template, menu_item · 1:N → reservation | 문창호 |
+| 9 | reservation | 予約履歴 | 상품 예약·픽업 이력 (1건=1행, 상태 관리) | N:1 → users, product, store, coupon · 1:1 → receipt, payment | 송채현 |
+| 10 | payment | 決済 | PortOne 결제 요청·승인 이력 | 1:1 → reservation | 송채현 |
+| 11 | payment_cancel | 決済取消履歴 | 결제 취소/환불 시도 감사 로그 | N:1 → payment | 송채현 |
+| 12 | receipt | 領収書 | 결제 영수증 PDF 기록 | 1:1 → reservation | 송채현 |
+| 13 | coupon | クーポン | 회원에게 발급된 쿠폰 1장 | N:1 → users, coupon_campaign, reservation | 송채현 |
+| 14 | coupon_policy | クーポン方針 | 웰컴/보상 쿠폰 할인율 정책값(1행) | (관계 없음, 독립 테이블) | 송채현 |
+| 15 | coupon_campaign | 프로모션 캠페인 | 슈퍼어드민 발급 프로모션 코드 | 1:N → coupon | 송채현 |
+| 16 | review | レビュー | 매장 리뷰·별점·사진 | N:1 → users, store | 강노은 |
+| 17 | review_summary | レビューAI要約 | 가게별 AI 리뷰 요약 캐시(가게당 1행) | N:1 → store | 강노은 |
+| 18 | likes | お気に入り | 관심 매장 찜하기 | N:1 → users, store | 강노은 |
+| 19 | notification | 通知 | 인앱 알림함 | N:1 → users | 강노은 |
+| 20 | notification_setting | 通知設定 | 회원별 알림 on/off 설정(회원당 1행) | N:1 → users | 강노은 |
+| 21 | notice | お知らせ | 슈퍼어드민 공지사항 | (관계 없음, 독립 테이블) | 송보미 |
+| 22 | inquiry | 問い合わせ | 문의 게시판 글 | N:1 → users, store(nullable), reservation(nullable) · 1:N → inquiry_comment | 강노은(작성) / 문창호(답변) |
+| 23 | inquiry_comment | 問い合わせコメント | 문의 댓글/답변 | N:1 → inquiry, users | 강노은 / 문창호 |
+| 24 | complaint | 通報 | 슈퍼어드민 신고 접수·처리 | (스냅샷 위주, FK 미설정) | 송보미 |
+| 25 | settlement | 週次精算 | 매장별 주간 정산 | N:1 → store · 자기참조(merged_into_id) | 문창호 |
+| 26 | user_badge | バッジ獲得記録 | 가계부 뱃지 획득 기록 | N:1 → users | 문창호 |
 
 ---
 
@@ -512,14 +545,19 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 1. ~~**store.owner_id 관계 모델**~~ — **해결됨.** 안B(User가 storeId로 Store 소유) 확정(2026-08-21), `login_id`/`password` 레거시 컬럼 제거 완료.
 2. **likes.(user_id, store_id) 복합 UK** — ~~미적용~~ **적용됨**(`uk_likes_user_store`, 2026-09-08).
 3. **review.(user_id, store_id) 복합 UK** — "1인 1매장 1리뷰(덮어쓰기)" 정책이 맞다면 UK 추가 권장. 아직 미적용.
-4. **report.(store_id, report_date) 복합 UK** — 일자별 리포트 중복 생성 방지. 아직 미적용.
+4. ~~**report.(store_id, report_date) 복합 UK**~~ — **해당 없음(2026-10-05).** `report` 테이블 자체를 삭제했다 — 2026-09-07에 매출 리포트가 Supabase(`sales` 테이블) 기반으로 완전히 대체된 뒤 어떤 코드도 새 행을 쓰지 않던 고아 테이블이었다(`ReportEntity`/`ReportRepository` 코드에서도 삭제).
 5. **reservation.pickup_code UK** — ~~미적용~~ **적용됨**(`uk_reservation_pickup_code`, 2026-09-08).
 6. **inquiry_comment 작성자 구분** — 문의 작성자 본인 댓글인지, 매장/운영자 답변인지 구분하는 컬럼이 없음(role/viewMode 세션 로직 확정 후 추가 검토로 유지 중).
-7. **product.updated_at** — 상품 수정 이력을 별도로 추적하려면(WBS 3.0 김태훈) 전용 컬럼/이력 테이블 검토 필요(현재는 재고 변동에도 같이 갱신되는 범용 컬럼).
-8. **CLAUDE.md 대비 미착수 테이블** — 카테고리 마스터(현재 `store.category` 자유 텍스트로만 존재)는 아직 별도 테이블 없음. 그 외 WBS 3.0~7.0 범위 기능은 이번 갱신 시점(2026-09-16) 기준 모두 테이블까지 반영 완료.
+7. **product.updated_at** — 상품 수정 이력을 별도로 추적하려면(WBS 3.0, 현재 문창호 담당) 전용 컬럼/이력 테이블 검토 필요(현재는 재고 변동에도 같이 갱신되는 범용 컬럼).
+8. **CLAUDE.md 대비 미착수 테이블** — 카테고리 마스터(현재 `store.category` 자유 텍스트로만 존재)는 아직 별도 테이블 없음.
+9. **store.business_number UK 없음** — 사업자등록번호 중복 매장 등록을 막는 제약이 없음. 필요 여부 검토 권장.
+10. **menu_item.pos_sku UK 없음** — `PosCatalogService`가 `(store_id, pos_sku)` 조합을 upsert 기준으로 쓰지만 DB 제약은 없어서, 동시 요청 시 중복 행 가능성 있음.
+11. **receipt.reservation_id UK 없음** — "예약 1건당 영수증 1건"이 `ReceiptService`의 upsert 로직으로만 유지되고(`payment.reservation_id`처럼 DB UK는 없음), 동시 요청 시 중복 행 가능성 있음.
 
 ---
 
-## 이번 갱신(2026-09-16)에서 새로 반영된 테이블
+## 갱신 이력
 
-이전 버전(2026-08-27, 12개 엔티티) 대비 신규 반영: `menu_item`, `listing_template`, `payment`, `payment_cancel`, `coupon`, `coupon_policy`, `coupon_campaign`, `review_summary`, `notification`, `notification_setting`, `inquiry`, `inquiry_comment`, `complaint`, `settlement`, `user_badge` (기존 문서 미반영분 + 신규 기능 전부 포함, 총 24개 테이블).
+**2026-10-05 (문창호)** — 코드 전수 재조사. `report` 테이블 삭제(`ReportEntity`/`ReportRepository` 포함, `docs/schema.sql`/`sql/sample-data.sql`도 동기화). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at` 누락분 추가. `oauth_provider` 설명 네이버→라인 정정. store/product/inquiry 답변 담당자를 김태훈→문창호로 정정(2026-09-16 팀 이탈 반영). 검토 필요 사항에 UK 누락 3건(business_number/pos_sku/receipt.reservation_id) 추가. 총 24개 → **26개 테이블**.
+
+**2026-09-16** — 코드 전수 조사, 12개 → 24개 테이블(2026-08-27 버전 대비 신규): `menu_item`, `listing_template`, `payment`, `payment_cancel`, `coupon`, `coupon_policy`, `coupon_campaign`, `review_summary`, `notification`, `notification_setting`, `inquiry`, `inquiry_comment`, `complaint`, `settlement`, `user_badge`.

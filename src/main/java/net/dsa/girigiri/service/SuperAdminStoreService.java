@@ -12,7 +12,6 @@ import net.dsa.girigiri.repository.LikeRepository;
 import net.dsa.girigiri.repository.ListingTemplateRepository;
 import net.dsa.girigiri.repository.MenuItemRepository;
 import net.dsa.girigiri.repository.ProductRepository;
-import net.dsa.girigiri.repository.ReportRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.ReviewRepository;
 import net.dsa.girigiri.repository.ReviewSummaryRepository;
@@ -54,7 +53,6 @@ public class SuperAdminStoreService {
 	private final LikeRepository likeRepository;
 	private final ReviewRepository reviewRepository;
 	private final ReviewSummaryRepository reviewSummaryRepository;
-	private final ReportRepository reportRepository;
 	// 추가됨 (2026-09-29, 담당: 송보미) — reject()에서 반려 사유를 신청자에게 알림으로 전달하는 용도.
 	private final NotificationService notificationService;
 
@@ -193,11 +191,16 @@ public class SuperAdminStoreService {
 	 * 변경됨 (2026-09-08, 코드 감사) — 예전엔 상품(product)만 같이 지웠다. 그 외 참조 테이블을 점검해서
 	 * 두 그룹으로 나눴다:
 	 *  - 매장 전용 부산물이라 다른 화면이 다시 조회할 일이 없는 것(menu_item/listing_template/likes/
-	 *    review/review_summary/report)은 상품과 함께 지운다.
+	 *    review/review_summary)은 상품과 함께 지운다.
 	 *  - 회계·이력 성격이라 보존해야 하는 것(reservation/payment/settlement — 완료건)은 그대로 둔다.
 	 *    미지급 정산은 위 canDelete()가 이미 막아서 여기까지 오지 않는다. inquiry.storeId/
 	 *    complaint.targetStoreId는 각 화면이 이미 store 조회 실패를 null-safe하게 처리하고 있어(예:
 	 *    InquiryService#getStoreName) 손대지 않는다.
+	 *
+	 * 변경됨 (2026-10-05, ERD 정리 — 문창호) — report(ReportEntity) 정리 호출을 제거했다. 2026-09-07에
+	 * 매출 리포트가 MySQL(report 테이블) 기반에서 Supabase(sales 테이블) 기반으로 완전히 대체된 뒤
+	 * report 테이블엔 더 이상 어떤 코드도 새 행을 쓰지 않는 고아 테이블이었다(저장 코드 전무, 이
+	 * deleteByStoreId만 유일한 참조) — ReportEntity/ReportRepository 자체를 삭제했다.
 	 */
 	@Transactional
 	public void delete(Long id) {
@@ -209,7 +212,6 @@ public class SuperAdminStoreService {
 		likeRepository.deleteByStoreId(id);
 		reviewRepository.deleteByStoreId(id);
 		reviewSummaryRepository.deleteByStoreId(id);
-		reportRepository.deleteByStoreId(id);
 
 		// 변경됨 (2026-09-08, 코드 감사) — approve()와 같은 이유. owner_id가 없는 매장이면 되돌릴
 		// role도 없으니 이 블록만 건너뛰고 매장 삭제는 그대로 진행한다.

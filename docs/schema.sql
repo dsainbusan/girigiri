@@ -1,5 +1,5 @@
 -- =====================================================================
--- 기리기리 ERD용 DDL (2026-09-16 갱신 — 코드 기준 24개 테이블 전체 반영)
+-- 기리기리 ERD용 DDL (2026-10-05 갱신 — 코드 기준 26개 테이블 전체 반영)
 -- =====================================================================
 -- 용도: 이 파일 자체를 실행하려는 게 아니라(테이블은 ddl-auto=update로 자동 생성됨),
 --       ERD Editor(vuerd) 플러그인의 "SQL DDL Import" 기능에 붙여넣어서
@@ -7,8 +7,8 @@
 --
 -- 사용법 (IntelliJ ERD Editor 플러그인):
 --   1. docs/ 폴더에 기리기리.vuerd.json 파일이 이미 있으면 그대로 열고, 없으면 빈 파일로 새로 생성
---   2. 그 파일을 열면 캔버스가 뜬다 (기존 도표가 있으면 지우고 새로 그리는 걸 권장 — 테이블이 12개 → 24개로 늘어서
---      자동 배치가 훨씬 깔끔하다)
+--   2. 그 파일을 열면 캔버스가 뜬다 (기존 도표가 있으면 지우고 새로 그리는 걸 권장 — 테이블이 24개 → 26개로
+--      바뀌어서(report 삭제, 3개 신규) 자동 배치가 훨씬 깔끔하다)
 --   3. 캔버스 우클릭 → SQL → SQL DDL Import (또는 상단 메뉴의 SQL 아이콘)
 --   4. 이 파일 내용을 통째로 붙여넣고 Run/Create
 --   5. 테이블이 자동 배치되면, 화면에 안 보이는 FK 관계선은 컬럼을 드래그해서 수동으로 연결
@@ -36,13 +36,17 @@
 --               review(image_url/edited) 등 기존 테이블 누락 컬럼 보강 → 총 24개 테이블
 --   2026-09-16  store에 매장 신뢰도(취소율) 자동 정지 컬럼 3개 추가(reliability_suspended_until/
 --               reliability_suspension_count/reliability_banned) — StoreReliabilityService 신규
+--   2026-10-05  report 테이블 삭제(2026-09-07에 Supabase sales 기반으로 완전히 대체된 뒤 저장 코드가
+--               전혀 없던 고아 테이블, ReportEntity/ReportRepository도 코드에서 삭제) + user_social_accounts/
+--               user_archive(2026-09-22)/store_announcement(2026-09-29) 3개 테이블 신규 반영 +
+--               oauth_provider 네이버→라인 정정 → 총 26개 테이블
 -- =====================================================================
 
 -- ── 1. 회원 / 매장 / 상품 ───────────────────────────────────────────
 
 CREATE TABLE users (
     id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
-    oauth_provider        VARCHAR(20) NOT NULL COMMENT 'kakao / naver / google / email',
+    oauth_provider        VARCHAR(20) NOT NULL COMMENT 'kakao / google / line / email (2026-09-16, 네이버→라인으로 확정)',
     oauth_id              VARCHAR(100) NOT NULL COMMENT 'provider=email이면 이메일 값 자체',
     password              VARCHAR(100) COMMENT '이메일 가입자만 값 존재(BCrypt). 소셜 계정은 NULL',
     role                  VARCHAR(20) NOT NULL COMMENT 'USER / OWNER / ADMIN',
@@ -64,6 +68,32 @@ CREATE TABLE users (
     updated_at            DATETIME,
     UNIQUE KEY uk_users_oauth (oauth_provider, oauth_id),
     UNIQUE KEY uk_users_phone (phone)
+);
+
+-- 1:N 소셜 계정 연동(Account Linking) — 2026-09-22 신규. 한 회원이 여러 소셜 수단을 동시에 가질 수 있다.
+CREATE TABLE user_social_accounts (
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id           BIGINT NOT NULL,
+    provider          VARCHAR(20) NOT NULL COMMENT 'google / kakao / line / email',
+    provider_id       VARCHAR(100) NOT NULL COMMENT 'OAuth2 공급자가 부여한 고유 ID',
+    connected_email   VARCHAR(100) COMMENT '같은 provider로 2건 이상 연동됐을 때 화면 구분용, 동의항목 없으면 NULL',
+    connected_at      DATETIME NOT NULL,
+    UNIQUE KEY uk_social_provider_id (provider, provider_id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- 탈퇴 회원 최소 보관 — 2026-09-22 신규(soft delete 정책 후속). 법정 보존기간 동안 최소 식별정보만 분리보관.
+-- original_user_id는 users 로우가 실제 삭제된 뒤에도 대조할 수 있게 FK를 걸지 않는다(팀 컨벤션).
+CREATE TABLE user_archive (
+    id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
+    original_user_id   BIGINT NOT NULL COMMENT '원래 users.id 값, FK 미설정',
+    oauth_provider     VARCHAR(20),
+    email              VARCHAR(100),
+    phone              VARCHAR(20),
+    joined_at          DATETIME,
+    withdrawn_at       DATETIME NOT NULL,
+    archived_at        DATETIME,
+    UNIQUE KEY uk_user_archive_original_user_id (original_user_id)
 );
 
 -- store.owner_id 관계 모델: 안B 확정(2026-08-21). login_id/password(안A용 레거시)는 제거됨 —
@@ -160,6 +190,19 @@ CREATE TABLE product (
     FOREIGN KEY (store_id) REFERENCES store(id),
     FOREIGN KEY (template_id) REFERENCES listing_template(id),
     FOREIGN KEY (menu_item_id) REFERENCES menu_item(id)
+);
+
+-- 점주가 직접 쓰는 매장 공지 — 2026-09-29 신규. 손님은 매장 상세(정보 탭)에서 읽는다.
+-- 슈퍼어드민이 전체 회원에게 쓰는 notice(플랫폼 공지)와는 완전히 다른 도메인이라 별도 테이블로 분리.
+CREATE TABLE store_announcement (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id    BIGINT NOT NULL,
+    title       VARCHAR(100) NOT NULL,
+    content     VARCHAR(2000) NOT NULL,
+    is_exposed  TINYINT(1) NOT NULL DEFAULT 1 COMMENT '매장당 1개만 true로 유지(앱 로직, DB 제약 아님) — 소비자 노출용 대표 공지',
+    created_at  DATETIME,
+    updated_at  DATETIME,
+    FOREIGN KEY (store_id) REFERENCES store(id)
 );
 
 -- ── 2. 예약 / 결제 / 쿠폰 / 영수증 ──────────────────────────────────
@@ -391,23 +434,9 @@ CREATE TABLE complaint (
 
 -- ── 5. 정산 / 리포트 / 뱃지 ──────────────────────────────────────────
 
-CREATE TABLE report (
-    id                 BIGINT AUTO_INCREMENT PRIMARY KEY,
-    store_id           BIGINT NOT NULL,
-    report_date        DATE NOT NULL,
-    registered_count   INT,
-    sold_count         INT,
-    expired_count      INT,
-    total_sales        INT,
-    total_discount     INT,
-    saved_co2          DOUBLE,
-    excel_url          VARCHAR(255),
-    pdf_url            VARCHAR(255),
-    generated_at       DATETIME,
-    INDEX idx_report_store_id (store_id),
-    INDEX idx_report_date (report_date),
-    FOREIGN KEY (store_id) REFERENCES store(id)
-);
+-- report 테이블은 2026-10-05 삭제됨(ERD 정리, 문창호) — 2026-09-07에 매출 리포트가
+-- MySQL(report) 기반에서 Supabase(sales 테이블) 기반으로 완전히 대체된 뒤로 어떤 코드도
+-- 새 행을 쓰지 않는 고아 테이블이었다. ReportEntity/ReportRepository도 같이 삭제했다.
 
 -- 주간 정산 (2026-09-01 문창호, WBS 2.0 매장 정산). "정산 확정"과 "지급"을 분리한 구조.
 CREATE TABLE settlement (

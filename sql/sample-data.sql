@@ -28,7 +28,6 @@ DELETE FROM inquiry_comment;
 DELETE FROM inquiry;
 DELETE FROM payment_cancel;
 DELETE FROM payment;
-DELETE FROM report;
 DELETE FROM receipt;
 DELETE FROM likes;
 DELETE FROM review;
@@ -201,18 +200,6 @@ INSERT INTO receipt (id, reservation_id, pdf_url, generated_at) VALUES
 (14, 23, '/receipts/reservation-23.pdf', DATE_SUB(NOW(), INTERVAL 9 DAY)),
 (15, 24, '/receipts/reservation-24.pdf', DATE_SUB(NOW(), INTERVAL 12 DAY)),
 (16, 26, '/receipts/reservation-26.pdf', DATE_SUB(NOW(), INTERVAL 5 HOUR));
-
--- ---------------------------------------------------------------------
--- report (승인 매장 7곳의 오늘자 판매/폐기 리포트)
--- ---------------------------------------------------------------------
-INSERT INTO report (id, store_id, report_date, registered_count, sold_count, expired_count, total_sales, total_discount, saved_co2, excel_url, pdf_url, generated_at) VALUES
-(1, 1, CURDATE(), 4, 2, 1, 7500, 7500, 1.6, '/reports/store1-today.xlsx', '/reports/store1-today.pdf', NOW()),
-(2, 3, CURDATE(), 3, 1, 0, 4800, 4200, 0.8, '/reports/store3-today.xlsx', '/reports/store3-today.pdf', NOW()),
-(3, 4, CURDATE(), 3, 1, 1, 3200, 5800, 0.9, '/reports/store4-today.xlsx', '/reports/store4-today.pdf', NOW()),
-(4, 5, CURDATE(), 3, 1, 0, 7200, 4800, 1.1, '/reports/store5-today.xlsx', '/reports/store5-today.pdf', NOW()),
-(5, 6, CURDATE(), 3, 0, 1, 0, 0, 0.0, '/reports/store6-today.xlsx', '/reports/store6-today.pdf', NOW()),
-(6, 7, CURDATE(), 3, 2, 0, 7750, 8250, 1.7, '/reports/store7-today.xlsx', '/reports/store7-today.pdf', NOW()),
-(7, 8, CURDATE(), 3, 1, 1, 4800, 3200, 0.8, '/reports/store8-today.xlsx', '/reports/store8-today.pdf', NOW());
 
 -- ---------------------------------------------------------------------
 -- notification (알림함 데모용 — 읽음/안읽음 섞어서)
