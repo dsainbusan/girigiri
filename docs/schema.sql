@@ -291,6 +291,26 @@ CREATE TABLE payment_cancel (
     FOREIGN KEY (payment_id) REFERENCES payment(id)
 );
 
+-- 신고 처리로 발생한 관리자 환불 1건 (2026-10-06 추가, 신고 기반 리팩터링 — 스펙 C). 유저 본인
+-- 취소(payment/payment_cancel 경로)와는 완전히 분리된 테이블 — PG 상태의 단일 진실 소스는 여전히
+-- payment.pay_status라서(정산이 그것만 본다), 이 테이블은 "신고 처리 환불 1건"이라는 사실 자체와
+-- "환불 완료" 배지 표시(일시·처리자)용으로만 쓴다.
+CREATE TABLE refund (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT NOT NULL COMMENT '= reservation.id ("주문")',
+    report_id       BIGINT NOT NULL COMMENT '= complaint.id, 이 환불의 근거가 된 신고',
+    amount          INT NOT NULL,
+    reason          VARCHAR(255) NOT NULL,
+    status          VARCHAR(20) NOT NULL COMMENT 'REQUESTED/DONE/FAILED (enum, 대문자 저장)',
+    pg_refund_tid   VARCHAR(50) COMMENT 'PG 환불 거래 참조값(현재는 merchantUid 재사용, PortOneClient 참고)',
+    requested_by    BIGINT NOT NULL COMMENT '처리한 슈퍼어드민 userId',
+    created_at      DATETIME,
+    updated_at      DATETIME,
+    UNIQUE KEY uk_refund_order_id (order_id),
+    FOREIGN KEY (order_id) REFERENCES reservation(id),
+    FOREIGN KEY (report_id) REFERENCES complaint(id)
+);
+
 CREATE TABLE receipt (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     reservation_id  BIGINT NOT NULL,
