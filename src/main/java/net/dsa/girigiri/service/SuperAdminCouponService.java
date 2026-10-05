@@ -396,6 +396,9 @@ public class SuperAdminCouponService {
 		} else {
 			statusLabel = "진행중";
 		}
+		long claimed = couponRepository.countByCampaignId(c.getId());
+		Integer claimPercent = c.getIssueLimit() != null && c.getIssueLimit() > 0
+				? (int) Math.min(100, claimed * 100 / c.getIssueLimit()) : null;
 		return CouponCampaignRowDto.builder()
 				.id(c.getId())
 				.name(c.getName())
@@ -404,10 +407,15 @@ public class SuperAdminCouponService {
 				.discountLabel(CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(c.getDiscountType())
 						? c.getDiscountAmount() + "원" : c.getDiscountRate() + "%")
 				.scopeLabel(scopeLabel(c))
+				.typeLabel(CouponCampaignEntity.SCOPE_REGION.equals(c.getScope()) ? "지역 지정"
+						: CouponCampaignEntity.SCOPE_STORE.equals(c.getScope()) ? "매장 지정" : "코드형")
+				.issueLimit(c.getIssueLimit())
+				.daysLeft(expired ? null : (int) java.time.temporal.ChronoUnit.DAYS.between(now.toLocalDate(), c.getExpiresAt().toLocalDate()))
 				.expiresAtLabel(c.getExpiresAt().toLocalDate().format(DATE_LABEL))
 				.active(c.isActive())
 				.expired(expired)
-				.claimedCount(couponRepository.countByCampaignId(c.getId()))
+				.claimedCount(claimed)
+				.claimPercent(claimPercent)
 				.statusLabel(statusLabel)
 				.build();
 	}
@@ -415,11 +423,11 @@ public class SuperAdminCouponService {
 	// 캠페인 목록의 "코드" 칸 — 코드형은 코드, 매장/지역 지정형은 코드가 없으니 적용 범위를 보여준다.
 	private String scopeLabel(CouponCampaignEntity c) {
 		if (CouponCampaignEntity.SCOPE_REGION.equals(c.getScope())) {
-			return "지역 · " + couponRegionRepository.findByCampaignId(c.getId()).stream()
+			return "대상 지역 " + couponRegionRepository.findByCampaignId(c.getId()).stream()
 					.map(CouponRegionEntity::getSido).collect(Collectors.joining("·"));
 		}
 		if (CouponCampaignEntity.SCOPE_STORE.equals(c.getScope())) {
-			return "매장 지정 · " + couponStoreRepository.findByCampaignId(c.getId()).size() + "곳";
+			return "대상 매장 " + couponStoreRepository.findByCampaignId(c.getId()).size() + "곳";
 		}
 		return null;
 	}

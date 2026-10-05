@@ -41,6 +41,13 @@ public class SuperAdminCouponController {
 		List<CouponCampaignRowDto> campaigns = couponService.listAllSortedByNewest();
 		CouponPolicyEntity policy = memberCouponService.getOrCreatePolicy();
 		model.addAttribute("campaigns", campaigns);
+		// 상단 요약 카드·탭 개수(2026-10-06 화면 개편) — 목록에서 바로 계산한다.
+		long activeCount = campaigns.stream().filter(c -> "진행중".equals(c.getStatusLabel())).count();
+		model.addAttribute("activeCount", activeCount);
+		model.addAttribute("endedCount", campaigns.size() - activeCount);
+		model.addAttribute("totalIssued", campaigns.stream().mapToLong(CouponCampaignRowDto::getClaimedCount).sum());
+		model.addAttribute("expiringSoonCount", campaigns.stream()
+				.filter(c -> "진행중".equals(c.getStatusLabel()) && c.getDaysLeft() != null && c.getDaysLeft() <= 3).count());
 		model.addAttribute("policy", policy);
 		return "superAdminView/coupons";
 	}

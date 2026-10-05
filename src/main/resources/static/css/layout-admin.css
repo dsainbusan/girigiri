@@ -1058,3 +1058,92 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
 /* 라디오/체크박스를 가로로 늘어놓을 때(field-group은 기본 세로 스택) */
 .u-row { display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--gray-700); }
 .u-row input[type="checkbox"], .u-row input[type="radio"] { margin-right: 6px; }
+
+/* ---------- 쿠폰 캠페인 관리 화면 개편 (2026-10-06) ----------
+   /superadmin/coupons — 통계 카드 · 정책 한 줄 카드 · 탭 필터 · 개선된 표 · 지역 발행 모달.
+   색·간격은 이 파일의 토큰만 쓴다. */
+
+/* 자동 발급 쿠폰 정책 — 값 2개뿐이라 세로 폼 대신 한 줄 카드로 압축 */
+.coupon-policy {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px 32px; flex-wrap: wrap;
+  padding: 18px 20px; margin-bottom: 32px;
+  border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--white);
+}
+.coupon-policy__text { flex: 1 1 320px; min-width: 0; }
+.coupon-policy__title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.coupon-policy__desc { margin: 4px 0 0; font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+.coupon-policy__form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0; }
+.coupon-policy__field { display: flex; flex-direction: column; gap: 6px; }
+.coupon-policy__field label { font-size: 12px; color: var(--gray-600); }
+.coupon-policy__field .field { width: 120px; }
+.coupon-policy__msg { flex-basis: 100%; margin: 0; }
+
+/* 탭(버튼형) — 기존 .tab 은 링크용이라 button 리셋만 더한다. 개수는 작은 회색 숫자로 */
+.tabs--tight { margin-bottom: 0; }
+.tabs button.tab { background: none; border: none; cursor: pointer; font-family: inherit; }
+.tab__count { margin-left: 6px; font-size: 12px; font-weight: 600; color: var(--gray-500); }
+.tab.is-active .tab__count { color: var(--blue-600); }
+
+/* 캠페인 표 셀 보조 문구·발급 진행 막대 */
+.data-table th.cell-left, .data-table td.cell-left { text-align: left; }
+.cell-sub { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; color: var(--gray-500); }
+.cell-sub--urgent { color: var(--red-500); font-weight: 600; }
+.cell-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cell-title .badge { min-width: 0; padding: 0 8px; height: 22px; font-size: 12px; }
+.progress { width: 120px; height: 6px; margin-top: 6px; border-radius: var(--radius-pill); background: var(--gray-100); overflow: hidden; }
+.progress__bar { height: 100%; border-radius: var(--radius-pill); background: var(--blue-500); }
+.data-table td.num, .data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 빈 상태 */
+.empty-state {
+  padding: 56px 20px; text-align: center;
+  border: 1px dashed var(--gray-300); border-radius: var(--radius-md); background: var(--gray-50);
+}
+.empty-state__title { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+.empty-state__desc { margin: 6px 0 20px; font-size: 14px; color: var(--gray-600); }
+.empty-state__actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* 지역 지정 쿠폰 모달 */
+.modal-card--wide { max-width: 580px; gap: 0; }
+/* 길어도 발급 요약과 [취소]/[발행하기]가 스크롤 아래로 숨지 않게 모달 하단에 같이 고정 */
+.modal-card--wide .modal-sticky {
+  position: sticky; bottom: -24px; margin: 8px -24px -24px; padding: 14px 24px 16px;
+  background: var(--white); border-top: 1px solid var(--gray-200);
+}
+.modal-card--wide .modal-sticky .modal-card__footer { margin-top: 12px; }
+.modal-card__desc { margin: 4px 0 20px; font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+.modal-section { margin-bottom: 20px; }
+.modal-section__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.modal-section__title { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+.modal-section__tools { display: flex; align-items: center; gap: 12px; }
+.modal-section__tools button { background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: var(--blue-600); cursor: pointer; }
+.modal-section__tools button:hover { text-decoration: underline; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.form-grid-2 .field-group { margin: 0; }
+
+/* 선택형 칩(체크박스/라디오를 알약 버튼처럼) */
+.chip-select-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-select { position: relative; display: inline-flex; }
+.chip-select input { position: absolute; opacity: 0; pointer-events: none; }
+.chip-select span {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 34px; padding: 0 14px;
+  border: 1px solid var(--gray-300); border-radius: var(--radius-pill); background: var(--white);
+  font-size: 14px; color: var(--gray-700); cursor: pointer; transition: background-color .12s, border-color .12s, color .12s;
+}
+.chip-select:hover span { border-color: var(--gray-400); }
+.chip-select input:checked + span { background: var(--blue-50); border-color: var(--blue-500); color: var(--blue-600); font-weight: 700; }
+.chip-select input:focus-visible + span { outline: 2px solid var(--blue-500); outline-offset: 2px; }
+.chip-select input:disabled + span { opacity: .5; cursor: not-allowed; }
+
+/* 발급 요약(대상 회원·예상 비용) */
+.summary-box { padding: 14px 16px; border: 1px solid var(--blue-100); border-radius: var(--radius-md); background: var(--blue-50); }
+.summary-box__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--gray-700); }
+.summary-box__row + .summary-box__row { margin-top: 6px; }
+.summary-box__value { font-size: 16px; font-weight: 700; color: var(--gray-900); font-variant-numeric: tabular-nums; }
+.summary-box__value--muted { font-size: 14px; font-weight: 500; color: var(--gray-600); }
+.summary-box__hint { margin: 8px 0 0; font-size: 12px; color: var(--gray-600); }
+
+@media (max-width: 720px) {
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .coupon-policy__field .field { width: 100px; }
+}

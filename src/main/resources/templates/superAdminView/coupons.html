@@ -12,68 +12,121 @@
 <body>
 <div id="content" th:fragment="content">
 
-  <section class="mb-16">
-    <h2 style="margin-bottom: 4px">쿠폰 정책 — 웰컴 · 매장취소보상 할인율</h2>
-    <p class="text-muted text-muted--sm" style="margin-bottom: 12px">
-      회원가입 시 자동 발급되는 웰컴 쿠폰과, 매장 사정으로 예약이 취소됐을 때 자동 발급되는 보상 쿠폰의
-      할인율이에요. 프로모션 코드 쿠폰과 다르게 회원이 직접 받는 게 아니라 시스템이 자동으로 발급하지만,
-      몇 %를 줄지는 이 화면에서 슈퍼어드민이 정해요.
-    </p>
-    <p class="form-error" th:if="${param.error != null and param.error[0] == 'policy'}">할인율은 1~90 사이 숫자로 입력해 주세요.</p>
-    <form th:action="@{/superadmin/coupons/policy}" method="post" class="form-narrow">
-      <div class="field-group">
-        <label class="field-group__label" for="welcomeDiscountRate">웰컴 쿠폰 할인율(%) <span class="req">*</span></label>
-        <input class="field" type="number" id="welcomeDiscountRate" name="welcomeDiscountRate" min="1" max="90" required
-               th:value="${policy.welcomeDiscountRate}">
+  <!--/*
+    화면 개편 (2026-10-06, UI/UX) — 핵심인 캠페인 목록이 먼저 보이도록 순서를 바꿨다:
+    ① 요약 카드(진행중/누적 발급/곧 만료) → ② 자동 발급 쿠폰 정책(한 줄 카드) → ③ 탭 필터 + 액션 + 캠페인 표.
+    표는 캠페인 종류 배지·발급 진행 막대·D-day 를 보여주고, 탭(전체/진행중/종료)은 JS로 행만 걸러낸다.
+  */-->
+
+  <!-- ① 요약 -->
+  <div class="stat-grid stat-grid--3">
+    <div class="stat-card">
+      <span class="stat-card__label">진행중 캠페인</span>
+      <span class="stat-card__value" th:text="${activeCount} + '건'">0건</span>
+      <span class="stat-card__delta" th:text="'전체 ' + ${#lists.size(campaigns)} + '건 중'">전체 0건 중</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">누적 발급 쿠폰</span>
+      <span class="stat-card__value" th:text="${#numbers.formatInteger(totalIssued, 1, 'COMMA')} + '장'">0장</span>
+      <span class="stat-card__delta">모든 캠페인 합계</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">3일 내 만료 예정</span>
+      <span class="stat-card__value" th:classappend="${expiringSoonCount > 0} ? 'stat-card__value--warning'" th:text="${expiringSoonCount} + '건'">0건</span>
+      <span class="stat-card__delta">진행중 캠페인 기준</span>
+    </div>
+  </div>
+
+  <!-- ② 자동 발급 쿠폰 정책 -->
+  <section class="coupon-policy">
+    <div class="coupon-policy__text">
+      <div class="coupon-policy__title">자동 발급 쿠폰 할인율</div>
+      <p class="coupon-policy__desc">회원가입 때 주는 웰컴 쿠폰과, 매장 사정으로 예약이 취소됐을 때 주는 보상 쿠폰이에요. 시스템이 자동으로 발급하고, 할인율만 여기서 정해요.</p>
+    </div>
+    <form th:action="@{/superadmin/coupons/policy}" method="post" class="coupon-policy__form">
+      <div class="coupon-policy__field">
+        <label for="welcomeDiscountRate">웰컴 쿠폰 (%)</label>
+        <input class="field" type="number" id="welcomeDiscountRate" name="welcomeDiscountRate" min="1" max="90" required th:value="${policy.welcomeDiscountRate}">
       </div>
-      <div class="field-group">
-        <label class="field-group__label" for="compensationDiscountRate">매장취소 보상 쿠폰 할인율(%) <span class="req">*</span></label>
-        <input class="field" type="number" id="compensationDiscountRate" name="compensationDiscountRate" min="1" max="90" required
-               th:value="${policy.compensationDiscountRate}">
+      <div class="coupon-policy__field">
+        <label for="compensationDiscountRate">매장취소 보상 (%)</label>
+        <input class="field" type="number" id="compensationDiscountRate" name="compensationDiscountRate" min="1" max="90" required th:value="${policy.compensationDiscountRate}">
       </div>
-      <!-- 변경됨 (2026-09-09) — "정책저장 버튼위로 간격이 있어야할 거 같다"는 피드백으로 mt-24 추가.
-           "저장되었습니다"도 폼 위 어정쩡한 자리 대신 버튼 바로 아래, 방금 누른 액션 옆으로 옮겼다. -->
-      <button type="submit" class="btn btn--primary btn--sm mt-24">정책 저장</button>
-      <p class="form-success" th:if="${param.saved}">저장되었습니다.</p>
+      <button type="submit" class="btn btn--primary btn--sm">저장</button>
+      <p class="form-success coupon-policy__msg" th:if="${param.saved}">저장되었습니다.</p>
+      <p class="form-error coupon-policy__msg" th:if="${param.error != null and param.error[0] == 'policy'}">할인율은 1~90 사이 숫자로 입력해 주세요.</p>
     </form>
   </section>
 
+  <!-- 발행 결과 안내 -->
   <p class="form-success" th:if="${regionCouponSuccess != null}" th:text="${regionCouponSuccess}">발행했어요.</p>
   <p class="form-error" th:if="${regionCouponError != null}" th:text="${regionCouponError}">오류</p>
 
-  <div class="toolbar">
-    <p class="result-count result-count--inline">전체 캠페인 <b th:text="${#lists.size(campaigns)}">0</b>건</p>
+  <!-- ③ 탭 + 액션 -->
+  <div class="toolbar" style="margin-bottom: 0; align-items: flex-end;">
+    <div class="tabs tabs--tight" role="tablist" aria-label="캠페인 상태 필터" style="border-bottom: none; margin-bottom: 0;">
+      <button type="button" class="tab is-active" role="tab" aria-selected="true" data-filter="all">전체<span class="tab__count" th:text="${#lists.size(campaigns)}">0</span></button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-filter="active">진행중<span class="tab__count" th:text="${activeCount}">0</span></button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-filter="ended">종료·비활성<span class="tab__count" th:text="${endedCount}">0</span></button>
+    </div>
     <div class="toolbar__spacer"></div>
-    <button type="button" class="btn btn--outline-neutral btn--sm" id="open-region-coupon-modal">지역 지정 쿠폰 발행</button>
-    <a class="btn btn--primary btn--sm" th:href="@{/superadmin/coupons/new}"><svg class="icon"><use href="#i-pencil"/></svg>새 캠페인 만들기</a>
+    <div style="display: flex; gap: 8px; padding-bottom: 8px;">
+      <button type="button" class="btn btn--outline-neutral btn--sm" id="open-region-coupon-modal">지역 지정 쿠폰 발행</button>
+      <a class="btn btn--primary btn--sm" th:href="@{/superadmin/coupons/new}"><svg class="icon"><use href="#i-pencil"/></svg>새 캠페인 만들기</a>
+    </div>
+  </div>
+  <div style="border-top: 1px solid var(--gray-200); margin-bottom: 16px;"></div>
+
+  <!-- 빈 상태 -->
+  <div class="empty-state" th:if="${#lists.isEmpty(campaigns)}">
+    <div class="empty-state__title">아직 만든 쿠폰 캠페인이 없어요</div>
+    <p class="empty-state__desc">지역을 골라 쿠폰을 한 번에 보내거나, 코드를 입력해 받는 프로모션 캠페인을 만들어 보세요.</p>
+    <div class="empty-state__actions">
+      <button type="button" class="btn btn--outline-neutral btn--sm" data-open-region-coupon>지역 지정 쿠폰 발행</button>
+      <a class="btn btn--primary btn--sm" th:href="@{/superadmin/coupons/new}">새 캠페인 만들기</a>
+    </div>
   </div>
 
-  <div class="table-wrap">
-    <table class="data-table">
+  <div class="table-wrap" th:unless="${#lists.isEmpty(campaigns)}">
+    <table class="data-table" id="campaign-table">
       <colgroup>
-        <col style="width:22%"><col style="width:18%"><col style="width:12%"><col style="width:16%"><col style="width:12%"><col style="width:12%"><col style="width:8%">
+        <col style="width:34%"><col style="width:14%"><col style="width:18%"><col style="width:14%"><col style="width:10%"><col style="width:10%">
       </colgroup>
       <thead>
-        <tr><th>캠페인명</th><th>코드</th><th>할인율</th><th>만료일</th><th>발급 인원</th><th>상태</th><th></th></tr>
+        <tr><th class="cell-left">캠페인</th><th>할인</th><th>발급 현황</th><th>만료일</th><th>상태</th><th></th></tr>
       </thead>
       <tbody>
-        <tr th:if="${#lists.isEmpty(campaigns)}">
-          <td colspan="7" class="table-empty">등록된 쿠폰 캠페인이 없습니다.</td>
-        </tr>
-        <tr th:each="c : ${campaigns}">
-          <td class="cell-name" th:text="${c.name}">추석 프로모션</td>
-          <td th:text="${c.code != null} ? ${c.code} : ${c.scopeLabel}">AUTUMN2026</td>
+        <tr th:each="c : ${campaigns}"
+            th:attr="data-status=${c.statusLabel == '진행중'} ? 'active' : 'ended'">
+          <td class="cell-left">
+            <div class="cell-title">
+              <span class="cell-name" th:text="${c.name}">추석 프로모션</span>
+              <span class="badge"
+                    th:classappend="${c.typeLabel == '지역 지정'} ? 'badge--open' : (${c.typeLabel == '매장 지정'} ? 'badge--warning' : 'badge--neutral')"
+                    th:text="${c.typeLabel}">코드형</span>
+            </div>
+            <span class="cell-sub" th:text="${c.code != null} ? '코드 ' + ${c.code} : ${c.scopeLabel}">코드 AUTUMN2026</span>
+          </td>
           <td th:text="${c.discountLabel}">10%</td>
-          <td th:text="${c.expiresAtLabel}">2026-09-30</td>
-          <td th:text="${c.claimedCount} + '명'">0명</td>
+          <td>
+            <span th:text="${#numbers.formatInteger(c.claimedCount, 1, 'COMMA')} + (${c.issueLimit != null} ? ' / ' + ${#numbers.formatInteger(c.issueLimit, 1, 'COMMA')} : '') + '명'">6 / 6명</span>
+            <div class="progress" th:if="${c.claimPercent != null}"
+                 role="progressbar" th:attr="aria-valuenow=${c.claimedCount}, aria-valuemax=${c.issueLimit}">
+              <div class="progress__bar" th:style="'width:' + ${c.claimPercent} + '%'"></div>
+            </div>
+          </td>
+          <td>
+            <span th:text="${c.expiresAtLabel}">2026-09-30</span>
+            <span class="cell-sub" th:classappend="${c.daysLeft != null and c.daysLeft <= 3} ? 'cell-sub--urgent'"
+                  th:text="${c.daysLeft == null} ? '만료됨' : (${c.daysLeft == 0} ? '오늘 만료' : 'D-' + ${c.daysLeft})">D-5</span>
+          </td>
           <td>
             <span class="badge badge--success" th:if="${c.statusLabel == '진행중'}">진행중</span>
             <span class="badge badge--neutral" th:if="${c.statusLabel == '비활성'}">비활성</span>
             <span class="badge badge--danger" th:if="${c.statusLabel == '기한 만료'}">기한 만료</span>
           </td>
           <td>
-            <!-- 변경됨 (2026-09-22, UI/UX 감사) — 표 안 보조 액션은 members.html/stores.html처럼
-                 .chip-btn 계열로 통일(이 화면만 .btn--ghost를 쓰고 있었다). -->
+            <!-- 표 안 보조 액션은 .chip-btn 계열로 통일(2026-09-22 UI/UX 감사) -->
             <form th:action="@{/superadmin/coupons/{id}/toggle(id=${c.id})}" method="post" style="display:inline">
               <button type="submit" class="chip-btn chip-btn--neutral" th:text="${c.active} ? '끄기' : '켜기'">끄기</button>
             </form>
@@ -83,129 +136,194 @@
             </form>
           </td>
         </tr>
+        <tr id="filter-empty-row" hidden><td colspan="6" class="table-empty">해당하는 캠페인이 없어요.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- 지역 지정 쿠폰 발행 모달 (2026-10-06) — 선택한 시도 회원의 쿠폰함으로 바로 발급한다. -->
-  <div id="region-coupon-modal" role="dialog" aria-modal="true" aria-label="지역 지정 쿠폰 발행" class="modal-overlay" hidden>
-    <form class="modal-card" th:action="@{/superadmin/coupons/region}" method="post" id="region-coupon-form">
+  <!-- 지역 지정 쿠폰 발행 모달 -->
+  <div id="region-coupon-modal" role="dialog" aria-modal="true" aria-labelledby="region-coupon-title" class="modal-overlay" hidden>
+    <form class="modal-card modal-card--wide" th:action="@{/superadmin/coupons/region}" method="post" id="region-coupon-form">
       <h3 class="modal-card__title" id="region-coupon-title">지역 지정 쿠폰 발행</h3>
-      <p class="text-muted text-muted--sm">선택한 시도에 사는 회원의 쿠폰함으로 바로 발급돼요. 쿠폰은 그 시도에 있는 매장에서만 쓸 수 있어요.</p>
+      <p class="modal-card__desc">선택한 시도에 사는 회원의 쿠폰함으로 바로 발급돼요. 쿠폰은 그 시도에 있는 매장에서만 쓸 수 있어요.</p>
 
-      <div class="field-group">
-        <label class="field-group__label">대상 시도</label>
-        <div class="u-row" style="flex-wrap: wrap; gap: 8px 14px">
-          <label th:each="s : ${sidoList}"><input type="checkbox" name="sidos" th:value="${s}" class="region-sido"> <span th:text="${s}">서울</span></label>
+      <div class="modal-section">
+        <div class="modal-section__head">
+          <span class="modal-section__title">대상 시도</span>
+          <span class="modal-section__tools">
+            <button type="button" data-preset="capital">수도권</button>
+            <button type="button" data-preset="all">전체 선택</button>
+            <button type="button" data-preset="none">선택 해제</button>
+          </span>
+        </div>
+        <div class="chip-select-group">
+          <label class="chip-select" th:each="s : ${sidoList}"><input type="checkbox" name="sidos" th:value="${s}" class="region-sido"><span th:text="${s}">서울</span></label>
         </div>
       </div>
 
-      <div class="field-group">
-        <label class="field-group__label">할인 방식</label>
-        <div class="u-row">
-          <label><input type="radio" name="discountType" value="RATE" checked> 정률(%)</label>
-          <label><input type="radio" name="discountType" value="AMOUNT"> 정액(원)</label>
+      <div class="modal-section">
+        <div class="modal-section__head"><span class="modal-section__title">할인 방식</span></div>
+        <div class="chip-select-group">
+          <label class="chip-select"><input type="radio" name="discountType" value="RATE" checked><span>정률 (%)</span></label>
+          <label class="chip-select"><input type="radio" name="discountType" value="AMOUNT"><span>정액 (원)</span></label>
+        </div>
+        <div class="form-grid-2" style="margin-top: 14px;">
+          <div class="field-group">
+            <label class="field-group__label" for="rcDiscountRate">할인율 (%)</label>
+            <input class="field" type="number" id="rcDiscountRate" name="discountRate" min="1" max="90" value="10">
+          </div>
+          <div class="field-group">
+            <label class="field-group__label" for="rcDiscountAmount">할인 금액 (원)</label>
+            <input class="field" type="number" id="rcDiscountAmount" name="discountAmount" min="100" step="100" disabled>
+          </div>
+          <div class="field-group">
+            <label class="field-group__label" for="rcMaxDiscount">최대 할인 금액 (원)</label>
+            <input class="field" type="number" id="rcMaxDiscount" name="maxDiscountAmount" min="100" step="100" placeholder="정률일 때만">
+          </div>
+          <div class="field-group">
+            <label class="field-group__label" for="rcMinOrder">최소 주문 금액 (원)</label>
+            <input class="field" type="number" id="rcMinOrder" name="minOrderAmount" min="0" step="100" value="0">
+          </div>
         </div>
       </div>
-      <div class="field-group">
-        <label class="field-group__label" for="rcDiscountRate">할인율(%)</label>
-        <input class="field" type="number" id="rcDiscountRate" name="discountRate" min="1" max="90" value="10">
-      </div>
-      <div class="field-group">
-        <label class="field-group__label" for="rcDiscountAmount">할인 금액(원)</label>
-        <input class="field" type="number" id="rcDiscountAmount" name="discountAmount" min="100" step="100" disabled>
-      </div>
-      <div class="field-group">
-        <label class="field-group__label" for="rcMaxDiscount">최대 할인 금액(원, 정률일 때만)</label>
-        <input class="field" type="number" id="rcMaxDiscount" name="maxDiscountAmount" min="100" step="100">
-      </div>
-      <div class="field-group">
-        <label class="field-group__label" for="rcMinOrder">최소 주문 금액(원)</label>
-        <input class="field" type="number" id="rcMinOrder" name="minOrderAmount" min="0" step="100" value="0">
-      </div>
-      <div class="field-group">
-        <label class="field-group__label">발급 대상 회원</label>
-        <input class="field" type="text" id="rcRecipientDisplay" value="시도를 선택해 주세요" disabled>
-        <span class="text-muted text-muted--sm">선택한 시도에 사는 활성 일반 회원 수예요 — 모두에게 한 장씩 발급되고, 직접 입력할 수 없어요.</span>
-      </div>
-      <div class="field-group">
-        <label class="field-group__label" for="rcValidDays">유효 기간(일)</label>
-        <input class="field" type="number" id="rcValidDays" name="validDays" min="1" value="7">
-      </div>
-      <p id="rcCostEstimate" class="text-muted text-muted--sm">예상 최대 비용: -</p>
 
-      <div class="field-group">
-        <label class="field-group__label" for="rcReason">발행 사유</label>
-        <input class="field" type="text" id="rcReason" name="reason" maxlength="200" placeholder="예: 지역 프로모션">
-      </div>
-      <div class="field-group">
-        <label class="field-group__label">알림 발송</label>
-        <label class="u-row"><input type="checkbox" name="notify" value="true" checked> 대상 회원에게 쿠폰 도착 알림</label>
+      <div class="modal-section">
+        <div class="modal-section__head"><span class="modal-section__title">기간 · 사유</span></div>
+        <div class="form-grid-2">
+          <div class="field-group">
+            <label class="field-group__label" for="rcValidDays">유효 기간 (일)</label>
+            <input class="field" type="number" id="rcValidDays" name="validDays" min="1" value="7">
+          </div>
+          <div class="field-group">
+            <label class="field-group__label" for="rcReason">발행 사유</label>
+            <input class="field" type="text" id="rcReason" name="reason" maxlength="200" placeholder="예: 지역 프로모션">
+          </div>
+        </div>
+        <label class="u-row" style="margin-top: 14px;"><input type="checkbox" name="notify" value="true" checked> 대상 회원에게 쿠폰 도착 알림 보내기</label>
       </div>
 
-      <div class="modal-card__footer">
-        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-region-modal>취소</button>
-        <button type="submit" class="btn btn--sm" id="rcSubmit" disabled>발행하기</button>
+      <div class="modal-sticky">
+        <div class="summary-box" aria-live="polite">
+          <div class="summary-box__row"><span>발급 대상 회원</span><span class="summary-box__value summary-box__value--muted" id="rcRecipientDisplay">시도를 선택해 주세요</span></div>
+          <div class="summary-box__row"><span>예상 최대 비용</span><span class="summary-box__value summary-box__value--muted" id="rcCostEstimate">-</span></div>
+          <p class="summary-box__hint">대상은 선택한 시도에 사는 활성 일반 회원이에요. 모두에게 한 장씩 발급되고 수량은 직접 정할 수 없어요.</p>
+        </div>
+
+        <div class="modal-card__footer">
+          <button type="button" class="btn btn--outline-neutral btn--sm" data-close-region-modal>취소</button>
+          <button type="submit" class="btn btn--primary btn--sm" id="rcSubmit" disabled>발행하기</button>
+        </div>
       </div>
     </form>
   </div>
 
   <script th:inline="none">
   (function () {
+    // ---- 탭 필터: 서버 왕복 없이 행의 data-status 로 걸러낸다 ----
+    var tabs = document.querySelectorAll('.tabs button.tab');
+    var rows = document.querySelectorAll('#campaign-table tbody tr[data-status]');
+    var emptyRow = document.getElementById('filter-empty-row');
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var filter = tab.dataset.filter;
+        tabs.forEach(function (t) {
+          var on = t === tab;
+          t.classList.toggle('is-active', on);
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        var visible = 0;
+        rows.forEach(function (row) {
+          var show = filter === 'all' || row.dataset.status === filter;
+          row.hidden = !show;
+          if (show) { visible++; }
+        });
+        if (emptyRow) { emptyRow.hidden = visible !== 0; }
+      });
+    });
+
+    // ---- 지역 지정 쿠폰 모달 ----
     var modal = document.getElementById('region-coupon-modal');
     var recipientEl = document.getElementById('rcRecipientDisplay');
-    var submitBtn = document.getElementById('rcSubmit');
     var costEl = document.getElementById('rcCostEstimate');
+    var submitBtn = document.getElementById('rcSubmit');
     var rate = document.getElementById('rcDiscountRate');
     var amount = document.getElementById('rcDiscountAmount');
     var maxDiscount = document.getElementById('rcMaxDiscount');
+    var sidoBoxes = Array.prototype.slice.call(document.querySelectorAll('.region-sido'));
     var recipients = 0;
+    var lastTrigger = null;
 
-    function sidos() {
-      return Array.prototype.slice.call(document.querySelectorAll('.region-sido:checked')).map(function (c) { return c.value; });
+    function selected() { return sidoBoxes.filter(function (c) { return c.checked; }).map(function (c) { return c.value; }); }
+    function setSummary(el, text, strong) {
+      el.textContent = text;
+      el.classList.toggle('summary-box__value--muted', !strong);
     }
     function updateCost() {
-      if (recipients === 0) { costEl.textContent = '예상 최대 비용: -'; return; }
+      if (recipients === 0) { setSummary(costEl, '-', false); return; }
       var isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
       if (isRate && !maxDiscount.value) {
-        costEl.textContent = '예상 최대 비용: 최대 할인 금액을 입력하면 계산돼요 (대상 ' + recipients + '명)';
+        setSummary(costEl, '최대 할인 금액을 입력하면 계산돼요', false);
         return;
       }
       var per = parseInt(isRate ? maxDiscount.value : amount.value, 10) || 0;
-      costEl.textContent = '예상 최대 비용: ' + (recipients * per).toLocaleString() + '원 (대상 ' + recipients + '명 × 최대 ' + per.toLocaleString() + '원)';
+      setSummary(costEl, (recipients * per).toLocaleString() + '원 (' + recipients.toLocaleString() + '명 × 최대 ' + per.toLocaleString() + '원)', true);
     }
     function refreshRecipients() {
-      var selected = sidos();
-      if (selected.length === 0) {
-        recipients = 0; recipientEl.value = '시도를 선택해 주세요'; submitBtn.disabled = true; updateCost(); return;
+      var sidos = selected();
+      if (sidos.length === 0) {
+        recipients = 0; setSummary(recipientEl, '시도를 선택해 주세요', false); submitBtn.disabled = true; updateCost(); return;
       }
-      recipientEl.value = '불러오는 중...';
-      var params = selected.map(function (s) { return 'sidos=' + encodeURIComponent(s); }).join('&');
-      fetch('/superadmin/coupons/region/recipient-count?' + params)
+      setSummary(recipientEl, '불러오는 중...', false);
+      fetch('/superadmin/coupons/region/recipient-count?' + sidos.map(function (s) { return 'sidos=' + encodeURIComponent(s); }).join('&'))
           .then(function (res) { return res.json(); })
           .then(function (data) {
             recipients = data.count || 0;
-            recipientEl.value = recipients === 0 ? '0명 — 쿠폰을 받을 회원이 없어 발행할 수 없어요' : recipients + '명';
+            if (recipients === 0) {
+              setSummary(recipientEl, '0명 — 쿠폰을 받을 회원이 없어요', false);
+            } else {
+              setSummary(recipientEl, recipients.toLocaleString() + '명', true);
+            }
             submitBtn.disabled = recipients === 0;
             updateCost();
           })
-          .catch(function () { recipientEl.value = '-'; });
+          .catch(function () { setSummary(recipientEl, '불러오지 못했어요', false); });
     }
 
-    document.getElementById('open-region-coupon-modal').addEventListener('click', function () {
+    function openModal(trigger) {
+      lastTrigger = trigger;
       modal.hidden = false;
-      document.getElementById('region-coupon-title').focus();
+      var first = sidoBoxes[0];
+      if (first) { first.focus(); }
+    }
+    function closeModal() {
+      modal.hidden = true;
+      if (lastTrigger) { lastTrigger.focus(); }
+    }
+    document.querySelectorAll('#open-region-coupon-modal, [data-open-region-coupon]').forEach(function (btn) {
+      btn.addEventListener('click', function () { openModal(btn); });
     });
-    document.querySelector('[data-close-region-modal]').addEventListener('click', function () { modal.hidden = true; });
-    modal.addEventListener('click', function (e) { if (e.target === modal) { modal.hidden = true; } });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { modal.hidden = true; } });
+    document.querySelector('[data-close-region-modal]').addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) { closeModal(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) { closeModal(); } });
 
-    document.querySelectorAll('.region-sido').forEach(function (c) { c.addEventListener('change', refreshRecipients); });
+    // 빠른 선택
+    var CAPITAL = ['서울', '경기', '인천'];
+    document.querySelectorAll('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        sidoBoxes.forEach(function (c) {
+          c.checked = btn.dataset.preset === 'all' || (btn.dataset.preset === 'capital' && CAPITAL.indexOf(c.value) !== -1);
+        });
+        refreshRecipients();
+      });
+    });
+
+    sidoBoxes.forEach(function (c) { c.addEventListener('change', refreshRecipients); });
     document.querySelectorAll('input[name="discountType"]').forEach(function (radio) {
       radio.addEventListener('change', function () {
         if (!radio.checked) { return; }
         var isRate = radio.value === 'RATE';
         rate.disabled = !isRate;
+        maxDiscount.disabled = !isRate;
         amount.disabled = isRate;
         updateCost();
       });
