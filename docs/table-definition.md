@@ -2,7 +2,7 @@
 
 - 작성 기준: `src/main/java/net/dsa/girigiri/domain/entity/*.java` (2026-10-05 갱신 — 코드 전수 재조사, 24개 → **26개 테이블**)
 - `docs/schema.sql`(ERD용 DDL)도 이 문서와 함께 26개 테이블 전체로 동기화했다. 실제 ERD 다이어그램(`docs/girigiri.vuerd.json`)은 IntelliJ ERD Editor 플러그인에서 `docs/schema.sql`을 "SQL DDL Import"로 다시 불러와 재생성해야 한다 (`docs/schema.sql` 상단 사용법 참고) — 이 문서/DDL 갱신만으로는 `.vuerd.json` 파일 자체는 자동으로 안 바뀐다.
-- **2026-10-05 변경 요약**: `report` 테이블 삭제(2026-09-07에 매출 리포트가 Supabase `sales` 테이블 기반으로 완전히 대체된 뒤 저장 코드가 전혀 없던 고아 테이블 — `ReportEntity`/`ReportRepository`도 코드에서 함께 삭제). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at`(soft delete, 2026-09-22) 컬럼 누락분 추가. 소셜 로그인 제공자 네이버→라인 정정(`oauth_provider`). 담당자 변경 반영(김태훈 이탈, 2026-09-16 — store/product/inquiry 답변 전부 문창호 인수).
+- **2026-10-05 변경 요약**: `report` 테이블 삭제(2026-09-07에 매출 리포트가 Supabase `sales` 테이블 기반으로 완전히 대체된 뒤 저장 코드가 전혀 없던 고아 테이블 — `ReportEntity`/`ReportRepository`도 코드에서 함께 삭제). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at`(soft delete, 2026-09-22) 컬럼 누락분 추가. 소셜 로그인 제공자 네이버→라인 정정(`oauth_provider`). 담당자 변경 반영(김태훈 이탈, 2026-09-16 — store/product/inquiry 답변 전부 문창호 인수). **(추가 보강, 송채현)** `coupon.used_at`(2026-09-22) 누락분 추가 반영, `users.deleted_at`은 `docs/schema.sql` DDL에서 빠져있던 걸 같이 맞춤. **(2차 추가 보강, 송채현 — IntelliJ 라이브 코드 26개 엔티티 전체 재대조)** 문창호 전수조사에서도 빠졌던 컬럼 8개 추가: `users.language`(2026-09-22), `store.image_url`(2026-09-21)/`settlement_alert_enabled`·`automation_alert_enabled`(2026-09-22), `product.owner_discount_rate`, `review.reply_content`·`reply_created_at`·`reply_edited`(2026-09-17, 문창호 "사장님 리뷰 답글" 기능) — 전부 문창호 전수조사 날짜(10/05) 이전에 이미 코드에 있었는데 문서에 안 반영돼 있었음.
 - **store.owner_id 관계 모델 결정 완료**: 안B(User가 storeId로 Store를 소유) 확정 (2026-08-21, `StoreEntity` 코드 주석). 안A(Store 독립 로그인 계정)용 레거시 컬럼(`login_id`/`password`)은 이미 코드에서 제거됨 — 이전 버전 문서에 남아있던 "미확정" 표시는 이번 갱신으로 정리했다.
 - CLAUDE.md 엔티티 설계(예상)에 있던 `Category`(카테고리 마스터)는 아직 별도 테이블 없이 `store.category` 자유 텍스트 컬럼으로만 존재한다. 절약 랭킹은 별도 테이블 없이 `users`/`user_badge` 집계로 처리.
 - NN=NOT NULL / PK=기본키 / FK=외래키(설계 의도 — 실제 DB엔 FK 제약 없음, `docs/schema.sql` 상단 참고) / UK=고유키(UNIQUE) / IDX=인덱스
@@ -34,9 +34,10 @@
 | 17 | privacy_agreed | 개인정보 동의 | BOOLEAN | O | | | | | false | 가입 완료 시 항상 true |
 | 18 | marketing_agreed | 마케팅 수신 동의 | BOOLEAN | O | | | | | false | 선택 항목, 알림 설정에서 on/off |
 | 19 | agreed_at | 약관 동의 일시 | DATETIME | | | | | | | |
-| 20 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
-| 21 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
-| 22 | deleted_at | 탈퇴일시 | DATETIME | | | | | | | soft delete 기준(2026-09-22 추가) — NULL이면 활성 회원, 값 있으면 탈퇴 처리 시각. `UserPurgeScheduler`가 보존기간 후 실제 삭제 |
+| 20 | language | 언어 설정 | VARCHAR(10) | | | | | | | 환경설정 "언어 설정" 선택값(2026-09-22 추가). NULL이면 "ko"(한국어) 취급 — 실제 다국어 처리는 아직 없고 저장만 함 |
+| 21 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 22 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
+| 23 | deleted_at | 탈퇴일시 | DATETIME | | | | | | | soft delete 기준(2026-09-22 추가) — NULL이면 활성 회원, 값 있으면 탈퇴 처리 시각. `UserPurgeScheduler`가 보존기간 후 실제 삭제 |
 
 \* UK/IDX는 `(oauth_provider, oauth_id)` **복합** 유니크·인덱스(`uk_users_oauth`) — `findByOauthProviderAndOauthId` 조회에 사용.
 
@@ -93,28 +94,31 @@
 | 5 | latitude | 위도 | DOUBLE | | | | | | | |
 | 6 | longitude | 경도 | DOUBLE | | | | | | | |
 | 7 | operating_hours | 영업시간 | VARCHAR(100) | | | | | | | |
-| 8 | prep_time_minutes | 준비시간(분) | INT | | | | | | 20 | NULL이면 매장 설정 전(항상 주문 가능 취급) |
-| 9 | last_pickup_time | 마지막 픽업시간 | TIME | | | | | | | 이 시간 이후 당일 주문/픽업 마감 |
-| 10 | rescue_goal_percent | 구제율 목표(%) | INT | | | | | | 70 | 대시보드 카드 목표치, 점주가 연필 아이콘으로 직접 수정 |
-| 11 | role | 권한 | VARCHAR(20) | O | | | | | | = 'OWNER' |
-| 12 | business_number | 사업자번호 | VARCHAR(30) | | | | | | | 입점 신청 시 검증용 |
-| 13 | phone | 연락처 | VARCHAR(30) | | | | | | | |
-| 14 | approval_status | 입점 승인 상태 | VARCHAR(20) | | | | | O | 'PENDING' | PENDING / APPROVED / REJECTED (`findByApprovalStatus`) |
-| 15 | status | 매장 상태 | VARCHAR(20) | | | | | | | ACTIVE / SUSPENDED. NULL=ACTIVE와 동일 취급(슈퍼어드민 매장 정지, 2026-09-08 추가) |
-| 16 | pos_provider | POS 연동사 | VARCHAR(30) | | | | | | | okpos/posbank/unionpos/etc. NULL=미연동 (2026-08-27 추가) |
-| 17 | pos_store_code | POS 매장 코드 | VARCHAR(50) | | | | | | | |
-| 18 | pos_connected_at | POS 연동 시각 | DATETIME | | | | | | | |
-| 19 | pos_last_sync_at | POS 마지막 동기화 시각 | DATETIME | | | | | | | |
-| 20 | pos_draft_prompt_time | 자동 초안 생성 시각 | TIME | | | | | | | 매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안 자동 생성(B안). NULL이면 자동 생성 안 함 |
-| 21 | bank_name | 정산 계좌 은행 | VARCHAR(30) | | | | | | | 주간 정산 지급용 (2026-09-01 추가) |
-| 22 | bank_account | 정산 계좌번호 | VARCHAR(40) | | | | | | | |
-| 23 | account_holder | 정산 계좌 예금주 | VARCHAR(40) | | | | | | | |
-| 24 | owner_id | 소유 회원번호 | BIGINT | | | O | | O | | users.id 참조 (안B 확정, `findByOwnerId`) |
-| 25 | reliability_suspended_until | 신뢰도 정지 해제 시각 | DATETIME | | | | | | | 신뢰도(취소율) 자동 정지 해제 예정 시각. NULL/과거면 정지 아님 — 별도 스케줄러 없이 조회 시점마다 동적 판정 (2026-09-16 추가) |
-| 26 | reliability_suspension_count | 신뢰도 위반 누적 횟수 | INT | O | | | | | 0 | 0~3. 7일→14일→30일 순서로 참조. 정지가 풀려도 리셋 안 됨 |
-| 27 | reliability_banned | 신뢰도 영구정지 여부 | BOOLEAN | O | | | | | false | true면 영구정지(4회차 위반). `store.status`(슈퍼어드민 수동 정지)와는 별도 컬럼 — 혼용 시 수동 정지 매장이 자동 해제될 위험이 있어 분리 |
-| 28 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
-| 29 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
+| 8 | image_url | 매장 사진 | VARCHAR(255) | | | | | | | NULL이면 화면에서 "가게명 첫 글자 + 카테고리색" 아바타로 대체 (2026-09-21 추가) |
+| 9 | prep_time_minutes | 준비시간(분) | INT | | | | | | 20 | NULL이면 매장 설정 전(항상 주문 가능 취급) |
+| 10 | last_pickup_time | 마지막 픽업시간 | TIME | | | | | | | 이 시간 이후 당일 주문/픽업 마감 |
+| 11 | rescue_goal_percent | 구제율 목표(%) | INT | | | | | | 70 | 대시보드 카드 목표치, 점주가 연필 아이콘으로 직접 수정 |
+| 12 | role | 권한 | VARCHAR(20) | O | | | | | | = 'OWNER' |
+| 13 | business_number | 사업자번호 | VARCHAR(30) | | | | | | | 입점 신청 시 검증용 |
+| 14 | phone | 연락처 | VARCHAR(30) | | | | | | | |
+| 15 | approval_status | 입점 승인 상태 | VARCHAR(20) | | | | | O | 'PENDING' | PENDING / APPROVED / REJECTED (`findByApprovalStatus`) |
+| 16 | status | 매장 상태 | VARCHAR(20) | | | | | | | ACTIVE / SUSPENDED. NULL=ACTIVE와 동일 취급(슈퍼어드민 매장 정지, 2026-09-08 추가) |
+| 17 | pos_provider | POS 연동사 | VARCHAR(30) | | | | | | | okpos/posbank/unionpos/etc. NULL=미연동 (2026-08-27 추가) |
+| 18 | pos_store_code | POS 매장 코드 | VARCHAR(50) | | | | | | | |
+| 19 | pos_connected_at | POS 연동 시각 | DATETIME | | | | | | | |
+| 20 | pos_last_sync_at | POS 마지막 동기화 시각 | DATETIME | | | | | | | |
+| 21 | pos_draft_prompt_time | 자동 초안 생성 시각 | TIME | | | | | | | 매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안 자동 생성(B안). NULL이면 자동 생성 안 함 |
+| 22 | bank_name | 정산 계좌 은행 | VARCHAR(30) | | | | | | | 주간 정산 지급용 (2026-09-01 추가) |
+| 23 | bank_account | 정산 계좌번호 | VARCHAR(40) | | | | | | | |
+| 24 | account_holder | 정산 계좌 예금주 | VARCHAR(40) | | | | | | | |
+| 25 | owner_id | 소유 회원번호 | BIGINT | | | O | | O | | users.id 참조 (안B 확정, `findByOwnerId`) |
+| 26 | reliability_suspended_until | 신뢰도 정지 해제 시각 | DATETIME | | | | | | | 신뢰도(취소율) 자동 정지 해제 예정 시각. NULL/과거면 정지 아님 — 별도 스케줄러 없이 조회 시점마다 동적 판정 (2026-09-16 추가) |
+| 27 | reliability_suspension_count | 신뢰도 위반 누적 횟수 | INT | O | | | | | 0 | 0~3. 7일→14일→30일 순서로 참조. 정지가 풀려도 리셋 안 됨 |
+| 28 | reliability_banned | 신뢰도 영구정지 여부 | BOOLEAN | O | | | | | false | true면 영구정지(4회차 위반). `store.status`(슈퍼어드민 수동 정지)와는 별도 컬럼 — 혼용 시 수동 정지 매장이 자동 해제될 위험이 있어 분리 |
+| 29 | settlement_alert_enabled | 정산 알림 토글 | BOOLEAN | | | | | | | 환경설정 "매장 관리" 섹션(OWNER 전용). NULL/true=켜짐, false만 꺼짐 — 저장만 하고 실제 발송 로직 연결은 아직 안 됨 (2026-09-22 추가) |
+| 30 | automation_alert_enabled | 자동 등록 알림 토글 | BOOLEAN | | | | | | | 위와 동일한 NULL-안전 패턴 (2026-09-22 추가) |
+| 31 | created_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 32 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
 
 ---
 
@@ -187,15 +191,16 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 | 3 | name | 상품명 | VARCHAR(100) | O | | | | | | |
 | 4 | original_price | 원가 | INT | O | | | | | | 원(KRW) 정수 단위 |
 | 5 | discounted_price | 할인가 | INT | O | | | | | | |
-| 6 | quantity | 등록 수량 | INT | O | | | | | | |
-| 7 | remaining_quantity | 잔여 수량 | INT | O | | | | | | 0 이상, quantity 이하 |
-| 8 | image_url | 이미지 URL | VARCHAR(255) | | | | | | | |
-| 9 | description | 설명 | VARCHAR(500) | | | | | | | |
-| 10 | status | 상태 | VARCHAR(20) | O | | | | O | | draft(자동 초안) / active / sold / expired / skipped("오늘 안 함" 처리). draft/skipped는 홈·검색·대시보드 집계 제외 |
-| 11 | template_id | 출처 템플릿 | BIGINT | | | O | | | | 템플릿 방식 초안이면 listing_template.id (2026-08-26 추가) |
-| 12 | menu_item_id | 출처 메뉴 | BIGINT | | | O | | | | POS 재고 스냅샷 방식 초안이면 menu_item.id (2026-08-27 추가) |
-| 13 | registered_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할) |
-| 14 | updated_at | 수정일시 | DATETIME | | | | | | | 상품 수정뿐 아니라 예약/취소로 인한 재고 변동에도 갱신됨(범용 컬럼, 수정 이력 전용 아님) |
+| 6 | owner_discount_rate | 점주 지정 할인율(%) | INT | | | | | | | NULL이면 전부 자동(마감 임박도 기준). 값이 있으면 자동 할인율이 이보다 낮아지지 않는 하한선으로만 쓰임(`DiscountRateCalculator.effectiveRate`) |
+| 7 | quantity | 등록 수량 | INT | O | | | | | | |
+| 8 | remaining_quantity | 잔여 수량 | INT | O | | | | | | 0 이상, quantity 이하 |
+| 9 | image_url | 이미지 URL | VARCHAR(255) | | | | | | | |
+| 10 | description | 설명 | VARCHAR(500) | | | | | | | |
+| 11 | status | 상태 | VARCHAR(20) | O | | | | O | | draft(자동 초안) / active / sold / expired / skipped("오늘 안 함" 처리). draft/skipped는 홈·검색·대시보드 집계 제외 |
+| 12 | template_id | 출처 템플릿 | BIGINT | | | O | | | | 템플릿 방식 초안이면 listing_template.id (2026-08-26 추가) |
+| 13 | menu_item_id | 출처 메뉴 | BIGINT | | | O | | | | POS 재고 스냅샷 방식 초안이면 menu_item.id (2026-08-27 추가) |
+| 14 | registered_at | 등록일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할) |
+| 15 | updated_at | 수정일시 | DATETIME | | | | | | | 상품 수정뿐 아니라 예약/취소로 인한 재고 변동에도 갱신됨(범용 컬럼, 수정 이력 전용 아님) |
 
 ---
 
@@ -284,7 +289,8 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 6 | discount_rate | 할인율(%) | INT | O | | | | | | 정률 할인 |
 | 7 | expires_at | 만료일시 | DATETIME | O | | | | | | |
 | 8 | used | 사용 여부 | BOOLEAN | O | | | | | false | 체크아웃에서 사용 시 true. 매장귀책/일반 취소 시 복구(false), 회원 노쇼로 인한 취소는 복구 안 함 |
-| 9 | created_at | 발급일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 9 | used_at | 사용 처리 일시 | DATETIME | | | | | | | used가 true로 바뀐 시점(2026-09-22 추가). `CouponService.markUsed()`에서 채우고, `restore()`로 복구(취소/노쇼 복구)되면 다시 NULL |
+| 10 | created_at | 발급일시 | DATETIME | O | | | | | | 공통 컬럼 |
 
 ---
 
@@ -329,6 +335,9 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 6 | image_url | 사진 URL | VARCHAR(500) | | | | | | | 사진 리뷰(강노은 추가). 파일 업로드 인프라가 없어 URL 문자열로만 저장 |
 | 7 | edited | 수정 여부 | BOOLEAN | O | | | | | false | 최초 작성 후 재작성(덮어쓰기) 시 true — 목록에 "수정됨" 표시용 |
 | 8 | created_at | 작성일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 9 | reply_content | 사장님 답글 | VARCHAR(500) | | | | | | | WBS "문의 답변/리뷰 답글"(김태훈 인수 후 문창호, 2026-09-17 추가) |
+| 10 | reply_created_at | 답글 작성일시 | DATETIME | | | | | | | |
+| 11 | reply_edited | 답글 수정 여부 | BOOLEAN | O | | | | | false | 위 `edited`와 동일한 패턴 — 답글 수정(덮어쓰기) 시 true |
 
 > ⚠️ **검토 필요(유지)**: 서비스 로직상 "회원 1명당 매장 1곳에 리뷰 1건"으로 덮어쓰기 하는 것으로 보이는데(`edited` 플래그 존재), DB 레벨에 `(user_id, store_id)` 복합 UK가 없다. 정책이 맞다면 UK 추가 권장.
 
@@ -557,6 +566,10 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 ---
 
 ## 갱신 이력
+
+**2026-10-05 (송채현) — 2차 보강** — IntelliJ 라이브 코드(도메인 엔티티 26개 전체)와 이 문서·`docs/schema.sql`·ERD를 1:1로 재대조. 문창호 전수조사(바로 아래 항목)에서도 빠졌던 컬럼 8개를 추가로 찾아 반영: `users.language`(2026-09-22, 환경설정 언어 선택값), `store.image_url`(2026-09-21, 매장 사진)/`settlement_alert_enabled`/`automation_alert_enabled`(둘 다 2026-09-22, 알림 토글), `product.owner_discount_rate`(점주 지정 할인율 하한), `review.reply_content`/`reply_created_at`/`reply_edited`(2026-09-17, 문창호 "사장님 리뷰 답글" 기능). 전부 전수조사 시점(10/05) 이전부터 코드에 있었지만 문서에 반영이 안 돼 있던 것들 — 나머지 22개 테이블은 전부 코드와 일치 확인.
+
+**2026-10-05 (송채현)** — 바로 위 문창호 전수조사 갱신분 검토 중 빠진 컬럼 2개 추가 보강: `coupon.used_at`(2026-09-22 추가됐는데 테이블 정의서·`docs/schema.sql` 둘 다에서 누락돼 있었음), `users.deleted_at`은 이 문서(표)에는 있었는데 `docs/schema.sql` DDL 쪽에서 실제로는 빠져있어서 같이 맞췄다.
 
 **2026-10-05 (문창호)** — 코드 전수 재조사. `report` 테이블 삭제(`ReportEntity`/`ReportRepository` 포함, `docs/schema.sql`/`sql/sample-data.sql`도 동기화). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at` 누락분 추가. `oauth_provider` 설명 네이버→라인 정정. store/product/inquiry 답변 담당자를 김태훈→문창호로 정정(2026-09-16 팀 이탈 반영). 검토 필요 사항에 UK 누락 3건(business_number/pos_sku/receipt.reservation_id) 추가. 총 24개 → **26개 테이블**.
 
