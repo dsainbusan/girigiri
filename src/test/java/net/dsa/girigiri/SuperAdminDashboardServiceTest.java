@@ -166,4 +166,22 @@ class SuperAdminDashboardServiceTest {
 
 		assertTrue(calendar.nextDisabled());
 	}
+
+	/**
+	 * 추가됨 (2026-10-06) — 작업 지시의 완료 기준("일별 현황 합계 = 같은 기간 KPI 합계가
+	 * 일치하는지 검증할 것")을 그대로 테스트로 고정한다. buildKpiSummary의 "오늘" 수치와
+	 * getDailyPlatformStats(오늘)이 내부적으로 같은 computeRawDailyCounts(today) 호출을
+	 * 공유하므로 항상 bit-for-bit 일치해야 한다 — 우연이 아니라 구조로 보장되는지 확인.
+	 */
+	@Test
+	void KPI_오늘_수치는_일별_현황_오늘_수치와_완전히_일치한다() {
+		LocalDate today = LocalDate.now();
+
+		var kpi = dashboardService.getDashboardStats().kpi();
+		var daily = dashboardService.getDailyPlatformStats(today);
+
+		assertEquals(kpi.todayTransactionCount(), daily.transactionCount());
+		assertEquals(kpi.todayRevenue(), daily.revenue());
+		assertEquals(kpi.todayRescuedQuantity(), daily.rescuedQuantity());
+	}
 }
