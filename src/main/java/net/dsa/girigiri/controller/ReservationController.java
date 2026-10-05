@@ -257,6 +257,10 @@ public class ReservationController {
 		model.addAttribute("totalPrice", reservation.getTotalPrice());
 		model.addAttribute("pickupTime", reservation.getPickupTime().format(DISPLAY_FORMAT));
 		model.addAttribute("pickupCode", reservation.getPickupCode());
+		// 추가됨 (2026-10-05, 결제완료 뒤로가기 버그 수정) — 왜: 완료 화면에서 뒤로가기를 누르면
+		// 체크아웃/결제 단계를 다시 보여주지 않고 상품 화면으로 보내려고, 그 목적지 URL을 만드는 데
+		// 필요한 productId를 화면(스크립트)에 같이 내려준다 (complete.html 참고).
+		model.addAttribute("productId", reservation.getProductId());
 
 		return "reservationView/complete";
 	}
