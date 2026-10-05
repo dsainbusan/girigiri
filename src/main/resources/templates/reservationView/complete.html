@@ -3,6 +3,34 @@
       th:replace="~{common/layout :: layout('예약 완료', ~{:: #content}, 'my', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
+	<!-- 수정됨 (2026-10-05, 채채 테스트 — 뒤로가기가 여전히 체크아웃으로 가는 문제 재현) — 왜:
+		 이 스크립트를 DOMContentLoaded 안에서 실행했더니, 화면이 다 그려지기 전(파싱 중)에 손님이
+		 뒤로가기를 누르면 아직 history.pushState/popstate 리스너가 등록되기 전이라 그 첫 뒤로가기를
+		 못 잡는 경우가 있었던 것으로 보인다(타이밍 문제). 그래서 DOMContentLoaded를 기다리지 않고,
+		 이 블록을 #content의 맨 처음(화면에서 가장 먼저 파싱되는 자리)으로 옮겨서 최대한 빨리
+		 실행되게 했다 — 이 스크립트는 DOM 요소를 전혀 안 쓰기 때문에(history API만 사용) DOM이
+		 다 준비될 때까지 기다릴 이유가 애초에 없었다. -->
+	<script th:inline="javascript">
+	(function () {
+		var productId = /*[[${productId}]]*/ 0;
+		// 수정됨 (2026-10-05, 채채 테스트 — 뒤로가기를 또 누르면 체크아웃이 다시 보임) — 왜: 여기서
+		// 상품 화면으로 보내도, 그 상품 화면에서 뒤로가기를 한 번 더 누르면 그 밑에 남아있던
+		// 체크아웃(결제) 화면이 다시 보였다. ?fromReservation=1을 붙여서 보내면, 상품 화면
+		// (productView/detail.html) 쪽 스크립트가 이 표시를 보고 거기서도 뒤로가기를 한 번 더
+		// 가로채 체크아웃으로 안 가게 막아준다(해당 파일 스크립트 참고).
+		var productUrl = '/user/products/' + productId + '?fromReservation=1';
+		try {
+			history.pushState(null, '', location.href);
+			window.addEventListener('popstate', function onBack() {
+				window.removeEventListener('popstate', onBack);
+				window.location.replace(productUrl);
+			});
+		} catch (e) {
+			// history API를 못 쓰는 환경이어도 화면 자체는 정상 동작해야 하므로 무시
+		}
+	})();
+	</script>
+
 	<div class="card u-center">
 		<img th:src="@{/reservation/{id}/qr-image(id=${reservationId})}"
 			 width="180" height="180" alt="픽업 QR 코드">

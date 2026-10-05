@@ -3,6 +3,36 @@
       th:replace="~{common/layout :: layout(${product.name} + ' - 기리기리', ~{:: #content}, '', false, '', ~{:: #actionbar})}">
 <body>
 <div id="content" th:fragment="content">
+	<!-- 추가됨 (2026-10-05, 결제완료 뒤로가기 버그 수정 — 예약/결제 플로우, 송채현) — 왜: 결제 완료
+	     화면(reservationView/complete.html)에서 뒤로가기를 누르면 이 상품 화면으로 바로 오게
+	     만들어놨는데, 거기서 또 뒤로가기를 한 번 더 누르면 그 밑에 남아있던 체크아웃(결제) 화면이
+	     다시 보이는 문제가 있었다. complete.html이 이리로 보낼 때만 붙이는 ?fromReservation=1
+	     표시가 있을 때만, 여기서도 같은 방식(history.pushState + popstate 가로채기)으로 뒤로가기를
+	     한 번 더 가로채서 체크아웃 대신 이 상품 화면에 그대로 머물게 한다. 이 파라미터가 없는 보통의
+	     상품 상세 화면 방문(둘러보다가 들어온 경우 등)은 이 스크립트가 아무것도 안 하고 그냥
+	     끝난다 — DOM 요소를 전혀 안 쓰므로 DOMContentLoaded를 기다리지 않고 최대한 빨리 실행되게
+	     #content 맨 앞에 뒀다(reservationView/complete.html과 동일한 이유). -->
+	<script>
+	(function () {
+		if (location.search.indexOf('fromReservation=1') === -1) { return; }
+		// 수정됨 (2026-10-05, 채채 확인 — 뒤로가기가 이 화면에 계속 멈춰있는 게 이상하다는 피드백) —
+		// 왜: 처음엔 뒤로가기를 눌러도 이 상품 화면 자체에 계속 머물게(자기 자신으로 replace) 했는데,
+		// "뒤로가기가 아예 안 먹는 것처럼" 보여서 어색했다. 홈 화면(/app)으로 한 번 더 보내도록
+		// 바꿨다 — 체크아웃/결제 화면으로 가는 것만 막으면 되므로, 그 다음 뒤로가기부터는(홈 화면에서)
+		// 그냥 평소 브라우저 동작 그대로 둬도 된다(홈은 앱의 시작 화면이라 더 뒤로 가도 문제될 내용이
+		// 없다).
+		try {
+			history.pushState(null, '', location.href);
+			window.addEventListener('popstate', function onBack() {
+				window.removeEventListener('popstate', onBack);
+				window.location.replace('/app');
+			});
+		} catch (e) {
+			// history API를 못 쓰는 환경이어도 화면 자체는 정상 동작해야 하므로 무시
+		}
+	})();
+	</script>
+
 	<div th:style="'height:var(--hero-h-lg);background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:52px'"
 	     th:text="${thumbEmoji}">🥐</div>
 
