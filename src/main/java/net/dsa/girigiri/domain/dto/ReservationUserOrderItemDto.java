@@ -11,6 +11,9 @@ package net.dsa.girigiri.domain.dto;
  * statusVariant: ReservationOrderItemDto와 같은 값("waiting"/"ready"/"done"/"cancelled"/"noshow") —
  * "취소"와 "노쇼"를 서로 다른 배지 색(빨강/주황)으로 구분해서 보여준다(2026-09-09).
  */
+// 추가됨 (2026-10-06) — 신고 상세(SuperAdminSupportController#complaintDetail)에서 신고자의
+// 최근 주문을 같이 보여달라는 요청 — 운영자가 픽업 코드를 모른 채 입력란만 보고 있던 문제.
+// pickupCode는 신고 상세 화면에서 "이 주문으로 선택" 클릭 시 취소 폼에 그대로 채워 넣는 용도.
 public record ReservationUserOrderItemDto(
 		Long reservationId,
 		Long storeId,
@@ -22,6 +25,7 @@ public record ReservationUserOrderItemDto(
 		String statusVariant,
 		String reservedAtDisplay,
 		String cancelInfo,
-		boolean cancellable
+		boolean cancellable,
+		String pickupCode
 ) {
 }

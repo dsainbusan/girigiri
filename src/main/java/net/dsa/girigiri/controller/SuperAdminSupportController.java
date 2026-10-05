@@ -101,10 +101,18 @@ public class SuperAdminSupportController {
 		return "superAdminView/inquiryDetail";
 	}
 
+	// 신고자의 "최근 주문" 목록을 몇 건까지 보여줄지 — 너무 길면 픽업 코드 입력란보다 더 복잡해진다.
+	private static final int REPORTER_RECENT_ORDERS_LIMIT = 5;
+
 	/**
 	 * 신고 상세. targetReservationId가 있는 신고(2026-09-08 이후 "예약 상세에서 신고하기"로 접수된
 	 * 것)는 픽업 코드 검색 없이 바로 그 예약 정보를 보여준다 — 그 전에 SQL로 넣은 신고나 매장 관련
 	 * 신고는 이 값이 없어서 기존처럼 검색으로 대응한다(complaintDetail.html의 분기 참고).
+	 *
+	 * 추가됨 (2026-10-06) — targetReservationId가 없는 신고라도 신고자가 실제 회원(reporterId
+	 * 있음)이면, 운영자가 픽업 코드를 맨땅에서 입력하지 않도록 그 회원의 최근 주문 목록을 같이
+	 * 보여준다("이 신고자가 무슨 주문을 갖고 있는지"). 비회원 신고(reporterId 없음)는 조회할
+	 * 대상 자체가 없어 그대로 빈 목록.
 	 */
 	@GetMapping("/complaints/{id}")
 	public String complaintDetail(@PathVariable Long id, Model model) {
@@ -119,6 +127,10 @@ public class SuperAdminSupportController {
 						.map(store -> store.getStoreName())
 						.orElse("-"));
 			});
+		} else if (complaint.getReporterId() != null) {
+			model.addAttribute("reporterRecentOrders", reservationService.getOrdersForUser(complaint.getReporterId()).stream()
+					.limit(REPORTER_RECENT_ORDERS_LIMIT)
+					.toList());
 		}
 
 		return "superAdminView/complaintDetail";

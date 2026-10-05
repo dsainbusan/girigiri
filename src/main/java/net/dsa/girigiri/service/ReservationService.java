@@ -613,7 +613,8 @@ public class ReservationService {
 				orderStatusVariant(r),
 				r.getReservedAt() != null ? r.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
 				orderCancelInfo(r),
-				blockedCancelMessage(r) == null
+				blockedCancelMessage(r) == null,
+				r.getPickupCode()
 		);
 	}
 
