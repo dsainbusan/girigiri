@@ -213,41 +213,42 @@ public class SuperAdminDashboardService {
 	}
 
 	/**
-	 * KPI 카드: 회원/매장/거래/매출/구제량. "전체" 누적은 getPlatformStats(null)(기간 필터 없음이라
-	 * reservedAt/pickedAt 어느 기준이든 결과가 같다)을 재사용한다.
+	 * KPI 카드 4장: 신규 회원/거래/거래액/구해낸 음식. "전체" 누적은 getPlatformStats(null)(기간
+	 * 필터 없음이라 reservedAt/pickedAt 어느 기준이든 결과가 같다)을 재사용한다.
 	 *
 	 * 변경됨 (2026-10-06) — "오늘" 수치는 더 이상 getPlatformStats("today")(reservedAt 기준)가 아니라
 	 * computeRawDailyCounts(today)(pickedAt 기준)를 쓴다 — 일별 현황 달력(getDailyPlatformStats)과
 	 * 완전히 같은 메서드를 타므로, "오늘"에 대해서는 KPI와 일별 현황 숫자가 항상 일치한다(같은
-	 * 코드 경로라 어긋날 수가 없다). CO2 필드는 대시보드에서 뺐다(2단계 리포트로 이동 예정).
+	 * 코드 경로라 어긋날 수가 없다). "입점 매장" 카드와 CO2 필드는 뺐다(CO2는 2단계 리포트로 이동
+	 * 예정). 카드마다 "어제 대비" 증감률(deltaPercent, LedgerData와 동일 규칙)을 추가했다 — 어제도
+	 * computeRawDailyCounts로 구해서 오늘과 완전히 같은 기준으로 비교한다.
 	 */
 	private KpiSummaryDto buildKpiSummary(LocalDateTime now) {
 		LocalDate today = now.toLocalDate();
+		LocalDate yesterday = today.minusDays(1);
 		Map<LocalDate, Long> signupsByDate = userRepository.findAll().stream()
 				.filter(u -> u.getCreatedAt() != null)
 				.collect(Collectors.groupingBy(u -> u.getCreatedAt().toLocalDate(), Collectors.counting()));
 		long memberTodayCount = signupsByDate.getOrDefault(today, 0L);
+		long memberYesterdayCount = signupsByDate.getOrDefault(yesterday, 0L);
 		long memberWeekCount = 0;
 		for (int i = 0; i <= 6; i++) {
 			memberWeekCount += signupsByDate.getOrDefault(today.minusDays(i), 0L);
 		}
 
-		long totalStoreCount = storeRepository.countByApprovalStatus(StoreEntity.STATUS_APPROVED);
-		long todayStoreCount = storeRepository.findByApprovalStatus(StoreEntity.STATUS_APPROVED).stream()
-				.filter(s -> s.getCreatedAt() != null && s.getCreatedAt().toLocalDate().equals(today))
-				.count();
-		long ownerCount = userRepository.countByRole(UserEntity.ROLE_OWNER);
-		long pendingStoreCount = storeRepository.countByApprovalStatus(StoreEntity.STATUS_PENDING);
-
 		PlatformStatsDto allTimeStats = getPlatformStats(null);
 		RawDailyCounts todayCounts = computeRawDailyCounts(today);
+		RawDailyCounts yesterdayCounts = computeRawDailyCounts(yesterday);
 
 		return new KpiSummaryDto(
 				userRepository.count(), memberTodayCount, memberWeekCount,
-				totalStoreCount, todayStoreCount, ownerCount, pendingStoreCount,
+				deltaPercent(memberTodayCount, memberYesterdayCount),
 				allTimeStats.totalTransactionCount(), todayCounts.transactionCount(),
+				deltaPercent(todayCounts.transactionCount(), yesterdayCounts.transactionCount()),
 				allTimeStats.totalRevenue(), todayCounts.revenue(),
-				allTimeStats.totalRescuedQuantity(), todayCounts.rescuedQuantity());
+				deltaPercent(todayCounts.revenue(), yesterdayCounts.revenue()),
+				allTimeStats.totalRescuedQuantity(), todayCounts.rescuedQuantity(),
+				deltaPercent(todayCounts.rescuedQuantity(), yesterdayCounts.rescuedQuantity()));
 	}
 
 	/**

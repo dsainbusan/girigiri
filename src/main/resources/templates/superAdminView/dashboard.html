@@ -57,31 +57,41 @@
   </script>
 
   <h2 class="subhead">플랫폼 현황</h2>
-  <div class="stat-grid stat-grid--5">
+  <!-- 변경됨 (2026-10-06) — 5장→4장("입점 매장" 카드 제거), 카드마다 "어제 대비" 증감률 추가.
+       "구해낸 음식"만 accent 색이던 걸 다른 카드와 같은 톤으로 통일(클릭 동작이 다 똑같아서
+       하나만 강조할 이유가 없었음). -->
+  <div class="stat-grid">
     <a class="stat-card stat-card--link" th:href="@{/superadmin/members}">
       <span class="stat-card__label">오늘 신규 회원</span>
       <span class="stat-card__value" th:text="'+' + ${#numbers.formatInteger(stats.kpi.memberTodayCount, 0, 'COMMA')} + '명'">+0명</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalMemberCount, 0, 'COMMA')} + '명 · 최근 7일 +' + ${stats.kpi.memberWeekCount}">전체 0명 · 최근 7일 +0</span>
-    </a>
-    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores}">
-      <span class="stat-card__label">오늘 입점 매장</span>
-      <span class="stat-card__value" th:text="'+' + ${#numbers.formatInteger(stats.kpi.todayStoreCount, 0, 'COMMA')} + '곳'">+0곳</span>
-      <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalStoreCount, 0, 'COMMA')} + '곳 · 점주 ' + ${stats.kpi.ownerCount} + '명 · 입점 대기 ' + ${stats.kpi.pendingStoreCount} + '건'">전체 0곳 · 점주 0명 · 입점 대기 0건</span>
+      <span th:if="${stats.kpi.memberDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.memberDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.memberDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.memberDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 거래</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayTransactionCount, 0, 'COMMA')} + '건'">0건</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalTransactionCount, 0, 'COMMA')} + '건'">전체 0건</span>
+      <span th:if="${stats.kpi.transactionDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.transactionDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.transactionDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.transactionDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 거래액</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRevenue, 0, 'COMMA')} + '원'">0원</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRevenue, 0, 'COMMA')} + '원'">전체 0원</span>
+      <span th:if="${stats.kpi.revenueDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.revenueDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.revenueDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.revenueDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 구해낸 음식</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRescuedQuantity, 0, 'COMMA')} + '개'">0개</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRescuedQuantity, 0, 'COMMA')} + '개'">전체 0개</span>
+      <span th:if="${stats.kpi.rescuedDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.rescuedDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.rescuedDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.rescuedDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
   </div>
 
