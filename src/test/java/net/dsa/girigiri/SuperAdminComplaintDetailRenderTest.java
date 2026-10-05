@@ -67,4 +67,15 @@ class SuperAdminComplaintDetailRenderTest {
 						.sessionAttr("userId", 4L).sessionAttr("role", "ADMIN"))
 				.andExpect(status().isOk());
 	}
+
+	@Test
+	@WithMockUser(username = "admin@girigiri.com", roles = "ADMIN")
+	@DisplayName("sample-data.sql의 주문 연결 신고 3(환불 가능)/5(환불 완료)/6(환불 불가 상태)이 정상 렌더링된다")
+	void sampleLinkedComplaintsRender() throws Exception {
+		for (long id : new long[]{3L, 5L, 6L}) {
+			mockMvc.perform(get("/superadmin/complaints/{id}", id)
+							.sessionAttr("userId", 4L).sessionAttr("role", "ADMIN"))
+					.andExpect(status().isOk());
+		}
+	}
 }

@@ -38,6 +38,7 @@ DELETE FROM review;
 DELETE FROM reservation;
 DELETE FROM product;
 DELETE FROM store;
+DELETE FROM notification_setting;
 DELETE FROM users;
 
 -- ---------------------------------------------------------------------
@@ -145,7 +146,18 @@ INSERT INTO reservation (id, user_id, product_id, product_name, store_id, reserv
 (23, 14, 20, '샐러드 도시락', 8, 1, 4800, DATE_SUB(NOW(), INTERVAL 9 DAY), 'PICK-1023', 'picked', DATE_SUB(NOW(), INTERVAL 9 DAY), DATE_SUB(NOW(), INTERVAL 9 DAY), DATE_SUB(NOW(), INTERVAL 9 DAY), NULL, NULL),
 (24, 15, 21, '김밥 3줄 세트', 8, 2, 6000, DATE_SUB(NOW(), INTERVAL 12 DAY), 'PICK-1024', 'picked', DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 12 DAY), NULL, NULL),
 (25, 2, 18, '오늘의 도시락 (랜덤)', 7, 1, 3500, DATE_ADD(NOW(), INTERVAL 5 HOUR), 'PICK-1025', 'confirmed', NOW(), NULL, NOW(), NULL, NULL),
-(26, 1, 12, '잡채 한 팩', 5, 1, 5400, DATE_SUB(NOW(), INTERVAL 5 HOUR), 'PICK-1026', 'picked', DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR), NULL, NULL);
+(26, 1, 12, '잡채 한 팩', 5, 1, 5400, DATE_SUB(NOW(), INTERVAL 5 HOUR), 'PICK-1026', 'picked', DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR), NULL, NULL),
+(27, 13, 12, '잡채 한 팩', 5, 1, 5400, DATE_SUB(NOW(), INTERVAL 20 HOUR), 'PICK-1027', 'refunded', DATE_SUB(NOW(), INTERVAL 20 HOUR), DATE_SUB(NOW(), INTERVAL 20 HOUR), DATE_SUB(NOW(), INTERVAL 20 HOUR), '상품 상태 불량 확인되어 전액 환불', 'ADMIN');
+
+-- ---------------------------------------------------------------------
+-- payment / refund (신고 기반 환불 테스트용, 2026-10-06) — 26·21은 PAID라 신고 상세의 [환불 처리]를
+-- 눌러볼 수 있다(PortOne 키가 비어 있으면 "환불 실패"로 처리되는 실패 경로 확인용). 27은 이미 환불 완료.
+-- ---------------------------------------------------------------------
+INSERT INTO payment (id, reservation_id, merchant_uid, imp_uid, amount, pay_method, pay_status, fail_reason, paid_at, requested_at, updated_at) VALUES
+(1, 26, 'SAMPLE-PAY-26', 'SAMPLE-IMP-26', 5400, 'card', 'PAID', NULL, DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR), DATE_SUB(NOW(), INTERVAL 5 HOUR)),
+(2, 21, 'SAMPLE-PAY-21', 'SAMPLE-IMP-21', 3200, 'kakaopay', 'PAID', NULL, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(3, 27, 'SAMPLE-PAY-27', 'SAMPLE-IMP-27', 5400, 'card', 'CANCELLED', '상품 상태 불량 확인되어 전액 환불', DATE_SUB(NOW(), INTERVAL 20 HOUR), DATE_SUB(NOW(), INTERVAL 20 HOUR), DATE_SUB(NOW(), INTERVAL 2 HOUR));
+
 
 -- ---------------------------------------------------------------------
 -- review (픽업 완료 건에 대한 리뷰 — 일부는 사장님 답글까지 채워서 답글 기능도 보이게 한다)
@@ -261,3 +273,18 @@ INSERT INTO notice (id, title, content, published, created_at, updated_at) VALUE
 INSERT INTO complaint (id, target_name, target_store_id, reason, content, reporter_name, reporter_id, status, admin_reply, created_at, resolved_at) VALUES
 (1, '다이스키 베이커리', 1, '상품 상태 불량', '포장 상태가 좋지 않고 유통기한이 임박한 상품이 섞여 있었습니다. 확인 부탁드립니다.', '알뜰소비자김태훈', 2, 'PENDING', NULL, '2026-08-19 13:20:00', NULL),
 (2, '동네빵집 청파점', 2, '노쇼 과다 청구', '예약을 취소했는데 노쇼로 처리되어 위약금이 청구됐어요. 취소 시각을 확인해 주세요.', '노쇼왕문창호', 5, 'RESOLVED', '확인해보니 취소 접수가 픽업 시간 이후로 늦게 처리된 케이스였습니다. 위약금은 취소 처리했습니다.', '2026-08-17 09:40:00', '2026-08-18 11:15:00');
+
+-- 추가됨 (2026-10-06, 신고 기반 환불 테스트) — target_reservation_id(주문 연결)가 있는 신고. 상태별로 하나씩:
+--  3: 픽업완료 + PAID, 대기 → [환불 처리] 버튼 노출   4: 같은 조건(카카오페이)
+--  5: 이미 환불 완료(refund DONE) → "환불 완료" 배지   6: 노쇼 주문 신고 → 환불 불가 안내 배지
+INSERT INTO complaint (id, target_name, target_store_id, target_reservation_id, reason, content, reporter_name, reporter_id, status, admin_reply, created_at, resolved_at) VALUES
+(3, '엄마손반찬', 5, 26, '상품 상태 불량', '받아온 잡채가 상해서 신맛이 났어요. 환불 부탁드립니다.', '구제왕나은', 1, 'PENDING', NULL, DATE_SUB(NOW(), INTERVAL 2 HOUR), NULL),
+(4, '커피와우 명동점', 4, 21, '수량 부족', '베이글이 2개라고 했는데 1개만 들어 있었어요.', '자취생박지민', 12, 'PENDING', NULL, DATE_SUB(NOW(), INTERVAL 5 HOUR), NULL),
+(5, '엄마손반찬', 5, 27, '상품 상태 불량', '잡채에서 이물질이 나왔습니다.', '다이어터최유나', 13, 'RESOLVED', '확인 후 전액 환불 처리했어요. 불편을 드려 죄송합니다.', DATE_SUB(NOW(), INTERVAL 18 HOUR), DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+(6, '브런치카페 온', 3, 18, '노쇼 오처리', '방문했는데 노쇼로 처리됐어요.', '노쇼왕문창호', 5, 'PENDING', NULL, DATE_SUB(NOW(), INTERVAL 1 DAY), NULL);
+
+INSERT INTO refund (id, order_id, report_id, amount, reason, status, pg_refund_tid, requested_by, created_at, updated_at) VALUES
+(1, 27, 5, 5400, '상품 상태 불량 확인되어 전액 환불', 'DONE', 'SAMPLE-PAY-27', 4, DATE_SUB(NOW(), INTERVAL 2 HOUR), DATE_SUB(NOW(), INTERVAL 2 HOUR));
+
+INSERT INTO reservation_status_history (id, reservation_id, from_status, to_status, changed_by, reason, created_at) VALUES
+(1, 27, 'picked', 'refunded', 4, '상품 상태 불량 확인되어 전액 환불', DATE_SUB(NOW(), INTERVAL 2 HOUR));
