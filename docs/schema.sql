@@ -328,8 +328,9 @@ CREATE TABLE coupon_campaign (
 
 CREATE TABLE review (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id     BIGINT NOT NULL,
-    store_id    BIGINT NOT NULL,
+    user_id         BIGINT NOT NULL,
+    store_id        BIGINT NOT NULL,
+    reservation_id  BIGINT COMMENT '주문당 리뷰 1개 정책(2026-10-05 추가, 사용자 요청) — 어느 주문에 대한 리뷰인지. 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가)',
     rating      INT NOT NULL,
     content     VARCHAR(500),
     image_url   VARCHAR(500) COMMENT '사진 리뷰 (2026-08 강노은 추가)',

@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.MyReviewRowDto;
 import net.dsa.girigiri.domain.dto.ReviewRowDto;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.ReviewEntity;
 import net.dsa.girigiri.domain.entity.ReviewSummaryEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.exception.ReviewNotAllowedException;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.ReviewRepository;
 import net.dsa.girigiri.repository.ReviewSummaryRepository;
@@ -15,9 +17,11 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.FileStorageUtil;
 import net.dsa.girigiri.util.ReviewSummaryClient;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -61,18 +65,39 @@ public class ReviewService {
 	// ReservationEntity.status의 "픽업완료" 값. 리뷰는 이 상태의 예약이 있어야 쓸 수 있다.
 	private static final String RESERVATION_STATUS_PICKED = "picked";
 
+	// 추가됨 (2026-10-05, 사용자 요청) — 왜: 처음엔 컬럼 추가 없이 "가게당 리뷰 1개 + 72시간 작성
+	// 창"으로 가볍게 구현했는데, 다시 "주문당 리뷰 1개"로 바꾸기로 했다 — review.reservation_id
+	// 컬럼을 추가해서 어느 주문에 대한 리뷰인지 명확히 기록한다(ReviewEntity 참고). 72시간 창은
+	// 그대로 유지 — "이 주문을 픽업한 지 72시간 이내"가 작성 자격이 된다. 이미 쓴 리뷰의 "수정"은
+	// 이 창과 무관하게 계속 가능하다(작성 시점에 이미 검증됐음).
+	public static final long REVIEW_WINDOW_HOURS = 72;
+
 	/**
-	 * 추가됨 (강노은) — 왜: "이용해본 사람만 리뷰를 쓸 수 있게" — 그 가게에서 예약 후 픽업까지 완료한
-	 * 이력이 하나라도 있어야 true. 이미 리뷰를 쓴 사람의 "수정"은 이 체크를 다시 거치지 않는다(작성
-	 * 시점에 이미 검증됐음 — submitReview 참고).
-	 * (2026-08-26) 현재는 StoreDetailController에서 이 메서드 대신 canReview=true를 임시로 박아둔
-	 * 상태(예약·픽업 플로우 테스트 전)라 실제로는 호출되지 않지만, 나중에 되돌릴 때를 위해 남겨둔다.
+	 * 변경됨 (2026-10-05) — "가게당 리뷰 1개"에서 "주문(예약)당 리뷰 1개"로 정책을 바꾸면서, 판단
+	 * 단위도 가게가 아니라 특정 예약이 됐다. 전부 만족해야 true: 그 예약이 이 사용자·이 가게 것 +
+	 * 픽업완료 상태 + 픽업한 지 REVIEW_WINDOW_HOURS(72시간) 이내 + 그 예약엔 아직 리뷰가 없음.
 	 */
-	public boolean canWriteReview(Long userId, Long storeId) {
-		if (userId == null) {
-			return false;
+	public boolean canWriteReviewForReservation(Long userId, Long storeId, Long reservationId) {
+		return eligibleReservation(userId, storeId, reservationId).isPresent();
+	}
+
+	// 추가됨 (2026-10-05) — 구매내역(reservationView/myReservations.html)에서 "이미 리뷰 썼음" 표시용.
+	// canWriteReviewForReservation은 자격(기한 등)까지 같이 보므로, "썼는지 여부"만 따로 필요했다.
+	public boolean hasReview(Long reservationId) {
+		return reservationId != null && reviewRepository.existsByReservationId(reservationId);
+	}
+
+	private Optional<ReservationEntity> eligibleReservation(Long userId, Long storeId, Long reservationId) {
+		if (userId == null || reservationId == null) {
+			return Optional.empty();
 		}
-		return reservationRepository.existsByUserIdAndStoreIdAndStatus(userId, storeId, RESERVATION_STATUS_PICKED);
+		LocalDateTime cutoff = LocalDateTime.now().minusHours(REVIEW_WINDOW_HOURS);
+		return reservationRepository.findById(reservationId)
+				.filter(r -> userId.equals(r.getUserId()))
+				.filter(r -> storeId.equals(r.getStoreId()))
+				.filter(r -> RESERVATION_STATUS_PICKED.equals(r.getStatus()))
+				.filter(r -> r.getPickedAt() != null && r.getPickedAt().isAfter(cutoff))
+				.filter(r -> !reviewRepository.existsByReservationId(reservationId));
 	}
 
 	public List<ReviewRowDto> getReviews(Long storeId, Long currentUserId, String role) {
@@ -250,43 +275,44 @@ public class ReviewService {
 	}
 
 
-	public Optional<ReviewEntity> getMyReview(Long userId, Long storeId) {
-		if (userId == null) {
-			return Optional.empty();
-		}
-		
-		return reviewRepository.findAll().stream()
-				.filter(r -> userId.equals(r.getUserId()) && storeId.equals(r.getStoreId()))
-				.findFirst();
-	}
-	
 	/**
-	 * 사용자당 매장 1개에 리뷰 1개만 작성할 수 있으며,
-	 * 이미 작성한 리뷰가 있으면 내용을 수정한다.
+	 * 변경됨 (2026-10-05) — "주문(예약)당 리뷰 1개" 정책. 신규 작성(reviewId 없음)은 reservationId로
+	 * 어느 주문에 대한 리뷰인지 명시해야 하고, 그 주문이 자격(픽업완료+72시간 이내+아직 리뷰 없음)을
+	 * 충족해야 한다. 수정(reviewId 있음)은 본인이 쓴 리뷰인지만 확인하고 자격을 다시 검증하지
+	 * 않는다 — 작성 시점에 이미 검증됐고, 수정은 시간 창과 무관하게 계속 열어둔다.
 	 *
 	 * 새 사진을 업로드하면 기존 사진을 삭제하고 새 사진으로 교체한다.
 	 * removeImage가 true이면 기존 사진을 삭제한다.
 	 * 둘 다 없으면 기존 사진을 그대로 유지한다.
 	 */
 	@Transactional
-	public boolean submitReview(Long userId, Long storeId, int rating, String content,
-	                            MultipartFile imagePhoto, boolean removeImage) {
-		
+	public boolean submitReview(Long userId, Long storeId, Long reservationId, Long reviewId,
+	                            int rating, String content, MultipartFile imagePhoto, boolean removeImage) {
+
 		int clampedRating = Math.max(1, Math.min(5, rating));
-		
-		Optional<ReviewEntity> existing = getMyReview(userId, storeId);
-		
-		boolean isNew = existing.isEmpty();
-		
-		ReviewEntity review = existing.orElseGet(() -> ReviewEntity.builder()
-				.userId(userId)
-				.storeId(storeId)
-				.build());
-		
-		if (existing.isPresent()) {
+		boolean isNew;
+		ReviewEntity review;
+
+		if (reviewId != null) {
+			review = reviewRepository.findById(reviewId)
+					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다: " + reviewId));
+			if (!userId.equals(review.getUserId())) {
+				throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 쓴 리뷰만 수정할 수 있어요.");
+			}
+			isNew = false;
 			review.setEdited(true);
+		} else {
+			ReservationEntity reservation = eligibleReservation(userId, storeId, reservationId)
+					.orElseThrow(() -> new ReviewNotAllowedException(
+							"리뷰를 쓸 수 없는 주문이에요 — 픽업 완료 후 72시간 이내, 아직 리뷰를 안 쓴 주문만 가능해요."));
+			isNew = true;
+			review = ReviewEntity.builder()
+					.userId(userId)
+					.storeId(storeId)
+					.reservationId(reservation.getId())
+					.build();
 		}
-		
+
 		review.setRating(clampedRating);
 		review.setContent(content == null ? "" : content.trim());
 		
@@ -328,18 +354,18 @@ public class ReviewService {
 	@Transactional
 	public void deleteReview(Long userId, String role, Long reviewId) {
 		ReviewEntity review = reviewRepository.findById(reviewId)
-				.orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-						org.springframework.http.HttpStatus.NOT_FOUND,
+				.orElseThrow(() -> new ResponseStatusException(
+						HttpStatus.NOT_FOUND,
 						"리뷰를 찾을 수 없습니다: " + reviewId
 				));
-		
+
 		if (!canDelete(review.getUserId(), userId, role)) {
-			throw new org.springframework.web.server.ResponseStatusException(
-					org.springframework.http.HttpStatus.FORBIDDEN,
+			throw new ResponseStatusException(
+					HttpStatus.FORBIDDEN,
 					"이 리뷰를 삭제할 권한이 없습니다."
 			);
 		}
-		
+
 		reviewRepository.delete(review);
 	}
 	

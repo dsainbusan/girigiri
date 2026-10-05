@@ -231,6 +231,33 @@ public class LedgerService {
 				repBadgeDto, badges, unlockedCount, Badge.values().length, newlyUnlockedBadges);
 	}
 
+	/**
+	 * 추가됨 (2026-10-05, 사용자 요청) — PDF 내보내기에서 "구매·절약 내역" 표만 원하는 기간으로 좁혀
+	 * 볼 수 있게. 뱃지/등급/이번 달·누적 절약 같은 평생 누적 지표는 "기간"이라는 개념 자체가 안
+	 * 맞아서(예: 뱃지는 평생 달성 기록) 그대로 build()의 전체 기준 값을 쓰고, history 목록만 교체한다.
+	 * from/to 둘 다 null이면 build()와 동일(전체 내역).
+	 */
+	public LedgerData buildForRange(Long userId, LocalDate from, LocalDate to) {
+		LedgerData base = build(userId);
+		if (from == null && to == null) {
+			return base;
+		}
+		List<RescueLine> lines = loadLines(userId);
+		List<LedgerData.HistoryRow> rangedHistory = lines.stream()
+				.filter(l -> (from == null || !l.date().isBefore(from)) && (to == null || !l.date().isAfter(to)))
+				.map(l -> new LedgerData.HistoryRow(l.date().format(DATE_FMT), l.storeName(), l.productName(),
+						l.quantity(), l.originalTotal(), l.paidTotal(), l.saved()))
+				.toList();
+
+		return new LedgerData(base.nickname(), base.thisMonthSaved(), base.deltaAmount(), base.deltaPercent(),
+				base.totalSaved(), base.rescueRatePercent(), base.goalAmount(), base.goalPercent(), base.goalOverPercent(),
+				base.monthly(), base.thisMonthRescuedCount(), base.thisMonthCo2Kg(),
+				rangedHistory, base.categories(),
+				base.rescuedCount(), base.co2Kg(), base.tier(), base.tierEmoji(), base.nextTierAt(),
+				base.representativeBadge(), base.badges(), base.unlockedBadgeCount(), base.totalBadgeCount(),
+				base.newlyUnlockedBadges());
+	}
+
 	public enum GoalUpdateResult { SUCCESS, TOO_LOW }
 
 	// 목표 프리셋 최소값(1만원)과 맞춘 하한선 — 없으면 목표를 1,000원처럼 아무 의미 없는 값으로 잡아서
@@ -345,6 +372,13 @@ public class LedgerService {
 					store != null ? store.getCategory() : null,
 					r.getProductName(), quantity, paid, original));
 		}
+		// 추가됨 (2026-10-05, 사용자 리포트) — 왜: 쿼리는 reservedAt DESC로 정렬해 가져오는데, 각 줄의
+		// date/hour는 eventTime(pickedAt 우선, 없으면 reservedAt)을 쓴다. 평소엔 reservedAt≈pickedAt라
+		// 티가 안 나지만, 둘이 갈리면(과거 데이터를 pickedAt만 따로 손으로 채운 경우 등) 화면/PDF엔
+		// "날짜순"처럼 보이는 목록이 실제로는 안 보이는 reservedAt 기준으로 섞여서, 같은 날짜가 떨어져
+		// 나오거나 순서가 뒤집히는 걸로 보였다(가계부 PDF에서 10/5 한 줄이 9월 내역들 밑에 끼어 나오는
+		// 현상으로 발견). 화면에 실제로 보여주는 기준(date, hour) 그대로 다시 정렬해서 둘을 일치시킨다.
+		lines.sort(Comparator.comparing(RescueLine::date).thenComparing(RescueLine::hour).reversed());
 		return lines;
 	}
 

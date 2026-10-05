@@ -13,6 +13,10 @@
 	나중에 바꾸는 창구다. "정산 알림"/"매장 자동화 알림"은 이번에 새로 추가한 매장 설정값인데,
 	아직 실제 알림 발송 로직이 이 값을 확인하도록 연결돼 있지는 않다(저장만 된다) — 다음 과제.
 	비밀번호 변경/회원 탈퇴는 별도 화면이 없어 실제 기능이 있는 /mypage/edit로 함께 연결한다.
+
+	변경됨 (2026-10-05, 사용자 요청) — 언어 설정은 쓰지 않기로 해서 섹션째 삭제(Language.java 등
+	관련 코드 전부 삭제). "알림 설정"으로 한 번 더 들어가야 했던 PUSH/찜한 가게 알림 토글 2개는
+	이 화면으로 바로 끌어왔다(뎁스 축소) — alertView/settings.html(알림함 쪽 진입점)은 그대로 둔다.
 */-->
 <div id="content" th:fragment="content" class="page">
 	<link rel="stylesheet" th:href="@{/css/mypage.css}">
@@ -22,27 +26,29 @@
 	<div class="settings-section">
 		<p class="settings-section__title">알림</p>
 		<div class="card settings-card">
-			<a th:href="@{/user/alerts/settings}" class="list-menu-item" style="border-bottom: none;">
-				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-bell"/></svg></span>
+			<form th:action="@{/user/settings/alerts/push}" method="post" class="list-menu-item list-menu-item--toggle">
 				<span class="list-menu-item__body">
-					<span class="list-menu-item__title">알림 설정</span>
-					<span class="list-menu-item__desc">PUSH·찜한 가게 알림을 관리해요</span>
+					<span class="list-menu-item__title">PUSH 알림</span>
+					<span class="list-menu-item__desc">예약 확정·픽업 임박·노쇼 등 전체 알림</span>
 				</span>
-				<span class="list-menu-item__arrow">&rsaquo;</span>
-			</a>
-		</div>
-	</div>
-
-	<!-- 언어 -->
-	<div class="settings-section">
-		<p class="settings-section__title">언어</p>
-		<div class="card settings-card">
-			<a th:href="@{/user/settings/language}" class="list-menu-item" style="border-bottom: none;">
-				<span class="list-menu-item__icon"><svg class="icon"><use href="#i-globe"/></svg></span>
-				<span class="list-menu-item__title">언어 설정</span>
-				<span class="list-menu-item__value" th:text="${settings.languageLabel}">한국어</span>
-				<span class="list-menu-item__arrow">&rsaquo;</span>
-			</a>
+				<label class="switch">
+					<input type="checkbox" name="enabled" value="true" th:checked="${settings.pushEnabled}"
+					       role="switch" th:attr="aria-checked=${settings.pushEnabled}">
+					<span class="switch__track"></span>
+				</label>
+			</form>
+			<form th:action="@{/user/settings/alerts/like}" method="post"
+			      class="list-menu-item list-menu-item--toggle" style="border-bottom: none;">
+				<span class="list-menu-item__body">
+					<span class="list-menu-item__title">찜한 가게 알림</span>
+					<span class="list-menu-item__desc">찜한 가게가 마감세일을 시작하면 알려줘요</span>
+				</span>
+				<label class="switch">
+					<input type="checkbox" name="enabled" value="true" th:checked="${settings.likeAlertEnabled}"
+					       role="switch" th:attr="aria-checked=${settings.likeAlertEnabled}">
+					<span class="switch__track"></span>
+				</label>
+			</form>
 		</div>
 	</div>
 

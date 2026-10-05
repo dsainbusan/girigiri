@@ -9,8 +9,12 @@
 
      defaultTab: 평소엔 "이 앱은 마감세일 상품을 보러 오는 곳"이라는 우선순위대로 상품 탭을 기본으로
      보여준다. 다만 리뷰 등록/수정 직후 이 페이지로 돌아온 경우(reviewMessage가 있음)는 그 결과를
-     바로 봐야 하니 리뷰 탭을 기본으로 띄운다 — 안 그러면 완료 배너가 안 보이는 탭 뒤에 숨어버린다. */-->
-<div id="content" th:fragment="content" th:with="defaultTab=${reviewMessage != null ? 'review' : 'product'}">
+     바로 봐야 하니 리뷰 탭을 기본으로 띄운다 — 안 그러면 완료 배너가 안 보이는 탭 뒤에 숨어버린다.
+     requestedTab 추가됨 (2026-10-05, 문창호) — 구매내역의 "리뷰 남기기"처럼 ?tab=으로 특정 탭을
+     명시해서 들어오는 진입점이 생기면서, 그 값이 있으면 최우선으로 쓴다(없으면 null이라 기존
+     reviewMessage/product 우선순위는 그대로). */-->
+<div id="content" th:fragment="content"
+     th:with="defaultTab=${requestedTab != null ? requestedTab : (reviewMessage != null ? 'review' : 'product')}">
 	<!-- 2026-09-21 추가 — store.imageUrl 있으면 실제 사진, 없으면 기존 카테고리색+이모지 배너로 폴백. -->
 	<div th:if="${store.imageUrl == null}" th:style="'height:var(--hero-h-sm);background:' + ${thumbColor} + ';display:flex;align-items:center;justify-content:center;font-size:44px'"
 	     th:text="${thumbEmoji}">🥐</div>
@@ -168,25 +172,20 @@
 				</div>
 			</div>
 
-			<!--/* 강노은: 리뷰 안 쓰고 그냥 둘러만 보고 싶은 사람도 있으니, 폼을 항상 펼쳐두지 않고
-			     "리뷰 작성" 버튼을 눌러야 펼쳐지게 한다. 이 가게에서 예약·픽업까지 완료한 사람만
-			     쓸 수 있게(canReview) 버튼 자체를 가린다 — 실제 제출 검증은 서버(ReviewService)에서도
-			     한 번 더 한다. */-->
-			<button type="button" id="review-write-btn" class="btn btn--outline btn--block"
-			        th:if="${loggedIn and myRating == 0 and canReview}"
-			        data-toggle-target="review-write-form">리뷰 작성</button>
-			<p class="u-sub" th:if="${loggedIn and myRating == 0 and !canReview}">
-				이 가게에서 예약 후 픽업까지 완료하면 리뷰를 남길 수 있어요.
-			</p>
-
-			<div class="card" id="review-write-form" data-reopen-btn="review-write-btn"
-			     th:if="${loggedIn and myRating == 0 and canReview}" hidden>
+			<!-- 변경됨 (2026-10-05, 사용자 요청) — "가게당 리뷰 1개"에서 "주문당 리뷰 1개"로 정책이
+				 바뀌면서, 이 가게 일반 방문만으로는 "어느 주문에 대한 리뷰인지" 특정할 수 없다. 그래서
+				 작성 폼은 구매내역(myReservations.html)의 "리뷰 남기기"로 reservationId를 들고 왔을
+				 때만(canWriteForReservation) 보여준다 — 가게를 그냥 둘러보러 온 경우엔 작성 유도 없이
+				 목록만 보여준다(아래 reviews 목록). -->
+			<div class="card" id="review-write-form"
+			     th:if="${loggedIn and reviewReservationId != null and canWriteForReservation}">
 				<p class="field__label" style="margin-bottom:var(--s-2)">리뷰 남기기</p>
 				<form th:action="@{/user/stores/{id}/reviews(id=${store.id})}" method="post" enctype="multipart/form-data">
+					<input type="hidden" name="reservationId" th:value="${reviewReservationId}">
 					<div class="star-input">
-						<input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
+						<input type="radio" name="rating" value="5" id="star5" checked><label for="star5">★</label>
 						<input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
-						<input type="radio" name="rating" value="3" id="star3" checked><label for="star3">★</label>
+						<input type="radio" name="rating" value="3" id="star3"><label for="star3">★</label>
 						<input type="radio" name="rating" value="2" id="star2"><label for="star2">★</label>
 						<input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
 					</div>
@@ -211,54 +210,7 @@
 						</div>
 					</div>
 					<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 (선택)</p>
-					<div class="u-row" style="gap:var(--s-2);margin-top:10px">
-						<button type="submit" class="btn u-grow">리뷰 등록하기</button>
-						<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
-					</div>
-				</form>
-			</div>
-
-			<div class="card" id="review-edit-form" data-reopen-btn="review-edit-btn"
-			     th:if="${loggedIn and myRating > 0}" hidden>
-				<p class="field__label" style="margin-bottom:var(--s-2)">내 리뷰 수정하기</p>
-				<form th:action="@{/user/stores/{id}/reviews(id=${store.id})}" method="post" enctype="multipart/form-data"
-				      data-confirm="리뷰를 수정하시겠습니까?">
-					<div class="star-input">
-						<input type="radio" name="rating" value="5" id="estar5" th:checked="${myRating} == 5"><label for="estar5">★</label>
-						<input type="radio" name="rating" value="4" id="estar4" th:checked="${myRating} == 4"><label for="estar4">★</label>
-						<input type="radio" name="rating" value="3" id="estar3" th:checked="${myRating} == 3"><label for="estar3">★</label>
-						<input type="radio" name="rating" value="2" id="estar2" th:checked="${myRating} == 2"><label for="estar2">★</label>
-						<input type="radio" name="rating" value="1" id="estar1" th:checked="${myRating} == 1"><label for="estar1">★</label>
-					</div>
-					<textarea name="content" class="input" style="margin-top:10px;min-height:70px;resize:vertical"
-					          placeholder="가게는 어떠셨나요?" th:text="${myContent}"></textarea>
-					<!--/* 강노은: 파일 input은 기존 값을 미리 채워둘 수 없어서, dropzone이 처음부터 현재 사진을
-					     미리보기 상태로 보여준다. "✕ 제거"를 누르면 숨은 removeImage 필드가 true로 바뀌고
-					     idle(업로드 안내) 상태로 돌아간다. 새 파일을 고르면 그걸로 교체(removeImage 무시).
-					     아무것도 안 건드리면 기존 사진이 그대로 유지된다. */-->
-					<div class="review-upload" style="margin-top:var(--s-2)" data-photo-dropzone
-					     role="button" tabindex="0" aria-label="리뷰 사진 선택 (드래그 앤 드롭 가능)">
-						<input type="file" name="imagePhoto" class="review-upload__input"
-						       accept="image/jpeg,image/png,image/webp,image/gif" data-photo-input tabindex="-1">
-						<input type="hidden" name="removeImage" value="false" data-photo-remove-flag>
-						<div class="review-upload__idle" data-photo-idle
-						     th:hidden="${myImageUrl != null and !#strings.isEmpty(myImageUrl)}">
-							<span class="review-upload__badge" aria-hidden="true">📤</span>
-							<p class="review-upload__text">사진을 끌어다 놓으세요</p>
-							<span class="review-upload__choose">파일 선택</span>
-						</div>
-						<div class="review-upload__preview" data-photo-preview
-						     th:hidden="${myImageUrl == null or #strings.isEmpty(myImageUrl)}">
-							<img data-photo-preview-img th:src="${myImageUrl}" class="review-upload__preview-img" alt="현재 등록된 리뷰 사진">
-							<span class="review-upload__filename" data-photo-filename>현재 등록된 사진</span>
-							<button type="button" class="review-upload__remove" data-photo-remove aria-label="사진 제거"><svg class="icon" style="width:13px;height:13px"><use href="#i-close"/></svg> 제거</button>
-						</div>
-					</div>
-					<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 · 새 사진을 고르면 기존 사진 대신 저장돼요</p>
-					<div class="u-row" style="gap:var(--s-2);margin-top:10px">
-						<button type="submit" class="btn u-grow">리뷰 수정하기</button>
-						<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
-					</div>
+					<button type="submit" class="btn btn--block" style="margin-top:10px">리뷰 등록하기</button>
 				</form>
 			</div>
 			<p th:unless="${loggedIn}" class="u-sub">
@@ -295,12 +247,59 @@
 							<p style="font-size:var(--fs-sm);margin-top:var(--s-1)" th:text="${r.replyContent}">답글 내용</p>
 						</div>
 						<div class="u-row" style="gap:6px;margin-top:6px">
-							<button th:if="${r.mine}" type="button" id="review-edit-btn" class="btn btn--outline" data-toggle-target="review-edit-form"
-							        style="padding:var(--s-1) var(--s-3);font-size:12px">수정</button>
+							<button th:if="${r.mine}" type="button" class="btn btn--outline" style="padding:var(--s-1) var(--s-3);font-size:12px"
+							        th:attr="id='review-edit-btn-' + ${r.id},data-toggle-target='review-edit-form-' + ${r.id}">수정</button>
 							<form th:if="${r.canDelete}" th:action="@{/user/stores/{id}/reviews/{reviewId}/delete(id=${store.id}, reviewId=${r.id})}"
 							      method="post" data-confirm="리뷰를 삭제할까요?">
 								<button type="submit" class="btn btn--outline"
 								        style="padding:var(--s-1) var(--s-3);font-size:12px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+							</form>
+						</div>
+
+						<!-- 변경됨 (2026-10-05) — 왜: "가게당 리뷰 1개"였을 땐 "내 리뷰"가 많아야 1개라
+							 공용 폼 하나(review-edit-form)로 충분했는데, "주문당 리뷰 1개"가 되면서 한
+							 가게에 내 리뷰가 여러 개 있을 수 있다. 공용 id를 그대로 뒀으면 리뷰마다 똑같은
+							 id="review-edit-btn"/"review-edit-form"이 중복 생성돼 아무 버튼을 눌러도 항상
+							 같은(첫 번째) 리뷰만 수정되는 버그가 났을 것 — reviewView/my.html의 인라인 수정
+							 폼과 동일하게 r.id를 id에 섞어 리뷰마다 독립적으로 토글되게 한다. -->
+						<div class="card" style="margin-top:10px" th:if="${r.mine}"
+						     th:attr="id='review-edit-form-' + ${r.id},data-reopen-btn='review-edit-btn-' + ${r.id}" hidden>
+							<p class="field__label" style="margin-bottom:var(--s-2)">내 리뷰 수정하기</p>
+							<form th:action="@{/user/stores/{id}/reviews(id=${store.id})}" method="post" enctype="multipart/form-data"
+							      data-confirm="리뷰를 수정하시겠습니까?">
+								<input type="hidden" name="reviewId" th:value="${r.id}">
+								<div class="star-input">
+									<input type="radio" name="rating" value="5" th:id="'estar5-' + ${r.id}" th:checked="${r.rating} == 5"><label th:for="'estar5-' + ${r.id}">★</label>
+									<input type="radio" name="rating" value="4" th:id="'estar4-' + ${r.id}" th:checked="${r.rating} == 4"><label th:for="'estar4-' + ${r.id}">★</label>
+									<input type="radio" name="rating" value="3" th:id="'estar3-' + ${r.id}" th:checked="${r.rating} == 3"><label th:for="'estar3-' + ${r.id}">★</label>
+									<input type="radio" name="rating" value="2" th:id="'estar2-' + ${r.id}" th:checked="${r.rating} == 2"><label th:for="'estar2-' + ${r.id}">★</label>
+									<input type="radio" name="rating" value="1" th:id="'estar1-' + ${r.id}" th:checked="${r.rating} == 1"><label th:for="'estar1-' + ${r.id}">★</label>
+								</div>
+								<textarea name="content" class="input" style="margin-top:10px;min-height:70px;resize:vertical"
+								          placeholder="가게는 어떠셨나요?" th:text="${r.content}"></textarea>
+								<div class="review-upload" style="margin-top:var(--s-2)" data-photo-dropzone
+								     role="button" tabindex="0" aria-label="리뷰 사진 선택 (드래그 앤 드롭 가능)">
+									<input type="file" name="imagePhoto" class="review-upload__input"
+									       accept="image/jpeg,image/png,image/webp,image/gif" data-photo-input tabindex="-1">
+									<input type="hidden" name="removeImage" value="false" data-photo-remove-flag>
+									<div class="review-upload__idle" data-photo-idle
+									     th:hidden="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}">
+										<span class="review-upload__badge" aria-hidden="true">📤</span>
+										<p class="review-upload__text">사진을 끌어다 놓으세요</p>
+										<span class="review-upload__choose">파일 선택</span>
+									</div>
+									<div class="review-upload__preview" data-photo-preview
+									     th:hidden="${r.imageUrl == null or #strings.isEmpty(r.imageUrl)}">
+										<img data-photo-preview-img th:src="${r.imageUrl}" class="review-upload__preview-img" alt="현재 등록된 리뷰 사진">
+										<span class="review-upload__filename" data-photo-filename>현재 등록된 사진</span>
+										<button type="button" class="review-upload__remove" data-photo-remove aria-label="사진 제거"><svg class="icon" style="width:13px;height:13px"><use href="#i-close"/></svg> 제거</button>
+									</div>
+								</div>
+								<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 · 새 사진을 고르면 기존 사진 대신 저장돼요</p>
+								<div class="u-row" style="gap:var(--s-2);margin-top:10px">
+									<button type="submit" class="btn u-grow">리뷰 수정하기</button>
+									<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
+								</div>
 							</form>
 						</div>
 					</div>

@@ -83,11 +83,19 @@ public class LedgerController {
 				.body(csv);
 	}
 
-	/** 절약 가계부 PDF. csv()와 데이터 소스 동일, 포맷만 PDF. 새 탭에서 바로 열리게 inline. */
+	/**
+	 * 절약 가계부 PDF. csv()와 데이터 소스 동일, 포맷만 PDF. 새 탭에서 바로 열리게 inline.
+	 * 추가됨 (2026-10-05, 사용자 요청) — from/to로 "구매·절약 내역" 표만 원하는 기간으로 좁혀볼 수
+	 * 있다(LedgerService#buildForRange 참고). 둘 다 없으면 기존처럼 전체 내역.
+	 */
 	@GetMapping("/pdf")
-	public ResponseEntity<byte[]> pdf(HttpSession session) throws IOException {
+	public ResponseEntity<byte[]> pdf(@RequestParam(required = false) String from,
+	                                  @RequestParam(required = false) String to,
+	                                  HttpSession session) throws IOException {
 		Long userId = (Long) session.getAttribute("userId");
-		LedgerData data = ledgerService.build(userId);
+		LocalDate fromDate = (from != null && !from.isBlank()) ? LocalDate.parse(from) : null;
+		LocalDate toDate = (to != null && !to.isBlank()) ? LocalDate.parse(to) : null;
+		LedgerData data = ledgerService.buildForRange(userId, fromDate, toDate);
 		byte[] pdf = LedgerPdfGenerator.generate(data);
 		return ResponseEntity.ok()
 				.contentType(MediaType.APPLICATION_PDF)

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -85,6 +86,13 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// 추가됨 (강노은) — 왜: 리뷰는 그 가게에서 실제로 예약·픽업까지 완료한 사용자만 쓸 수 있게 제한한다
 	// (ReviewService#canWriteReview). status="picked"로 호출.
 	boolean existsByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
+
+	// 추가됨 (2026-10-05, 문창호) — 왜: 리뷰 작성을 "픽업 후 72시간 이내"로 제한하면서
+	// (ReviewService#canWriteReview), 그 72시간 기준을 판단하려면 픽업 시각(pickedAt)까지 같이
+	// 봐야 했다. 컬럼(review.reservation_id) 추가 없이 "가게당 리뷰 1개" 모델은 그대로 두고,
+	// 쓸 수 있는 "자격"만 최근 픽업 기준으로 좁히는 가벼운 방식을 택했다(팀 결정, 2026-10-05).
+	boolean existsByUserIdAndStoreIdAndStatusAndPickedAtAfter(
+			Long userId, Long storeId, String status, LocalDateTime cutoff);
 
 	// 추가됨 (문창호, 2026-09-17) — 왜: 사장님이 리뷰 작성자 닉네임을 눌렀을 때 "이 손님이 우리
 	// 매장에서 몇 번 픽업했는지" 보여주기 위해(StoreReviewService). existsBy...는 있는데 정확한

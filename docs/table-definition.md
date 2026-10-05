@@ -330,16 +330,17 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 1 | id | 리뷰번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
 | 2 | user_id | 회원번호 | BIGINT | O | | O | | O | | users.id 참조 |
 | 3 | store_id | 매장번호 | BIGINT | O | | O | | O | | store.id 참조 |
-| 4 | rating | 별점 | INT | O | | | | | | |
-| 5 | content | 내용 | VARCHAR(500) | | | | | | | |
-| 6 | image_url | 사진 URL | VARCHAR(500) | | | | | | | 사진 리뷰(강노은 추가). 파일 업로드 인프라가 없어 URL 문자열로만 저장 |
-| 7 | edited | 수정 여부 | BOOLEAN | O | | | | | false | 최초 작성 후 재작성(덮어쓰기) 시 true — 목록에 "수정됨" 표시용 |
-| 8 | created_at | 작성일시 | DATETIME | O | | | | | | 공통 컬럼 |
-| 9 | reply_content | 사장님 답글 | VARCHAR(500) | | | | | | | WBS "문의 답변/리뷰 답글"(김태훈 인수 후 문창호, 2026-09-17 추가) |
-| 10 | reply_created_at | 답글 작성일시 | DATETIME | | | | | | | |
-| 11 | reply_edited | 답글 수정 여부 | BOOLEAN | O | | | | | false | 위 `edited`와 동일한 패턴 — 답글 수정(덮어쓰기) 시 true |
+| 4 | reservation_id | 예약번호 | BIGINT | | | | | | | reservation.id 참조(FK 미설정). "주문당 리뷰 1개" 정책(2026-10-05 추가, 사용자 요청) — 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가) |
+| 5 | rating | 별점 | INT | O | | | | | | |
+| 6 | content | 내용 | VARCHAR(500) | | | | | | | |
+| 7 | image_url | 사진 URL | VARCHAR(500) | | | | | | | 사진 리뷰(강노은 추가). 파일 업로드 인프라가 없어 URL 문자열로만 저장 |
+| 8 | edited | 수정 여부 | BOOLEAN | O | | | | | false | 최초 작성 후 재작성(덮어쓰기) 시 true — 목록에 "수정됨" 표시용 |
+| 9 | created_at | 작성일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 10 | reply_content | 사장님 답글 | VARCHAR(500) | | | | | | | WBS "문의 답변/리뷰 답글"(김태훈 인수 후 문창호, 2026-09-17 추가) |
+| 11 | reply_created_at | 답글 작성일시 | DATETIME | | | | | | | |
+| 12 | reply_edited | 답글 수정 여부 | BOOLEAN | O | | | | | false | 위 `edited`와 동일한 패턴 — 답글 수정(덮어쓰기) 시 true |
 
-> ⚠️ **검토 필요(유지)**: 서비스 로직상 "회원 1명당 매장 1곳에 리뷰 1건"으로 덮어쓰기 하는 것으로 보이는데(`edited` 플래그 존재), DB 레벨에 `(user_id, store_id)` 복합 UK가 없다. 정책이 맞다면 UK 추가 권장.
+> ⚠️ **검토 필요(유지, 2026-10-05 갱신)**: "회원당 매장 1곳에 리뷰 1건"(2026-10-05 이전 정책)에서 "예약(주문)당 리뷰 1건"으로 바뀌었다 — `ReviewService.canWriteReviewForReservation`이 애플리케이션 레벨에서 `reservation_id` 유니크를 보장하지만, DB 레벨엔 여전히 UK가 없다. 정책이 고정되면 `reservation_id` UK 추가 권장(NULL 허용 — 레거시 리뷰).
 
 ---
 
@@ -566,6 +567,8 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 ---
 
 ## 갱신 이력
+
+**2026-10-05 (문창호) — review.reservation_id 추가** — "회원당 매장 1곳에 리뷰 1건"에서 "예약(주문)당 리뷰 1건"으로 정책 변경(사용자 요청). `review` 테이블에 `reservation_id`(nullable, 이 컬럼 도입 전 리뷰는 소급 연결 불가) 컬럼 신규 추가, 16번 섹션 "검토 필요" 각주를 새 정책 기준으로 갱신.
 
 **2026-10-05 (송채현) — 2차 보강** — IntelliJ 라이브 코드(도메인 엔티티 26개 전체)와 이 문서·`docs/schema.sql`·ERD를 1:1로 재대조. 문창호 전수조사(바로 아래 항목)에서도 빠졌던 컬럼 8개를 추가로 찾아 반영: `users.language`(2026-09-22, 환경설정 언어 선택값), `store.image_url`(2026-09-21, 매장 사진)/`settlement_alert_enabled`/`automation_alert_enabled`(둘 다 2026-09-22, 알림 토글), `product.owner_discount_rate`(점주 지정 할인율 하한), `review.reply_content`/`reply_created_at`/`reply_edited`(2026-09-17, 문창호 "사장님 리뷰 답글" 기능). 전부 전수조사 시점(10/05) 이전부터 코드에 있었지만 문서에 반영이 안 돼 있던 것들 — 나머지 22개 테이블은 전부 코드와 일치 확인.
 

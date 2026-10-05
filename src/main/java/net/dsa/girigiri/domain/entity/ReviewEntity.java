@@ -27,6 +27,13 @@ public class ReviewEntity {
 	@Column(name = "store_id", nullable = false)
 	private Long storeId;
 
+	// 추가됨 (2026-10-05, 사용자 요청) — 왜: "가게당 리뷰 1개"에서 "주문(예약)당 리뷰 1개"로 정책을
+	// 바꾸면서, 어느 주문에 대한 리뷰인지 식별할 방법이 필요했다. 기존 행(이 컬럼 도입 전에 쓰인
+	// 리뷰)은 전부 NULL로 남는다 — 레거시 리뷰는 "가게당 1개" 시절 기록이라 특정 주문에 소급해서
+	// 연결할 근거가 없다(ddl-auto=update라 마이그레이션 스크립트 없이 컬럼만 추가됨).
+	@Column(name = "reservation_id")
+	private Long reservationId;
+
 	@Column(name = "rating", nullable = false)
 	private Integer rating;
 

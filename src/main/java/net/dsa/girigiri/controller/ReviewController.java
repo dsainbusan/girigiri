@@ -41,9 +41,15 @@ public class ReviewController {
 	// 추가됨 (강노은) — 왜: 리뷰 등록/수정 버튼을 눌러도 처리 결과가 화면에 아무 표시 없이 그냥
 	// 새로고침되는 것처럼 보여서, "등록/수정됐다"는 걸 알려주는 1회성 안내를 넣었다. flash
 	// attribute라 리다이렉트된 화면에 한 번만 뜨고 새로고침하면 사라진다(예약 취소/수락 안내와 동일한 방식).
+	// 변경됨 (2026-10-05) — 왜: "가게당 리뷰 1개"에서 "주문당 리뷰 1개"로 바뀌면서, 폼 제출만으로는
+	// "새로 쓰는 건지 수정하는 건지"를 더 이상 (userId,storeId) 조합만으로 알 수 없다(한 가게에
+	// 리뷰가 여러 개 있을 수 있어서). reservationId(신규 작성 — 어느 주문에 대한 리뷰인지)와
+	// reviewId(수정 — 어느 리뷰를 고치는지) 중 하나를 폼이 명시해서 보낸다.
 	@LoginRequired
 	@PostMapping
 	public String submit(@PathVariable Long storeId,
+						  @RequestParam(required = false) Long reservationId,
+						  @RequestParam(required = false) Long reviewId,
 						  @RequestParam int rating,
 						  @RequestParam(required = false) String content,
 						  @RequestParam(required = false) MultipartFile imagePhoto,
@@ -52,7 +58,7 @@ public class ReviewController {
 						  HttpSession session,
 						  RedirectAttributes redirectAttributes) {
 		Long userId = (Long) session.getAttribute("userId");
-		boolean isNew = reviewService.submitReview(userId, storeId, rating, content, imagePhoto, removeImage);
+		boolean isNew = reviewService.submitReview(userId, storeId, reservationId, reviewId, rating, content, imagePhoto, removeImage);
 		redirectAttributes.addFlashAttribute("reviewMessage", isNew ? "리뷰가 등록되었습니다." : "리뷰가 수정되었습니다.");
 		return resolveRedirect(returnTo, storeId);
 	}

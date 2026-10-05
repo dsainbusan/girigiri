@@ -18,7 +18,7 @@
 	  숫자일 뿐이고, 절약·취향탐험·랭킹 뱃지가 더 많아서 "구제"만 따로 이름에 넣을 이유가 없었다.
 */-->
 <div id="content" th:fragment="content" class="page">
-	<link rel="stylesheet" th:href="@{/css/ledger.css(v=13)}">
+	<link rel="stylesheet" th:href="@{/css/ledger.css(v=14)}">
 
 	<!-- 뱃지 공유 카드용 원본 데이터 — 화면엔 안 보임. 뱃지마다 카드를 새로 만드는 대신, 카드 1개
 	     템플릿에 이 값 + 클릭한 뱃지의 아이콘/이름/카테고리만 갈아끼운다(아래 공유 버튼 JS 참고).
@@ -171,7 +171,25 @@
 	<div class="ledger-export-row">
 		<a th:href="@{/user/ledger/pdf}" target="_blank" class="btn btn--outline btn--sm ledger-export-btn">📄 PDF로 보기</a>
 		<a th:href="@{/user/ledger/csv}" class="btn btn--outline btn--sm ledger-export-btn">📑 CSV로 저장</a>
+		<!-- 추가됨 (2026-10-05, 사용자 요청) — "구매·절약 내역" 표만 원하는 기간으로 좁혀서 PDF로 보고
+		     싶다는 요청. 뱃지/등급/이번 달 절약 같은 평생 누적 지표는 기간 선택과 무관하게 그대로
+		     전체 기준(LedgerService#buildForRange 참고) — 표만 바뀐다. -->
+		<button type="button" id="ledger-pdf-range-btn" class="btn btn--outline btn--sm ledger-export-btn"
+		        data-toggle-target="ledger-pdf-range-form">📅 기간 선택 PDF</button>
 	</div>
+	<form id="ledger-pdf-range-form" data-reopen-btn="ledger-pdf-range-btn" hidden
+	      th:action="@{/user/ledger/pdf}" method="get" target="_blank" class="card" style="margin-top:var(--s-2);padding:var(--s-3)">
+		<p class="field__label" style="margin-bottom:var(--s-2)">기간 선택</p>
+		<div class="u-row" style="gap:var(--s-2);align-items:center">
+			<input type="date" name="from" class="input u-grow" th:max="${T(java.time.LocalDate).now()}" required>
+			<span class="u-sub">~</span>
+			<input type="date" name="to" class="input u-grow" th:max="${T(java.time.LocalDate).now()}" required>
+		</div>
+		<div class="u-row" style="gap:var(--s-2);margin-top:var(--s-2)">
+			<button type="submit" class="btn u-grow">📅 이 기간으로 PDF 보기</button>
+			<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
+		</div>
+	</form>
 
 	</div>
 	<!-- /panel-summary -->
@@ -230,9 +248,13 @@
 		</div>
 
 		<p id="history-month-empty" class="ledger-empty is-hidden">선택한 기간에 구제 내역이 없어요.</p>
-		<div th:if="${#lists.isEmpty(data.history)}" class="ledger-empty">
-			<p>아직 구제 내역이 없어요. 마감세일 상품을 찾아보세요!</p>
-			<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">홈</a>
+		<div th:if="${#lists.isEmpty(data.history)}" class="ledger-empty-card">
+			<div class="ledger-empty-card__icon" aria-hidden="true">
+				<svg class="icon"><use href="#i-ledger"/></svg>
+			</div>
+			<p class="ledger-empty-card__title">아직 구제 내역이 없어요</p>
+			<p class="ledger-empty-card__sub">마감세일 상품을 구제하면 이 자리에 쌓여요.</p>
+			<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">마감세일 둘러보기</a>
 		</div>
 
 		<!-- 구매·절약 내역 카드 리스트 -->

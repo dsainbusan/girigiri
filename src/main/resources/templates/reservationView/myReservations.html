@@ -54,6 +54,19 @@
 		<a th:href="@{/reservation/{id}/receipt(id=${r.reservationId})}"
 		   class="btn btn--outline btn--block" style="margin-top:var(--s-2)" target="_blank">영수증 PDF 보기</a>
 
+		<!-- 추가됨 (2026-10-05) — 왜: 구매내역(이 화면)에서 리뷰를 쓰러 갈 경로가 아예 없었다(사용자
+			 리포트로 발견). 리뷰 작성 폼은 가게 상세(storeView/detail.html) 리뷰 탭 안에만 있어서,
+			 픽업완료 건에 한해 그 탭이 펼쳐진 채로 바로 이어준다. reservationId를 같이 실어 보내서
+			 "주문당 리뷰 1개" 정책(ReviewService#canWriteReviewForReservation)이 이 주문 기준으로
+			 판단하게 한다. -->
+		<a th:if="${activeTab == 'picked' and r.reviewEligible}"
+		   th:href="@{/user/stores/{id}(id=${r.storeId}, tab='review', reservationId=${r.reservationId})}"
+		   class="btn btn--outline btn--block" style="margin-top:var(--s-2)">리뷰 남기기</a>
+		<p th:if="${activeTab == 'picked' and !r.reviewEligible and r.reviewed}"
+		   class="u-sub" style="margin-top:var(--s-2)">이 주문엔 이미 리뷰를 남겼어요.</p>
+		<p th:if="${activeTab == 'picked' and !r.reviewEligible and !r.reviewed}"
+		   class="u-sub" style="margin-top:var(--s-2)">리뷰 작성 기간(픽업 후 72시간)이 지났어요.</p>
+
 		<!-- 취소는 아직 픽업 전(진행중 탭)일 때만 의미가 있다.
 			 confirm() 추가 (2026-09-16, UI/UX 검토) — 되돌릴 수 없는 환불 트리거인데 확인 절차 없이
 			 "영수증 보기"와 나란히 있어 실수로 누르기 쉬웠다. 처음엔 네이티브 onsubmit="return confirm(...)"

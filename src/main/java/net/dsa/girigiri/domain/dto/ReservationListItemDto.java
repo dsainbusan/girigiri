@@ -9,12 +9,21 @@ package net.dsa.girigiri.domain.dto;
  */
 public record ReservationListItemDto(
 		Long reservationId,
+		// 추가됨 (2026-10-05) — 왜: 픽업완료 탭에 리뷰를 쓰러 갈 경로가 아예 없었다(구매내역에서
+		// 리뷰 작성 진입점 부재, 사용자 리포트로 발견). 리뷰 작성 폼은 가게 상세(storeView/detail.html)
+		// 안에만 있어서, 거기로 보내려면 storeId가 필요하다.
+		Long storeId,
 		String storeName,
 		String productName,
 		int quantity,
 		int totalPrice,
 		String pickupTimeDisplay,
 		String pickupCode,
-		String statusBadge
+		String statusBadge,
+		// 추가됨 (2026-10-05) — "주문당 리뷰 1개" 정책. 픽업완료 탭에서 이 주문에 이미 리뷰를 썼는지,
+		// 아직 안 썼다면 지금 쓸 수 있는 자격(픽업 후 72시간 이내)이 있는지를 구분해서 보여준다
+		// (ReservationService#toListItemDto, ReviewService.canWriteReviewForReservation).
+		boolean reviewed,
+		boolean reviewEligible
 ) {
 }

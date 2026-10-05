@@ -269,6 +269,26 @@
 .ledger-empty { padding: var(--s-6) 0; text-align: center; color: var(--c-text-mut); font-size: var(--fs-sm); }
 .ledger-empty.is-hidden { display: none; }
 
+/* 내역 탭 — "아직 구제 내역이 없어요" 최초 빈 상태 카드 (2026-10-05) — 왜: 문단 한 줄 + 버튼 하나만
+   있으니 화면이 휑해 보인다는 피드백으로, store.css의 .empty-card와 같은 생김새(아이콘 원 + 제목 +
+   보조설명)를 ledger.css 안에 자체 클래스로 둔다 — CSS 경계 규칙상 store.css를 이 화면에서 직접
+   가져다 쓸 수 없어서(storeView 전용), 같은 톤만 맞춰 복제했다. */
+.ledger-empty-card { padding: var(--s-6) var(--s-4); text-align: center; }
+.ledger-empty-card__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(15, 43, 140, 0.08);
+  color: var(--c-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--s-3);
+}
+.ledger-empty-card__icon .icon { width: 26px; height: 26px; }
+.ledger-empty-card__title { font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--c-text); margin-bottom: 6px; }
+.ledger-empty-card__sub { font-size: var(--fs-xs); color: var(--c-text-sub); line-height: 1.5; margin: 0; }
+
 /* ---------- 탭: 내역 ---------- */
 /* 기간 빠른 선택 칩 + 연도·월 직접 선택 셀렉트 */
 .ledger-history-filter-wrap {

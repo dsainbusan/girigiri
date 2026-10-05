@@ -129,6 +129,10 @@ public class ReservationService {
 	// 새 예약 시 정지/영구정지 매장 차단(prepareReservation)에 쓴다. getStoreCancelStats도 이제
 	// 이 서비스로 위임한다(계산 로직 자체가 옮겨감) — 기존 호출부(컨트롤러 3곳)는 안 바뀐다.
 	private final StoreReliabilityService storeReliabilityService;
+	// 추가됨 (2026-10-05) — "주문당 리뷰 1개" 정책에서, 구매내역(픽업완료 탭)에 이 주문의 리뷰 작성
+	// 가능 여부를 보여주려고(toListItemDto). ReviewService는 ReservationRepository만 쓰고 이쪽
+	// 서비스를 되부르지 않아 순환 의존 없음.
+	private final ReviewService reviewService;
 
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
@@ -1341,15 +1345,22 @@ public class ReservationService {
 		StoreEntity store = storeRepository.findById(reservation.getStoreId())
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다. id=" + reservation.getStoreId()));
 
+		boolean reviewed = reviewService.hasReview(reservation.getId());
+		boolean reviewEligible = !reviewed
+				&& reviewService.canWriteReviewForReservation(reservation.getUserId(), store.getId(), reservation.getId());
+
 		return new ReservationListItemDto(
 				reservation.getId(),
+				store.getId(),
 				store.getStoreName(),
 				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				reservation.getPickupTime() != null ? reservation.getPickupTime().format(LIST_DISPLAY_FORMAT) : "-",
 				reservation.getPickupCode(),
-				resolveStatusBadge(reservation)
+				resolveStatusBadge(reservation),
+				reviewed,
+				reviewEligible
 		);
 	}
 

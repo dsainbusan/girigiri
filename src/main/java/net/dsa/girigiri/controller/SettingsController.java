@@ -2,7 +2,6 @@ package net.dsa.girigiri.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import net.dsa.girigiri.domain.Language;
 import net.dsa.girigiri.security.LoginRequired;
 import net.dsa.girigiri.service.SettingsService;
 import org.springframework.stereotype.Controller;
@@ -52,18 +51,23 @@ public class SettingsController {
 		return "redirect:/user/settings";
 	}
 
-	@GetMapping("/language")
-	public String languageForm(HttpSession session, Model model) {
+	// 추가됨 (2026-10-05, 사용자 요청) — 원래 NotificationController의 "알림 설정" 화면
+	// (/user/alerts/settings)에서만 바꿀 수 있던 PUSH/찜한 가게 알림을, 뎁스 하나 줄이려고 이
+	// 화면에서도 바로 바꿀 수 있게 한다. 값의 주인(NotificationService)은 그대로다 — 진입점만 하나 더.
+	// store-alerts/settlement·automation과 같은 이유로 토글 2개를 각자 별도 폼·엔드포인트로 둔다 —
+	// 한 폼에 합치면 토글 하나만 바꿔 제출해도 폼에 없는 다른 토글 값이 "체크 안 됨"으로 같이
+	// 날아가(버튼에 required=false라 null→false로 처리됨) 덩달아 꺼져버린다.
+	@PostMapping("/alerts/push")
+	public String updatePushAlert(@RequestParam(required = false) Boolean enabled, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		model.addAttribute("currentCode", settingsService.getLanguageCode(userId));
-		model.addAttribute("languages", Language.values());
-		return "settingsView/language";
+		settingsService.updatePushAlert(userId, Boolean.TRUE.equals(enabled));
+		return "redirect:/user/settings";
 	}
 
-	@PostMapping("/language")
-	public String updateLanguage(@RequestParam String language, HttpSession session) {
+	@PostMapping("/alerts/like")
+	public String updateLikeAlert(@RequestParam(required = false) Boolean enabled, HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		settingsService.updateLanguage(userId, language);
-		return "redirect:/user/settings/language";
+		settingsService.updateLikeAlert(userId, Boolean.TRUE.equals(enabled));
+		return "redirect:/user/settings";
 	}
 }

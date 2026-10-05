@@ -30,7 +30,7 @@
 
 	<!-- 리뷰가 있을 때만 상단 카운트 표시 -->
 	<div class="u-row" style="justify-content:space-between; margin-bottom:var(--s-2);" th:if="${!#lists.isEmpty(reviews)}">
-		<span class="u-sub" style="font-size:13px">가게별로 하나씩 작성할 수 있어요</span>
+		<span class="u-sub" style="font-size:13px">주문(픽업)마다 하나씩 작성할 수 있어요</span>
 		<span class="u-bold" style="font-size:13px; color:var(--c-primary);" th:text="'총 ' + ${#lists.size(reviews)} + '개'">총 0개</span>
 	</div>
 
@@ -78,6 +78,10 @@
 					      data-confirm="리뷰를 수정할까요?">
 						<!--/* 강노은: 처리 후 가게 상세로 안 보내고 이 페이지로 돌아오게. */-->
 						<input type="hidden" name="returnTo" value="/user/reviews/my">
+						<!-- 추가됨 (2026-10-05) — "주문당 리뷰 1개"가 되면서 서버가 (userId,storeId)만으로
+						     "그" 리뷰를 더 이상 특정할 수 없다(한 가게에 내 리뷰가 여러 개일 수 있음).
+						     어느 리뷰를 고치는지 명시한다(ReviewController#submit 참고). -->
+						<input type="hidden" name="reviewId" th:value="${r.id}">
 						<div class="star-input">
 							<input type="radio" name="rating" value="5" th:id="${'my-star5-' + r.id}" th:checked="${r.rating} == 5"><label th:for="${'my-star5-' + r.id}">★</label>
 							<input type="radio" name="rating" value="4" th:id="${'my-star4-' + r.id}" th:checked="${r.rating} == 4"><label th:for="${'my-star4-' + r.id}">★</label>
