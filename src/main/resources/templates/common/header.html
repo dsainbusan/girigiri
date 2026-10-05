@@ -5,7 +5,13 @@
 <!--/* 상단바. dark=true 면 사장님/운영자용 다크 헤더. badge는 제목 옆 텍스트 뱃지(예: '관리자 모드'), 없으면 '' */-->
 <header th:fragment="topbar(title, dark, badge)"
         class="topbar" th:classappend="${dark} ? ' topbar--dark' : ''">
-  <button class="topbar__back" type="button" data-back aria-label="뒤로">&lsaquo;</button>
+  <!--/* 강노은 (2026-10-05): 원래 "‹" 글자를 썼는데, 폰트 자체의 글자 모양이 제목 텍스트보다
+       위쪽으로 치우쳐 그려져서(글꼴 지표 문제라 line-height/여백 조정으로는 못 고친다) 제목이랑
+       높이가 안 맞아 보였다 — flex로 정확히 가운데 정렬되는 SVG 아이콘(기존 chevron-right를
+       좌우반전)으로 바꿔서 완전히 해결. */-->
+  <button class="topbar__back" type="button" data-back aria-label="뒤로">
+    <svg class="icon" style="width:22px;height:22px;transform:scaleX(-1)"><use href="#i-chevron-right"/></svg>
+  </button>
   <h1 class="topbar__title" th:text="${title}">제목</h1>
   <span th:if="${badge}" class="badge badge--accent" th:text="${badge}">관리자 모드</span>
   <span class="topbar__spacer"></span>
@@ -31,15 +37,19 @@
   유무로 채워주는 model attribute를 그대로 받는다(location/unreadCount와 같은 방식).
 */-->
 <header th:fragment="topbarHome(location, unreadCount, loggedIn)" class="topbar">
-  <span class="u-row" style="font-size:14px;font-weight:900">
-    <svg class="icon" style="width:15px;height:15px"><use href="#i-pin"/></svg><span th:text="${location}">내 동네</span>
+  <!--/* 강노은 (2026-10-05): 위치 표시는 지도 바로 위(홈 본문)로 옮기고, 상단바 왼쪽엔 로고만.
+       로고 rect만 흰색으로 바꾼 사본을 썼더니 작은 크기에서 테두리가 살짝 어긋나 보여서 되돌림 —
+       원본 이미지(크림 배경 그대로)를 쓰고, 그 바깥에 흰 배경 칩을 하나 더 둬서 흰 바탕처럼 보이게.
+       알림벨과 크기를 맞추려고 로고·벨 둘 다 30px로. */-->
+  <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:#fff;border-radius:10px;flex-shrink:0">
+    <img th:src="@{/images/brand/logo.svg}" alt="기리기리" style="width:30px;height:30px">
   </span>
   <span class="topbar__spacer"></span>
   <!--/* 강노은: /notifications는 실제로 없는 경로였다(하단 탭바는 /user/alerts를 씀) — 알림함을
        만들면서 통일했다. */-->
   <!--/* id="alert-bell"/"alert-dot": home.html의 SSE 스크립트가 실시간으로 이 점을 붙였다 뗐다 한다. */-->
   <a th:if="${loggedIn}" th:href="@{/user/alerts}" class="topbar__action" id="alert-bell" style="position:relative">
-    <svg class="icon"><use href="#i-bell"/></svg>
+    <svg class="icon" style="width:30px;height:30px"><use href="#i-bell"/></svg>
     <span th:if="${unreadCount} != null and ${unreadCount} > 0" id="alert-dot"
           style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)"></span>
   </a>

@@ -63,7 +63,7 @@
   top: 0;
   z-index: 20;
 }
-.topbar__back  { font-size: 26px; color: var(--c-text); line-height: 1; flex-shrink: 0; }
+.topbar__back  { display: inline-flex; align-items: center; justify-content: center; color: var(--c-text); flex-shrink: 0; padding: 0; background: none; border: none; }
 .topbar__title { 
   font-size: var(--fs-lg); 
   font-weight: var(--fw-bold); 
@@ -271,4 +271,33 @@
 }
 .bottom-cta__price { display: flex; flex-direction: column; line-height: 1.2; }
 .bottom-cta__price small { font-size: var(--fs-xs); color: var(--c-text-mut); }
+
+/* ---------- 전역 토스트 ---------- */
+/* 강노은: 원래는 실시간 알림(SSE) 전용이었는데(common/layout.html), 리뷰 등록/수정·설정 저장 같은
+   1회성 완료 안내(data-auto-dismiss, app.js)도 화면마다 제각각 .banner 모양으로 떠 있던 걸 전부
+   여기로 통일했다 — 어떤 안내든 똑같이 화면 맨 위, 상단바 바로 아래에 떴다가 사라진다. 하단
+   탭바보다 위(z-index 40)라 탭 전환 중에도 가려지지 않는다. */
+.girigiri-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-12px);
+  max-width: calc(var(--app-max) - 32px);
+  width: calc(100% - 32px);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: var(--c-primary);
+  color: var(--c-primary-on);
+  border-radius: var(--r-lg);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.girigiri-toast.is-shown { opacity: 1; transform: translateX(-50%) translateY(0); }
 .bottom-cta__price strong { font-size: var(--fs-xl); font-weight: var(--fw-black); }

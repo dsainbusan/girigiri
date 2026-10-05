@@ -82,9 +82,10 @@ public interface ReservationRepository extends JpaRepository<ReservationEntity, 
 	// "판매(픽업완료)"와 "예약됨(픽업대기)"을 구분하는 데 쓴다.
 	List<ReservationEntity> findByProductIdIn(List<Long> productIds);
 
-	// 추가됨 (강노은) — 왜: 리뷰는 그 가게에서 실제로 예약·픽업까지 완료한 사용자만 쓸 수 있게 제한한다
-	// (ReviewService#canWriteReview). status="picked"로 호출.
-	boolean existsByUserIdAndStoreIdAndStatus(Long userId, Long storeId, String status);
+	// 추가됨 (강노은, 2026-10-01) — "매장당 리뷰 1건" → "픽업완료 예약당 1건"으로 바뀌면서, 이 유저가
+	// 이 매장에서 픽업완료한 예약 전체를 가져와(ReviewService#getReviewableReservations) 그중 아직
+	// 리뷰 없는 것만 "리뷰 작성 가능" 목록으로 보여준다. 최근 픽업부터 보여준다.
+	List<ReservationEntity> findByUserIdAndStoreIdAndStatusOrderByPickedAtDesc(Long userId, Long storeId, String status);
 
 	// 추가됨 (문창호, 2026-09-17) — 왜: 사장님이 리뷰 작성자 닉네임을 눌렀을 때 "이 손님이 우리
 	// 매장에서 몇 번 픽업했는지" 보여주기 위해(StoreReviewService). existsBy...는 있는데 정확한

@@ -21,8 +21,30 @@
 
 	<form id="email-signup-form">
 		<div class="field">
-			<label class="field__label" for="email">이메일</label>
-			<input class="input" type="email" id="email" name="email" th:value="${email}" placeholder="example@email.com" required>
+			<label class="field__label" for="emailLocal">이메일</label>
+			<div class="u-row" style="gap:6px;align-items:center">
+				<input class="input" type="text" id="emailLocal" placeholder="example" autocomplete="off" required style="flex:1;min-width:0">
+				<span class="u-mut" style="flex:none">@</span>
+				<select class="input" id="emailDomainSelect" style="flex:1;min-width:0">
+					<option value="naver.com">naver.com</option>
+					<option value="hanmail.net">hanmail.net</option>
+					<option value="hotmail.com">hotmail.com</option>
+					<option value="nate.com">nate.com</option>
+					<option value="yahoo.co.kr">yahoo.co.kr</option>
+					<option value="empas.com">empas.com</option>
+					<option value="dreamwiz.com">dreamwiz.com</option>
+					<option value="freechal.com">freechal.com</option>
+					<option value="lycos.co.kr">lycos.co.kr</option>
+					<option value="korea.com">korea.com</option>
+					<option value="gmail.com">gmail.com</option>
+					<option value="hanmir.com">hanmir.com</option>
+					<option value="paran.com">paran.com</option>
+					<option value="__custom__">직접입력</option>
+				</select>
+			</div>
+			<input class="input" type="text" id="emailDomainCustom" placeholder="도메인을 입력하세요 (예: mycompany.com)"
+			       autocomplete="off" style="display:none;margin-top:6px">
+			<input type="hidden" id="email" name="email" th:value="${email}">
 		</div>
 
 		<div class="field" style="margin-top: var(--s-4)">
@@ -164,6 +186,54 @@
 		(function () {
 			var form = document.getElementById('email-signup-form');
 			var emailInput = document.getElementById('email');
+			var emailLocalInput = document.getElementById('emailLocal');
+			var emailDomainSelect = document.getElementById('emailDomainSelect');
+			var emailDomainCustom = document.getElementById('emailDomainCustom');
+
+			// 강노은: 이메일 도메인을 흔히 쓰는 목록에서 고르거나 "직접입력"으로 타이핑하게 분리.
+			// 실제 제출/검증 로직(위 emailInput = #email)은 그대로 두고, 여기서 로컬파트+도메인을
+			// 합쳐서 숨은 #email 값만 채워 넣는다 — fetch 쪽 코드를 안 건드려도 되게 하기 위함.
+			function syncEmailHiddenField() {
+				var local = emailLocalInput.value.trim();
+				var domain = emailDomainSelect.value === '__custom__'
+					? emailDomainCustom.value.trim()
+					: emailDomainSelect.value;
+				emailInput.value = local && domain ? (local + '@' + domain) : '';
+			}
+			function onDomainSelectChange() {
+				var isCustom = emailDomainSelect.value === '__custom__';
+				emailDomainCustom.style.display = isCustom ? 'block' : 'none';
+				if (isCustom) emailDomainCustom.focus();
+				syncEmailHiddenField();
+			}
+			emailLocalInput.addEventListener('input', syncEmailHiddenField);
+			emailDomainSelect.addEventListener('change', onDomainSelectChange);
+			emailDomainCustom.addEventListener('input', syncEmailHiddenField);
+
+			// 에러로 리다이렉트됐을 때(th:value="${email}") 기존에 입력했던 이메일을 로컬파트/도메인으로
+			// 다시 쪼개 채워 넣는다. 프리셋 목록에 없는 도메인이면 "직접입력"으로 전환.
+			(function restorePrefilledEmail() {
+				var prefilled = emailInput.value.trim();
+				if (!prefilled || prefilled.indexOf('@') === -1) return;
+				var parts = prefilled.split('@');
+				var local = parts[0];
+				var domain = parts.slice(1).join('@');
+				emailLocalInput.value = local;
+				var matched = false;
+				for (var i = 0; i < emailDomainSelect.options.length; i++) {
+					if (emailDomainSelect.options[i].value === domain) {
+						emailDomainSelect.value = domain;
+						matched = true;
+						break;
+					}
+				}
+				if (!matched) {
+					emailDomainSelect.value = '__custom__';
+					emailDomainCustom.value = domain;
+					emailDomainCustom.style.display = 'block';
+				}
+			})();
+
 			var passwordInput = document.getElementById('password');
 			var passwordConfirmInput = document.getElementById('passwordConfirm');
 			var btnSubmit = document.getElementById('btn-email-signup');
@@ -270,6 +340,9 @@
 
 						otpRequested = true;
 						emailInput.disabled = true;
+						emailLocalInput.disabled = true;
+						emailDomainSelect.disabled = true;
+						emailDomainCustom.disabled = true;
 						passwordInput.disabled = true;
 						passwordConfirmInput.disabled = true;
 						btnSubmit.textContent = '인증번호 다시 받기';

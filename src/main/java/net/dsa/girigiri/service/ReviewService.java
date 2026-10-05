@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.MyReviewRowDto;
 import net.dsa.girigiri.domain.dto.ReviewRowDto;
+import net.dsa.girigiri.domain.dto.ReviewableReservationDto;
+import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.ReviewEntity;
 import net.dsa.girigiri.domain.entity.ReviewSummaryEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.exception.ReviewNotAllowedException;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.ReviewRepository;
 import net.dsa.girigiri.repository.ReviewSummaryRepository;
@@ -62,17 +65,20 @@ public class ReviewService {
 	private static final String RESERVATION_STATUS_PICKED = "picked";
 
 	/**
-	 * 추가됨 (강노은) — 왜: "이용해본 사람만 리뷰를 쓸 수 있게" — 그 가게에서 예약 후 픽업까지 완료한
-	 * 이력이 하나라도 있어야 true. 이미 리뷰를 쓴 사람의 "수정"은 이 체크를 다시 거치지 않는다(작성
-	 * 시점에 이미 검증됐음 — submitReview 참고).
-	 * (2026-08-26) 현재는 StoreDetailController에서 이 메서드 대신 canReview=true를 임시로 박아둔
-	 * 상태(예약·픽업 플로우 테스트 전)라 실제로는 호출되지 않지만, 나중에 되돌릴 때를 위해 남겨둔다.
+	 * 변경됨 (강노은, 2026-10-01) — "매장당 리뷰 1건" → "픽업완료 예약(구매)당 1건"으로 바꾸면서
+	 * canWriteReview(boolean 하나)를 대체. 이 가게에서 픽업완료했는데 아직 리뷰를 안 쓴 예약을
+	 * 전부 돌려준다 — 여러 건이면 화면에서 어느 구매에 대한 리뷰인지 직접 고르게 한다(createReview
+	 * 호출 시 reservationId로 지정). 빈 리스트면 "리뷰 작성" 자체를 못 띄운다.
 	 */
-	public boolean canWriteReview(Long userId, Long storeId) {
+	public List<ReviewableReservationDto> getReviewableReservations(Long userId, Long storeId) {
 		if (userId == null) {
-			return false;
+			return List.of();
 		}
-		return reservationRepository.existsByUserIdAndStoreIdAndStatus(userId, storeId, RESERVATION_STATUS_PICKED);
+		return reservationRepository.findByUserIdAndStoreIdAndStatusOrderByPickedAtDesc(userId, storeId, RESERVATION_STATUS_PICKED)
+				.stream()
+				.filter(r -> !reviewRepository.existsByReservationId(r.getId()))
+				.map(r -> new ReviewableReservationDto(r.getId(), r.getProductName(), relativeLabel(r.getPickedAt())))
+				.toList();
 	}
 
 	public List<ReviewRowDto> getReviews(Long storeId, Long currentUserId, String role) {
@@ -250,73 +256,74 @@ public class ReviewService {
 	}
 
 
-	public Optional<ReviewEntity> getMyReview(Long userId, Long storeId) {
-		if (userId == null) {
-			return Optional.empty();
-		}
-		
-		return reviewRepository.findAll().stream()
-				.filter(r -> userId.equals(r.getUserId()) && storeId.equals(r.getStoreId()))
-				.findFirst();
-	}
-	
 	/**
-	 * 사용자당 매장 1개에 리뷰 1개만 작성할 수 있으며,
-	 * 이미 작성한 리뷰가 있으면 내용을 수정한다.
+	 * 강노은 (2026-10-01) — 새 리뷰 작성. reservationId가 실제로 (1) 이 유저 것이고 (2) 이 매장
+	 * 픽업완료 건이며 (3) 아직 리뷰가 안 달렸는지 서버에서 다시 검증한다 — 화면은
+	 * getReviewableReservations가 돌려준 것만 "리뷰 작성" 버튼으로 보여주지만, 폼을 직접 조작해
+	 * 남의 예약 id로 우회 제출하는 경우까지 막아야 한다(ReviewNotAllowedException 클래스 주석 참고).
+	 */
+	@Transactional
+	public void createReview(Long userId, Long storeId, Long reservationId, int rating, String content,
+	                          MultipartFile imagePhoto) {
+		ReservationEntity reservation = reservationRepository.findById(reservationId)
+				.orElseThrow(() -> new ReviewNotAllowedException("예약을 찾을 수 없습니다: " + reservationId));
+
+		if (!userId.equals(reservation.getUserId()) || !storeId.equals(reservation.getStoreId())
+				|| !RESERVATION_STATUS_PICKED.equals(reservation.getStatus())) {
+			throw new ReviewNotAllowedException("이 예약에는 리뷰를 쓸 수 없습니다.");
+		}
+		if (reviewRepository.existsByReservationId(reservationId)) {
+			throw new ReviewNotAllowedException("이미 리뷰를 작성한 예약입니다.");
+		}
+
+		ReviewEntity review = ReviewEntity.builder()
+				.userId(userId)
+				.storeId(storeId)
+				.reservationId(reservationId)
+				.build();
+		applyContent(review, rating, content, imagePhoto, false);
+		reviewRepository.save(review);
+	}
+
+	/**
+	 * 강노은 (2026-10-01) — 내 리뷰 수정(마이페이지 "내가 쓴 리뷰" 전용). 작성자 본인만 가능하다 —
+	 * canDelete와 달리 관리자 예외가 없다(삭제는 신고 대응용으로 열어뒀지만, 수정은 원래부터
+	 * "내 리뷰"일 때만 버튼이 보이던 본인 전용 기능).
 	 *
 	 * 새 사진을 업로드하면 기존 사진을 삭제하고 새 사진으로 교체한다.
 	 * removeImage가 true이면 기존 사진을 삭제한다.
 	 * 둘 다 없으면 기존 사진을 그대로 유지한다.
 	 */
 	@Transactional
-	public boolean submitReview(Long userId, Long storeId, int rating, String content,
-	                            MultipartFile imagePhoto, boolean removeImage) {
-		
-		int clampedRating = Math.max(1, Math.min(5, rating));
-		
-		Optional<ReviewEntity> existing = getMyReview(userId, storeId);
-		
-		boolean isNew = existing.isEmpty();
-		
-		ReviewEntity review = existing.orElseGet(() -> ReviewEntity.builder()
-				.userId(userId)
-				.storeId(storeId)
-				.build());
-		
-		if (existing.isPresent()) {
-			review.setEdited(true);
+	public void updateReview(Long userId, Long reviewId, int rating, String content,
+	                          MultipartFile imagePhoto, boolean removeImage) {
+		ReviewEntity review = reviewRepository.findById(reviewId)
+				.orElseThrow(() -> new ReviewNotAllowedException("리뷰를 찾을 수 없습니다: " + reviewId));
+
+		if (!userId.equals(review.getUserId())) {
+			throw new ReviewNotAllowedException("이 리뷰를 수정할 권한이 없습니다.");
 		}
-		
-		review.setRating(clampedRating);
+
+		review.setEdited(true);
+		applyContent(review, rating, content, imagePhoto, removeImage);
+		reviewRepository.save(review);
+	}
+
+	private void applyContent(ReviewEntity review, int rating, String content,
+	                           MultipartFile imagePhoto, boolean removeImage) {
+		review.setRating(Math.max(1, Math.min(5, rating)));
 		review.setContent(content == null ? "" : content.trim());
-		
+
 		// 새 사진을 업로드한 경우
 		if (imagePhoto != null && !imagePhoto.isEmpty()) {
-			fileStorageUtil.deleteIfOwned(
-					review.getImageUrl(),
-					REVIEW_IMAGE_SUBDIR
-			);
-			
-			review.setImageUrl(
-					fileStorageUtil.store(
-							imagePhoto,
-							REVIEW_IMAGE_SUBDIR
-					)
-			);
+			fileStorageUtil.deleteIfOwned(review.getImageUrl(), REVIEW_IMAGE_SUBDIR);
+			review.setImageUrl(fileStorageUtil.store(imagePhoto, REVIEW_IMAGE_SUBDIR));
 		}
 		// 새 사진은 없지만 기존 사진을 삭제한 경우
 		else if (removeImage) {
-			fileStorageUtil.deleteIfOwned(
-					review.getImageUrl(),
-					REVIEW_IMAGE_SUBDIR
-			);
-			
+			fileStorageUtil.deleteIfOwned(review.getImageUrl(), REVIEW_IMAGE_SUBDIR);
 			review.setImageUrl(null);
 		}
-		
-		reviewRepository.save(review);
-		
-		return isNew;
 	}
 	
 	/** 가게 사장님은 리뷰를 볼 순 있어도 지울 순 없다 — 작성자 본인 / 관리자만 true. */

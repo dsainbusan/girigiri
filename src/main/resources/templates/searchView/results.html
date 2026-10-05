@@ -8,7 +8,7 @@
 	<form th:action="@{/user/search}" method="get" class="search" style="margin-bottom:var(--s-3)">
 		<span><svg class="icon"><use href="#i-search"/></svg></span>
 		<input type="text" name="q" th:value="${keyword}" placeholder="베이커리, 반찬, 도시락 검색"
-		       style="border:none;background:transparent;outline:none;width:100%;font-size:var(--fs-md);color:var(--c-text)">
+		       style="border:none;background:transparent;outline:none;width:100%;font:inherit;color:inherit">
 		<input type="hidden" name="sort" th:value="${sort}">
 		<!--/* 강노은: 키워드를 새로 검색해도 지금 걸려있는 가격대/픽업시간 필터는 유지되게 그대로 실어 보낸다. */-->
 		<input type="hidden" name="priceMin" th:value="${priceMin}">

@@ -20,17 +20,16 @@
 	})();
 	</script>
 
-	<!-- 강노은: 리뷰 수정/삭제 직후 1회성 안내 (flash) — 3초 뒤 자동으로 사라진다(data-auto-dismiss, app.js). -->
-	<div th:if="${reviewMessage != null}" class="banner" style="margin-bottom:var(--s-3)" data-auto-dismiss="3000">
-		<div>
-			<p class="banner__title">✅ 완료</p>
-			<p class="banner__desc" th:text="${reviewMessage}">리뷰가 수정되었습니다.</p>
-		</div>
+	<!-- 강노은 (2026-10-05): 리뷰 수정/삭제 직후 1회성 안내 — 실시간 알림 토스트와 같은 모양으로
+	     화면 맨 위에 떴다가 3초 뒤 사라진다(data-auto-dismiss, app.js). -->
+	<div th:if="${reviewMessage != null}" class="girigiri-toast" data-auto-dismiss="3000">
+		<svg class="icon" style="width:16px;height:16px"><use href="#i-check-circle"/></svg>
+		<span th:text="${reviewMessage}">리뷰가 수정되었습니다.</span>
 	</div>
 
 	<!-- 리뷰가 있을 때만 상단 카운트 표시 -->
 	<div class="u-row" style="justify-content:space-between; margin-bottom:var(--s-2);" th:if="${!#lists.isEmpty(reviews)}">
-		<span class="u-sub" style="font-size:13px">가게별로 하나씩 작성할 수 있어요</span>
+		<span class="u-sub" style="font-size:13px">픽업완료한 구매마다 리뷰를 남길 수 있어요</span>
 		<span class="u-bold" style="font-size:13px; color:var(--c-primary);" th:text="'총 ' + ${#lists.size(reviews)} + '개'">총 0개</span>
 	</div>
 
@@ -48,33 +47,34 @@
 					<div class="u-row" style="gap:1px;margin-top:2px">
 						<svg class="icon" th:each="i : ${#numbers.sequence(1,5)}" th:classappend="${i > r.rating} ? ' icon--dim'" style="width:13px;height:13px;color:var(--c-accent)"><use href="#i-star"/></svg>
 					</div>
-					<p style="font-size:13px;margin-top:4px" th:text="${r.content}">리뷰 내용</p>
+					<!-- 강노은: 가게 상세 리뷰 탭과 동일하게 사진 → 본문 순서로 맞춘다. -->
 					<img th:if="${r.imageUrl != null and !#strings.isEmpty(r.imageUrl)}" th:src="${r.imageUrl}"
 					     alt="리뷰 사진" loading="lazy" onerror="this.style.display='none'"
 					     style="margin-top:6px;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-md)">
+					<p style="font-size:13px;margin-top:6px" th:text="${r.content}">리뷰 내용</p>
 				</a>
-				<div class="u-row" style="gap:6px;margin-top:8px">
+				<div class="u-row" style="gap:6px;margin-top:var(--s-2);justify-content:flex-end">
 					<!--/* 강노은: 이전엔 가게 상세로 돌려보내 거기서 수정하게 했는데, 이 페이지에서 바로
 					     고칠 수 있게 인라인 수정 폼(아래)을 토글하는 방식으로 바꿨다. */-->
 					<button type="button" class="btn btn--outline"
 					        th:attr="id=${'my-review-edit-btn-' + r.id},data-toggle-target=${'my-review-edit-' + r.id}"
-					        style="padding:4px 12px;font-size:12px">수정</button>
+					        style="padding:4px 12px;font-size:12px;line-height:1">수정</button>
 					<form th:action="@{/user/stores/{id}/reviews/{reviewId}/delete(id=${r.storeId}, reviewId=${r.id})}"
-					      method="post" data-confirm="리뷰를 삭제할까요?">
+					      method="post" data-confirm="리뷰를 삭제할까요?" style="display:contents">
 						<!--/* 강노은: 처리 후 가게 상세로 안 보내고 이 페이지로 돌아오게. */-->
 						<input type="hidden" name="returnTo" value="/user/reviews/my">
 						<button type="submit" class="btn btn--outline"
-						        style="padding:4px 12px;font-size:12px;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
+						        style="padding:4px 12px;font-size:12px;line-height:1;color:var(--c-danger);border-color:var(--c-danger)">삭제</button>
 					</form>
 				</div>
 
-				<!--/* 강노은: 인라인 수정 폼 — storeView/detail.html의 "내 리뷰 수정하기" 폼과 동일한 구조
-				     (별점 + 내용 + 사진 dropzone)을 그대로 재사용한다. 라디오/hidden id에 r.id를 붙여
-				     리뷰마다 겹치지 않게 한다. 제출 대상은 원래 리뷰를 쓰던 그 엔드포인트 그대로
-				     (/user/stores/{storeId}/reviews) — 같은 사용자·매장 리뷰는 덮어쓰는 기존 로직 재사용. */-->
+				<!--/* 강노은 (2026-10-01): 인라인 수정 폼 — 별점/내용/사진 입력 구조는 그대로 두고,
+				     제출 대상만 reviewId로 지정하는 전용 수정 엔드포인트로 바꿨다(/reviews/{reviewId}/edit)
+				     — "매장당 리뷰 1건" 제한이 없어지면서 (storeId, userId)만으로는 어느 리뷰를 고치는
+				     건지 더 이상 특정할 수 없어서다. 라디오/hidden id에 r.id를 붙여 리뷰마다 겹치지 않게 한다. */-->
 				<div class="card" style="margin-top:10px"
 				     th:attr="id=${'my-review-edit-' + r.id},data-reopen-btn=${'my-review-edit-btn-' + r.id}" hidden>
-					<form th:action="@{/user/stores/{id}/reviews(id=${r.storeId})}" method="post" enctype="multipart/form-data"
+					<form th:action="@{/user/stores/{storeId}/reviews/{reviewId}/edit(storeId=${r.storeId}, reviewId=${r.id})}" method="post" enctype="multipart/form-data"
 					      data-confirm="리뷰를 수정할까요?">
 						<!--/* 강노은: 처리 후 가게 상세로 안 보내고 이 페이지로 돌아오게. */-->
 						<input type="hidden" name="returnTo" value="/user/reviews/my">
@@ -106,9 +106,10 @@
 							</div>
 						</div>
 						<p class="review-upload-hint">jpg · png · webp · gif, 5MB 이하 · 새 사진을 고르면 기존 사진 대신 저장돼요</p>
+						<!--/* 강노은 (2026-10-05): u-grow만 있으면 "닫기"는 콘텐츠 너비로 남아서 1:1이 아니었다 — 둘 다 flex-basis 0으로. */-->
 						<div class="u-row" style="gap:8px;margin-top:10px">
-							<button type="submit" class="btn u-grow">리뷰 수정하기</button>
-							<button type="button" class="btn btn--outline" data-close-panel>닫기</button>
+							<button type="submit" class="btn" style="flex:1 1 0">리뷰 수정하기</button>
+							<button type="button" class="btn btn--outline" style="flex:1 1 0" data-close-panel>닫기</button>
 						</div>
 					</form>
 				</div>

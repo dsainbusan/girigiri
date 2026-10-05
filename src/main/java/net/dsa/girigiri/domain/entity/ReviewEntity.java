@@ -27,6 +27,14 @@ public class ReviewEntity {
 	@Column(name = "store_id", nullable = false)
 	private Long storeId;
 
+	// 추가됨 (강노은, 2026-10-01) — 왜: "매장당 리뷰 1건" 제한을 "픽업완료 예약(구매)당 1건"으로 바꾸면서
+	// 추가. null이면 이 제한이 생기기 전에 작성된 레거시 리뷰(특정 구매에 못 묶임) — 계속 그대로 보여주되
+	// 새 리뷰 작성 자격 판단(ReviewService#getReviewableReservations)에는 영향 없다. unique라
+	// 예약 하나당 리뷰가 두 개 생기는 걸 DB 레벨에서도 막는다(NULL끼리는 유니크 제약에서 제외되므로
+	// 레거시 리뷰 여러 개는 문제없다).
+	@Column(name = "reservation_id", unique = true)
+	private Long reservationId;
+
 	@Column(name = "rating", nullable = false)
 	private Integer rating;
 
@@ -39,8 +47,8 @@ public class ReviewEntity {
 	private String imageUrl;
 
 	// 추가됨 (강노은) — 왜: 리뷰 수정 남용(예: 작성 후 몰래 내용을 바꾸는 것) 방지용으로
-	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#submitReview에서
-	// 기존 리뷰를 덮어쓸 때만 true로 바뀐다.
+	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#updateReview에서
+	// 수정할 때만 true로 바뀐다.
 	@Builder.Default
 	@Column(name = "edited", nullable = false)
 	private boolean edited = false;

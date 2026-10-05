@@ -156,5 +156,54 @@
 
   </div>
   <script th:src="@{/js/app.js}"></script>
+
+  <!--/* 강노은: 실시간 알림(SSE) 전역 구독 — 예전엔 home.html에서만 열어서 홈 화면에 있을 때만
+       종(bell) 배지가 실시간으로 바뀌었다. 모든 화면이 이 layout을 거치므로 여기로 옮기면 로그인한
+       사용자는 어느 화면에 있든 똑같이 받는다. 로그인 안 했으면 /user/alerts/stream이 401만 주고
+       끝나는 게 낭비라 세션에 userId 있을 때만 연다. 연결이 끊기면 EventSource가 알아서 재연결한다.
+       알림함(/user/alerts) 자체의 "새로고침" 배너는 그 페이지 스크립트가 girigiri:new-notification
+       커스텀 이벤트로 따로 받아 처리하므로, 거기서는 이 전역 토스트를 생략한다(같은 알림을 두 번
+       안내하지 않기 위해). */-->
+  <script th:if="${session.userId != null}">
+    (function () {
+      if (!window.EventSource) return;
+      var source = new EventSource('/user/alerts/stream');
+
+      source.addEventListener('unread-count', function (e) {
+        var count = parseInt(e.data, 10) || 0;
+        var bell = document.getElementById('alert-bell');
+        var dot = document.getElementById('alert-dot');
+        if (!bell) return;
+        if (count > 0 && !dot) {
+          dot = document.createElement('span');
+          dot.id = 'alert-dot';
+          dot.style.cssText = 'position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)';
+          bell.appendChild(dot);
+        } else if (count === 0 && dot) {
+          dot.remove();
+        }
+      });
+
+      source.addEventListener('new-notification', function () {
+        window.dispatchEvent(new CustomEvent('girigiri:new-notification'));
+
+        if (window.location.pathname === '/user/alerts') return;
+        if (document.getElementById('girigiri-toast-new-alert')) return;
+
+        var toast = document.createElement('a');
+        toast.id = 'girigiri-toast-new-alert';
+        toast.href = '/user/alerts';
+        toast.className = 'girigiri-toast';
+        toast.innerHTML = '<svg class="icon" style="width:16px;height:16px"><use href="#i-bell"></use></svg>'
+          + '<span>새 알림이 도착했어요</span>';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function () { toast.classList.add('is-shown'); });
+        setTimeout(function () {
+          toast.classList.remove('is-shown');
+          setTimeout(function () { toast.remove(); }, 300);
+        }, 5000);
+      });
+    })();
+  </script>
 </body>
 </html>

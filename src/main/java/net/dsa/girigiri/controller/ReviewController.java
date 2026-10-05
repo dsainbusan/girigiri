@@ -34,16 +34,32 @@ public class ReviewController {
 		return "redirect:/user/stores/" + storeId;
 	}
 
-	// 변경됨 (강노은) — 왜: 사진 리뷰를 URL 문자열 입력에서 실제 파일 업로드로 바꿈.
+	// 변경됨 (강노은, 2026-10-01) — "매장당 리뷰 1건"에서 "픽업완료 예약당 1건"으로 바뀌면서 작성/수정이
+	// 더 이상 같은 (storeId, userId) 키로 묶이지 않는다(한 유저가 같은 매장에 리뷰를 여러 개 가질 수
+	// 있음) — 그래서 작성(reservationId로 대상 지정)과 수정(reviewId로 대상 지정)을 별 엔드포인트로 뗐다.
+	//
 	// imagePhoto: 새로 올린 파일(선택). removeImage: 새 파일 없이 "기존 사진 삭제"만 요청하는 체크박스.
 	// 둘 다 없으면 기존 사진을 그대로 유지한다(폼이 파일 input이라 기존 값을 다시 제출할 방법이 없어서).
-	//
-	// 추가됨 (강노은) — 왜: 리뷰 등록/수정 버튼을 눌러도 처리 결과가 화면에 아무 표시 없이 그냥
-	// 새로고침되는 것처럼 보여서, "등록/수정됐다"는 걸 알려주는 1회성 안내를 넣었다. flash
-	// attribute라 리다이렉트된 화면에 한 번만 뜨고 새로고침하면 사라진다(예약 취소/수락 안내와 동일한 방식).
 	@LoginRequired
 	@PostMapping
-	public String submit(@PathVariable Long storeId,
+	public String create(@PathVariable Long storeId,
+						  @RequestParam Long reservationId,
+						  @RequestParam int rating,
+						  @RequestParam(required = false) String content,
+						  @RequestParam(required = false) MultipartFile imagePhoto,
+						  @RequestParam(required = false) String returnTo,
+						  HttpSession session,
+						  RedirectAttributes redirectAttributes) {
+		Long userId = (Long) session.getAttribute("userId");
+		reviewService.createReview(userId, storeId, reservationId, rating, content, imagePhoto);
+		redirectAttributes.addFlashAttribute("reviewMessage", "리뷰가 등록되었습니다.");
+		return resolveRedirect(returnTo, storeId);
+	}
+
+	@LoginRequired
+	@PostMapping("/{reviewId}/edit")
+	public String update(@PathVariable Long storeId,
+						  @PathVariable Long reviewId,
 						  @RequestParam int rating,
 						  @RequestParam(required = false) String content,
 						  @RequestParam(required = false) MultipartFile imagePhoto,
@@ -52,8 +68,8 @@ public class ReviewController {
 						  HttpSession session,
 						  RedirectAttributes redirectAttributes) {
 		Long userId = (Long) session.getAttribute("userId");
-		boolean isNew = reviewService.submitReview(userId, storeId, rating, content, imagePhoto, removeImage);
-		redirectAttributes.addFlashAttribute("reviewMessage", isNew ? "리뷰가 등록되었습니다." : "리뷰가 수정되었습니다.");
+		reviewService.updateReview(userId, reviewId, rating, content, imagePhoto, removeImage);
+		redirectAttributes.addFlashAttribute("reviewMessage", "리뷰가 수정되었습니다.");
 		return resolveRedirect(returnTo, storeId);
 	}
 

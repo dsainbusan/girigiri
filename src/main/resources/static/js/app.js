@@ -115,13 +115,16 @@
     if (openBtn) openBtn.hidden = false;
   });
 
-  // 강노은: 리뷰 등록/수정 완료 안내 같은 1회성 알림(flash)은 계속 떠있을 필요가 없어서,
-  // data-auto-dismiss="ms" 만큼 지나면 살짝 페이드되며 사라지게 한다.
+  // 강노은 (2026-10-05): 리뷰 등록/수정·설정 저장 같은 1회성 안내(flash)를, 화면 맨 위에 뜨는
+  // 실시간 알림 토스트(.girigiri-toast, common/layout.html의 SSE 스크립트 참고)와 같은 모양·위치로
+  // 통일했다 — data-auto-dismiss 엘리먼트는 전부 마크업에서 class="girigiri-toast"를 이미 달고
+  // 있고(기본 opacity:0, position:fixed), 여기서는 그 is-shown 토글만 해주면 CSS 트랜지션이
+  // 나타남/사라짐을 똑같이 처리한다.
   document.querySelectorAll("[data-auto-dismiss]").forEach(function (el) {
     var delay = parseInt(el.getAttribute("data-auto-dismiss"), 10) || 3000;
+    requestAnimationFrame(function () { el.classList.add("is-shown"); });
     setTimeout(function () {
-      el.style.transition = "opacity .3s ease";
-      el.style.opacity = "0";
+      el.classList.remove("is-shown");
       setTimeout(function () { el.hidden = true; }, 300);
     }, delay);
   });
