@@ -1,5 +1,5 @@
 -- =====================================================================
--- 기리기리 ERD용 DDL (2026-10-05 갱신 — 코드 기준 26개 테이블 전체 반영)
+-- 기리기리 ERD용 DDL (2026-10-06 갱신 — 코드 기준 28개 테이블 전체 반영)
 -- =====================================================================
 -- 용도: 이 파일 자체를 실행하려는 게 아니라(테이블은 ddl-auto=update로 자동 생성됨),
 --       ERD Editor(vuerd) 플러그인의 "SQL DDL Import" 기능에 붙여넣어서
@@ -7,8 +7,8 @@
 --
 -- 사용법 (IntelliJ ERD Editor 플러그인):
 --   1. docs/ 폴더에 기리기리.vuerd.json 파일이 이미 있으면 그대로 열고, 없으면 빈 파일로 새로 생성
---   2. 그 파일을 열면 캔버스가 뜬다 (기존 도표가 있으면 지우고 새로 그리는 걸 권장 — 테이블이 24개 → 26개로
---      바뀌어서(report 삭제, 3개 신규) 자동 배치가 훨씬 깔끔하다)
+--   2. 그 파일을 열면 캔버스가 뜬다 (기존 도표가 있으면 지우고 새로 그리는 걸 권장 — 테이블이 26개 → 28개로
+--      바뀌어서(refund/reservation_status_history 2개 신규) 자동 배치가 훨씬 깔끔하다)
 --   3. 캔버스 우클릭 → SQL → SQL DDL Import (또는 상단 메뉴의 SQL 아이콘)
 --   4. 이 파일 내용을 통째로 붙여넣고 Run/Create
 --   5. 테이블이 자동 배치되면, 화면에 안 보이는 FK 관계선은 컬럼을 드래그해서 수동으로 연결
@@ -47,6 +47,13 @@
 --               settlement_alert_enabled(2026-09-22)/automation_alert_enabled(2026-09-22),
 --               product.owner_discount_rate, review.reply_content/reply_created_at/reply_edited
 --               (2026-09-17, 문창호 "사장님 리뷰 답글" 기능)
+--   2026-10-05  (강노은) review.reservation_id 추가 — "매장당 리뷰 1건"에서 "픽업완료 예약당 1건"으로
+--               정책 변경(UK, NULL 허용 — 이 컬럼 도입 전 리뷰는 소급 연결 불가)
+--   2026-10-06  (문창호) 신고 기반 리팩터링(팀원 작업) 병합 후 재대조 — refund(신고 처리로 발생한
+--               관리자 환불)/reservation_status_history(예약 상태 변경 이력, 현재는 picked→refunded
+--               전이 1건만 기록) 2개 테이블 신규 반영. 병합 과정에서 refund 테이블이 이 파일에 중복
+--               정의(한 곳은 complaint보다 앞에 있어 FK 선후관계도 안 맞았음)돼 있던 걸 발견해 하나로
+--               정리 → 총 28개 테이블
 -- =====================================================================
 
 -- ── 1. 회원 / 매장 / 상품 ───────────────────────────────────────────
@@ -289,26 +296,6 @@ CREATE TABLE payment_cancel (
     requested_at  DATETIME NOT NULL COMMENT '취소/환불 요청 시각',
     INDEX idx_payment_cancel_payment_id (payment_id),
     FOREIGN KEY (payment_id) REFERENCES payment(id)
-);
-
--- 신고 처리로 발생한 관리자 환불 1건 (2026-10-06 추가, 신고 기반 리팩터링 — 스펙 C). 유저 본인
--- 취소(payment/payment_cancel 경로)와는 완전히 분리된 테이블 — PG 상태의 단일 진실 소스는 여전히
--- payment.pay_status라서(정산이 그것만 본다), 이 테이블은 "신고 처리 환불 1건"이라는 사실 자체와
--- "환불 완료" 배지 표시(일시·처리자)용으로만 쓴다.
-CREATE TABLE refund (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id        BIGINT NOT NULL COMMENT '= reservation.id ("주문")',
-    report_id       BIGINT NOT NULL COMMENT '= complaint.id, 이 환불의 근거가 된 신고',
-    amount          INT NOT NULL,
-    reason          VARCHAR(255) NOT NULL,
-    status          VARCHAR(20) NOT NULL COMMENT 'REQUESTED/DONE/FAILED (enum, 대문자 저장)',
-    pg_refund_tid   VARCHAR(50) COMMENT 'PG 환불 거래 참조값(현재는 merchantUid 재사용, PortOneClient 참고)',
-    requested_by    BIGINT NOT NULL COMMENT '처리한 슈퍼어드민 userId',
-    created_at      DATETIME,
-    updated_at      DATETIME,
-    UNIQUE KEY uk_refund_order_id (order_id),
-    FOREIGN KEY (order_id) REFERENCES reservation(id),
-    FOREIGN KEY (report_id) REFERENCES complaint(id)
 );
 
 CREATE TABLE receipt (

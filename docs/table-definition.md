@@ -1,7 +1,8 @@
 # 테이블 정의서 (テーブル定義書) — 기리기리(끼리끼리)
 
-- 작성 기준: `src/main/java/net/dsa/girigiri/domain/entity/*.java` (2026-10-05 갱신 — 코드 전수 재조사, 24개 → **26개 테이블**)
-- `docs/schema.sql`(ERD용 DDL)도 이 문서와 함께 26개 테이블 전체로 동기화했다. 실제 ERD 다이어그램(`docs/girigiri.vuerd.json`)은 IntelliJ ERD Editor 플러그인에서 `docs/schema.sql`을 "SQL DDL Import"로 다시 불러와 재생성해야 한다 (`docs/schema.sql` 상단 사용법 참고) — 이 문서/DDL 갱신만으로는 `.vuerd.json` 파일 자체는 자동으로 안 바뀐다.
+- 작성 기준: `src/main/java/net/dsa/girigiri/domain/entity/*.java` (2026-10-06 갱신 — 코드 전수 재조사, 24개 → 26개 → **28개 테이블**)
+- `docs/schema.sql`(ERD용 DDL)도 이 문서와 함께 28개 테이블 전체로 동기화했다. 실제 ERD 다이어그램(`docs/girigiri.vuerd.json`)은 IntelliJ ERD Editor 플러그인에서 `docs/schema.sql`을 "SQL DDL Import"로 다시 불러와 재생성해야 한다 (`docs/schema.sql` 상단 사용법 참고) — 이 문서/DDL 갱신만으로는 `.vuerd.json` 파일 자체는 자동으로 안 바뀐다.
+- **2026-10-06 변경 요약**: 팀원이 독립적으로 진행한 "신고 기반 리팩터링"(관리자 환불) 병합 — `refund`(신고 처리로 발생한 관리자 환불)/`reservation_status_history`(예약 상태 변경 이력) 2개 테이블 신규 반영, `reservation.status`에 `refunded` 값 추가. 병합 과정에서 `docs/schema.sql`에 `refund` 테이블이 중복 정의돼 있던 걸 발견해 정리. 같은 날 `review.reservation_id`(2026-10-01, 강노은 — "매장당 1리뷰"에서 "주문당 1리뷰"로 정책 변경, UK 포함)도 함께 반영.
 - **2026-10-05 변경 요약**: `report` 테이블 삭제(2026-09-07에 매출 리포트가 Supabase `sales` 테이블 기반으로 완전히 대체된 뒤 저장 코드가 전혀 없던 고아 테이블 — `ReportEntity`/`ReportRepository`도 코드에서 함께 삭제). `user_social_accounts`/`user_archive`(2026-09-22)/`store_announcement`(2026-09-29) 3개 테이블 신규 반영. `users.deleted_at`(soft delete, 2026-09-22) 컬럼 누락분 추가. 소셜 로그인 제공자 네이버→라인 정정(`oauth_provider`). 담당자 변경 반영(김태훈 이탈, 2026-09-16 — store/product/inquiry 답변 전부 문창호 인수). **(추가 보강, 송채현)** `coupon.used_at`(2026-09-22) 누락분 추가 반영, `users.deleted_at`은 `docs/schema.sql` DDL에서 빠져있던 걸 같이 맞춤. **(2차 추가 보강, 송채현 — IntelliJ 라이브 코드 26개 엔티티 전체 재대조)** 문창호 전수조사에서도 빠졌던 컬럼 8개 추가: `users.language`(2026-09-22), `store.image_url`(2026-09-21)/`settlement_alert_enabled`·`automation_alert_enabled`(2026-09-22), `product.owner_discount_rate`, `review.reply_content`·`reply_created_at`·`reply_edited`(2026-09-17, 문창호 "사장님 리뷰 답글" 기능) — 전부 문창호 전수조사 날짜(10/05) 이전에 이미 코드에 있었는데 문서에 안 반영돼 있었음.
 - **store.owner_id 관계 모델 결정 완료**: 안B(User가 storeId로 Store를 소유) 확정 (2026-08-21, `StoreEntity` 코드 주석). 안A(Store 독립 로그인 계정)용 레거시 컬럼(`login_id`/`password`)은 이미 코드에서 제거됨 — 이전 버전 문서에 남아있던 "미확정" 표시는 이번 갱신으로 정리했다.
 - CLAUDE.md 엔티티 설계(예상)에 있던 `Category`(카테고리 마스터)는 아직 별도 테이블 없이 `store.category` 자유 텍스트 컬럼으로만 존재한다. 절약 랭킹은 별도 테이블 없이 `users`/`user_badge` 집계로 처리.
@@ -220,7 +221,7 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 | 8 | coupon_id | 사용 쿠폰 | BIGINT | | | O | | | | 이 예약에 쓴 coupon.id. 안 썼으면 NULL (2026-09-07 추가) |
 | 9 | pickup_time | 픽업 시각 | DATETIME | | | | | O | | 노쇼 판정·오늘 픽업 목록 조회에 사용 |
 | 10 | pickup_code | 픽업 코드 | VARCHAR(30) | | | | O | O | | QR/현장 확인용 (`findByPickupCode`). DB UK로 중복 방지 (2026-09-08 추가) |
-| 11 | status | 상태 | VARCHAR(20) | O | | | | O | | pending → confirmed → ready → picked / cancelled / noshowed |
+| 11 | status | 상태 | VARCHAR(20) | O | | | | O | | pending → confirmed → ready → picked / cancelled / noshowed / **refunded**(2026-10-06 추가, 신고 처리 결과 관리자 환불 — `AdminRefundService`) |
 | 12 | reserved_at | 예약일시 | DATETIME | O | | | | | | 공통 컬럼(created_at 역할) |
 | 13 | accepted_at | 매장 수락일시 | DATETIME | | | | | | | confirmed→ready 전환 시점 |
 | 14 | picked_at | 픽업완료일시 | DATETIME | | | | | | | |
@@ -229,7 +230,23 @@ POS 카탈로그에서 불러온 매장의 **영속 메뉴**(그날그날 파는
 
 ---
 
-## 10. payment — 決済
+## 10. reservation_status_history — 予約状態変更履歴
+
+예약 상태 변경 이력(감사 로그, 불변). 2026-10-06 신설 — 신고 기반 리팩터링(관리자 환불) 요청으로 추가됐다. 범위를 일부러 좁게 잡아서, 기존 취소(cancelReservation/cancelByStore)·노쇼·픽업 전이는 지금처럼 이력 없이 그대로 두고, `AdminRefundService`의 "picked → refunded" 전이 1건에만 이 테이블에 행을 남긴다 — "누가/언제/왜" 바꿨는지 신고 처리 결과를 나중에 감사할 수 있어야 한다는 요구에 대응.
+
+| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | id | 이력번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
+| 2 | reservation_id | 예약번호 | BIGINT | O | | O | | | | reservation.id 참조 |
+| 3 | from_status | 변경 전 상태 | VARCHAR(20) | O | | | | | | |
+| 4 | to_status | 변경 후 상태 | VARCHAR(20) | O | | | | | | 현재는 "refunded"만 기록됨 |
+| 5 | changed_by | 처리자 회원번호 | BIGINT | O | | | | | | 처리한 관리자(슈퍼어드민) userId |
+| 6 | reason | 변경 사유 | VARCHAR(255) | | | | | | | |
+| 7 | created_at | 생성일시 | DATETIME | O | | | | | | 공통 컬럼. updated_at 없음(불변 레코드) |
+
+---
+
+## 11. payment — 決済
 
 PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fail()`/`cancel()`/`applyCancel()` 상태 전이 메서드로만 변경 가능(불법 상태 조합 방지).
 
@@ -249,7 +266,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 11. payment_cancel — 決済取消履歴
+## 12. payment_cancel — 決済取消履歴
 
 결제 취소/환불 **시도** 1건을 남기는 감사(audit) 로그. 같은 결제를 여러 번 취소 시도(예: 1차 환불 API 실패 → 재시도)해도 이력이 각각 남는다. 담당: 송채현, 송보미 제안(2026-08-25).
 
@@ -264,7 +281,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 12. receipt — 領収書
+## 13. receipt — 領収書
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -275,7 +292,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 13. coupon — クーポン
+## 14. coupon — クーポン
 
 회원 1명에게 발급된 쿠폰 1장. 담당: 송채현(2026-09-07 신규/재설계). 발급 경로 3가지 모두 **회원 1명당 1장 지급** 방식이라 공유 수량 풀 개념이 없다.
 
@@ -294,7 +311,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 14. coupon_policy — クーポン方針
+## 15. coupon_policy — クーポン方針
 
 웰컴/매장귀책보상 쿠폰의 할인율 정책값. **항상 1행만 존재**(id=1) — 없으면 서비스가 기본값(웰컴 10%/보상 15%)으로 자동 생성.
 
@@ -307,7 +324,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 15. coupon_campaign — 프로모션 캠페인
+## 16. coupon_campaign — 프로모션 캠페인
 
 슈퍼어드민이 이벤트마다 만드는 쿠폰 캠페인. 회원이 `code`를 앱에 입력해 발급받으며, 캠페인 1개당 회원 1명에게 1장만 발급된다.
 
@@ -323,7 +340,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 16. review — レビュー
+## 17. review — レビュー
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -344,7 +361,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 17. review_summary — レビューAI要約
+## 18. review_summary — レビューAI要約
 
 가게별 "AI 리뷰 요약" 캐시(가게당 최대 1행). 담당: 강노은. 매 요청마다 Gemini를 다시 부르지 않도록, 마지막 요약 생성 시점의 리뷰 개수를 저장해두고 리뷰 개수가 달라졌을 때만 재생성한다.
 
@@ -358,7 +375,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 18. likes — お気に入り
+## 19. likes — お気に入り
 
 | No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -371,7 +388,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 19. notification — 通知
+## 20. notification — 通知
 
 인앱 알림함 1건. 담당: 강노은. `NotificationTriggerScheduler`가 주기적으로 스캔해서 생성하며, `source_key`로 같은 사건에 대한 중복 생성을 막는다(idempotent).
 
@@ -388,7 +405,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 20. notification_setting — 通知設定
+## 21. notification_setting — 通知設定
 
 사용자 1명당 1행. `UserEntity`(문창호 담당)에 컬럼을 얹지 않고 강노은이 별도 엔티티로 분리.
 
@@ -402,7 +419,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 21. notice — お知らせ
+## 22. notice — お知らせ
 
 슈퍼어드민이 작성하는 공지사항 (WBS 7.0, 송보미 담당). `published` 수동 on/off + 선택적 게시 기간(`publish_start_at`/`publish_end_at`) 조합으로 노출 여부가 결정된다.
 
@@ -419,7 +436,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 22. inquiry — 問い合わせ
+## 23. inquiry — 問い合わせ
 
 문의 게시판 글. `store_id`가 있으면 특정 매장 문의, NULL이면 서비스 전체 문의.
 
@@ -436,7 +453,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 23. inquiry_comment — 問い合わせコメント
+## 24. inquiry_comment — 問い合わせコメント
 
 문의 글에 달리는 댓글(작성자 추가 설명 또는 매장/운영자 답변).
 
@@ -450,7 +467,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 24. complaint — 通報
+## 25. complaint — 通報
 
 신고 접수(슈퍼어드민 "신고·문의" 화면). 신고 제출 화면(소비자용)이 아직 없고 비회원 신고도 있을 수 있어, 대상/신고자는 FK 강제 대신 표시용 스냅샷 문자열 + 선택적 id(있으면 상세 링크) 조합으로 저장한다. "report"라는 이름은 매장 판매/폐기 리포트(`report` 테이블)가 이미 쓰고 있어 `complaint`로 지었다.
 
@@ -471,7 +488,26 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 25. settlement — 週次精算
+## 26. refund — 通報による返金
+
+신고 처리로 발생한 "관리자 환불" 1건. 담당: 문창호(2026-10-06, 신고 기반 리팩터링). 유저 본인 취소(`payment`/`payment_cancel` 경로, `cancelReservation`/`cancelByStore`)와는 완전히 분리된 테이블이다 — 정산(`SettlementService`)은 여전히 `payment.pay_status`만 보고 계산하므로, 이 테이블을 건드리지 않아도 정산엔 자동 반영된다. 이 테이블은 "신고 처리 과정에서 운영자가 이미 픽업 완료된 주문을 환불했다"는 사실 자체(환불 완료 배지의 "일시·처리자" 표시용)만 남긴다.
+
+| No | 컬럼명 (물리) | 논리명 | 데이터 타입 | NN | PK | FK | UK | IDX | 기본값 | 설명 · 제약조건 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | id | 환불번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
+| 2 | order_id | 주문번호 | BIGINT | O | | O | O | | | reservation.id 참조("주문"). UK — 같은 주문에 환불 레코드가 두 번 생기는 걸 DB 레벨에서 막음(`AdminRefundService`가 이미 REQUESTED/FAILED 행이 있으면 새로 안 만들고 재사용) |
+| 3 | report_id | 신고번호 | BIGINT | O | | O | | | | complaint.id 참조 — 이 환불의 근거가 된 신고 |
+| 4 | amount | 환불 금액 | INT | O | | | | | | |
+| 5 | reason | 환불 사유 | VARCHAR(255) | O | | | | | | |
+| 6 | status | 처리 상태 | VARCHAR(20) | O | | | | | | REQUESTED / DONE / FAILED (enum, 대문자 저장) |
+| 7 | pg_refund_tid | PG 환불 거래 참조값 | VARCHAR(50) | | | | | | | 현재는 merchantUid 재사용(`PortOneClient` 참고) |
+| 8 | requested_by | 처리자 회원번호 | BIGINT | O | | | | | | 처리한 슈퍼어드민 userId |
+| 9 | created_at | 생성일시 | DATETIME | O | | | | | | 공통 컬럼 |
+| 10 | updated_at | 수정일시 | DATETIME | | | | | | | 공통 컬럼 |
+
+---
+
+## 27. settlement — 週次精算
 
 주간 정산 1건. 담당: 문창호(2026-09-01, WBS 2.0 "매장 정산 페이지"). "정산 확정"(계산, `SettlementScheduler` 매주 월 00:00)과 "지급"(슈퍼어드민 실제 송금 확인)을 분리한 구조.
 
@@ -501,7 +537,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ---
 
-## 26. user_badge — バッジ獲得記録
+## 28. user_badge — バッジ獲得記録
 
 사용자가 실제로 획득(해금)한 뱃지 기록. 뱃지 조건은 매번 현재 통계로 재계산되지만(예: 이달 목표 달성률처럼 나중에 다시 거짓이 될 수 있음), "한 번 딴 뱃지는 영구 유지"되도록 조건을 처음 충족한 시점에 여기 기록해두고 이후로는 이 기록의 존재 여부로 해금 상태를 판정한다.
 
@@ -530,23 +566,25 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 7 | listing_template | 自動出品テンプレート | "오늘의 구제" 자동 등록 템플릿 | N:1 → store · 1:N → product(template_id) | 문창호 |
 | 8 | product | 商品 | 매장이 등록한 마감세일 상품(재고) | N:1 → store, listing_template, menu_item · 1:N → reservation | 문창호 |
 | 9 | reservation | 予約履歴 | 상품 예약·픽업 이력 (1건=1행, 상태 관리) | N:1 → users, product, store, coupon · 1:1 → receipt, payment | 송채현 |
-| 10 | payment | 決済 | PortOne 결제 요청·승인 이력 | 1:1 → reservation | 송채현 |
-| 11 | payment_cancel | 決済取消履歴 | 결제 취소/환불 시도 감사 로그 | N:1 → payment | 송채현 |
-| 12 | receipt | 領収書 | 결제 영수증 PDF 기록 | 1:1 → reservation | 송채현 |
-| 13 | coupon | クーポン | 회원에게 발급된 쿠폰 1장 | N:1 → users, coupon_campaign, reservation | 송채현 |
-| 14 | coupon_policy | クーポン方針 | 웰컴/보상 쿠폰 할인율 정책값(1행) | (관계 없음, 독립 테이블) | 송채현 |
-| 15 | coupon_campaign | 프로모션 캠페인 | 슈퍼어드민 발급 프로모션 코드 | 1:N → coupon | 송채현 |
-| 16 | review | レビュー | 매장 리뷰·별점·사진 | N:1 → users, store | 강노은 |
-| 17 | review_summary | レビューAI要約 | 가게별 AI 리뷰 요약 캐시(가게당 1행) | N:1 → store | 강노은 |
-| 18 | likes | お気に入り | 관심 매장 찜하기 | N:1 → users, store | 강노은 |
-| 19 | notification | 通知 | 인앱 알림함 | N:1 → users | 강노은 |
-| 20 | notification_setting | 通知設定 | 회원별 알림 on/off 설정(회원당 1행) | N:1 → users | 강노은 |
-| 21 | notice | お知らせ | 슈퍼어드민 공지사항 | (관계 없음, 독립 테이블) | 송보미 |
-| 22 | inquiry | 問い合わせ | 문의 게시판 글 | N:1 → users, store(nullable), reservation(nullable) · 1:N → inquiry_comment | 강노은(작성) / 문창호(답변) |
-| 23 | inquiry_comment | 問い合わせコメント | 문의 댓글/답변 | N:1 → inquiry, users | 강노은 / 문창호 |
-| 24 | complaint | 通報 | 슈퍼어드민 신고 접수·처리 | (스냅샷 위주, FK 미설정) | 송보미 |
-| 25 | settlement | 週次精算 | 매장별 주간 정산 | N:1 → store · 자기참조(merged_into_id) | 문창호 |
-| 26 | user_badge | バッジ獲得記録 | 가계부 뱃지 획득 기록 | N:1 → users | 문창호 |
+| 10 | reservation_status_history | 予約状態変更履歴 | 예약 상태 변경 이력(감사 로그, 현재는 picked→refunded 1건만) | N:1 → reservation | 문창호 |
+| 11 | payment | 決済 | PortOne 결제 요청·승인 이력 | 1:1 → reservation | 송채현 |
+| 12 | payment_cancel | 決済取消履歴 | 결제 취소/환불 시도 감사 로그 | N:1 → payment | 송채현 |
+| 13 | receipt | 領収書 | 결제 영수증 PDF 기록 | 1:1 → reservation | 송채현 |
+| 14 | coupon | クーポン | 회원에게 발급된 쿠폰 1장 | N:1 → users, coupon_campaign, reservation | 송채현 |
+| 15 | coupon_policy | クーポン方針 | 웰컴/보상 쿠폰 할인율 정책값(1행) | (관계 없음, 독립 테이블) | 송채현 |
+| 16 | coupon_campaign | 프로모션 캠페인 | 슈퍼어드민 발급 프로모션 코드 | 1:N → coupon | 송채현 |
+| 17 | review | レビュー | 매장 리뷰·별점·사진 (주문당 1건) | N:1 → users, store, reservation(nullable) | 강노은 |
+| 18 | review_summary | レビューAI要約 | 가게별 AI 리뷰 요약 캐시(가게당 1행) | N:1 → store | 강노은 |
+| 19 | likes | お気に入り | 관심 매장 찜하기 | N:1 → users, store | 강노은 |
+| 20 | notification | 通知 | 인앱 알림함 | N:1 → users | 강노은 |
+| 21 | notification_setting | 通知設定 | 회원별 알림 on/off 설정(회원당 1행) | N:1 → users | 강노은 |
+| 22 | notice | お知らせ | 슈퍼어드민 공지사항 | (관계 없음, 독립 테이블) | 송보미 |
+| 23 | inquiry | 問い合わせ | 문의 게시판 글 | N:1 → users, store(nullable), reservation(nullable) · 1:N → inquiry_comment | 강노은(작성) / 문창호(답변) |
+| 24 | inquiry_comment | 問い合わせコメント | 문의 댓글/답변 | N:1 → inquiry, users | 강노은 / 문창호 |
+| 25 | complaint | 通報 | 슈퍼어드민 신고 접수·처리 | (스냅샷 위주, FK 미설정) | 송보미 |
+| 26 | refund | 通報による返金 | 신고 처리로 발생한 관리자 환불 1건 | N:1 → reservation(order_id), complaint(report_id) | 문창호 |
+| 27 | settlement | 週次精算 | 매장별 주간 정산 | N:1 → store · 자기참조(merged_into_id) | 문창호 |
+| 28 | user_badge | バッジ獲得記録 | 가계부 뱃지 획득 기록 | N:1 → users | 문창호 |
 
 ---
 
@@ -554,7 +592,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 1. ~~**store.owner_id 관계 모델**~~ — **해결됨.** 안B(User가 storeId로 Store 소유) 확정(2026-08-21), `login_id`/`password` 레거시 컬럼 제거 완료.
 2. **likes.(user_id, store_id) 복합 UK** — ~~미적용~~ **적용됨**(`uk_likes_user_store`, 2026-09-08).
-3. **review.(user_id, store_id) 복합 UK** — "1인 1매장 1리뷰(덮어쓰기)" 정책이 맞다면 UK 추가 권장. 아직 미적용.
+3. ~~**review.(user_id, store_id) 복합 UK**~~ — **해당 없음(2026-10-01, 강노은).** "1인 1매장 1리뷰(덮어쓰기)" 정책이 "주문(예약)당 1리뷰"로 바뀌면서 이 복합 UK는 더 이상 맞지 않는다 — 대신 `review.reservation_id`에 단일 컬럼 UK(`uk_review_reservation`, NULL 허용)가 적용됐다(17번 섹션 참고).
 4. ~~**report.(store_id, report_date) 복합 UK**~~ — **해당 없음(2026-10-05).** `report` 테이블 자체를 삭제했다 — 2026-09-07에 매출 리포트가 Supabase(`sales` 테이블) 기반으로 완전히 대체된 뒤 어떤 코드도 새 행을 쓰지 않던 고아 테이블이었다(`ReportEntity`/`ReportRepository` 코드에서도 삭제).
 5. **reservation.pickup_code UK** — ~~미적용~~ **적용됨**(`uk_reservation_pickup_code`, 2026-09-08).
 6. **inquiry_comment 작성자 구분** — 문의 작성자 본인 댓글인지, 매장/운영자 답변인지 구분하는 컬럼이 없음(role/viewMode 세션 로직 확정 후 추가 검토로 유지 중).
@@ -567,6 +605,8 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 ---
 
 ## 갱신 이력
+
+**2026-10-06 (문창호)** — 팀원이 독립적으로 진행한 "신고 기반 리팩터링"(관리자 환불) dev 병합 후 재대조. `refund`(신고 처리로 발생한 관리자 환불)/`reservation_status_history`(예약 상태 변경 이력, 현재는 picked→refunded 전이 1건만 기록) 2개 테이블 신규 반영 → 섹션 26개 전체 재번호. `reservation.status`에 `refunded` 값 추가 반영. `docs/schema.sql`에서 `refund` 테이블이 중복 정의(한쪽은 `complaint` 정의보다 앞에 있어 FK 선후관계도 안 맞았음)돼 있던 버그를 발견해 하나로 정리. "확정 전 검토 필요 사항" 3번(`review` 복합 UK) 항목을 "해당 없음"으로 갱신(주문당 리뷰 정책으로 바뀌며 `reservation_id` 단일 UK로 대체됨). 총 26개 → **28개 테이블**.
 
 **2026-10-05 (문창호/강노은 병합)** — review.reservation_id 문서화. "회원당 매장 1곳에 리뷰 1건"에서 "예약(주문)당 리뷰 1건"으로 정책 변경(강노은, 2026-10-01, `sql/migration-2026-10-01-review-reservation-id.sql`) — `review.reservation_id`(nullable, UK) 컬럼 추가. 문창호가 같은 날 독립적으로 유사 기능(72시간 창 포함, DB 제약 없음)을 구현했다가 dev 브랜치 병합 시 충돌 발견 — 강노은의 DB 제약 버전을 기준으로 채택하고, 72시간 작성 제한만 그 위에 추가로 얹었다(`ReviewService.getReviewableReservations`/`createReview`).
 
