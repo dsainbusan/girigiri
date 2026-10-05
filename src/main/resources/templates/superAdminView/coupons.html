@@ -149,7 +149,7 @@
 
       <div class="modal-section">
         <div class="modal-section__head">
-          <span class="modal-section__title">대상 시도</span>
+          <span class="modal-section__title">대상 지역</span>
           <span class="modal-section__tools">
             <button type="button" data-preset="capital">수도권</button>
             <button type="button" data-preset="all">전체 선택</button>
@@ -271,7 +271,7 @@
     function refreshRecipients() {
       var sidos = selected();
       if (sidos.length === 0) {
-        recipients = 0; setSummary(recipientEl, '시도를 선택해 주세요', false); submitBtn.disabled = true; updateCost(); return;
+        recipients = 0; setSummary(recipientEl, '지역을 선택해 주세요', false); submitBtn.disabled = true; updateCost(); return;
       }
       setSummary(recipientEl, '불러오는 중...', false);
       fetch('/superadmin/coupons/region/recipient-count?' + sidos.map(function (s) { return 'sidos=' + encodeURIComponent(s); }).join('&'))
