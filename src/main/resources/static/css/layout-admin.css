@@ -110,14 +110,17 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 .topbar__inner {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 24px;
+  gap: 12px;
   height: 46px;
 }
 .topbar__util {
   display: flex;
   align-items: center;
   gap: 4px;
+  /* 변경됨 (2026-10-06) — 로고가 이 줄 맨 앞으로 옮겨오면서, util만 오른쪽 끝에 붙도록
+     margin-left:auto로 민다(형제가 몇 개든 util 하나만 밀어내면 되니 justify-content:
+     space-between보다 이쪽이 안전 — 뱃지(badge) span이 끼어도 레이아웃이 안 깨진다). */
+  margin-left: auto;
 }
 .util-btn {
   display: inline-flex;

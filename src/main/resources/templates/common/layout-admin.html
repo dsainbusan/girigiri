@@ -67,8 +67,14 @@
 </svg>
 
 <!-- 상단 유틸 바 -->
+<!-- 변경됨 (2026-10-06) — 로고(ギリギリ)를 gnb(탭 줄)에서 이 줄로 올려달라는 요청. 로고가
+     빠진 gnb 줄은 탭 목록이 왼쪽 끝부터 채운다. -->
 <div class="topbar">
   <div class="container topbar__inner">
+    <a class="gnb__brand" th:href="@{/superadmin/dashboard}">
+      <img th:src="@{/images/brand/logo.svg}" alt="" width="20" height="20" style="vertical-align:-5px;margin-right:4px">ギリギリ
+    </a>
+    <span th:if="${badge}" class="gnb__badge-label" th:text="${badge}">뱃지</span>
     <div class="topbar__util">
       <span class="util-btn util-btn--user">
         <span class="avatar"><svg class="icon"><use href="#i-user"/></svg></span>
@@ -88,13 +94,9 @@
   </div>
 </div>
 
-<!-- 글로벌 내비게이션 -->
+<!-- 글로벌 내비게이션 — 로고/뱃지는 위 상단바로 옮겨서, 이제 탭 목록이 왼쪽 끝부터 채운다. -->
 <nav class="gnb">
   <div class="container gnb__bar">
-    <a class="gnb__brand" th:href="@{/superadmin/dashboard}">
-      <img th:src="@{/images/brand/logo.svg}" alt="" width="20" height="20" style="vertical-align:-5px;margin-right:4px">ギリギリ
-    </a>
-    <span th:if="${badge}" class="gnb__badge-label" th:text="${badge}">뱃지</span>
     <ul class="gnb__list">
       <li><a class="gnb__link" th:classappend="${active=='dashboard'} ? ' is-active'"
              th:href="@{/superadmin/dashboard}">홈</a></li>
