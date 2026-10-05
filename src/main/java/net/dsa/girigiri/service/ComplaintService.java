@@ -12,6 +12,9 @@ import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 /**
  * 손님이 예약 건에 대해 신고를 접수하는 로직 — 2026-09-08 신설.
  *
@@ -30,6 +33,33 @@ public class ComplaintService {
 	private final ComplaintRepository complaintRepository;
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
+
+	// 픽업 후 이 시간(시간 단위)이 지나면 신고 접수를 막는다 — "신고 가능 시간은 48시간" 확정(2026-10-06).
+	private static final int REPORT_WINDOW_HOURS = 48;
+
+	/**
+	 * 주문(예약) 기반 신고 접수 자격을 판정한다 — 접수 가능하면 null, 아니면 이유 메시지.
+	 * blockedCancelMessage(ReservationService)와 동일한 패턴: 화면에서 [신고하기] 버튼을 숨기는
+	 * 것과(ReservationController#myReservations), 실제 제출을 막는 것(ReservationReportController)
+	 * 둘 다 이 메서드 하나로 판정해서, 한쪽만 고치고 다른 쪽을 빠뜨리는 일을 막는다.
+	 *
+	 * 조건(스펙 A.3): 픽업완료 상태일 것 / 픽업 후 48시간 이내일 것 / 이 주문에 처리 중(PENDING)인
+	 * 신고가 이미 없을 것. "본인 주문인지"는 호출부(컨트롤러)가 세션 userId와 reservation.userId를
+	 * 비교해서 이미 걸러주는 소유권 검증 영역이라 여기서는 다루지 않는다(기존 관례).
+	 */
+	public String blockedReportMessage(ReservationEntity reservation) {
+		if (!"picked".equals(reservation.getStatus())) {
+			return "픽업 완료된 주문만 신고할 수 있어요.";
+		}
+		if (reservation.getPickedAt() == null
+				|| Duration.between(reservation.getPickedAt(), LocalDateTime.now()).toHours() >= REPORT_WINDOW_HOURS) {
+			return "픽업 후 " + REPORT_WINDOW_HOURS + "시간이 지나 신고할 수 없어요.";
+		}
+		if (complaintRepository.existsByTargetReservationIdAndStatus(reservation.getId(), ComplaintEntity.STATUS_PENDING)) {
+			return "이미 신고가 접수됐어요. 운영자 처리를 기다려주세요.";
+		}
+		return null;
+	}
 
 	/**
 	 * 예약 상세의 "신고하기" 버튼 제출 — 신고 대상(매장)과 신고와 관련된 예약을 자동으로 채운다.

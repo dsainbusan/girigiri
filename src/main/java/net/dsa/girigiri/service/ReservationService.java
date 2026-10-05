@@ -129,6 +129,10 @@ public class ReservationService {
 	// 새 예약 시 정지/영구정지 매장 차단(prepareReservation)에 쓴다. getStoreCancelStats도 이제
 	// 이 서비스로 위임한다(계산 로직 자체가 옮겨감) — 기존 호출부(컨트롤러 3곳)는 안 바뀐다.
 	private final StoreReliabilityService storeReliabilityService;
+	// 추가됨 (2026-10-06, 신고 기반 리팩터링) — 마이페이지 목록에서 [신고하기] 버튼을 보여줄지/
+	// "신고 접수됨"으로 바꿀지 판정(blockedReportMessage)에 쓴다. 역방향 의존(ComplaintService →
+	// ReservationService)은 없어서 순환 참조 걱정 없다.
+	private final ComplaintService complaintService;
 
 	/**
 	 * 결제창을 띄우기 직전 단계 — 재고를 먼저 차감하고, 예약을 "pending" 상태로 저장한다.
@@ -683,6 +687,11 @@ public class ReservationService {
 		if ("noshowed".equals(r.getStatus())) {
 			return "노쇼 처리됨";
 		}
+		if ("refunded".equals(r.getStatus())) {
+			// 추가됨 (2026-10-06, 신고 기반 리팩터링) — AdminRefundService가 cancelledBy="ADMIN"으로
+			// 남기므로 cancelReason까지 그대로 보여준다(위 "운영자 취소"와 같은 포맷).
+			return "운영자 환불" + (r.getCancelReason() != null && !r.getCancelReason().isBlank() ? " · " + r.getCancelReason() : "");
+		}
 		return null;
 	}
 
@@ -695,6 +704,11 @@ public class ReservationService {
 			case "picked" -> "done";
 			case "cancelled" -> "cancelled";
 			case "noshowed" -> "noshow";
+			// refunded는 별도 배지 변형을 추가하는 대신 cancelled 변형을 재사용한다(2026-10-06,
+			// 신고 기반 리팩터링) — statusLabel 텍스트("환불완료")로 구분되고, 기존 템플릿들
+			// (memberReservations.html/storeOrders.html/orders.html 등)이 variant 5종류만
+			// 분기하고 있어서 새 variant를 추가하면 거기서 전부 빈 배지가 될 위험이 있다.
+			case "refunded" -> "cancelled";
 			default -> "waiting";   // pending, confirmed
 		};
 	}
@@ -1105,6 +1119,7 @@ public class ReservationService {
 			case "picked" -> "이미 픽업 완료된 예약은 취소할 수 없어요.";
 			case "cancelled" -> "이미 취소된 예약이에요.";
 			case "noshowed" -> "이미 노쇼 처리된 예약이라 취소할 수 없어요.";
+			case "refunded" -> "이미 환불 처리된 예약이에요.";   // 추가됨 (2026-10-06, 신고 기반 리팩터링)
 			default -> "취소할 수 없는 상태의 예약이에요. (현재 상태: " + reservation.getStatus() + ")";
 		};
 	}
@@ -1326,7 +1341,9 @@ public class ReservationService {
 		List<String> statuses = switch (tab) {
 			case TAB_PROGRESS -> List.of("confirmed", "ready");   // (2026-08-21) 매장 수락 대기중/수락됨 둘 다 "진행중"
 			case TAB_PICKED -> List.of("picked");
-			case TAB_CANCELLED -> List.of("cancelled", "noshowed");
+			// refunded 추가됨 (2026-10-06, 신고 기반 리팩터링) — 신고 처리로 환불된 주문도 손님 쪽에선
+			// "더 이상 유효하지 않은 주문"이라는 점에서 취소·노쇼와 성격이 같아 같은 탭에 묶는다.
+			case TAB_CANCELLED -> List.of("cancelled", "noshowed", "refunded");
 			default -> throw new IllegalArgumentException("알 수 없는 탭입니다: " + tab);
 		};
 
@@ -1350,7 +1367,8 @@ public class ReservationService {
 				reservation.getTotalPrice(),
 				reservation.getPickupTime() != null ? reservation.getPickupTime().format(LIST_DISPLAY_FORMAT) : "-",
 				reservation.getPickupCode(),
-				resolveStatusBadge(reservation)
+				resolveStatusBadge(reservation),
+				complaintService.blockedReportMessage(reservation)
 		);
 	}
 
@@ -1375,8 +1393,14 @@ public class ReservationService {
 			case "picked" -> "픽업완료";
 			case "cancelled" -> "취소";
 			case "noshowed" -> "노쇼";
+			case "refunded" -> "환불완료";   // 추가됨 (2026-10-06, 신고 기반 리팩터링) — AdminRefundService 참고
 			default -> reservation.getStatus();
 		};
+	}
+
+	/** resolveStatusBadge의 public 버전 — 슈퍼어드민 "신고 대상 주문" 카드처럼 서비스 밖에서 상태 라벨이 필요할 때. */
+	public String statusLabel(ReservationEntity reservation) {
+		return resolveStatusBadge(reservation);
 	}
 
 	// ── 2026-09-03 추가 (레이어 규칙 2단계) ──────────────────────────────────

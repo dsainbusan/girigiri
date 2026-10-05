@@ -101,6 +101,13 @@ public class SuperAdminSupportService {
 		return userRepository.existsById(userId);
 	}
 
+	// 추가됨 (2026-10-06, 신고 기반 리팩터링) — "환불 완료(일시, 처리자)" 배지에 쓸 관리자 표시 이름.
+	// RefundEntity.requestedBy는 userId만 들고 있어서(스냅샷 컬럼 없음) 매번 조회해서 보여준다.
+	@Transactional(readOnly = true)
+	public String adminDisplayName(Long userId) {
+		return userRepository.findById(userId).map(UserEntity::getNickname).orElse("운영자");
+	}
+
 	/**
 	 * "신고 접수" 탭도 매장 문의/유저 문의처럼 답변할 수 있게 한다. 문의와 달리 신고는 댓글 스레드가
 	 * 아니라 답변 하나만 남기면 끝(ComplaintEntity에 adminReply 필드 하나) — 답변을 달면 그 자리에서

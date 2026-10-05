@@ -51,6 +51,24 @@ public class GlobalExceptionHandler {
 		return "errorView/custom-error-page";
 	}
 
+	// 신고 접수 불가 (픽업완료 상태 아님 / 48시간 경과 / 이미 처리 중인 신고 있음 / 본인 주문 아님)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	@ExceptionHandler(ReportNotAllowedException.class)
+	public String handleReportNotAllowed(ReportNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] ReportNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
+	// 관리자 환불 불가 (픽업완료 상태 아님 / 이미 환불됨 / 신고와 연결된 주문 아님)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	@ExceptionHandler(AdminRefundNotAllowedException.class)
+	public String handleAdminRefundNotAllowed(AdminRefundNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] AdminRefundNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
 	// 주문 불가 (매장 마지막 픽업시간이 지나서 오늘 판매 마감)
 	@ResponseStatus(HttpStatus.CONFLICT)
 	@ExceptionHandler(OrderNotAllowedException.class)

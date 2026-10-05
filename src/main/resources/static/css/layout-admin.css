@@ -235,6 +235,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   transition: background-color .12s, border-color .12s, color .12s;
 }
 .btn .icon { width: 17px; height: 17px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
 
 .btn--primary { background: var(--blue-500); color: var(--white); }
 .btn--primary:hover { background: var(--blue-600); }
