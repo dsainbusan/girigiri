@@ -2,15 +2,16 @@ package net.dsa.girigiri.service;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.AdminNotificationRowDto;
+import net.dsa.girigiri.domain.entity.ComplaintEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.repository.ComplaintRepository;
+import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,8 @@ public class SuperAdminNotificationService {
 	private final NotificationService notificationService;
 	private final UserRepository userRepository;
 	private final StoreRepository storeRepository;
+	private final ComplaintRepository complaintRepository;
+	private final InquiryRepository inquiryRepository;
 
 	@Transactional(readOnly = true)
 	public int getUnreadNotificationCount() {
@@ -49,26 +52,23 @@ public class SuperAdminNotificationService {
 	}
 
 	/**
-	 * "이번주" 기준은 모호하다는 지적을 받아 "오늘"(자정~자정) 단위로 바꿨다. 상한(내일 자정)도 같이
-	 * 걸어서 "확실히" 오늘 하루 구간만 세도록 함 — createdAt이 없거나(가입 미완료 등) 오늘 구간 밖이면
-	 * 제외.
-	 *
-	 * 성능 메모: userRepository.findAll()로 전체를 읽어서 메모리에서 필터링한다 — 아쉽지만 이번 이관은
-	 * 위치만 옮기는 작업이라 최적화(예: 날짜 범위 쿼리)는 하지 않는다. 별도 작업으로 남겨둔다.
+	 * 변경됨 (2026-10-06) — "신규회원/승인대기 매장"을 "처리 대기 N건(신고 N)"으로 바꾸면서
+	 * getTodayNewMemberCount/getPendingStoreCount(둘 다 findAll()/findByXxx(...).size()로 전체를
+	 * 읽어오던 무거운 쿼리)를 이 두 COUNT 메서드로 교체했다. 이 두 메서드는 모든 슈퍼어드민
+	 * 화면에서 요청마다 호출되므로(@ControllerAdvice) 반드시 COUNT 전용 쿼리여야 한다 —
+	 * SuperAdminDashboardService#buildPendingQueue는 "가장 오래된 요청" 시각까지 보여줘야 해서
+	 * 목록을 통째로 읽지만, 여기는 숫자만 필요하다.
 	 */
 	@Transactional(readOnly = true)
-	public int getTodayNewMemberCount() {
-		LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-		LocalDateTime tomorrowStart = todayStart.plusDays(1);
-		return (int) userRepository.findAll().stream()
-				.filter(u -> u.getCreatedAt() != null
-						&& !u.getCreatedAt().isBefore(todayStart)
-						&& u.getCreatedAt().isBefore(tomorrowStart))
-				.count();
+	public int getPendingTotalCount() {
+		long reportCount = complaintRepository.countByStatus(ComplaintEntity.STATUS_PENDING);
+		long storeCount = storeRepository.countByApprovalStatus(StoreEntity.STATUS_PENDING);
+		long inquiryCount = inquiryRepository.countPending();
+		return (int) (reportCount + storeCount + inquiryCount);
 	}
 
 	@Transactional(readOnly = true)
-	public int getPendingStoreCount() {
-		return storeRepository.findByApprovalStatus(StoreEntity.STATUS_PENDING).size();
+	public int getPendingReportCount() {
+		return (int) complaintRepository.countByStatus(ComplaintEntity.STATUS_PENDING);
 	}
 }

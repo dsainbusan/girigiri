@@ -57,11 +57,6 @@ public class SuperAdminNotificationAdvice {
 		return notificationService.getGroupedNotifications();
 	}
 
-	@ModelAttribute("todayNewMemberCount")
-	public int todayNewMemberCount() {
-		return notificationService.getTodayNewMemberCount();
-	}
-
 	// 추가됨 — 왜: 상단바에 "(오늘)"이라고만 적혀 있으면 정확히 어느 날짜 기준인지 안 보여서, "오늘"이 실제로
 	// 가리키는 날짜(yyyy-MM-dd)를 같이 보여달라는 요청.
 	@ModelAttribute("todayLabel")
@@ -69,8 +64,16 @@ public class SuperAdminNotificationAdvice {
 		return LocalDate.now().format(TODAY_LABEL_FORMAT);
 	}
 
-	@ModelAttribute("pendingStoreCount")
-	public int pendingStoreCount() {
-		return notificationService.getPendingStoreCount();
+	// 변경됨 (2026-10-06) — "신규회원 N명 / 승인대기 매장 N건"을 "처리 대기 N건(신고 N)"으로 바꿈
+	// (전역 상단바 — 모든 슈퍼어드민 화면 공통). 처리 대기 = 신고 접수 + 입점 신청 + 매장/유저 문의,
+	// 대시보드 "처리 대기" 카드와 같은 집계 기준.
+	@ModelAttribute("pendingTotalCount")
+	public int pendingTotalCount() {
+		return notificationService.getPendingTotalCount();
+	}
+
+	@ModelAttribute("pendingReportCount")
+	public int pendingReportCount() {
+		return notificationService.getPendingReportCount();
 	}
 }
