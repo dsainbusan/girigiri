@@ -61,24 +61,35 @@
   <p class="text-muted text-muted--sm" th:if="${cancelledMessage != null}" th:text="${cancelledMessage}">처리 결과</p>
 
   <!-- "주문 상세에서 신고하기"로 접수된 신고(order_id=targetReservationId 있음) — "신고 대상 주문" 카드. -->
+  <!-- 수정됨 (2026-10-06) — 점(·)으로 이어 붙인 한 문장이던 주문 정보를 라벨/값 행으로 풀고, 주문 상태는
+       카드 제목 옆 배지 하나로 옮겼다(환불완료가 문장과 배지에 두 번 나오던 것 정리). 환불 완료는 "성공"
+       파랑이 아니라 중립 회색 배지로, 처리 일시·처리자는 아래 작은 글씨로 뺐다. -->
   <div class="reply-box" th:if="${linkedReservation != null}">
-    <div class="reply-box__label">신고 대상 주문</div>
-    <div class="info-row--pre"
-         th:text="${linkedReservationStoreName} + ' · ' + ${linkedReservation.productName} + ' × ' + ${linkedReservation.reservedQuantity} + '개 · '
-                  + ${linkedReservation.totalPrice} + '원 · 픽업 ' + (${linkedReservation.pickedAt} != null ? ${#temporals.format(linkedReservation.pickedAt, 'yyyy-MM-dd HH:mm')} : '-')
-                  + ' · ' + ${linkedReservationStatusLabel} + ' · ' + ${linkedReservation.pickupCode}">
-      매장명 · 상품명 × 1개 · 3000원 · 픽업 2026-08-19 13:20 · 픽업완료 · PICK-1004
+    <div class="order-card__head">
+      <div class="reply-box__label">신고 대상 주문</div>
+      <span class="badge"
+            th:classappend="${linkedReservation.status == 'picked'} ? 'badge--success'
+                          : (${linkedReservation.status == 'cancelled'} ? 'badge--danger'
+                          : (${linkedReservation.status == 'noshowed'} ? 'badge--warning' : 'badge--neutral'))"
+            th:text="${linkedReservationStatusLabel}">픽업완료</span>
     </div>
+    <dl class="order-card__list">
+      <div class="order-card__row"><dt>매장</dt><dd th:text="${linkedReservationStoreName}">매장명</dd></div>
+      <div class="order-card__row"><dt>상품</dt><dd th:text="${linkedReservation.productName} + ' × ' + ${linkedReservation.reservedQuantity} + '개'">상품명 × 1개</dd></div>
+      <div class="order-card__row"><dt>결제금액</dt><dd class="order-card__amount" th:text="${#numbers.formatInteger(linkedReservation.totalPrice, 3, 'COMMA')} + '원'">3,000원</dd></div>
+      <div class="order-card__row"><dt>픽업일시</dt><dd th:text="${linkedReservation.pickedAt != null} ? ${#temporals.format(linkedReservation.pickedAt, 'yyyy-MM-dd HH:mm')} : '-'">2026-08-19 13:20</dd></div>
+      <div class="order-card__row"><dt>픽업 코드</dt><dd th:text="${linkedReservation.pickupCode}">PICK-1004</dd></div>
+    </dl>
 
     <!-- 이미 환불 완료 — 버튼 대신 처리 내역만 보여준다. -->
-    <span class="badge badge--success mt-8" th:if="${refundInfo != null}"
-          th:text="'환불 완료(' + ${#temporals.format(refundInfo.updatedAt, 'yyyy-MM-dd HH:mm')} + ', ' + ${refundProcessedByName} + ')'">
-      환불 완료(2026-10-06 14:00, 송보미)
-    </span>
+    <p class="order-card__note" th:if="${refundInfo != null}"
+       th:text="'환불 처리 ' + ${#temporals.format(refundInfo.updatedAt, 'yyyy-MM-dd HH:mm')} + ' · ' + ${refundProcessedByName}">
+      환불 처리 2026-10-06 14:00 · 송보미
+    </p>
 
     <!-- 환불 대상 아님(아직 픽업 전 / 취소 / 노쇼) -->
-    <span class="badge badge--neutral mt-8" th:if="${refundInfo == null and linkedReservationBlockedMessage != null}"
-          th:text="${linkedReservationBlockedMessage}">아직 픽업 전인 주문이라 환불할 수 없어요.</span>
+    <p class="order-card__note" th:if="${refundInfo == null and linkedReservationBlockedMessage != null}"
+       th:text="${linkedReservationBlockedMessage}">아직 픽업 전인 주문이라 환불할 수 없어요.</p>
 
     <!-- 환불 가능(picked) — 모달을 여는 버튼만, 실제 제출은 모달 폼이 한다. -->
     <button type="button" id="open-refund-modal" class="btn btn--outline-danger btn--sm mt-8"
