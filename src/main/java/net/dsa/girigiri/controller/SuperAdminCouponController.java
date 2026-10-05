@@ -1,5 +1,6 @@
 package net.dsa.girigiri.controller;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CouponCampaignRowDto;
 import net.dsa.girigiri.domain.entity.CouponPolicyEntity;
@@ -12,8 +13,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) "프로모션 쿠폰 캠페인 관리" 화면 라우팅 — 2026-09-07 신규 (송채현).
@@ -33,6 +37,7 @@ public class SuperAdminCouponController {
 
 	@GetMapping
 	public String list(Model model) {
+		model.addAttribute("sidoList", net.dsa.girigiri.util.SidoParser.SIDO_LIST);
 		List<CouponCampaignRowDto> campaigns = couponService.listAllSortedByNewest();
 		CouponPolicyEntity policy = memberCouponService.getOrCreatePolicy();
 		model.addAttribute("campaigns", campaigns);
@@ -48,6 +53,43 @@ public class SuperAdminCouponController {
 			case INVALID -> "redirect:/superadmin/coupons?error=policy";
 			case SUCCESS -> "redirect:/superadmin/coupons?saved";
 		};
+	}
+
+	/**
+	 * 지역 지정 쿠폰 발행(2026-10-06) — 선택한 시도의 회원 쿠폰함으로 바로 발급한다.
+	 * 서버에서 한 번 더 검증(SuperAdminCouponService#createRegionCampaign)하고, 통과 못 하면 목록으로 돌아간다.
+	 */
+	@PostMapping("/region")
+	public String issueRegionCoupon(@RequestParam List<String> sidos,
+	                                 @RequestParam String discountType,
+	                                 @RequestParam(required = false) Integer discountRate,
+	                                 @RequestParam(required = false) Integer discountAmount,
+	                                 @RequestParam(required = false) Integer maxDiscountAmount,
+	                                 @RequestParam(required = false) Integer minOrderAmount,
+	                                 @RequestParam(defaultValue = "7") int validDays,
+	                                 @RequestParam(required = false) String reason,
+	                                 @RequestParam(required = false) boolean notify,
+	                                 HttpSession session,
+	                                 RedirectAttributes redirectAttributes) {
+		Long adminId = (Long) session.getAttribute("userId");
+		SuperAdminCouponService.RegionCampaignResult result = couponService.createRegionCampaign(
+				sidos, discountType, discountRate, discountAmount, maxDiscountAmount, minOrderAmount,
+				validDays, reason, adminId, notify);
+		if (!result.success()) {
+			redirectAttributes.addFlashAttribute("regionCouponError",
+					"입력값을 다시 확인해 주세요 (선택한 지역에 쿠폰을 받을 회원이 없으면 발행할 수 없어요).");
+		} else {
+			redirectAttributes.addFlashAttribute("regionCouponSuccess",
+					String.join("·", sidos) + " 회원 " + result.issuedCount() + "명에게 쿠폰을 발행했어요.");
+		}
+		return "redirect:/superadmin/coupons";
+	}
+
+	/** 지역 쿠폰 발행 모달 미리보기용 — 선택한 시도의 발급 대상 회원 수(순수 조회). */
+	@GetMapping("/region/recipient-count")
+	@ResponseBody
+	public Map<String, Integer> regionRecipientCount(@RequestParam(required = false) List<String> sidos) {
+		return Map.of("count", couponService.countRegionRecipients(sidos));
 	}
 
 	@GetMapping("/new")

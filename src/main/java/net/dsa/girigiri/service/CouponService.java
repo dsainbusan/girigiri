@@ -9,7 +9,9 @@ import net.dsa.girigiri.domain.entity.CouponPolicyEntity;
 import net.dsa.girigiri.repository.CouponCampaignRepository;
 import net.dsa.girigiri.repository.CouponPolicyRepository;
 import net.dsa.girigiri.repository.CouponRepository;
+import net.dsa.girigiri.repository.CouponRegionRepository;
 import net.dsa.girigiri.repository.CouponStoreRepository;
+import net.dsa.girigiri.repository.StoreRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,9 @@ public class CouponService {
 	private final CouponPolicyRepository couponPolicyRepository;
 	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — 체크아웃 시 "이 매장에서 쓸 수 있는 쿠폰인지" 확인용.
 	private final CouponStoreRepository couponStoreRepository;
+	// 추가됨 (2026-10-06, 지역 지정 쿠폰) — 체크아웃에서 "이 매장의 시도가 쿠폰 대상 지역인지" 확인용.
+	private final CouponRegionRepository couponRegionRepository;
+	private final StoreRepository storeRepository;
 	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — claimStoreCampaignCoupon()에서 발급 수량 상한을
 	// 동시성 안전하게 확인하기 위해 캠페인 행을 락 걸고 다시 조회한다.
 	private final CouponCampaignRepository couponCampaignRepository;
@@ -191,8 +196,12 @@ public class CouponService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "기한이 지난 쿠폰이에요.");
 		}
 		if (CouponCampaignEntity.SCOPE_REGION.equals(coupon.getScope())) {
-			// 방어적 분기 — REGION은 발행 자체가 막혀 있어 정상 경로로는 여기 올 일이 없다.
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "아직 지원하지 않는 쿠폰이에요.");
+			// 지역 지정 쿠폰(2026-10-06 발행 기능 추가) — 이 매장이 대상 시도에 있어야 쓸 수 있다.
+			// 매장의 sido가 비어 있으면(주소 파싱 실패 등) 대상 여부를 알 수 없으니 막는다.
+			String storeSido = storeId == null ? null : storeRepository.findById(storeId).map(net.dsa.girigiri.domain.entity.StoreEntity::getSido).orElse(null);
+			if (storeSido == null || !couponRegionRepository.existsByCampaignIdAndSido(coupon.getCampaignId(), storeSido)) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이 지역 매장에서는 쓸 수 없는 쿠폰이에요.");
+			}
 		}
 		if (CouponCampaignEntity.SCOPE_STORE.equals(coupon.getScope())
 				&& !couponStoreRepository.existsByCampaignIdAndStoreId(coupon.getCampaignId(), storeId)) {
@@ -334,6 +343,13 @@ public class CouponService {
 				.id(c.getId())
 				.sourceLabel(sourceLabel(c.getSource()))
 				.discountRate(c.getDiscountRate())
+				.discountLabel(CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(c.getDiscountType())
+						? c.getDiscountAmount() + "원 할인" : c.getDiscountRate() + "% 할인")
+				.areaLabel(CouponCampaignEntity.SCOPE_REGION.equals(c.getScope())
+						? couponRegionRepository.findByCampaignId(c.getCampaignId()).stream()
+								.map(net.dsa.girigiri.domain.entity.CouponRegionEntity::getSido)
+								.collect(java.util.stream.Collectors.joining("·")) + " 매장에서 사용"
+						: null)
 				.expiresAtLabel(c.getExpiresAt().toLocalDate().format(DATE_LABEL))
 				.used(c.isUsed())
 				.expired(expired)

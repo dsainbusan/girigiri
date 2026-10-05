@@ -22,10 +22,11 @@
 			<div class="stock-item__head">
 				<div class="stock-item__body">
 					<div class="u-row" style="justify-content: space-between; align-items: flex-start; gap: var(--s-2)">
-						<span class="stock-item__name" th:text="${c.discountRate} + '% 할인 쿠폰'">10% 할인 쿠폰</span>
+						<span class="stock-item__name" th:text="${c.discountLabel} + ' 쿠폰'">10% 할인 쿠폰</span>
 						<span class="stock-item__status" th:text="${c.statusLabel}">사용 가능</span>
 					</div>
 					<span class="stock-item__meta" th:text="${c.sourceLabel}">웰컴 쿠폰</span>
+					<span class="stock-item__meta" th:if="${c.areaLabel != null}" th:text="${c.areaLabel}">서울 매장에서 사용</span>
 					<span class="stock-item__meta" th:text="${c.expiresAtLabel} + ' 까지'">2026-09-30 까지</span>
 				</div>
 			</div>

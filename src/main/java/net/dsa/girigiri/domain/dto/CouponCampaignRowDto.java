@@ -15,6 +15,9 @@ public class CouponCampaignRowDto {
     private String name;
     private String code;
     private Integer discountRate;
+    // 정률이면 "10%", 정액이면 "3,000원"(2026-10-06 — 정액 쿠폰이 "null%"로 보이던 것 정리). 코드형이 아니면 scopeLabel이 "지역 · 서울·경기" 등.
+    private String discountLabel;
+    private String scopeLabel;
     private String expiresAtLabel;
     private boolean active;
     private boolean expired;
