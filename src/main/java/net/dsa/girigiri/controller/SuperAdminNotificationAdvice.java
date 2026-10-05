@@ -6,8 +6,6 @@ import net.dsa.girigiri.service.SuperAdminNotificationService;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -43,8 +41,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SuperAdminNotificationAdvice {
 
-	private static final DateTimeFormatter TODAY_LABEL_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
 	private final SuperAdminNotificationService notificationService;
 
 	@ModelAttribute("unreadNotificationCount")
@@ -55,22 +51,5 @@ public class SuperAdminNotificationAdvice {
 	@ModelAttribute("groupedNotifications")
 	public Map<String, List<AdminNotificationRowDto>> groupedNotifications() {
 		return notificationService.getGroupedNotifications();
-	}
-
-	@ModelAttribute("todayNewMemberCount")
-	public int todayNewMemberCount() {
-		return notificationService.getTodayNewMemberCount();
-	}
-
-	// 추가됨 — 왜: 상단바에 "(오늘)"이라고만 적혀 있으면 정확히 어느 날짜 기준인지 안 보여서, "오늘"이 실제로
-	// 가리키는 날짜(yyyy-MM-dd)를 같이 보여달라는 요청.
-	@ModelAttribute("todayLabel")
-	public String todayLabel() {
-		return LocalDate.now().format(TODAY_LABEL_FORMAT);
-	}
-
-	@ModelAttribute("pendingStoreCount")
-	public int pendingStoreCount() {
-		return notificationService.getPendingStoreCount();
 	}
 }

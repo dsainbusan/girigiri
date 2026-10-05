@@ -11,9 +11,11 @@
   디자인은 기존 슈퍼어드민 톤(layout-admin.css의 blue/gray/red 토큰, Pretendard)을 그대로
   쓴다 — 별도 팔레트를 새로 얹지 않기로 확정(2026-09-30, 조장 확인).
 
-  거래량/매출/구제량/CO2는 SuperAdminDashboardService#buildKpiSummary가 기존 getPlatformStats
-  ("전체"/"오늘")를 그대로 재사용해서 계산한다 — /superadmin/stats와 다른 숫자가 나오지 않는다.
-  플랫폼 수수료는 코드 어디에도 수수료 모델이 없어 그 보조 줄 자체를 생략했다(숫자를 지어내지 않음).
+  변경됨 (2026-10-06) — 화면 순서를 "처리 대기(최상단, 가로 1줄) → KPI 4카드 → 소진 차트 +
+  지역별 현황(2열) → 일별 현황(맨 아래)"로 재배치. 처리 대기는 세로 목록(.info-list)에서
+  가로 카드 1줄(.pending-row)로 바꾸고, SLA(신고 24시간/나머지 72시간, DashboardPolicy)를
+  넘긴 항목은 빨간 테두리로 표시한다. KPI는 5장→4장("입점 매장" 카드 제거, CO2 제거)으로
+  줄이고 카드마다 "어제 대비" 증감률을 추가했다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('통계 대시보드', ~{:: #content}, 'dashboard', '슈퍼어드민')}">
@@ -56,33 +58,238 @@
   })();
   </script>
 
-  <h2 class="subhead">플랫폼 현황</h2>
-  <div class="stat-grid stat-grid--5">
+  <!-- 변경됨 (2026-10-06) — 처리 대기를 페이지 최상단, 가로 한 줄 카드로 옮겼다("지금 뭘 처리해야
+       하는지"를 KPI보다 먼저 보여달라는 요청). 각 카드는 그대로 클릭하면 해당 목록 화면으로 간다.
+       SLA(신고 24시간/나머지 72시간)를 넘긴 항목은 빨간 테두리(.is-overdue)로 표시한다. -->
+  <h2 class="subhead">
+    처리 대기
+    <span class="subhead__count" th:text="'총 ' + ${stats.totalPendingCount()} + '건'">총 0건</span>
+  </h2>
+  <div class="pending-row">
+    <a class="info-row" th:each="row : ${stats.pendingQueue}"
+       th:classappend="${(row.count == 0 ? ' is-empty' : '') + (row.overSla ? ' is-overdue' : '')}"
+       th:href="${row.linkUrl}">
+      <span class="info-row__icon" th:classappend="${row.priority} ? ' info-row__icon--danger'"><svg class="icon"><use th:attr="href='#' + ${row.iconId}"/></svg></span>
+      <div class="info-row__body">
+        <div class="info-row__title">
+          <span th:text="${row.label}">신고 접수</span>
+          <span class="badge badge--danger" th:if="${row.priority and row.count > 0}">우선 처리</span>
+        </div>
+        <div class="info-row__sub"
+             th:text="${row.count > 0} ? (${row.oldestAgoLabel} + ' · 가장 오래된 요청') : '대기 없음'">대기 없음</div>
+      </div>
+      <span class="badge" th:classappend="${row.overSla} ? 'badge--danger' : (${row.count > 0} ? 'badge--warning' : 'badge--neutral')"
+            th:text="${row.count} + '건'">0건</span>
+      <span class="info-row__arrow">&rsaquo;</span>
+    </a>
+  </div>
+
+  <h2 class="subhead mt-24">플랫폼 현황</h2>
+  <!-- 변경됨 (2026-10-06) — 5장→4장("입점 매장" 카드 제거), 카드마다 "어제 대비" 증감률 추가.
+       "구해낸 음식"만 accent 색이던 걸 다른 카드와 같은 톤으로 통일(클릭 동작이 다 똑같아서
+       하나만 강조할 이유가 없었음). -->
+  <div class="stat-grid">
     <a class="stat-card stat-card--link" th:href="@{/superadmin/members}">
       <span class="stat-card__label">오늘 신규 회원</span>
       <span class="stat-card__value" th:text="'+' + ${#numbers.formatInteger(stats.kpi.memberTodayCount, 0, 'COMMA')} + '명'">+0명</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalMemberCount, 0, 'COMMA')} + '명 · 최근 7일 +' + ${stats.kpi.memberWeekCount}">전체 0명 · 최근 7일 +0</span>
-    </a>
-    <a class="stat-card stat-card--link" th:href="@{/superadmin/stores}">
-      <span class="stat-card__label">오늘 입점 매장</span>
-      <span class="stat-card__value" th:text="'+' + ${#numbers.formatInteger(stats.kpi.todayStoreCount, 0, 'COMMA')} + '곳'">+0곳</span>
-      <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalStoreCount, 0, 'COMMA')} + '곳 · 점주 ' + ${stats.kpi.ownerCount} + '명 · 입점 대기 ' + ${stats.kpi.pendingStoreCount} + '건'">전체 0곳 · 점주 0명 · 입점 대기 0건</span>
+      <span th:if="${stats.kpi.memberDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.memberDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.memberDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.memberDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 거래</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayTransactionCount, 0, 'COMMA')} + '건'">0건</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalTransactionCount, 0, 'COMMA')} + '건'">전체 0건</span>
+      <span th:if="${stats.kpi.transactionDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.transactionDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.transactionDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.transactionDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 거래액</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRevenue, 0, 'COMMA')} + '원'">0원</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRevenue, 0, 'COMMA')} + '원'">전체 0원</span>
+      <span th:if="${stats.kpi.revenueDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.revenueDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.revenueDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.revenueDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
     <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
       <span class="stat-card__label">오늘 구해낸 음식</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRescuedQuantity, 0, 'COMMA')} + '개'">0개</span>
-      <span class="stat-card__delta stat-card__delta--accent" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRescuedQuantity, 0, 'COMMA')} + '개 · CO2 ' + ${#numbers.formatDecimal(stats.kpi.todayCo2Kg, 1, 1)} + 'kg 절감'">전체 0개 · CO2 0kg 절감</span>
+      <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRescuedQuantity, 0, 'COMMA')} + '개'">전체 0개</span>
+      <span th:if="${stats.kpi.rescuedDeltaPercent != null}" class="stat-card__yoy"
+            th:classappend="${stats.kpi.rescuedDeltaPercent >= 0} ? ' is-up' : ' is-down'"
+            th:text="(${stats.kpi.rescuedDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.rescuedDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
+  </div>
+
+  <!-- 변경됨 (2026-10-06) — "소진 차트 + 문제 지역"을 한 줄(2열)로 묶어달라는 요청. 처리 대기가
+       최상단으로 빠지면서 이 자리가 비어 지역별 현황(기존엔 맨 아래 단독 섹션)을 끌어왔다. -->
+  <div class="dash-two-col mt-24">
+    <div class="sell-through-card">
+      <div class="sell-through-card__head">
+        <div>
+          <h2 class="subhead" style="margin-bottom:2px">마감 상품 소진 현황 <span class="text-muted">(최근 7일 · 마감일 기준)</span></h2>
+          <p class="sell-through-card__subtitle"
+             th:text="'등록 ' + ${stats.sellThrough.weekRegisteredTotal} + '개 중 ' + ${stats.sellThrough.weekSoldTotal} + '개 판매'">등록 0개 중 0개 판매</p>
+        </div>
+        <div class="sell-through-card__rate">
+          <span class="sell-through-card__rate-label">7일 소진율</span>
+          <span class="sell-through-card__rate-value"
+                th:text="${stats.sellThrough.weekSellThroughPercent} != null ? (${stats.sellThrough.weekSellThroughPercent} + '%') : '-'">-%</span>
+        </div>
+      </div>
+
+      <div class="sell-through-legend">
+        <span><span class="sell-through-legend__swatch sell-through-legend__swatch--sold"></span>판매</span>
+        <span><span class="sell-through-legend__swatch sell-through-legend__swatch--unsold"></span>미판매</span>
+      </div>
+
+      <!-- 변경됨 (2026-10-06) — 이중축 꺾은선(소진율 %)을 제거했다. 막대는 7칸 flex 중심 좌표,
+           꺾은선 점은 SVG viewBox 가장자리 좌표라 서로 다른 좌표계였고(x좌표가 구조적으로 어긋남),
+           소진율은 이미 아래 .sell-through-chart__rates 텍스트로 보여주고 있어 중복이었다.
+           "막대 위 숫자 = 등록 수" 설명 문구도 없앴다 — title 속성(네이티브 툴팁)으로 대체. -->
+      <div class="sell-through-chart">
+        <div class="sell-through-chart__body">
+          <div class="sell-through-chart__plot">
+            <div class="sell-through-chart__gridline" style="top:0"></div>
+            <div class="sell-through-chart__gridline" style="top:50%"></div>
+            <div class="sell-through-chart__col" th:each="d : ${stats.sellThrough.days}">
+              <div class="sell-through-chart__count" title="등록 수" th:text="${d.registeredCount > 0} ? ${d.registeredCount} : ''">0</div>
+              <div class="sell-through-chart__track">
+                <div class="sell-through-chart__fill" th:style="'height:' + ${d.registeredHeightPercent} + '%'">
+                  <div class="sell-through-chart__seg sell-through-chart__seg--unsold"
+                       th:style="'flex-grow:' + ${d.registeredHeightPercent - d.soldHeightPercent}"></div>
+                  <div class="sell-through-chart__seg sell-through-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}">
+                    <span th:if="${d.soldCount > 0}" th:text="${d.soldCount}">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="sell-through-chart__dates">
+            <span th:each="d : ${stats.sellThrough.days}" th:classappend="${d.isToday} ? ' is-today'"
+                  th:text="${d.isToday ? '오늘' : d.dateLabel}">9/24 목</span>
+          </div>
+          <div class="sell-through-chart__rates">
+            <span th:each="d : ${stats.sellThrough.days}"
+                  th:text="${d.inProgress} ? '집계 중' : (${d.sellThroughPercent != null} ? (${d.sellThroughPercent} + '%') : '-')">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="region-card">
+      <div class="sell-through-card__head">
+        <div>
+          <h2 class="subhead" style="margin-bottom:2px">지역별 현황 <span class="text-muted">(마감일 기준)</span></h2>
+          <p class="sell-through-card__subtitle"
+             th:text="'최근 7일 · ' + ${stats.regions.coveredRegionCount} + '개 지역 매장 ' + ${stats.regions.totalStoreCount} + '곳 운영 중 · ' + ${stats.regions.missingRegionCount} + '개 지역 미진출'">
+            최근 7일 · 0개 지역 매장 0곳 운영 중 · 0개 지역 미진출
+          </p>
+        </div>
+      </div>
+
+      <!-- 삭제됨 (2026-10-06) — 타일맵 제거하고 표만 남긴다는 요청. 표가 이미 소진율 기준 정렬을
+           제공하고, 행 클릭(.row-clickable)으로 매장별 상세(/superadmin/regions/{sido}/stores)까지
+           바로 가므로 타일 클릭 필터(지역 하나만 보기)는 더 이상 필요 없어 그 기능 자체도 같이 뺐다. -->
+      <div class="region-table-wrap">
+        <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>지역</th><th>매장</th><th>등록</th><th>판매</th><th>소진율</th><th>상태</th></tr>
+          </thead>
+          <tbody>
+            <tr class="row-clickable" th:each="r : ${stats.regions.tableRows}"
+                th:attr="data-sido=${r.sido},data-empty=${r.storeCount == 0},data-href=@{/superadmin/regions/{sido}/stores(sido=${r.sido})}">
+              <td class="cell-name" th:text="${r.sido}">서울</td>
+              <td th:text="${r.storeCount} + '곳'">0곳</td>
+              <td th:text="${r.registeredCount}">0</td>
+              <td th:text="${r.soldCount}">0</td>
+              <td>
+                <div class="region-bar" th:if="${r.sellThroughPercent != null}">
+                  <div class="region-bar__track"><div class="region-bar__fill" th:style="'width:' + ${r.sellThroughPercent} + '%'"></div></div>
+                  <span th:text="${r.sellThroughPercent} + '%'">0%</span>
+                </div>
+                <span th:unless="${r.sellThroughPercent != null}">-</span>
+              </td>
+              <td>
+                <span class="badge badge--danger" th:if="${r.statusLabel == '점검 필요'}" th:text="${r.statusLabel}">점검 필요</span>
+                <span class="badge badge--open" th:if="${r.statusLabel == '정상'}" th:text="${r.statusLabel}">정상</span>
+                <span class="badge badge--neutral" th:if="${r.statusLabel == '표본 부족' or r.statusLabel == '미진출'}" th:text="${r.statusLabel}">표본 부족</span>
+              </td>
+            </tr>
+            <!-- 추가됨 (2026-10-05) — 17개 지역이 한 번에 다 보여서 많다는 피드백으로, home.html
+                 "내 주변 마감세일" 카드 목록과 같은 방식(처음 5개만, 더보기 누르면 5개씩 추가 공개)을
+                 그대로 적용. 이미 정렬(점검 필요 먼저, 그다음 소진율 낮은 순)돼 있어 처음 5개가
+                 자연히 가장 주의가 필요한 지역부터 보여준다. -->
+            <tr id="region-table-load-more-row">
+              <td colspan="6" style="padding:0">
+                <button type="button" id="region-table-load-more" class="region-table__more" aria-expanded="false">
+                  <span id="region-table-load-more__label">더보기</span>
+                  <svg class="icon"><use href="#i-chevron-down"/></svg>
+                </button>
+              </td>
+            </tr>
+            <tr id="region-total-row" class="region-table__total">
+              <td>합계</td>
+              <td th:text="${stats.regions.totalStoreCount} + '곳'">0곳</td>
+              <td th:text="${stats.regions.totalRegisteredCount}">0</td>
+              <td th:text="${stats.regions.totalSoldCount}">0</td>
+              <td th:text="${stats.regions.totalSellThroughPercent} != null ? (${stats.regions.totalSellThroughPercent} + '%') : '-'">-%</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <script th:inline="none">
+      (function () {
+        // 추가됨 (2026-10-05) — 17개 지역이 한 번에 다 보여서 많다는 피드백. home.html의
+        // "내 주변 마감세일" 더보기(5개씩 공개)와 같은 패턴 — rows가 이미 정렬(점검 필요 먼저,
+        // 그다음 소진율 낮은 순)돼 있어 처음 5개가 자연히 가장 주의가 필요한 지역부터 보여준다.
+        //
+        // 변경됨 (2026-10-06) — 타일맵(과 타일 클릭 필터) 제거에 맞춰 이 블록도 더보기 아코디언만
+        // 남기고 단순화했다. 행 클릭(.row-clickable, common/layout-admin.html의 전역 핸들러)은
+        // 그대로 매장별 상세(/superadmin/regions/{sido}/stores)로 이동한다.
+        var rows = Array.prototype.slice.call(document.querySelectorAll('.region-table-wrap tbody tr[data-sido]'));
+        if (rows.length === 0) return;
+
+        var PAGE_SIZE = 5;
+        var revealed = PAGE_SIZE;
+        var loadMoreRow = document.getElementById('region-table-load-more-row');
+        var loadMoreBtn = document.getElementById('region-table-load-more');
+        var loadMoreLabel = document.getElementById('region-table-load-more__label');
+
+        // 변경됨 (2026-10-06) — "더보기만 있고 접기가 없다"는 피드백으로 토글로 바꿨다. 다 펼쳐진
+        // 상태(hasMore=false)에서 버튼을 다시 누르면 처음 5개로 되접힌다 — 펼쳐도 숨길 수 없던 것을
+        // 고쳤다. 지역이 PAGE_SIZE(5) 이하면 더보기/접기 자체가 의미 없어 버튼을 아예 숨긴다.
+        function renderReveal() {
+          rows.forEach(function (r, i) {
+            r.style.display = i < revealed ? '' : 'none';
+          });
+          var hasMore = rows.length > revealed;
+          var expandable = rows.length > PAGE_SIZE;
+          if (loadMoreRow) loadMoreRow.hidden = !expandable;
+          if (loadMoreBtn) {
+            if (loadMoreLabel) loadMoreLabel.textContent = hasMore ? (rows.length - revealed) + '개 더보기' : '접기';
+            loadMoreBtn.setAttribute('aria-expanded', hasMore ? 'false' : 'true');
+          }
+        }
+
+        if (loadMoreBtn) {
+          loadMoreBtn.addEventListener('click', function () {
+            var hasMore = rows.length > revealed;
+            revealed = hasMore ? revealed + PAGE_SIZE : PAGE_SIZE;
+            renderReveal();
+          });
+        }
+
+        renderReveal();
+      })();
+      </script>
+    </div>
   </div>
 
   <!-- 추가됨 (2026-10-05) — 달력에서 날짜를 클릭하면 그 날의 플랫폼 현황을 보고, Excel/PDF로
@@ -90,7 +297,8 @@
        변경됨 (2026-10-05) — 날짜/월 클릭마다 페이지 전체가 새로고침되는 게 불편하다는 피드백으로,
        #daily-report(바깥 id, 안 바뀜) 안쪽만 fetch로 다시 받아 교체하는 방식으로 바꿨다. 안쪽
        dailyReportBody 프래그먼트를 SuperAdminController#dailyReportFragment가 그대로 돌려준다 —
-       풀페이지와 완전히 같은 모델 데이터로 렌더링해서 두 경로가 다른 걸 보여줄 일이 없다. -->
+       풀페이지와 완전히 같은 모델 데이터로 렌더링해서 두 경로가 다른 걸 보여줄 일이 없다.
+       변경됨 (2026-10-06) — 화면 순서 재배치로 맨 아래로 이동(스펙 "일별 현황은 일단 맨 아래에 유지"). -->
   <div class="region-card mt-24" id="daily-report">
    <div th:fragment="dailyReportBody">
     <div class="sell-through-card__head">
@@ -205,390 +413,6 @@
     });
   })();
   </script>
-
-  <div class="dash-two-col mt-24">
-    <div class="sell-through-card">
-      <div class="sell-through-card__head">
-        <div>
-          <h2 class="subhead" style="margin-bottom:2px">마감 상품 소진 현황 <span class="text-muted">(최근 7일)</span></h2>
-          <p class="sell-through-card__subtitle"
-             th:text="'등록 ' + ${stats.sellThrough.weekRegisteredTotal} + '개 중 ' + ${stats.sellThrough.weekSoldTotal} + '개 판매'">등록 0개 중 0개 판매</p>
-        </div>
-        <div class="sell-through-card__rate">
-          <span class="sell-through-card__rate-label">7일 소진율</span>
-          <span class="sell-through-card__rate-value"
-                th:text="${stats.sellThrough.weekSellThroughPercent} != null ? (${stats.sellThrough.weekSellThroughPercent} + '%') : '-'">-%</span>
-        </div>
-      </div>
-
-      <div class="sell-through-legend">
-        <span><span class="sell-through-legend__swatch sell-through-legend__swatch--sold"></span>판매</span>
-        <span><span class="sell-through-legend__swatch sell-through-legend__swatch--unsold"></span>미판매</span>
-        <span><span class="sell-through-legend__line"></span>소진율 (오른쪽 축)</span>
-        <span class="sell-through-legend__hint">막대 위 숫자 = 등록 수</span>
-      </div>
-
-      <div class="sell-through-chart">
-        <div class="sell-through-chart__body">
-          <div class="sell-through-chart__plot">
-            <div class="sell-through-chart__gridline" style="top:0"></div>
-            <div class="sell-through-chart__gridline" style="top:50%"></div>
-            <svg class="sell-through-chart__line" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <polyline th:attr="points=${stats.sellThrough.linePoints}" fill="none" stroke="var(--blue-600)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-            </svg>
-            <span class="sell-through-chart__dot" th:each="d, iter : ${stats.sellThrough.days}"
-                  th:classappend="${d.isToday} ? ' is-today'"
-                  th:style="'left:' + (${iter.index} * 16.6667) + '%; bottom:' + (${d.sellThroughPercent} ?: 0) + '%'"></span>
-            <div class="sell-through-chart__col" th:each="d : ${stats.sellThrough.days}">
-              <div class="sell-through-chart__count" th:text="${d.registeredCount > 0} ? ${d.registeredCount} : ''">0</div>
-              <div class="sell-through-chart__track">
-                <div class="sell-through-chart__fill" th:style="'height:' + ${d.registeredHeightPercent} + '%'">
-                  <div class="sell-through-chart__seg sell-through-chart__seg--unsold"
-                       th:style="'flex-grow:' + ${d.registeredHeightPercent - d.soldHeightPercent}"></div>
-                  <div class="sell-through-chart__seg sell-through-chart__seg--sold" th:style="'flex-grow:' + ${d.soldHeightPercent}">
-                    <span th:if="${d.soldCount > 0}" th:text="${d.soldCount}">0</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="sell-through-chart__dates">
-            <span th:each="d : ${stats.sellThrough.days}" th:classappend="${d.isToday} ? ' is-today'"
-                  th:text="${d.isToday ? '오늘' : d.dateLabel}">9/24 목</span>
-          </div>
-          <div class="sell-through-chart__rates">
-            <span th:each="d : ${stats.sellThrough.days}"
-                  th:text="${d.sellThroughPercent != null} ? (${d.sellThroughPercent} + '%') : '-'">-</span>
-          </div>
-        </div>
-        <div class="sell-through-chart__axis">
-          <span>100%</span><span>50%</span><span>0%</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="region-card">
-      <h2 class="subhead">
-        처리 대기
-        <span class="subhead__count" th:text="'총 ' + ${stats.totalPendingCount()} + '건'">총 0건</span>
-      </h2>
-      <div class="info-list">
-        <a class="info-row" th:each="row : ${stats.pendingQueue}"
-           th:classappend="${row.count == 0} ? ' is-empty'"
-           th:href="${row.linkUrl}">
-          <span class="info-row__icon" th:classappend="${row.priority} ? ' info-row__icon--danger'"><svg class="icon"><use th:attr="href='#' + ${row.iconId}"/></svg></span>
-          <div class="info-row__body">
-            <div class="info-row__title">
-              <span th:text="${row.label}">신고 접수</span>
-              <span class="badge badge--danger" th:if="${row.priority and row.count > 0}">우선 처리</span>
-            </div>
-            <div class="info-row__sub"
-                 th:text="${row.count > 0} ? (${row.oldestAgoLabel} + ' · 가장 오래된 요청') : '대기 없음'">대기 없음</div>
-          </div>
-          <span class="badge" th:classappend="${row.count > 0} ? 'badge--warning' : 'badge--neutral'"
-                th:text="${row.count} + '건'">0건</span>
-          <span class="info-row__arrow">&rsaquo;</span>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <div class="region-card mt-24">
-    <div class="sell-through-card__head">
-      <div>
-        <h2 class="subhead" style="margin-bottom:2px">지역별 현황</h2>
-        <p class="sell-through-card__subtitle"
-           th:text="'최근 7일 · ' + ${stats.regions.coveredRegionCount} + '개 지역 매장 ' + ${stats.regions.totalStoreCount} + '곳 운영 중 · ' + ${stats.regions.missingRegionCount} + '개 지역 미진출'">
-          최근 7일 · 0개 지역 매장 0곳 운영 중 · 0개 지역 미진출
-        </p>
-      </div>
-    </div>
-
-    <div class="region-layout">
-      <!-- 왼쪽: 17개 시도 타일맵 (4열×6행, 실제 지리 배치를 흉내낸 고정 좌표) -->
-      <div class="region-tilemap">
-        <div class="region-tile is-blank"></div>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['서울']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">서울</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['강원']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">강원</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <div class="region-tile is-blank"></div>
-
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['인천']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">인천</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['경기']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">경기</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['충북']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">충북</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['경북']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">경북</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['충남']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">충남</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['세종']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">세종</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['대전']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">대전</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['대구']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">대구</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['전북']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">전북</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <div class="region-tile is-blank"></div>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['경남']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">경남</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['울산']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">울산</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['광주']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">광주</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['전남']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">전남</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['부산']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">부산</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <div class="region-tile is-blank"></div>
-
-        <button type="button" class="region-tile" th:with="r=${stats.regions.tiles['제주']}" th:classappend="${r.tileClass}"
-          th:attr="data-sido=${r.sido}, aria-label=${r.sellThroughPercent != null ? (r.sido + ', 소진율 ' + r.sellThroughPercent + '%') : (r.sido + ', ' + r.statusLabel)}"
-          aria-pressed="false">
-          <span class="region-tile__name">제주</span>
-          <span class="region-tile__value" th:if="${r.sellThroughPercent != null}" th:text="${r.sellThroughPercent} + '%'"></span>
-        </button>
-        <div class="region-tile is-blank"></div>
-        <div class="region-tile is-blank"></div>
-        <div class="region-tile is-blank"></div>
-      </div>
-
-      <!-- 오른쪽: 운영 지역 표 (소진율 낮은 순) -->
-      <div class="region-table-wrap">
-        <div id="region-filter-banner" class="region-filter-banner" hidden aria-live="polite">
-          <span id="region-filter-banner__text"></span>
-          <button type="button" class="link-action" data-clear-filter>전체 보기</button>
-        </div>
-        <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr><th>지역</th><th>매장</th><th>등록</th><th>판매</th><th>소진율</th><th>상태</th></tr>
-          </thead>
-          <tbody>
-            <tr class="row-clickable" th:each="r : ${stats.regions.tableRows}"
-                th:attr="data-sido=${r.sido},data-empty=${r.storeCount == 0},data-href=@{/superadmin/regions/{sido}/stores(sido=${r.sido})}">
-              <td class="cell-name" th:text="${r.sido}">서울</td>
-              <td th:text="${r.storeCount} + '곳'">0곳</td>
-              <td th:text="${r.registeredCount}">0</td>
-              <td th:text="${r.soldCount}">0</td>
-              <td>
-                <div class="region-bar" th:if="${r.sellThroughPercent != null}">
-                  <div class="region-bar__track"><div class="region-bar__fill" th:style="'width:' + ${r.sellThroughPercent} + '%'"></div></div>
-                  <span th:text="${r.sellThroughPercent} + '%'">0%</span>
-                </div>
-                <span th:unless="${r.sellThroughPercent != null}">-</span>
-              </td>
-              <td>
-                <span class="badge badge--danger" th:if="${r.statusLabel == '점검 필요'}" th:text="${r.statusLabel}">점검 필요</span>
-                <span class="badge badge--warning" th:if="${r.statusLabel == '보통'}" th:text="${r.statusLabel}">보통</span>
-                <span class="badge badge--open" th:if="${r.statusLabel == '양호'}" th:text="${r.statusLabel}">양호</span>
-                <span class="badge badge--neutral" th:if="${r.statusLabel == '미진출' or r.statusLabel == '-'}" th:text="${r.statusLabel}">미진출</span>
-              </td>
-            </tr>
-            <tr id="region-empty-row" hidden>
-              <td colspan="6" class="table-empty">이 지역에는 아직 입점 매장이 없어요</td>
-            </tr>
-            <!-- 추가됨 (2026-10-05) — 17개 지역이 한 번에 다 보여서 많다는 피드백으로, home.html
-                 "내 주변 마감세일" 카드 목록과 같은 방식(처음 5개만, 더보기 누르면 5개씩 추가 공개)을
-                 그대로 적용. 이미 "소진율 낮은 순"으로 정렬돼 있어 처음 5개가 자연히 "점검 필요"
-                 지역부터 보여준다. 지역 필터(타일 클릭) 중엔 숨긴다 — 그땐 매칭된 한 줄만 보면 되니까. -->
-            <tr id="region-table-load-more-row">
-              <td colspan="6" style="padding:0">
-                <button type="button" id="region-table-load-more" class="region-table__more" aria-expanded="false">
-                  <span id="region-table-load-more__label">더보기</span>
-                  <svg class="icon"><use href="#i-chevron-down"/></svg>
-                </button>
-              </td>
-            </tr>
-            <tr id="region-total-row" class="region-table__total">
-              <td>합계</td>
-              <td th:text="${stats.regions.totalStoreCount} + '곳'">0곳</td>
-              <td th:text="${stats.regions.totalRegisteredCount}">0</td>
-              <td th:text="${stats.regions.totalSoldCount}">0</td>
-              <td th:text="${stats.regions.totalSellThroughPercent} != null ? (${stats.regions.totalSellThroughPercent} + '%') : '-'">-%</td>
-              <td>-</td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-
-    <script th:inline="none">
-    (function () {
-      // 추가됨 (2026-10-01) — "지역별 현황" 타일 클릭 → 표를 그 지역만 보이게 필터링.
-      // 서버 재요청 없이 클라이언트에서 처리(데이터는 이미 렌더링돼 있음). 이벤트 위임으로
-      // .region-layout 하나에 클릭을 걸고, 표시/숨김은 hidden 속성으로 한다.
-      var root = document.querySelector('.region-layout');
-      if (!root) return;
-
-      var tilemap = root.querySelector('.region-tilemap');
-      var tiles = Array.prototype.slice.call(root.querySelectorAll('.region-tile[data-sido]'));
-      var rows = Array.prototype.slice.call(root.querySelectorAll('tbody tr[data-sido]'));
-      var totalRow = document.getElementById('region-total-row');
-      var emptyRow = document.getElementById('region-empty-row');
-      var banner = document.getElementById('region-filter-banner');
-      var bannerText = document.getElementById('region-filter-banner__text');
-
-      // 추가됨 (2026-10-05) — 17개 지역이 한 번에 다 보여서 많다는 피드백. home.html의
-      // "내 주변 마감세일" 더보기(5개씩 공개)와 같은 패턴 — rows가 이미 "소진율 낮은 순"으로
-      // 정렬돼 있어 처음 5개가 자연히 "점검 필요" 지역부터 보여준다.
-      var PAGE_SIZE = 5;
-      var revealed = PAGE_SIZE;
-      var loadMoreRow = document.getElementById('region-table-load-more-row');
-      var loadMoreBtn = document.getElementById('region-table-load-more');
-      var loadMoreLabel = document.getElementById('region-table-load-more__label');
-
-      function renderReveal() {
-        rows.forEach(function (r, i) {
-          r.style.display = i < revealed ? '' : 'none';
-        });
-        var hasMore = rows.length > revealed;
-        if (loadMoreRow) loadMoreRow.hidden = !hasMore;
-        if (loadMoreBtn) {
-          if (loadMoreLabel) loadMoreLabel.textContent = (rows.length - revealed) + '개 더보기';
-          loadMoreBtn.setAttribute('aria-expanded', hasMore ? 'false' : 'true');
-        }
-      }
-
-      if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', function () {
-          revealed += PAGE_SIZE;
-          renderReveal();
-        });
-      }
-
-      function applyFilter(sido) {
-        tiles.forEach(function (t) {
-          t.setAttribute('aria-pressed', t.dataset.sido === sido ? 'true' : 'false');
-        });
-        if (tilemap) tilemap.classList.toggle('is-filtering', !!sido);
-
-        if (!sido) {
-          rows.forEach(function (r) { r.hidden = false; });
-          renderReveal();
-          if (totalRow) totalRow.hidden = false;
-          if (emptyRow) emptyRow.hidden = true;
-          if (banner) banner.hidden = true;
-          history.replaceState(null, '', location.pathname);
-          return;
-        }
-
-        // 필터링 중엔 더보기로 접어둔 줄도 매칭되면 봐야 하니 전부 펼쳐두고(display 리셋),
-        // 어차피 매칭 안 되는 줄은 바로 아래에서 hidden=true로 다시 숨긴다.
-        rows.forEach(function (r) { r.style.display = ''; });
-        if (loadMoreRow) loadMoreRow.hidden = true;
-
-        var matched = null;
-        rows.forEach(function (r) {
-          var isMatch = r.dataset.sido === sido;
-          r.hidden = !isMatch;
-          if (isMatch) matched = r;
-        });
-        if (totalRow) totalRow.hidden = true;
-
-        var isEmpty = matched && matched.dataset.empty === 'true';
-        if (matched) matched.hidden = matched.hidden || isEmpty;
-        if (emptyRow) emptyRow.hidden = !isEmpty;
-
-        if (banner) {
-          banner.hidden = false;
-          if (bannerText) bannerText.textContent = sido + ' 지역만 보는 중 ·';
-        }
-
-        var params = new URLSearchParams(location.search);
-        params.set('sido', sido);
-        history.replaceState(null, '', location.pathname + '?' + params.toString());
-      }
-
-      root.addEventListener('click', function (e) {
-        var clearBtn = e.target.closest('[data-clear-filter]');
-        if (clearBtn) { applyFilter(null); return; }
-
-        var tile = e.target.closest('.region-tile[data-sido]');
-        if (!tile) return;
-        var current = tile.getAttribute('aria-pressed') === 'true';
-        applyFilter(current ? null : tile.dataset.sido);
-      });
-
-      renderReveal();
-      var initialSido = new URLSearchParams(location.search).get('sido');
-      if (initialSido && tiles.some(function (t) { return t.dataset.sido === initialSido; })) {
-        applyFilter(initialSido);
-      }
-    })();
-    </script>
-  </div>
 
 </div>
 </body>

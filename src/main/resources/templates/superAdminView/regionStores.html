@@ -92,9 +92,8 @@
           <td th:text="${r.lastActionLabel}">-</td>
           <td>
             <span class="badge badge--danger" th:if="${r.statusLabel == '점검 필요'}" th:text="${r.statusLabel}">점검 필요</span>
-            <span class="badge badge--warning" th:if="${r.statusLabel == '보통'}" th:text="${r.statusLabel}">보통</span>
-            <span class="badge badge--open" th:if="${r.statusLabel == '양호'}" th:text="${r.statusLabel}">양호</span>
-            <span class="badge badge--neutral" th:if="${r.statusLabel == '등록 없음'}" th:text="${r.statusLabel}">등록 없음</span>
+            <span class="badge badge--open" th:if="${r.statusLabel == '정상'}" th:text="${r.statusLabel}">정상</span>
+            <span class="badge badge--neutral" th:if="${r.statusLabel == '표본 부족'}" th:text="${r.statusLabel}">표본 부족</span>
           </td>
         </tr>
       </tbody>

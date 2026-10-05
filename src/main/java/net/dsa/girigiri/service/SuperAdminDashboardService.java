@@ -28,8 +28,10 @@ import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.DashboardPolicy;
 import net.dsa.girigiri.util.SellThroughClassifier;
 import net.dsa.girigiri.util.SidoParser;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -88,8 +91,8 @@ public class SuperAdminDashboardService {
 		return new SuperAdminDashboardStatsDto(
 				buildKpiSummary(now),
 				buildPendingQueue(now),
-				buildSellThrough(now.toLocalDate()),
-				buildRegions(now.toLocalDate()),
+				buildSellThrough(now.toLocalDate(), now),
+				buildRegions(now.toLocalDate(), now),
 				buildAsOfLabel(now.toLocalDate()),
 				now.format(UPDATED_AT_FORMAT),
 				now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
@@ -118,6 +121,11 @@ public class SuperAdminDashboardService {
 			double co2Kg, long cancelledCount, long noshowedCount) {
 	}
 
+	// 변경됨 (2026-10-06) — "판매(거래/매출/구제량)"의 날짜 기준을 reservedAt(접수일)에서
+	// pickedAt(픽업 완료 시각, KST)로 바꿨다. "판매=픽업완료"라는 확정 규칙에 맞춰, "오늘 거래"가
+	// 말 그대로 "오늘 픽업까지 끝난 건"을 가리키게 하기 위함 — 접수는 며칠 전이었어도 오늘 픽업했으면
+	// 오늘 집계에 잡히고, 오늘 접수됐어도 아직 픽업 전이면 안 잡힌다.
+	// 취소/노쇼는 픽업이라는 개념 자체가 없는 상태라(영영 pickedAt이 안 채워짐) 그대로 접수일 기준 유지.
 	private RawDailyCounts computeRawDailyCounts(LocalDate date) {
 		LocalDateTime dayStart = date.atStartOfDay();
 		LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
@@ -132,14 +140,18 @@ public class SuperAdminDashboardService {
 				.filter(s -> !s.getCreatedAt().isBefore(dayStart) && s.getCreatedAt().isBefore(dayEnd))
 				.count();
 
-		List<ReservationEntity> inDay = reservationRepository.findByReservedAtBetween(dayStart, dayEnd);
-		List<ReservationEntity> picked = inDay.stream().filter(r -> "picked".equals(r.getStatus())).toList();
-		long transactionCount = picked.size();
-		long revenue = picked.stream().mapToLong(r -> r.getTotalPrice() == null ? 0 : r.getTotalPrice()).sum();
-		long rescuedQuantity = picked.stream().mapToLong(r -> r.getReservedQuantity() == null ? 0 : r.getReservedQuantity()).sum();
+		List<ReservationEntity> pickedInDay = reservationRepository.findByStatusIn(List.of("picked")).stream()
+				.filter(r -> r.getPickedAt() != null
+						&& !r.getPickedAt().isBefore(dayStart) && r.getPickedAt().isBefore(dayEnd))
+				.toList();
+		long transactionCount = pickedInDay.size();
+		long revenue = pickedInDay.stream().mapToLong(r -> r.getTotalPrice() == null ? 0 : r.getTotalPrice()).sum();
+		long rescuedQuantity = pickedInDay.stream().mapToLong(r -> r.getReservedQuantity() == null ? 0 : r.getReservedQuantity()).sum();
 		double co2Kg = rescuedQuantity * CO2_KG_PER_ITEM;
-		long cancelledCount = inDay.stream().filter(r -> "cancelled".equals(r.getStatus())).count();
-		long noshowedCount = inDay.stream().filter(r -> "noshowed".equals(r.getStatus())).count();
+
+		List<ReservationEntity> receivedInDay = reservationRepository.findByReservedAtBetween(dayStart, dayEnd);
+		long cancelledCount = receivedInDay.stream().filter(r -> "cancelled".equals(r.getStatus())).count();
+		long noshowedCount = receivedInDay.stream().filter(r -> "noshowed".equals(r.getStatus())).count();
 
 		return new RawDailyCounts(newMemberCount, newStoreCount, transactionCount, revenue, rescuedQuantity,
 				co2Kg, cancelledCount, noshowedCount);
@@ -201,38 +213,42 @@ public class SuperAdminDashboardService {
 	}
 
 	/**
-	 * KPI 5카드: 회원/매장/거래/매출/구제량. 거래·매출·구제량·CO2는 기존 getPlatformStats("전체"/"오늘")를
-	 * 그대로 재사용한다 — /superadmin/stats와 계산 기준을 다르게 가져가지 않기 위해서다. 수수료 필드는
-	 * 코드 어디에도 수수료 모델이 없어 KpiSummaryDto에 아예 넣지 않았다(화면에서 그 보조 줄을 생략).
+	 * KPI 카드 4장: 신규 회원/거래/거래액/구해낸 음식. "전체" 누적은 getPlatformStats(null)(기간
+	 * 필터 없음이라 reservedAt/pickedAt 어느 기준이든 결과가 같다)을 재사용한다.
+	 *
+	 * 변경됨 (2026-10-06) — "오늘" 수치는 더 이상 getPlatformStats("today")(reservedAt 기준)가 아니라
+	 * computeRawDailyCounts(today)(pickedAt 기준)를 쓴다 — 일별 현황 달력(getDailyPlatformStats)과
+	 * 완전히 같은 메서드를 타므로, "오늘"에 대해서는 KPI와 일별 현황 숫자가 항상 일치한다(같은
+	 * 코드 경로라 어긋날 수가 없다). "입점 매장" 카드와 CO2 필드는 뺐다(CO2는 2단계 리포트로 이동
+	 * 예정). 카드마다 "어제 대비" 증감률(deltaPercent, LedgerData와 동일 규칙)을 추가했다 — 어제도
+	 * computeRawDailyCounts로 구해서 오늘과 완전히 같은 기준으로 비교한다.
 	 */
 	private KpiSummaryDto buildKpiSummary(LocalDateTime now) {
 		LocalDate today = now.toLocalDate();
+		LocalDate yesterday = today.minusDays(1);
 		Map<LocalDate, Long> signupsByDate = userRepository.findAll().stream()
 				.filter(u -> u.getCreatedAt() != null)
 				.collect(Collectors.groupingBy(u -> u.getCreatedAt().toLocalDate(), Collectors.counting()));
 		long memberTodayCount = signupsByDate.getOrDefault(today, 0L);
+		long memberYesterdayCount = signupsByDate.getOrDefault(yesterday, 0L);
 		long memberWeekCount = 0;
 		for (int i = 0; i <= 6; i++) {
 			memberWeekCount += signupsByDate.getOrDefault(today.minusDays(i), 0L);
 		}
 
-		long totalStoreCount = storeRepository.countByApprovalStatus(StoreEntity.STATUS_APPROVED);
-		long todayStoreCount = storeRepository.findByApprovalStatus(StoreEntity.STATUS_APPROVED).stream()
-				.filter(s -> s.getCreatedAt() != null && s.getCreatedAt().toLocalDate().equals(today))
-				.count();
-		long ownerCount = userRepository.countByRole(UserEntity.ROLE_OWNER);
-		long pendingStoreCount = storeRepository.countByApprovalStatus(StoreEntity.STATUS_PENDING);
-
 		PlatformStatsDto allTimeStats = getPlatformStats(null);
-		PlatformStatsDto todayStats = getPlatformStats("today");
+		RawDailyCounts todayCounts = computeRawDailyCounts(today);
+		RawDailyCounts yesterdayCounts = computeRawDailyCounts(yesterday);
 
 		return new KpiSummaryDto(
 				userRepository.count(), memberTodayCount, memberWeekCount,
-				totalStoreCount, todayStoreCount, ownerCount, pendingStoreCount,
-				allTimeStats.totalTransactionCount(), todayStats.totalTransactionCount(),
-				allTimeStats.totalRevenue(), todayStats.totalRevenue(),
-				allTimeStats.totalRescuedQuantity(), todayStats.totalRescuedQuantity(),
-				allTimeStats.totalCo2Kg(), todayStats.totalCo2Kg());
+				deltaPercent(memberTodayCount, memberYesterdayCount),
+				allTimeStats.totalTransactionCount(), todayCounts.transactionCount(),
+				deltaPercent(todayCounts.transactionCount(), yesterdayCounts.transactionCount()),
+				allTimeStats.totalRevenue(), todayCounts.revenue(),
+				deltaPercent(todayCounts.revenue(), yesterdayCounts.revenue()),
+				allTimeStats.totalRescuedQuantity(), todayCounts.rescuedQuantity(),
+				deltaPercent(todayCounts.rescuedQuantity(), yesterdayCounts.rescuedQuantity()));
 	}
 
 	/**
@@ -256,30 +272,32 @@ public class SuperAdminDashboardService {
 
 		List<PendingQueueRowDto> rows = new ArrayList<>();
 		rows.add(pendingRow("신고 접수", "i-bell", pendingComplaints.size(),
-				oldestAgo(pendingComplaints.stream().map(ComplaintEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=report", true));
+				oldestOf(pendingComplaints.stream().map(ComplaintEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_REPORT_HOURS, "/superadmin/reports?tab=report", true));
 		rows.add(pendingRow("입점 신청", "i-box", pendingStores.size(),
-				oldestAgo(pendingStores.stream().map(StoreEntity::getCreatedAt), now),
-				"/superadmin/stores", false));
+				oldestOf(pendingStores.stream().map(StoreEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/stores", false));
 		rows.add(pendingRow("매장 문의", "i-list", pendingStoreInquiries.size(),
-				oldestAgo(pendingStoreInquiries.stream().map(InquiryEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=store", false));
+				oldestOf(pendingStoreInquiries.stream().map(InquiryEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/reports?tab=store", false));
 		rows.add(pendingRow("유저 문의", "i-user", pendingUserInquiries.size(),
-				oldestAgo(pendingUserInquiries.stream().map(InquiryEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=user", false));
+				oldestOf(pendingUserInquiries.stream().map(InquiryEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/reports?tab=user", false));
 		return rows;
 	}
 
-	private PendingQueueRowDto pendingRow(String label, String iconId, long count, String oldestAgoLabel,
-	                                       String linkUrl, boolean priority) {
-		return new PendingQueueRowDto(label, iconId, count, count > 0 ? oldestAgoLabel : null, linkUrl, priority);
+	// 변경됨 (2026-10-06) — SLA 초과 여부(overSla)를 같이 계산하려면 "가장 오래된 건" 시각 자체가
+	// 필요해서, 문자열(oldestAgoLabel)이 아니라 LocalDateTime을 받도록 바꿨다. SLA 시간은
+	// DashboardPolicy 상수(신고 24시간/나머지 72시간)에서 받아 하드코딩하지 않는다.
+	private PendingQueueRowDto pendingRow(String label, String iconId, long count, LocalDateTime oldest,
+	                                       LocalDateTime now, long slaHours, String linkUrl, boolean priority) {
+		String oldestAgoLabel = count > 0 && oldest != null ? formatAgo(oldest, now) : null;
+		boolean overSla = count > 0 && oldest != null && Duration.between(oldest, now).toHours() >= slaHours;
+		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla);
 	}
 
-	private String oldestAgo(Stream<LocalDateTime> timestamps, LocalDateTime now) {
-		return timestamps.filter(Objects::nonNull)
-				.min(Comparator.naturalOrder())
-				.map(oldest -> formatAgo(oldest, now))
-				.orElse(null);
+	private LocalDateTime oldestOf(Stream<LocalDateTime> timestamps) {
+		return timestamps.filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
 	}
 
 	private String formatAgo(LocalDateTime from, LocalDateTime now) {
@@ -299,41 +317,90 @@ public class SuperAdminDashboardService {
 
 	private static final DateTimeFormatter SELL_THROUGH_DAY_FORMAT = DateTimeFormatter.ofPattern("M/d");
 
-	/**
-	 * "마감 상품 소진 현황"(최근 7일) — SKU(상품 건수) 기준(사용자 확인 완료, 수량 기준 아님).
-	 * registeredCount = 그날 등록된 상품 수(draft/skipped 제외, storeView 대시보드의 fetchTodayProducts와
-	 * 동일 기준) · soldCount = 그중 지금 시점에 status="sold"인 것. "미판매"는 아직 판매중(active)이거나
-	 * 마감(expired)된 것을 합친, 화면이 요구하는 이분법 그대로다. 소진율 0%는 "등록은 했는데 하나도 안
-	 * 팔림"과 구분이 안 되므로 등록 0건인 날은 null(화면에서 "-")로 둔다.
-	 */
-	private SellThroughSummaryDto buildSellThrough(LocalDate today) {
-		LocalDate windowStart = today.minusDays(6);
+	// 추가됨 (2026-10-06) — "마감 상품 소진 현황"/"지역별 현황"을 전부 "상품 마감일시" 기준으로
+	// 다시 짜면서, 두 메서드가 공유하는 "이 상품은 언제 마감됐나/이미 마감이 지났나" 계산을 뺐다.
+	// 마감일시는 DB 컬럼이 아니라 ListingDraftScheduler.sellingWindowOver와 같은 공식(등록일 당일
+	// + 그 매장의 그날 마감 시각, StoreHoursUtil)으로 그때그때 계산한다 — 스케줄러와 다른 공식을
+	// 새로 추측해서 만들지 않는다.
+	private record DeadlineTaggedProduct(ProductEntity product, LocalDate deadlineDate, boolean deadlinePassed) {
+	}
 
-		List<ProductEntity> products = productRepository.findAll().stream()
+	private List<DeadlineTaggedProduct> tagProductsWithDeadline(LocalDate windowStart, LocalDate windowEnd, LocalDateTime now) {
+		List<ProductEntity> candidates = productRepository.findAll().stream()
 				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
 				.filter(p -> p.getRegisteredAt() != null)
 				.filter(p -> !p.getRegisteredAt().toLocalDate().isBefore(windowStart)
-						&& !p.getRegisteredAt().toLocalDate().isAfter(today))
+						&& !p.getRegisteredAt().toLocalDate().isAfter(windowEnd))
 				.toList();
-
-		Map<LocalDate, Long> registeredByDate = products.stream()
-				.collect(Collectors.groupingBy(p -> p.getRegisteredAt().toLocalDate(), Collectors.counting()));
-		Map<LocalDate, Long> soldByDate = products.stream()
-				.filter(p -> "sold".equals(p.getStatus()))
-				.collect(Collectors.groupingBy(p -> p.getRegisteredAt().toLocalDate(), Collectors.counting()));
-
-		int maxRegistered = 0;
-		for (int i = 0; i <= 6; i++) {
-			maxRegistered = Math.max(maxRegistered, registeredByDate.getOrDefault(windowStart.plusDays(i), 0L).intValue());
+		if (candidates.isEmpty()) {
+			return List.of();
 		}
 
-		List<SellThroughDailyDto> days = new ArrayList<>();
-		List<String> points = new ArrayList<>();
+		Map<Long, StoreEntity> storesById = storeRepository.findAll().stream()
+				.collect(Collectors.toMap(StoreEntity::getId, s -> s));
+
+		List<DeadlineTaggedProduct> tagged = new ArrayList<>();
+		for (ProductEntity p : candidates) {
+			StoreEntity store = storesById.get(p.getStoreId());
+			if (store == null) {
+				continue; // 매장을 못 찾으면 마감을 계산할 수 없다 — 지어내지 않고 제외한다.
+			}
+			StoreHoursUtil.ClosingInfo closing = StoreHoursUtil.parse(
+					store.getOperatingHours(), StoreHoursUtil.URGENT_THRESHOLD_MINUTES, p.getRegisteredAt());
+			if (closing.closeAt() == null) {
+				continue; // 영업시간 형식을 못 읽으면 마감을 계산할 수 없다 — 지어내지 않고 제외한다.
+			}
+			tagged.add(new DeadlineTaggedProduct(p, closing.closeAt().toLocalDate(), !closing.closeAt().isAfter(now)));
+		}
+		return tagged;
+	}
+
+	/** "픽업완료 예약이 1건이라도 있는 product_id" 집합 — Set이라 자연히 COUNT(DISTINCT product_id)와 같은 효과. */
+	private Set<Long> pickedProductIds() {
+		return reservationRepository.findByStatusIn(List.of("picked")).stream()
+				.map(ReservationEntity::getProductId)
+				.collect(Collectors.toSet());
+	}
+
+	/**
+	 * "마감 상품 소진 현황"(최근 7일, 마감일 기준) — SKU(상품 건수) 기준(사용자 확인 완료, 수량
+	 * 기준 아님). registeredCount = 그날 마감된 상품 수 중 "이미 마감이 지난" 것만(확정 집계) ·
+	 * soldCount = 그중 picked 예약이 1건 이상 있는 상품 수(=판매). 등록 0건이거나, 그 날짜(=오늘)에
+	 * 아직 마감 안 지난 상품이 섞여 있으면(inProgress) 소진율은 null(화면에서 "-"/"집계 중").
+	 */
+	private SellThroughSummaryDto buildSellThrough(LocalDate today, LocalDateTime now) {
+		LocalDate windowStart = today.minusDays(6);
+		// registeredAt(등록일) 기준으로 1차 후보를 넉넉히 뽑고(자정 넘는 영업시간이면 마감일이 등록일
+		// 다음날일 수 있어 windowEnd를 today+1까지 잡는다), 실제 묶음은 deadlineDate로 다시 거른다.
+		List<DeadlineTaggedProduct> tagged = tagProductsWithDeadline(windowStart, today.plusDays(1), now).stream()
+				.filter(t -> !t.deadlineDate().isBefore(windowStart) && !t.deadlineDate().isAfter(today))
+				.toList();
+		Set<Long> pickedProductIds = pickedProductIds();
+
+		Map<LocalDate, List<DeadlineTaggedProduct>> byDeadlineDate = tagged.stream()
+				.collect(Collectors.groupingBy(DeadlineTaggedProduct::deadlineDate));
+
+		Map<LocalDate, Integer> registeredByDate = new HashMap<>();
+		Map<LocalDate, Integer> soldByDate = new HashMap<>();
+		Map<LocalDate, Boolean> inProgressByDate = new HashMap<>();
 		for (int i = 0; i <= 6; i++) {
 			LocalDate date = windowStart.plusDays(i);
-			int registered = registeredByDate.getOrDefault(date, 0L).intValue();
-			int sold = soldByDate.getOrDefault(date, 0L).intValue();
-			Integer percent = registered == 0 ? null : (int) Math.round(100.0 * sold / registered);
+			List<DeadlineTaggedProduct> dayProducts = byDeadlineDate.getOrDefault(date, List.of());
+			List<DeadlineTaggedProduct> passed = dayProducts.stream().filter(DeadlineTaggedProduct::deadlinePassed).toList();
+			registeredByDate.put(date, passed.size());
+			soldByDate.put(date, (int) passed.stream().filter(t -> pickedProductIds.contains(t.product().getId())).count());
+			inProgressByDate.put(date, dayProducts.size() > passed.size());
+		}
+
+		int maxRegistered = registeredByDate.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+
+		List<SellThroughDailyDto> days = new ArrayList<>();
+		for (int i = 0; i <= 6; i++) {
+			LocalDate date = windowStart.plusDays(i);
+			int registered = registeredByDate.get(date);
+			int sold = soldByDate.get(date);
+			boolean inProgress = inProgressByDate.get(date);
+			Integer percent = (registered == 0 || inProgress) ? null : (int) Math.round(100.0 * sold / registered);
 
 			int registeredHeightPercent = maxRegistered == 0 ? 0 : (int) Math.round(100.0 * registered / maxRegistered);
 			int soldHeightPercent = maxRegistered == 0 ? 0 : (int) Math.round(100.0 * sold / maxRegistered);
@@ -343,27 +410,23 @@ public class SuperAdminDashboardService {
 			}
 
 			String dateLabel = date.format(SELL_THROUGH_DAY_FORMAT) + " " + koreanDayOfWeek(date.getDayOfWeek());
-			days.add(new SellThroughDailyDto(dateLabel, date.equals(today), registered, sold, percent,
+			days.add(new SellThroughDailyDto(dateLabel, date.equals(today), inProgress, registered, sold, percent,
 					registeredHeightPercent, soldHeightPercent));
-
-			double x = i * (100.0 / 6);
-			double y = 100 - (percent == null ? 0 : percent);
-			points.add(String.format(Locale.US, "%.2f,%.2f", x, y));
 		}
 
 		int weekRegisteredTotal = days.stream().mapToInt(SellThroughDailyDto::registeredCount).sum();
 		int weekSoldTotal = days.stream().mapToInt(SellThroughDailyDto::soldCount).sum();
 		Integer weekPercent = weekRegisteredTotal == 0 ? null : (int) Math.round(100.0 * weekSoldTotal / weekRegisteredTotal);
 
-		return new SellThroughSummaryDto(days, weekRegisteredTotal, weekSoldTotal, weekPercent, String.join(" ", points));
+		return new SellThroughSummaryDto(days, weekRegisteredTotal, weekSoldTotal, weekPercent);
 	}
 
 	/**
-	 * "지역별 현황"(최근 7일, SKU 기준) — StoreEntity.sido(2026-09-30 신설 컬럼)로 매장을 시도별로
-	 * 묶고, 그 매장들의 최근 7일 등록/판매 상품 수를 합산한다. sido가 null인 매장(주소 파싱 실패,
-	 * 또는 컬럼 추가 전 가입해 아직 백필 안 된 매장)은 어느 지역에도 잡히지 않는다 — 지어내지 않는다.
+	 * "지역별 현황"(최근 7일, 마감일 기준, SKU 기준) — StoreEntity.sido(2026-09-30 신설 컬럼)로
+	 * 매장을 시도별로 묶고, 그 매장들의 "마감 지난" 상품의 등록/판매(picked 1건 이상) 수를 합산한다.
+	 * sido가 null인 매장(주소 파싱 실패 등)은 어느 지역에도 잡히지 않는다 — 지어내지 않는다.
 	 */
-	private RegionSummaryDto buildRegions(LocalDate today) {
+	private RegionSummaryDto buildRegions(LocalDate today, LocalDateTime now) {
 		LocalDate windowStart = today.minusDays(6);
 
 		List<StoreEntity> approvedStores = storeRepository.findByApprovalStatus(StoreEntity.STATUS_APPROVED);
@@ -374,20 +437,19 @@ public class SuperAdminDashboardService {
 				.filter(s -> s.getSido() != null)
 				.collect(Collectors.groupingBy(StoreEntity::getSido, Collectors.counting()));
 
-		List<ProductEntity> recentProducts = productRepository.findAll().stream()
-				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
-				.filter(p -> p.getRegisteredAt() != null)
-				.filter(p -> !p.getRegisteredAt().toLocalDate().isBefore(windowStart)
-						&& !p.getRegisteredAt().toLocalDate().isAfter(today))
-				.filter(p -> sidoByStoreId.containsKey(p.getStoreId()))
+		List<DeadlineTaggedProduct> tagged = tagProductsWithDeadline(windowStart, today.plusDays(1), now).stream()
+				.filter(t -> !t.deadlineDate().isBefore(windowStart) && !t.deadlineDate().isAfter(today))
+				.filter(DeadlineTaggedProduct::deadlinePassed) // 지역표는 확정 집계만 — 마감 안 지난 건 제외
+				.filter(t -> sidoByStoreId.containsKey(t.product().getStoreId()))
 				.toList();
+		Set<Long> pickedProductIds = pickedProductIds();
 
 		Map<String, Integer> registeredBySido = new HashMap<>();
 		Map<String, Integer> soldBySido = new HashMap<>();
-		for (ProductEntity p : recentProducts) {
-			String sido = sidoByStoreId.get(p.getStoreId());
+		for (DeadlineTaggedProduct t : tagged) {
+			String sido = sidoByStoreId.get(t.product().getStoreId());
 			registeredBySido.merge(sido, 1, Integer::sum);
-			if ("sold".equals(p.getStatus())) {
+			if (pickedProductIds.contains(t.product().getId())) {
 				soldBySido.merge(sido, 1, Integer::sum);
 			}
 		}
@@ -400,11 +462,12 @@ public class SuperAdminDashboardService {
 			tiles.put(sido, buildRegionRow(sido, storeCount, registered, sold));
 		}
 
-		// 표는 소진율 낮은 순 — null(미진출/데이터없음)은 판단 대상이 아니므로 맨 뒤로.
+		// 변경됨 (2026-10-06) — "점검 필요"가 위로 오게 정렬해달라는 요청. 소진율 숫자만으로 정렬하면
+		// 표본 부족 지역이 어쩌다 퍼센트가 낮아서(또는 높아서) 점검 필요 지역보다 위/아래로 섞여
+		// 들어올 수 있어, 상태 우선순위(점검 필요 → 정상 → 표본 부족 → 미진출)를 1차 기준으로 두고
+		// 같은 상태 안에서만 소진율 오름차순으로 2차 정렬한다.
 		List<RegionStatDto> tableRows = tiles.values().stream()
-				.sorted(Comparator.comparing(
-						(RegionStatDto r) -> r.sellThroughPercent() == null,
-						Comparator.naturalOrder())
+				.sorted(Comparator.comparing((RegionStatDto r) -> regionRowPriority(r.statusLabel()))
 						.thenComparing(r -> r.sellThroughPercent() == null ? Integer.MAX_VALUE : r.sellThroughPercent()))
 				.toList();
 
@@ -423,10 +486,18 @@ public class SuperAdminDashboardService {
 		if (storeCount == 0) {
 			return new RegionStatDto(sido, 0, registered, sold, null, SellThroughClassifier.TILE_NONE, "미진출");
 		}
-		// 매장은 있지만 최근 7일 등록이 0건 — SellThroughClassifier의 공용 "등록 0건" 분기를 쓰되,
-		// 지역 타일은 이 경우 "-"로 표시한다(매장 단위 "등록 없음"과 라벨이 다름 — 아래 SuperAdminRegionService 참고).
-		var result = SellThroughClassifier.classify(registered, sold, "-");
+		var result = SellThroughClassifier.classify(registered, sold,
+				DashboardPolicy.REGION_SAMPLE_SIZE_MIN, DashboardPolicy.REGION_LOW_SELLTHROUGH_PERCENT);
 		return new RegionStatDto(sido, storeCount, registered, sold, result.percent(), result.tileClass(), result.statusLabel());
+	}
+
+	private int regionRowPriority(String statusLabel) {
+		return switch (statusLabel) {
+			case "점검 필요" -> 0;
+			case "정상" -> 1;
+			case "표본 부족" -> 2;
+			default -> 3; // "미진출"
+		};
 	}
 
 	// getPlatformStats의 기간 필터 — 셋 다 reservedAt(주문 접수 시점) 기준으로 자른다. 값이 이 넷 중

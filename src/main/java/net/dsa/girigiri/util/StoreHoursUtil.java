@@ -69,8 +69,14 @@ public final class StoreHoursUtil {
 		return parse(operatingHours, urgentThresholdMinutes, LocalDateTime.now());
 	}
 
-	/** now를 주입받는 오버로드 — 테스트용. 자정을 넘기는 영업시간 판정 때문에 시각 의존이 커서 분리했다. */
-	static ClosingInfo parse(String operatingHours, long urgentThresholdMinutes, LocalDateTime now) {
+	/**
+	 * now를 주입받는 오버로드 — 원래 테스트 전용이었는데(자정을 넘기는 영업시간 판정 때문에 시각
+	 * 의존이 커서 분리), 2026-10-06부터 SuperAdminDashboardService가 "상품 마감일시"(등록일 +
+	 * 그 매장의 그날 마감 시각) 계산에도 재사용한다 — product.registeredAt을 now 자리에 넣으면
+	 * ListingDraftScheduler.sellingWindowOver와 동일한 마감 판정을 과거 날짜에 대해서도 그대로
+	 * 쓸 수 있다. 새로 추측해서 만들지 않고 이미 검증된 로직을 그대로 쓰기 위함.
+	 */
+	public static ClosingInfo parse(String operatingHours, long urgentThresholdMinutes, LocalDateTime now) {
 		if (operatingHours == null || !operatingHours.contains("~")) {
 			return new ClosingInfo("", false, null);
 		}

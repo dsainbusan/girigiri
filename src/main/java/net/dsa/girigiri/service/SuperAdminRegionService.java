@@ -16,6 +16,7 @@ import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.DashboardPolicy;
 import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.SellThroughClassifier;
 import org.springframework.stereotype.Service;
@@ -96,7 +97,8 @@ public class SuperAdminRegionService {
 		int sold = (int) products.stream().filter(p -> "sold".equals(p.getStatus())).count();
 		int expired = (int) products.stream().filter(p -> "expired".equals(p.getStatus())).count();
 
-		var result = SellThroughClassifier.classify(registered, sold, "등록 없음");
+		var result = SellThroughClassifier.classify(registered, sold,
+				DashboardPolicy.REGION_SAMPLE_SIZE_MIN, DashboardPolicy.REGION_LOW_SELLTHROUGH_PERCENT);
 
 		String pickupTimeLabel = store.getLastPickupTime() != null
 				? store.getLastPickupTime().format(DateTimeFormatter.ofPattern("HH:mm"))
