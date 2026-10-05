@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class RecommendationService {
 
 	private static final String STATUS_ACTIVE = "active";
-	// 픽업 완료 = 실제로 구매가 확정된 건 (ReviewService#canWriteReview와 같은 기준).
+	// 픽업 완료 = 실제로 구매가 확정된 건 (ReviewService#getReviewableReservations와 같은 기준).
 	// 결제만 하고 아직 안 찾아간 예약(confirmed/ready)은 취소될 수도 있어서 "구매 이력"에서 뺀다.
 	private static final String STATUS_PICKED = "picked";
 	private static final int MAX_RECOMMENDATIONS = 4;

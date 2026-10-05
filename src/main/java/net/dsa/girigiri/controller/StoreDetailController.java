@@ -43,9 +43,13 @@ public class StoreDetailController {
 
 	private static final Set<String> VALID_TABS = Set.of("info", "product", "review");
 
+	// 추가됨 (2026-10-05, 문창호) — 구매내역(reservationView/myReservations.html)의 "리뷰 남기기"에서
+	// ?tab=review&reservationId=N으로 들어오면 리뷰 탭이 바로 펼쳐진 채로 시작하게 한다. detail.html의
+	// th:with(defaultTab) 지역변수 계산식에 requestedTab이란 이름으로 끼워 넣는다(모델 attribute를
+	// "defaultTab"으로 직접 넣으면 그 지역변수에 가려져 무시된다 — th:with가 동명의 model attribute보다
+	// 우선순위가 높음, 직접 재현해서 확인함).
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, @RequestParam(required = false) String tab,
-	                     @RequestParam(required = false) Long reservationId,
 	                     HttpSession session, Model model) {
 		StoreEntity store = lookupService.getStore(id);
 
@@ -65,14 +69,9 @@ public class StoreDetailController {
 		// 강노은: AI 리뷰 요약 (리뷰 10건 이상일 때만 값이 채워짐 — ReviewService.getReviewSummary 참고).
 		model.addAttribute("reviewSummary", reviewService.getReviewSummary(id).orElse(null));
 		model.addAttribute("loggedIn", userId != null);
-		// 변경됨 (2026-10-05, 사용자 요청) — "가게당 리뷰 1개"에서 "주문당 리뷰 1개"로 바뀌면서,
-		// "내 리뷰 하나"를 가게 단위로 더 이상 특정할 수 없다(여러 개일 수 있음). 리뷰 작성은 이제
-		// 구매내역(myReservations.html)의 "리뷰 남기기"에서 reservationId를 들고 들어올 때만
-		// 가능하다 — 그 주문이 자격(픽업완료+72시간 이내+아직 리뷰 없음)을 충족해야 폼이 뜬다.
-		// reservationId 없이 이 페이지에 오면(가게를 그냥 둘러보는 경우) 작성 폼 없이 목록만 보여준다.
-		model.addAttribute("reviewReservationId", reservationId);
-		model.addAttribute("canWriteForReservation",
-				reservationId != null && reviewService.canWriteReviewForReservation(userId, id, reservationId));
+		// 강노은 (2026-10-01): "매장당 리뷰 1건" → "픽업완료 예약당 1건"으로 바뀌면서 myRating==0 체크
+		// 대신, 아직 리뷰 안 쓴 픽업완료 예약 목록을 보여주고 어느 구매에 대한 리뷰인지 직접 고르게 한다.
+		model.addAttribute("reviewableReservations", reviewService.getReviewableReservations(userId, id));
 		model.addAttribute("closingLabel", closingInfo.label());
 		model.addAttribute("products", activeProducts.stream().map(this::toProductRow).toList());
 		model.addAttribute("liked", likeService.isLiked(userId, id));
@@ -84,15 +83,6 @@ public class StoreDetailController {
 		model.addAttribute("storeReliability", reservationService.getStoreCancelStats(id));
 		// 추가됨 (2026-09-29) — 배민 스타일 슬림 띠 배너: 점주가 노출 중으로 지정한 공지 1건만 단정하게 전달한다.
 		model.addAttribute("storeAnnouncements", storeAnnouncementService.getExposedForConsumer(id));
-		// 추가됨 (2026-10-05) — 왜: 구매내역(픽업완료 탭)에 "리뷰 남기기" 링크를 새로 만들면서, 이
-		// 페이지에 도착했을 때 리뷰 탭이 바로 펼쳐져 있어야 했다. detail.html은 th:with로 지역변수
-		// defaultTab을 "reviewMessage 있으면 review, 아니면 product"로 이미 계산하고 있어서(강노은,
-		// 상단 주석 참고) 모델 attribute로 "defaultTab"을 넣어봤자 그 지역변수에 가려져 무시된다
-		// (th:with 지역변수가 동명의 model attribute보다 우선순위가 높다 — 처음엔 이걸 놓쳐서 직접
-		// "defaultTab"을 채웠다가 실제로는 아무 효과가 없는 걸 사용자 재현으로 확인했다). 그래서
-		// 이름을 다르게 "requestedTab"으로 둬서 그 지역변수 계산식 안에 명시적으로 끼워 넣는다
-		// (detail.html의 th:with 수정 참고) — ?tab= 쿼리파라미터가 없으면 null이라 기존 동작(상품 탭
-		// 기본, 리뷰 작성/수정 직후엔 리뷰 탭)은 전혀 안 바뀐다.
 		model.addAttribute("requestedTab", tab != null && VALID_TABS.contains(tab) ? tab : null);
 		return "storeView/detail";
 	}

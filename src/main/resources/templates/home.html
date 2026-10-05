@@ -83,10 +83,15 @@
 	     배너가 아니라, 앱을 열 때 잠깐 떴다 사라지는 스플래시 화면이었다. 아래 #splash-screen
 	     참고. -->
 
-	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
-	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-4);overflow:hidden;border:1px solid var(--c-line);"></div>
+	<!--/* 강노은 (2026-10-05): 상단바엔 로고만 두기로 하면서, 위치 표시를 여기 지도 바로 위로 옮겼다. */-->
+	<span class="u-row" style="font-size:14px;font-weight:900">
+		<svg class="icon" style="width:15px;height:15px"><use href="#i-pin"/></svg><span th:text="${location}">내 동네</span>
+	</span>
 
-	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)"><svg class="icon" style="width:16px;height:16px"><use href="#i-search"/></svg> <span>베이커리, 반찬, 도시락 검색</span></a>
+	<!--/* TODO(강노은): 카드 리스트 붙이면서 지도 높이 등 페이지 전용 스타일은 static/css/map.css로 분리 */-->
+	<div id="kakao-map" style="width:100%;height:260px;border-radius:var(--r-lg);margin-top:var(--s-3);overflow:hidden;border:1px solid var(--c-line);"></div>
+
+	<a th:href="@{/user/search}" class="search" style="margin-top:var(--s-4)"><svg class="icon" style="width:16px;height:16px"><use href="#i-search"/></svg> <span style="line-height:1">베이커리, 반찬, 도시락 검색</span></a>
 
 	<!--/* 강노은: 위치 권한이 차단돼 있으면 조용히 넘어가지 않고 어디서 풀 수 있는지 안내한다
 	     (아래 script 참고). 한 번 닫으면 localStorage에 남겨서 방문할 때마다 다시 뜨지 않게 한다. */-->
@@ -108,7 +113,7 @@
 		<button type="button" class="chip" data-filter="카페">카페</button>
 	</div>
 
-	<div class="banner" style="margin-top:var(--s-4)" th:if="${todayRescueCount} > 0">
+	<div class="banner" style="margin-top:var(--s-4);background:#ECF0FA" th:if="${todayRescueCount} > 0">
 		<svg class="icon" style="width:16px;height:16px"><use href="#i-globe"/></svg>
 		<div class="u-grow">
 			<div class="banner__title" th:text="'오늘 ' + ${todayRescueCount} + '명이 마감 음식을 구했어요'">오늘 3,940명이 마감 음식을 구했어요</div>
@@ -335,31 +340,9 @@
 		})();
 	</script>
 
-	<!--/* 강노은: 실시간 알림(SSE) 구독 — 새 알림이 생기거나 읽음 처리되면 서버가 최신 안읽음 개수를
-	     밀어준다(NotificationController#stream). 로그인 안 했으면 401만 받고 끝나는 게 낭비라 아예 안 연다.
-	     연결이 끊기면 EventSource가 알아서 재연결을 시도한다 — 별도 재시도 로직 안 짜도 된다. */-->
-	<script th:if="${loggedIn}">
-		(function () {
-			if (!window.EventSource) return;
-			var source = new EventSource('/user/alerts/stream');
-			// 강노은 (2026-09-21): 배지는 "안읽은 개수"가 바뀌면 언제든(새 알림이든 읽음 처리든) 맞춰줘야
-			// 하니 unread-count를 구독한다 — "진짜 새 알림"만 알려주는 new-notification과는 다른 용도.
-			source.addEventListener('unread-count', function (e) {
-				var count = parseInt(e.data, 10) || 0;
-				var bell = document.getElementById('alert-bell');
-				var dot = document.getElementById('alert-dot');
-				if (!bell) return;
-				if (count > 0 && !dot) {
-					dot = document.createElement('span');
-					dot.id = 'alert-dot';
-					dot.style.cssText = 'position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:999px;background:var(--c-danger)';
-					bell.appendChild(dot);
-				} else if (count === 0 && dot) {
-					dot.remove();
-				}
-			});
-		})();
-	</script>
+	<!--/* 강노은 (2026-10-05): 실시간 알림(SSE) 구독은 common/layout.html로 옮겼다 — 홈 화면에
+	     있을 때만 배지가 갱신되던 걸 모든 화면에서 동일하게 받도록 전역화했다. #alert-bell 배지
+	     갱신 로직은 그 전역 스크립트가 대신하고, 이 자리엔 더 이상 스크립트가 필요 없다. */-->
 </div>
 </body>
 </html>

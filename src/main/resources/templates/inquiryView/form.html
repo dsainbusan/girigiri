@@ -3,7 +3,11 @@
       th:replace="~{common/layout :: layout('문의하기', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'home'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
+	<!--/* 강노은 (2026-10-05): "‹" 글자 대신 벡터 아이콘 — 글꼴 지표 때문에 텍스트랑 높이가 안
+	     맞던 문제를 common/header.html topbar__back과 같은 방식으로 해결. */-->
+	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-flex;align-items:center;gap:2px;margin-bottom:var(--s-3)">
+		<svg class="icon" style="width:14px;height:14px;transform:scaleX(-1)"><use href="#i-chevron-right"/></svg> 문의 목록으로
+	</a>
 
 	<!-- 추가됨 (2026-09-08) — "예약 상세에서 문의하기"로 들어온 경우, 어떤 주문 문의인지 보여준다. -->
 	<div class="card" th:if="${reservation != null}" style="margin-bottom:var(--s-3)">

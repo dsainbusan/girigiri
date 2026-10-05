@@ -91,7 +91,7 @@
   align-items: center;
   padding: 8px var(--s-4);
   border-radius: var(--r-pill);
-  background: var(--c-bg);
+  background: var(--c-surface);
   color: var(--c-text-sub);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
@@ -269,7 +269,7 @@
 .search {
   display: flex; align-items: center; gap: var(--s-2);
   padding: 12px var(--s-4);
-  background: var(--c-bg);
+  background: var(--c-surface);
   border-radius: var(--r-md);
   color: var(--c-text-mut);
   border: 1px solid var(--c-line);
@@ -284,6 +284,18 @@
 .list-row__body { flex: 1 1 auto; min-width: 0; }
 .list-row + .list-row { border-top: 1px solid var(--c-line-weak); }
 .list-row__arrow { flex: 0 0 auto; font-size: var(--fs-lg); color: var(--c-text-mut); }
+
+/* 강노은: 리뷰(가게 상세)·알림함 목록은 항목 수가 많고 훑어봐야 해서 기본 --c-line-weak 구분선이
+   크림 배경 위에서 거의 안 보인다는 피드백 — 이 두 화면만 --c-line으로 진하게 올린다. */
+.review-list .list-row + .list-row,
+.alert-list .list-row + .list-row {
+  border-top-color: var(--c-line);
+}
+/* alert-list는 여기 안 넣는다 — 그 화면 .list-row는 인라인 style로 padding을 직접 지정해서
+   (읽음/안읽음 배경색과 같이 관리하려고) 이 클래스 규칙보다 항상 우선한다. */
+.review-list .list-row {
+  padding: var(--s-3) 0;
+}
 
 /* ---------------- Segmented / mode select card ---------------- */
 .mode-card {

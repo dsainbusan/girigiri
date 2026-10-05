@@ -33,13 +33,14 @@ public class InquiryController {
 	// 요약을 보여주고 본인 예약인지 확인하기 위해서만 쓴다(저장 자체는 InquiryService가 다시 확인).
 	private final LookupService lookupService;
 
+	// 강노은 (2026-10-05): 이 목록 화면(inquiryView/list)은 /user/support의 "내 문의내역" 탭과
+	// 내용이 완전히 겹치는 중복 화면이었다 — 메인 내비게이션 어디에도 연결돼 있지 않고 FAQ 답변 속
+	// 링크 하나로만 닿을 수 있어서 "이 화면을 어떻게 찾아가는지 모르겠다"는 피드백을 받았다. 새로
+	// 안내를 만드는 대신, 실제로 쓰이는 /user/support로 보내서 중복 화면 자체를 없앤다.
 	@LoginRequired
 	@GetMapping
-	public String list(HttpSession session, Model model) {
-		Long userId = (Long) session.getAttribute("userId");
-		String role = (String) session.getAttribute("role");
-		model.addAttribute("inquiries", inquiryService.getInquiriesForUser(userId, role));
-		return "inquiryView/list";
+	public String list() {
+		return "redirect:/user/support";
 	}
 
 	@LoginRequired

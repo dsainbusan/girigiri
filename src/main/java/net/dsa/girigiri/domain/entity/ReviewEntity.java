@@ -27,11 +27,12 @@ public class ReviewEntity {
 	@Column(name = "store_id", nullable = false)
 	private Long storeId;
 
-	// 추가됨 (2026-10-05, 사용자 요청) — 왜: "가게당 리뷰 1개"에서 "주문(예약)당 리뷰 1개"로 정책을
-	// 바꾸면서, 어느 주문에 대한 리뷰인지 식별할 방법이 필요했다. 기존 행(이 컬럼 도입 전에 쓰인
-	// 리뷰)은 전부 NULL로 남는다 — 레거시 리뷰는 "가게당 1개" 시절 기록이라 특정 주문에 소급해서
-	// 연결할 근거가 없다(ddl-auto=update라 마이그레이션 스크립트 없이 컬럼만 추가됨).
-	@Column(name = "reservation_id")
+	// 추가됨 (강노은, 2026-10-01) — 왜: "매장당 리뷰 1건" 제한을 "픽업완료 예약(구매)당 1건"으로 바꾸면서
+	// 추가. null이면 이 제한이 생기기 전에 작성된 레거시 리뷰(특정 구매에 못 묶임) — 계속 그대로 보여주되
+	// 새 리뷰 작성 자격 판단(ReviewService#getReviewableReservations)에는 영향 없다. unique라
+	// 예약 하나당 리뷰가 두 개 생기는 걸 DB 레벨에서도 막는다(NULL끼리는 유니크 제약에서 제외되므로
+	// 레거시 리뷰 여러 개는 문제없다).
+	@Column(name = "reservation_id", unique = true)
 	private Long reservationId;
 
 	@Column(name = "rating", nullable = false)
@@ -46,8 +47,8 @@ public class ReviewEntity {
 	private String imageUrl;
 
 	// 추가됨 (강노은) — 왜: 리뷰 수정 남용(예: 작성 후 몰래 내용을 바꾸는 것) 방지용으로
-	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#submitReview에서
-	// 기존 리뷰를 덮어쓸 때만 true로 바뀐다.
+	// 목록에 "수정됨" 표시를 하기 위해 필요. 최초 작성 시 false, ReviewService#updateReview에서
+	// 수정할 때만 true로 바뀐다.
 	@Builder.Default
 	@Column(name = "edited", nullable = false)
 	private boolean edited = false;

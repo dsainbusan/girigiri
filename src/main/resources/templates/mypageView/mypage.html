@@ -76,6 +76,15 @@
 			<span class="list-menu-item__arrow">&rsaquo;</span>
 		</a>
 
+		<!-- 이용 내역 (강노은, 2026-10-05 추가) — 픽업완료·노쇼·취소를 한 번에 모아보는 화면.
+		     "예약 내역"은 상태 관리(취소 버튼·QR 등) 중심이라, 지난 이용 결과만 기간별로 훑어보는
+		     용도는 따로 뒀다. -->
+		<a th:href="@{/user/usage-history}" class="list-menu-item">
+			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-document"/></svg></span>
+			<span class="list-menu-item__title">이용 내역</span>
+			<span class="list-menu-item__arrow">&rsaquo;</span>
+		</a>
+
 		<!-- 찜한 가게 -->
 		<a th:href="@{/user/likes}" class="list-menu-item">
 			<span class="list-menu-item__icon"><svg class="icon"><use href="#i-heart"/></svg></span>

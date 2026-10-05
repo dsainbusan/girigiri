@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout(${inquiry.title}, ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'home'}, false, '', null)}">
+      th:replace="~{common/layout :: layout('문의 목록으로', ~{:: #content}, ${session.viewMode == 'OWNER_MODE' ? 'my-owner' : 'home'}, false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
-	<!--/* 강노은: 원래 있던 "고객센터"(/user/support) 화면의 "내 문의내역" 탭으로 연결한다 —
-	     InquiryController가 따로 갖고 있던 문의 목록(/user/inquiries)은 이 화면과 중복이라 안 쓴다. */-->
-	<a th:href="@{/user/support}" class="u-sub" style="font-size:13px;display:inline-block;margin-bottom:var(--s-3)">‹ 문의 목록으로</a>
-
+	<!--/* 강노은 (2026-10-05): 원래는 상단바 제목에 문의 제목(inquiry.title)을 그대로 쓰고, 그
+	     아래에 "‹ 문의 목록으로" 링크를 따로 뒀었다 — 문의 제목은 바로 아래 카드에도 또 나오는데
+	     상단바까지 중복으로 보여줄 필요가 없고, 뒤로가기 링크도 상단바 자체의 뒤로가기 버튼이랑
+	     중복이었다. 상단바 제목을 "문의 목록으로" 고정 문구로 바꾸고(상단바 뒤로가기 버튼이 실질적
+	     으로 같은 역할), 아래 링크는 지웠다. */-->
 	<div class="card">
 		<div class="u-row" style="justify-content:space-between;align-items:flex-start">
 			<b style="font-size:16px" th:text="${inquiry.title}">문의 제목</b>

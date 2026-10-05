@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout :: layout('이용 내역', ~{:: #content}, 'my', false, '', null)}">
+<body>
+<div id="content" th:fragment="content" class="page">
+
+	<!--/* 강노은 (2026-10-05): 가계부(ledger.html)의 "내역" 탭과 같은 전체/이번달/지난달 칩 +
+	     연도·월 셀렉트 필터 UI를 참고해서 만들었다. 다만 저쪽은 절약 가계부 전용 CSS/JS라 그대로
+	     가져다 쓰면 다른 화면(ledger.css)에 의존하게 되므로, 이 화면만의 클래스를 따로 둔다. */-->
+	<style>
+		.usage-filter-wrap { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; justify-content: space-between; margin-bottom: var(--s-3); }
+		.usage-chips { display: flex; gap: 6px; }
+		.usage-chip {
+			padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--c-line);
+			background: var(--c-surface); color: var(--c-text-sub); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+			cursor: pointer;
+		}
+		.usage-chip.is-active { background: var(--c-primary); color: var(--c-primary-on); border-color: var(--c-primary); }
+		.usage-select-wrap { display: flex; gap: 6px; }
+		.usage-date-select { padding: 6px 8px; border-radius: var(--r-sm); border: 1px solid var(--c-line); background: var(--c-surface); font-size: var(--fs-xs); }
+		.usage-header { display: flex; align-items: baseline; justify-content: space-between; margin: var(--s-3) 0 var(--s-2); }
+		.usage-header__title { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+		.usage-header__count { font-size: var(--fs-xs); color: var(--c-text-mut); }
+		.usage-list { display: flex; flex-direction: column; gap: var(--s-2); }
+		.usage-card { background: var(--c-surface); border: 1px solid var(--c-line-weak); border-radius: var(--r-md); padding: var(--s-3); }
+		.usage-card__header { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+		.usage-card__store { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+		.usage-card__date { font-size: var(--fs-xs); color: var(--c-text-mut); }
+		.usage-card__body { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+		.usage-card__product { font-size: var(--fs-sm); }
+		.usage-card__qty { font-size: var(--fs-xs); color: var(--c-text-mut); }
+		.usage-card__footer { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-2); margin-top: var(--s-2); }
+		.usage-card__paid { font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+		.usage-card__original { font-size: var(--fs-xs); color: var(--c-text-mut); margin-left: 6px; }
+		.usage-card__rate { color: var(--c-accent-strong); font-weight: var(--fw-bold); }
+		.usage-card__note { font-size: var(--fs-xs); color: var(--c-text-mut); margin-top: 2px; }
+		.usage-card__saved-chip { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary); background: var(--c-primary-weak); padding: 3px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+		.usage-empty { text-align: center; padding: var(--s-6) 0; color: var(--c-text-mut); font-size: var(--fs-sm); }
+		.usage-empty.is-hidden { display: none; }
+	</style>
+
+	<div class="usage-filter-wrap" th:if="${!#lists.isEmpty(history)}">
+		<div class="usage-chips">
+			<button type="button" class="usage-chip is-active" data-filter="all">전체</button>
+			<button type="button" class="usage-chip" data-filter="this-month">이번 달</button>
+			<button type="button" class="usage-chip" data-filter="last-month">지난달</button>
+		</div>
+		<div class="usage-select-wrap">
+			<select id="usage-year-select" class="usage-date-select" aria-label="연도 선택"></select>
+			<select id="usage-month-select" class="usage-date-select" aria-label="월 선택">
+				<option value="all" selected>전체 월</option>
+				<option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+				<option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+				<option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
+				<option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+			</select>
+		</div>
+	</div>
+
+	<div class="usage-header" th:if="${!#lists.isEmpty(history)}">
+		<span id="usage-summary-title" class="usage-header__title">전체 내역</span>
+		<span class="usage-header__count"><strong id="usage-visible-count" th:text="${#lists.size(history)}">0</strong>건</span>
+	</div>
+
+	<p id="usage-month-empty" class="usage-empty is-hidden">선택한 기간에 이용 내역이 없어요.</p>
+	<div th:if="${#lists.isEmpty(history)}" class="usage-empty">
+		<p>아직 이용 내역이 없어요.</p>
+		<a th:href="@{/app}" class="btn btn--outline btn--sm" style="margin-top: var(--s-3)">마감세일 둘러보기</a>
+	</div>
+
+	<div class="usage-list">
+		<div th:each="h : ${history}" class="usage-card" th:data-date-label="${h.dateLabel}">
+			<div class="usage-card__header">
+				<span class="usage-card__store" th:text="${h.storeName}">가게명</span>
+				<span class="usage-card__date" th:text="${h.dateLabel}">2026.09.10</span>
+			</div>
+			<div class="usage-card__body">
+				<span class="usage-card__product" th:text="${h.productName}">상품명</span>
+				<span class="usage-card__qty" th:text="${h.quantity} + '개'">1개</span>
+				<span class="badge"
+				      th:classappend="${h.statusVariant == 'done'} ? ' badge--success' : (${h.statusVariant == 'noshow'} ? ' badge--danger' : ' badge--muted')"
+				      th:text="${h.statusLabel}" style="margin-left:auto">픽업완료</span>
+			</div>
+			<div class="usage-card__footer">
+				<div>
+					<span class="usage-card__paid" th:text="${#numbers.formatInteger(h.paidTotal, 0, 'COMMA')} + '원 결제'">4,000원 결제</span>
+					<span th:if="${h.saved > 0}" class="usage-card__original">
+						<s th:text="'정가 ' + ${#numbers.formatInteger(h.originalTotal, 0, 'COMMA')} + '원'">정가 7,000원</s>
+						<span class="usage-card__rate" th:text="'(' + ${h.discountPercent} + '% 할인)'">(43% 할인)</span>
+					</span>
+					<p th:if="${h.noteText != null}" class="usage-card__note" th:text="${h.noteText}">환불됐어요</p>
+				</div>
+				<div th:if="${h.saved > 0}">
+					<span class="usage-card__saved-chip" th:text="'+' + ${#numbers.formatInteger(h.saved, 0, 'COMMA')} + '원 절약'">+3,000원 절약</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!--/* 강노은 (2026-10-05): ledger.html의 filterHistory()와 거의 같은 로직 — data-date-label
+	     접두어 비교로 클라이언트에서 보이기/숨기기만 한다(서버는 전체 내역을 한 번에 내려준다). */-->
+	<script th:inline="none">
+	(function () {
+		var cards = Array.prototype.slice.call(document.querySelectorAll('.usage-card'));
+		var chips = Array.prototype.slice.call(document.querySelectorAll('.usage-chip'));
+		var yearSelect = document.getElementById('usage-year-select');
+		var monthSelect = document.getElementById('usage-month-select');
+		var summaryTitle = document.getElementById('usage-summary-title');
+		var visibleCountEl = document.getElementById('usage-visible-count');
+		var monthEmpty = document.getElementById('usage-month-empty');
+		if (!cards.length || !yearSelect) { return; }
+
+		var now = new Date();
+		var curYear = String(now.getFullYear());
+		var curMonth = String(now.getMonth() + 1).padStart(2, '0');
+		var thisMonthPrefix = curYear + '.' + curMonth;
+
+		var lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		var lastYear = String(lastMonthDate.getFullYear());
+		var lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+		var lastMonthPrefix = lastYear + '.' + lastMonth;
+
+		// 연도 셀렉트 옵션: 이용 내역에 실제로 있는 연도들(+ 올해)만 채운다.
+		var years = cards.map(function (c) { return (c.getAttribute('data-date-label') || '').slice(0, 4); });
+		years.push(curYear);
+		years = years.filter(function (y, i) { return y && years.indexOf(y) === i; }).sort().reverse();
+		years.forEach(function (y) {
+			var opt = document.createElement('option');
+			opt.value = y; opt.textContent = y + '년';
+			if (y === curYear) { opt.selected = true; }
+			yearSelect.appendChild(opt);
+		});
+
+		function filter(mode) {
+			chips.forEach(function (chip) { chip.classList.toggle('is-active', chip.getAttribute('data-filter') === mode); });
+
+			var targetPrefix = '';
+			var labelText = '전체 내역';
+
+			if (mode === 'all') {
+				yearSelect.value = curYear; monthSelect.value = 'all';
+				cards.forEach(function (c) { c.style.display = ''; });
+				summaryTitle.textContent = labelText;
+				visibleCountEl.textContent = cards.length;
+				monthEmpty.classList.add('is-hidden');
+				return;
+			}
+
+			if (mode === 'this-month') {
+				targetPrefix = thisMonthPrefix; yearSelect.value = curYear; monthSelect.value = curMonth;
+				labelText = curYear + '년 ' + parseInt(curMonth, 10) + '월 내역 (이번 달)';
+			} else if (mode === 'last-month') {
+				targetPrefix = lastMonthPrefix; yearSelect.value = lastYear; monthSelect.value = lastMonth;
+				labelText = lastYear + '년 ' + parseInt(lastMonth, 10) + '월 내역 (지난달)';
+			} else {
+				var y = yearSelect.value, m = monthSelect.value;
+				if (m === 'all') { targetPrefix = y + '.'; labelText = y + '년 전체 내역'; }
+				else { targetPrefix = y + '.' + m; labelText = y + '년 ' + parseInt(m, 10) + '월 내역'; }
+				if (targetPrefix === thisMonthPrefix) {
+					var tm = document.querySelector('.usage-chip[data-filter="this-month"]'); if (tm) tm.classList.add('is-active');
+				} else if (targetPrefix === lastMonthPrefix) {
+					var lm = document.querySelector('.usage-chip[data-filter="last-month"]'); if (lm) lm.classList.add('is-active');
+				}
+			}
+
+			var visible = 0;
+			cards.forEach(function (c) {
+				var match = (c.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
+				c.style.display = match ? '' : 'none';
+				if (match) { visible++; }
+			});
+			summaryTitle.textContent = labelText;
+			visibleCountEl.textContent = visible;
+			monthEmpty.classList.toggle('is-hidden', visible > 0);
+		}
+
+		chips.forEach(function (chip) { chip.addEventListener('click', function () { filter(chip.getAttribute('data-filter')); }); });
+		yearSelect.addEventListener('change', function () { filter('date-select'); });
+		monthSelect.addEventListener('change', function () { filter('date-select'); });
+	})();
+	</script>
+
+</div>
+</body>
+</html>

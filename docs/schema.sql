@@ -330,7 +330,7 @@ CREATE TABLE review (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id         BIGINT NOT NULL,
     store_id        BIGINT NOT NULL,
-    reservation_id  BIGINT COMMENT '주문당 리뷰 1개 정책(2026-10-05 추가, 사용자 요청) — 어느 주문에 대한 리뷰인지. 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가)',
+    reservation_id  BIGINT COMMENT '주문당 리뷰 1개 정책(2026-10-01, 강노은 / 72시간 작성창은 2026-10-05, 문창호) — 어느 주문에 대한 리뷰인지. 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가)',
     rating      INT NOT NULL,
     content     VARCHAR(500),
     image_url   VARCHAR(500) COMMENT '사진 리뷰 (2026-08 강노은 추가)',
@@ -341,6 +341,7 @@ CREATE TABLE review (
     reply_edited      TINYINT(1) NOT NULL DEFAULT 0 COMMENT '답글 수정(덮어쓰기) 시 true — edited와 동일한 패턴',
     INDEX idx_review_user_id (user_id),
     INDEX idx_review_store_id (store_id),
+    UNIQUE KEY uk_review_reservation (reservation_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (store_id) REFERENCES store(id)
 );

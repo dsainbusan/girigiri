@@ -9,23 +9,23 @@
 		<a th:href="@{/user/alerts/settings}" class="u-mut" style="font-size:12px;text-decoration:none"><svg class="icon" style="width:12px;height:12px"><use href="#i-settings"/></svg> 알림 설정</a>
 	</div>
 
-	<form th:if="${unreadCount} > 0" th:action="@{/user/alerts/read-all}" method="post" style="margin-top:8px">
+	<form th:if="${unreadCount} > 0" th:action="@{/user/alerts/read-all}" method="post" style="margin-top:14px">
 		<button type="submit" class="btn btn--outline btn--block" style="padding:8px;font-size:13px">
 			안 읽은 알림 <span th:text="${unreadCount}">3</span>개 모두 읽음으로 표시
 		</button>
 	</form>
 
-	<div style="display:flex;flex-direction:column;gap:var(--s-2);margin-top:14px">
+	<div class="alert-list" style="display:flex;flex-direction:column;gap:0;margin-top:14px">
 		<!--/* 강노은: 알림 클릭 → GET /user/alerts/{id}가 읽음 처리 후 linkUrl로 보낸다(없으면 알림함에 머묾).
 		     안 읽은 알림은 왼쪽에 점 표시 + 배경을 살짝 다르게 줘서 한눈에 구분되게 했다. */-->
 		<a th:each="n : ${notifications}" th:href="@{/user/alerts/{id}(id=${n.id})}" class="list-row"
 		   th:style="${n.read} ? '' : 'background:var(--c-primary-weak);border-radius:var(--r-md)'"
-		   style="text-decoration:none;color:inherit;padding:10px var(--s-2)">
+		   style="text-decoration:none;color:inherit;padding:var(--s-3) var(--s-2)">
 			<span class="list-row__ico" th:style="'background:' + (${n.read} ? 'var(--c-line-weak)' : 'var(--c-primary-border)')"
 			      th:text="${n.icon}">🔔</span>
 			<span class="list-row__body">
 				<span style="font-size:13px" th:classappend="${n.read} ? '' : ' u-primary'" th:text="${n.message}">알림 내용</span>
-				<div class="u-mut" style="font-size:11px;margin-top:2px" th:text="${n.createdAtLabel}">오늘</div>
+				<div class="u-mut" style="font-size:11px;margin-top:var(--s-2)" th:text="${n.createdAtLabel}">오늘</div>
 			</span>
 			<span th:if="${!n.read}" style="width:8px;height:8px;border-radius:999px;background:var(--c-danger);flex:0 0 auto"></span>
 		</a>
@@ -35,17 +35,14 @@
 		</div>
 	</div>
 
-	<!--/* 강노은: 이 화면을 보고 있는 동안 새 알림이 오면(SSE) 바로 목록을 새로고침하는 대신,
-	     스크롤 위치가 튀지 않게 눌러서 새로고침하는 배너만 살짝 띄운다.
-	     변경됨 (2026-09-21) — 왜: 예전엔 "notification" 이벤트(읽음 처리해도 같이 밀려옴)를 그대로
-	     구독해서, 이미 읽은 알림을 다시 클릭하기만 해도 "새 알림이 도착했어요" 배너가 잘못 떴다.
-	     실시간으로 "진짜 새 알림"이 생겼을 때만 보내는 new-notification 이벤트로 바꿔서, 이 페이지
-	     안에서의 클릭(읽음 처리)으로는 더 이상 안 뜨고 실제 실시간 도착에만 뜨게 한다. */-->
+	<!--/* 강노은 (2026-10-05): SSE 연결 자체는 common/layout.html이 화면마다 하나씩 전역으로 열고 있어서,
+	     여기서 또 열면 같은 화면에 연결이 두 개 생긴다. 대신 layout.html이 new-notification을 받을 때마다
+	     쏴주는 girigiri:new-notification 커스텀 이벤트를 듣는다 — 이 화면에서는 전역 토스트(다른 화면으로
+	     이동 유도) 대신, 스크롤 위치가 안 튀게 "눌러서 새로고침" 배너만 살짝 띄운다. (layout.html 쪽은
+	     지금 보고 있는 경로가 /user/alerts면 전역 토스트를 스스로 생략해서 중복 안내가 안 생긴다.) */-->
 	<script>
 		(function () {
-			if (!window.EventSource) return;
-			var source = new EventSource('/user/alerts/stream');
-			source.addEventListener('new-notification', function () {
+			window.addEventListener('girigiri:new-notification', function () {
 				if (document.getElementById('live-refresh-banner')) return;
 				var banner = document.createElement('a');
 				banner.id = 'live-refresh-banner';

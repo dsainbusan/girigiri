@@ -330,7 +330,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 1 | id | 리뷰번호 | BIGINT | O | O | | | | AUTO_INCREMENT | 主キー |
 | 2 | user_id | 회원번호 | BIGINT | O | | O | | O | | users.id 참조 |
 | 3 | store_id | 매장번호 | BIGINT | O | | O | | O | | store.id 참조 |
-| 4 | reservation_id | 예약번호 | BIGINT | | | | | | | reservation.id 참조(FK 미설정). "주문당 리뷰 1개" 정책(2026-10-05 추가, 사용자 요청) — 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가) |
+| 4 | reservation_id | 예약번호 | BIGINT | | | | O* | | | reservation.id 참조(FK 미설정). "주문당 리뷰 1개" 정책(2026-10-01, 강노은) — 이 컬럼 도입 전 리뷰는 NULL(소급 연결 불가), NULL은 유니크 제약에서 제외되므로 레거시 리뷰 여러 개도 문제없음 |
 | 5 | rating | 별점 | INT | O | | | | | | |
 | 6 | content | 내용 | VARCHAR(500) | | | | | | | |
 | 7 | image_url | 사진 URL | VARCHAR(500) | | | | | | | 사진 리뷰(강노은 추가). 파일 업로드 인프라가 없어 URL 문자열로만 저장 |
@@ -340,7 +340,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 | 11 | reply_created_at | 답글 작성일시 | DATETIME | | | | | | | |
 | 12 | reply_edited | 답글 수정 여부 | BOOLEAN | O | | | | | false | 위 `edited`와 동일한 패턴 — 답글 수정(덮어쓰기) 시 true |
 
-> ⚠️ **검토 필요(유지, 2026-10-05 갱신)**: "회원당 매장 1곳에 리뷰 1건"(2026-10-05 이전 정책)에서 "예약(주문)당 리뷰 1건"으로 바뀌었다 — `ReviewService.canWriteReviewForReservation`이 애플리케이션 레벨에서 `reservation_id` 유니크를 보장하지만, DB 레벨엔 여전히 UK가 없다. 정책이 고정되면 `reservation_id` UK 추가 권장(NULL 허용 — 레거시 리뷰).
+\* `uk_review_reservation` — `sql/migration-2026-10-01-review-reservation-id.sql` 참고. "주문당 리뷰 1건"을 DB 레벨에서도 보장(NULL끼리는 중복 허용). 작성 자격을 "픽업 후 72시간 이내"로 더 좁히는 건 `ReviewService.getReviewableReservations`/`createReview`(2026-10-05, 문창호)의 애플리케이션 레벨 검증이다 — DB 제약은 "같은 예약으로 리뷰 2개"만 막고 시간 창까지는 안 본다.
 
 ---
 
@@ -568,7 +568,7 @@ PortOne(아임포트) 결제 1건. 담당: 송채현. `ready()`/`approve()`/`fai
 
 ## 갱신 이력
 
-**2026-10-05 (문창호) — review.reservation_id 추가** — "회원당 매장 1곳에 리뷰 1건"에서 "예약(주문)당 리뷰 1건"으로 정책 변경(사용자 요청). `review` 테이블에 `reservation_id`(nullable, 이 컬럼 도입 전 리뷰는 소급 연결 불가) 컬럼 신규 추가, 16번 섹션 "검토 필요" 각주를 새 정책 기준으로 갱신.
+**2026-10-05 (문창호/강노은 병합)** — review.reservation_id 문서화. "회원당 매장 1곳에 리뷰 1건"에서 "예약(주문)당 리뷰 1건"으로 정책 변경(강노은, 2026-10-01, `sql/migration-2026-10-01-review-reservation-id.sql`) — `review.reservation_id`(nullable, UK) 컬럼 추가. 문창호가 같은 날 독립적으로 유사 기능(72시간 창 포함, DB 제약 없음)을 구현했다가 dev 브랜치 병합 시 충돌 발견 — 강노은의 DB 제약 버전을 기준으로 채택하고, 72시간 작성 제한만 그 위에 추가로 얹었다(`ReviewService.getReviewableReservations`/`createReview`).
 
 **2026-10-05 (송채현) — 2차 보강** — IntelliJ 라이브 코드(도메인 엔티티 26개 전체)와 이 문서·`docs/schema.sql`·ERD를 1:1로 재대조. 문창호 전수조사(바로 아래 항목)에서도 빠졌던 컬럼 8개를 추가로 찾아 반영: `users.language`(2026-09-22, 환경설정 언어 선택값), `store.image_url`(2026-09-21, 매장 사진)/`settlement_alert_enabled`/`automation_alert_enabled`(둘 다 2026-09-22, 알림 토글), `product.owner_discount_rate`(점주 지정 할인율 하한), `review.reply_content`/`reply_created_at`/`reply_edited`(2026-09-17, 문창호 "사장님 리뷰 답글" 기능). 전부 전수조사 시점(10/05) 이전부터 코드에 있었지만 문서에 반영이 안 돼 있던 것들 — 나머지 22개 테이블은 전부 코드와 일치 확인.
 
