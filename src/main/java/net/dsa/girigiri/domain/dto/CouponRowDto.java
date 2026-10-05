@@ -14,6 +14,9 @@ public class CouponRowDto {
     private Long id;
     private String sourceLabel;
     private Integer discountRate;
+    // "10% 할인" / "3,000원 할인" (정액 쿠폰이 "null%"로 보이던 것 정리, 2026-10-06) · areaLabel은 지역 지정 쿠폰만 "서울·경기 매장에서 사용".
+    private String discountLabel;
+    private String areaLabel;
     private String expiresAtLabel;
     private boolean used;
     private boolean expired;

@@ -2,10 +2,13 @@ package net.dsa.girigiri;
 
 import net.dsa.girigiri.domain.entity.CouponCampaignEntity;
 import net.dsa.girigiri.domain.entity.CouponEntity;
+import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.CouponCampaignRepository;
 import net.dsa.girigiri.repository.CouponPolicyRepository;
+import net.dsa.girigiri.repository.CouponRegionRepository;
 import net.dsa.girigiri.repository.CouponRepository;
 import net.dsa.girigiri.repository.CouponStoreRepository;
+import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.CouponService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +26,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 매장 지정 쿠폰(scope=STORE) 체크아웃 검증 + 할인 계산 — 2026-10-01 신규
- * (지역별 현황 드릴다운 "완료 조건": 쿠폰 적용 가능 여부 검증, REGION 발행 차단).
+ * (지역별 현황 드릴다운 "완료 조건": 쿠폰 적용 가능 여부 검증, REGION 발행 차단 → 2026-10-06 지역 지정 쿠폰 지원으로 변경).
  * CouponService는 repository가 여러 개라 Mockito 단위 테스트로 격리한다(LedgerServiceBadgeTest와 동일 패턴).
  */
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +40,11 @@ class CouponStoreScopeTest {
 	private CouponStoreRepository couponStoreRepository;
 	@Mock
 	private CouponCampaignRepository couponCampaignRepository;
+	// 지역 지정 쿠폰(2026-10-06) — validateForRedeem이 매장의 시도를 coupon_region과 대조한다.
+	@Mock
+	private CouponRegionRepository couponRegionRepository;
+	@Mock
+	private StoreRepository storeRepository;
 
 	@InjectMocks
 	private CouponService couponService;
@@ -74,14 +82,36 @@ class CouponStoreScopeTest {
 		assertEquals(1L, result.getId());
 	}
 
+	// 변경됨 (2026-10-06) — 지역 지정 쿠폰 발행이 생겨서 "REGION은 항상 거부" 대신 "대상 시도의 매장에서만 통과"로 바뀌었다.
 	@Test
-	void REGION_스코프_쿠폰은_체크아웃에서_항상_거부된다() {
+	void 지역_지정_쿠폰은_대상_시도의_매장이면_통과한다() {
 		CouponEntity coupon = storeCoupon(CouponCampaignEntity.SCOPE_REGION, 51L);
 		when(couponRepository.findByIdAndIssuedToUserId(1L, 100L)).thenReturn(Optional.of(coupon));
+		when(storeRepository.findById(7L)).thenReturn(Optional.of(StoreEntity.builder().id(7L).sido("부산").build()));
+		when(couponRegionRepository.existsByCampaignIdAndSido(51L, "부산")).thenReturn(true);
+
+		assertEquals(1L, couponService.validateForRedeem(100L, 1L, 7L, 10000).getId());
+	}
+
+	@Test
+	void 지역_지정_쿠폰은_대상_시도가_아닌_매장이면_거부된다() {
+		CouponEntity coupon = storeCoupon(CouponCampaignEntity.SCOPE_REGION, 51L);
+		when(couponRepository.findByIdAndIssuedToUserId(1L, 100L)).thenReturn(Optional.of(coupon));
+		when(storeRepository.findById(7L)).thenReturn(Optional.of(StoreEntity.builder().id(7L).sido("서울").build()));
+		when(couponRegionRepository.existsByCampaignIdAndSido(51L, "서울")).thenReturn(false);
 
 		ResponseStatusException e = assertThrows(ResponseStatusException.class,
 				() -> couponService.validateForRedeem(100L, 1L, 7L, 10000));
-		assertTrue(e.getReason().contains("지원하지"));
+		assertTrue(e.getReason().contains("이 지역"));
+	}
+
+	@Test
+	void 지역_지정_쿠폰은_매장의_시도를_모르면_거부된다() {
+		CouponEntity coupon = storeCoupon(CouponCampaignEntity.SCOPE_REGION, 51L);
+		when(couponRepository.findByIdAndIssuedToUserId(1L, 100L)).thenReturn(Optional.of(coupon));
+		when(storeRepository.findById(7L)).thenReturn(Optional.of(StoreEntity.builder().id(7L).sido(null).build()));
+
+		assertThrows(ResponseStatusException.class, () -> couponService.validateForRedeem(100L, 1L, 7L, 10000));
 	}
 
 	@Test

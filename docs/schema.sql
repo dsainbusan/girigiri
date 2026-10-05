@@ -291,51 +291,12 @@ CREATE TABLE payment_cancel (
     FOREIGN KEY (payment_id) REFERENCES payment(id)
 );
 
--- 신고 처리로 발생한 관리자 환불 1건 (2026-10-06 추가, 신고 기반 리팩터링 — 스펙 C). 유저 본인
--- 취소(payment/payment_cancel 경로)와는 완전히 분리된 테이블 — PG 상태의 단일 진실 소스는 여전히
--- payment.pay_status라서(정산이 그것만 본다), 이 테이블은 "신고 처리 환불 1건"이라는 사실 자체와
--- "환불 완료" 배지 표시(일시·처리자)용으로만 쓴다.
-CREATE TABLE refund (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id        BIGINT NOT NULL COMMENT '= reservation.id ("주문")',
-    report_id       BIGINT NOT NULL COMMENT '= complaint.id, 이 환불의 근거가 된 신고',
-    amount          INT NOT NULL,
-    reason          VARCHAR(255) NOT NULL,
-    status          VARCHAR(20) NOT NULL COMMENT 'REQUESTED/DONE/FAILED (enum, 대문자 저장)',
-    pg_refund_tid   VARCHAR(50) COMMENT 'PG 환불 거래 참조값(현재는 merchantUid 재사용, PortOneClient 참고)',
-    requested_by    BIGINT NOT NULL COMMENT '처리한 슈퍼어드민 userId',
-    created_at      DATETIME,
-    updated_at      DATETIME,
-    UNIQUE KEY uk_refund_order_id (order_id),
-    FOREIGN KEY (order_id) REFERENCES reservation(id),
-    FOREIGN KEY (report_id) REFERENCES complaint(id)
-);
-
 CREATE TABLE receipt (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     reservation_id  BIGINT NOT NULL,
     pdf_url         VARCHAR(255),
     generated_at    DATETIME,
     FOREIGN KEY (reservation_id) REFERENCES reservation(id)
-);
-
--- 회원 1명에게 발급된 쿠폰 1장 (2026-09-07 신규/재설계, 송채현). 웰컴/매장귀책보상/프로모션 3경로,
--- 전부 "회원 1명당 1장" 방식이라 공유 수량 풀(quantityLimit/usedCount) 개념 없음.
-CREATE TABLE coupon (
-    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
-    source                  VARCHAR(30) NOT NULL COMMENT 'WELCOME / STORE_COMPENSATION / PROMOTION',
-    issued_to_user_id       BIGINT NOT NULL,
-    campaign_id             BIGINT COMMENT 'source=PROMOTION일 때만 값 존재',
-    source_reservation_id   BIGINT COMMENT 'source=STORE_COMPENSATION일 때만 값 존재',
-    discount_rate           INT NOT NULL COMMENT '정률 할인(%)',
-    expires_at              DATETIME NOT NULL,
-    used                    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '체크아웃에서 쓰면 true. 매장귀책/일반 취소 시 복구(false), 회원 노쇼는 복구 안 함',
-    used_at                 DATETIME COMMENT 'used가 true로 바뀐 시점(2026-09-22 추가). markUsed()에서 채우고, restore()로 복구되면 다시 NULL',
-    created_at              DATETIME,
-    INDEX idx_coupon_issued_to_user_id (issued_to_user_id),
-    FOREIGN KEY (issued_to_user_id) REFERENCES users(id),
-    FOREIGN KEY (campaign_id) REFERENCES coupon_campaign(id),
-    FOREIGN KEY (source_reservation_id) REFERENCES reservation(id)
 );
 
 -- 쿠폰 정책값 — 웰컴/매장귀책보상 할인율. 항상 1행만 존재(id=1), 없으면 서비스가 기본값으로 생성.
@@ -346,16 +307,71 @@ CREATE TABLE coupon_policy (
     updated_at                  DATETIME
 );
 
--- 프로모션 이벤트 쿠폰 캠페인 — 슈퍼어드민이 이벤트마다 생성, 회원이 code를 입력해 발급받음.
+-- 쿠폰 캠페인 — 슈퍼어드민이 만든다. scope로 세 종류를 한 테이블에 둔다:
+--   NULL   코드형 프로모션 (회원이 code를 입력해 발급, 매장/지역 제한 없음)
+--   STORE  매장 지정 (2026-10-01) — 대상 매장은 coupon_store, 매장 상세의 "쿠폰 받기" 버튼으로 받음
+--   REGION 지역 지정 (2026-10-06) — 대상 시도는 coupon_region, 발행 즉시 해당 시도 회원 쿠폰함으로 발급
 CREATE TABLE coupon_campaign (
-    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name           VARCHAR(100) NOT NULL COMMENT '관리용 이름, 회원 비노출',
-    code           VARCHAR(30) NOT NULL COMMENT '회원이 입력하는 코드(대문자 정규화)',
-    discount_rate  INT NOT NULL,
-    expires_at     DATETIME NOT NULL,
-    active         TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'false면 새 발급만 막힘, 기발급 쿠폰은 유효',
-    created_at     DATETIME,
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                VARCHAR(100) NOT NULL COMMENT '관리용 이름, 회원 비노출',
+    code                VARCHAR(30) COMMENT '코드형만 값 존재(대문자 정규화). 매장/지역 지정형은 NULL (2026-10-06 NOT NULL 해제)',
+    scope               VARCHAR(10) COMMENT 'NULL / STORE / REGION',
+    discount_type       VARCHAR(10) COMMENT 'RATE / AMOUNT',
+    discount_rate       INT COMMENT '정률(%). 정액 캠페인이면 NULL (2026-10-06 NOT NULL 해제)',
+    discount_amount     INT COMMENT '정액(원)',
+    max_discount_amount INT COMMENT '정률의 최대 할인 금액',
+    min_order_amount    INT COMMENT '최소 주문 금액',
+    issue_limit         INT COMMENT '발급 수량 상한. NULL이면 무제한',
+    funded_by           VARCHAR(20) COMMENT '비용 부담 주체: PLATFORM',
+    issued_by_admin_id  BIGINT COMMENT '발행한 슈퍼어드민 users.id',
+    issue_reason        VARCHAR(200) COMMENT '발행 사유(운영 기록용)',
+    expires_at          DATETIME NOT NULL,
+    active              TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'false면 새 발급만 막힘, 기발급 쿠폰은 유효',
+    created_at          DATETIME,
     UNIQUE KEY uk_coupon_campaign_code (code)
+);
+
+-- 매장 지정 캠페인의 대상 매장 (N:M)
+CREATE TABLE coupon_store (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id  BIGINT NOT NULL,
+    store_id     BIGINT NOT NULL,
+    INDEX idx_coupon_store_store_id (store_id),
+    FOREIGN KEY (campaign_id) REFERENCES coupon_campaign(id),
+    FOREIGN KEY (store_id) REFERENCES store(id)
+);
+
+-- 지역 지정 캠페인의 대상 시도 (N:M, 2026-10-06 추가). sido는 "서울", "경기" 등 17개 표준 명칭.
+CREATE TABLE coupon_region (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    campaign_id  BIGINT NOT NULL,
+    sido         VARCHAR(10) NOT NULL,
+    INDEX idx_coupon_region_campaign_sido (campaign_id, sido),
+    FOREIGN KEY (campaign_id) REFERENCES coupon_campaign(id)
+);
+
+-- 회원 1명에게 발급된 쿠폰 1장 (2026-09-07 신규/재설계, 송채현). 웰컴/매장귀책보상/프로모션 3경로,
+-- 전부 "회원 1명당 1장" 방식이라 공유 수량 풀(quantityLimit/usedCount) 개념 없음.
+CREATE TABLE coupon (
+    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    source                  VARCHAR(30) NOT NULL COMMENT 'WELCOME / STORE_COMPENSATION / PROMOTION',
+    issued_to_user_id       BIGINT NOT NULL,
+    campaign_id             BIGINT COMMENT 'source=PROMOTION일 때만 값 존재',
+    source_reservation_id   BIGINT COMMENT 'source=STORE_COMPENSATION일 때만 값 존재',
+    discount_rate           INT COMMENT '정률 할인(%). 정액(AMOUNT) 쿠폰이면 NULL (2026-10-06 NOT NULL 해제)',
+    scope                   VARCHAR(10) COMMENT '발급 시점의 캠페인 scope 복사: NULL(제한 없음) / STORE / REGION (2026-10-01 추가)',
+    discount_type           VARCHAR(10) COMMENT 'RATE / AMOUNT (2026-10-01 추가)',
+    discount_amount         INT COMMENT '정액 할인(원)',
+    max_discount_amount     INT COMMENT '정률 할인의 최대 할인 금액',
+    min_order_amount        INT COMMENT '최소 주문 금액',
+    expires_at              DATETIME NOT NULL,
+    used                    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '체크아웃에서 쓰면 true. 매장귀책/일반 취소 시 복구(false), 회원 노쇼는 복구 안 함',
+    used_at                 DATETIME COMMENT 'used가 true로 바뀐 시점(2026-09-22 추가). markUsed()에서 채우고, restore()로 복구되면 다시 NULL',
+    created_at              DATETIME,
+    INDEX idx_coupon_issued_to_user_id (issued_to_user_id),
+    FOREIGN KEY (issued_to_user_id) REFERENCES users(id),
+    FOREIGN KEY (campaign_id) REFERENCES coupon_campaign(id),
+    FOREIGN KEY (source_reservation_id) REFERENCES reservation(id)
 );
 
 -- ── 3. 리뷰 / 찜 / 알림 ─────────────────────────────────────────────

@@ -38,9 +38,13 @@
     </form>
   </section>
 
+  <p class="form-success" th:if="${regionCouponSuccess != null}" th:text="${regionCouponSuccess}">발행했어요.</p>
+  <p class="form-error" th:if="${regionCouponError != null}" th:text="${regionCouponError}">오류</p>
+
   <div class="toolbar">
     <p class="result-count result-count--inline">전체 캠페인 <b th:text="${#lists.size(campaigns)}">0</b>건</p>
     <div class="toolbar__spacer"></div>
+    <button type="button" class="btn btn--outline-neutral btn--sm" id="open-region-coupon-modal">지역 지정 쿠폰 발행</button>
     <a class="btn btn--primary btn--sm" th:href="@{/superadmin/coupons/new}"><svg class="icon"><use href="#i-pencil"/></svg>새 캠페인 만들기</a>
   </div>
 
@@ -58,8 +62,8 @@
         </tr>
         <tr th:each="c : ${campaigns}">
           <td class="cell-name" th:text="${c.name}">추석 프로모션</td>
-          <td th:text="${c.code}">AUTUMN2026</td>
-          <td th:text="${c.discountRate} + '%'">10%</td>
+          <td th:text="${c.code != null} ? ${c.code} : ${c.scopeLabel}">AUTUMN2026</td>
+          <td th:text="${c.discountLabel}">10%</td>
           <td th:text="${c.expiresAtLabel}">2026-09-30</td>
           <td th:text="${c.claimedCount} + '명'">0명</td>
           <td>
@@ -82,6 +86,133 @@
       </tbody>
     </table>
   </div>
+
+  <!-- 지역 지정 쿠폰 발행 모달 (2026-10-06) — 선택한 시도 회원의 쿠폰함으로 바로 발급한다. -->
+  <div id="region-coupon-modal" role="dialog" aria-modal="true" aria-label="지역 지정 쿠폰 발행" class="modal-overlay" hidden>
+    <form class="modal-card" th:action="@{/superadmin/coupons/region}" method="post" id="region-coupon-form">
+      <h3 class="modal-card__title" id="region-coupon-title">지역 지정 쿠폰 발행</h3>
+      <p class="text-muted text-muted--sm">선택한 시도에 사는 회원의 쿠폰함으로 바로 발급돼요. 쿠폰은 그 시도에 있는 매장에서만 쓸 수 있어요.</p>
+
+      <div class="field-group">
+        <label class="field-group__label">대상 시도</label>
+        <div class="u-row" style="flex-wrap: wrap; gap: 8px 14px">
+          <label th:each="s : ${sidoList}"><input type="checkbox" name="sidos" th:value="${s}" class="region-sido"> <span th:text="${s}">서울</span></label>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-group__label">할인 방식</label>
+        <div class="u-row">
+          <label><input type="radio" name="discountType" value="RATE" checked> 정률(%)</label>
+          <label><input type="radio" name="discountType" value="AMOUNT"> 정액(원)</label>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="rcDiscountRate">할인율(%)</label>
+        <input class="field" type="number" id="rcDiscountRate" name="discountRate" min="1" max="90" value="10">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="rcDiscountAmount">할인 금액(원)</label>
+        <input class="field" type="number" id="rcDiscountAmount" name="discountAmount" min="100" step="100" disabled>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="rcMaxDiscount">최대 할인 금액(원, 정률일 때만)</label>
+        <input class="field" type="number" id="rcMaxDiscount" name="maxDiscountAmount" min="100" step="100">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="rcMinOrder">최소 주문 금액(원)</label>
+        <input class="field" type="number" id="rcMinOrder" name="minOrderAmount" min="0" step="100" value="0">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label">발급 대상 회원</label>
+        <input class="field" type="text" id="rcRecipientDisplay" value="시도를 선택해 주세요" disabled>
+        <span class="text-muted text-muted--sm">선택한 시도에 사는 활성 일반 회원 수예요 — 모두에게 한 장씩 발급되고, 직접 입력할 수 없어요.</span>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="rcValidDays">유효 기간(일)</label>
+        <input class="field" type="number" id="rcValidDays" name="validDays" min="1" value="7">
+      </div>
+      <p id="rcCostEstimate" class="text-muted text-muted--sm">예상 최대 비용: -</p>
+
+      <div class="field-group">
+        <label class="field-group__label" for="rcReason">발행 사유</label>
+        <input class="field" type="text" id="rcReason" name="reason" maxlength="200" placeholder="예: 지역 프로모션">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label">알림 발송</label>
+        <label class="u-row"><input type="checkbox" name="notify" value="true" checked> 대상 회원에게 쿠폰 도착 알림</label>
+      </div>
+
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-region-modal>취소</button>
+        <button type="submit" class="btn btn--sm" id="rcSubmit" disabled>발행하기</button>
+      </div>
+    </form>
+  </div>
+
+  <script th:inline="none">
+  (function () {
+    var modal = document.getElementById('region-coupon-modal');
+    var recipientEl = document.getElementById('rcRecipientDisplay');
+    var submitBtn = document.getElementById('rcSubmit');
+    var costEl = document.getElementById('rcCostEstimate');
+    var rate = document.getElementById('rcDiscountRate');
+    var amount = document.getElementById('rcDiscountAmount');
+    var maxDiscount = document.getElementById('rcMaxDiscount');
+    var recipients = 0;
+
+    function sidos() {
+      return Array.prototype.slice.call(document.querySelectorAll('.region-sido:checked')).map(function (c) { return c.value; });
+    }
+    function updateCost() {
+      if (recipients === 0) { costEl.textContent = '예상 최대 비용: -'; return; }
+      var isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
+      if (isRate && !maxDiscount.value) {
+        costEl.textContent = '예상 최대 비용: 최대 할인 금액을 입력하면 계산돼요 (대상 ' + recipients + '명)';
+        return;
+      }
+      var per = parseInt(isRate ? maxDiscount.value : amount.value, 10) || 0;
+      costEl.textContent = '예상 최대 비용: ' + (recipients * per).toLocaleString() + '원 (대상 ' + recipients + '명 × 최대 ' + per.toLocaleString() + '원)';
+    }
+    function refreshRecipients() {
+      var selected = sidos();
+      if (selected.length === 0) {
+        recipients = 0; recipientEl.value = '시도를 선택해 주세요'; submitBtn.disabled = true; updateCost(); return;
+      }
+      recipientEl.value = '불러오는 중...';
+      var params = selected.map(function (s) { return 'sidos=' + encodeURIComponent(s); }).join('&');
+      fetch('/superadmin/coupons/region/recipient-count?' + params)
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            recipients = data.count || 0;
+            recipientEl.value = recipients === 0 ? '0명 — 쿠폰을 받을 회원이 없어 발행할 수 없어요' : recipients + '명';
+            submitBtn.disabled = recipients === 0;
+            updateCost();
+          })
+          .catch(function () { recipientEl.value = '-'; });
+    }
+
+    document.getElementById('open-region-coupon-modal').addEventListener('click', function () {
+      modal.hidden = false;
+      document.getElementById('region-coupon-title').focus();
+    });
+    document.querySelector('[data-close-region-modal]').addEventListener('click', function () { modal.hidden = true; });
+    modal.addEventListener('click', function (e) { if (e.target === modal) { modal.hidden = true; } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { modal.hidden = true; } });
+
+    document.querySelectorAll('.region-sido').forEach(function (c) { c.addEventListener('change', refreshRecipients); });
+    document.querySelectorAll('input[name="discountType"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        if (!radio.checked) { return; }
+        var isRate = radio.value === 'RATE';
+        rate.disabled = !isRate;
+        amount.disabled = isRate;
+        updateCost();
+      });
+    });
+    [maxDiscount, amount].forEach(function (el) { el.addEventListener('input', updateCost); });
+  })();
+  </script>
 
 </div>
 </body>

@@ -4,12 +4,15 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.dto.CouponCampaignRowDto;
 import net.dsa.girigiri.domain.entity.CouponCampaignEntity;
+import net.dsa.girigiri.domain.entity.CouponEntity;
+import net.dsa.girigiri.domain.entity.CouponRegionEntity;
 import net.dsa.girigiri.domain.entity.CouponStoreEntity;
 import net.dsa.girigiri.domain.entity.LikeEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.CouponCampaignRepository;
+import net.dsa.girigiri.repository.CouponRegionRepository;
 import net.dsa.girigiri.repository.CouponRepository;
 import net.dsa.girigiri.repository.CouponStoreRepository;
 import net.dsa.girigiri.repository.LikeRepository;
@@ -44,6 +47,13 @@ public class SuperAdminCouponService {
 
 	public enum StoreCampaignResult { SUCCESS, INVALID }
 
+	/** 지역 지정 쿠폰 발행 결과 — success=false면 입력값 오류/대상 회원 없음, issuedCount는 실제 발급된 쿠폰 수. */
+	public record RegionCampaignResult(boolean success, int issuedCount) {
+		static RegionCampaignResult invalid() {
+			return new RegionCampaignResult(false, 0);
+		}
+	}
+
 	private static final DateTimeFormatter DATE_LABEL = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final int MAX_RATE = 90;
 
@@ -51,6 +61,8 @@ public class SuperAdminCouponService {
 	private final CouponRepository couponRepository;
 	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — createStoreCampaign 전용 의존성.
 	private final CouponStoreRepository couponStoreRepository;
+	// 추가됨 (2026-10-06, 지역 지정 쿠폰) — createRegionCampaign 전용 의존성.
+	private final CouponRegionRepository couponRegionRepository;
 	private final StoreRepository storeRepository;
 	private final LikeRepository likeRepository;
 	private final UserRepository userRepository;
@@ -159,6 +171,117 @@ public class SuperAdminCouponService {
 			notifyCustomers(campaign, stores, notifyLiked, notifySameRegion);
 		}
 		return StoreCampaignResult.SUCCESS;
+	}
+
+	/**
+	 * 지역 지정 쿠폰 발행("뿌리기") — 2026-10-06 신규(/superadmin/coupons). 선택한 시도에 사는 활성 일반
+	 * 회원(role=USER, status=ACTIVE, users.region을 SidoParser로 파싱한 값이 대상 시도에 포함)의 쿠폰함으로
+	 * 쿠폰을 바로 발급한다. 매장 지정 쿠폰(createStoreCampaign)처럼 "쿠폰 받기" 버튼을 누르게 하지 않는
+	 * 이유는 대상이 매장을 찜한 사람이 아니라 지역 주민 전체라 상세 페이지 진입점이 따로 없기 때문이다.
+	 * 쓸 수 있는 곳은 대상 시도에 있는 매장뿐이다(CouponService#validateForRedeem).
+	 * 비용은 전부 플랫폼 부담(FUNDED_BY_PLATFORM)이라 정산은 건드리지 않는다. 발행 수량은 발급 대상 회원
+	 * 수와 같다(issueLimit) — 클라이언트가 모달에서 본 숫자는 믿지 않고 여기서 다시 계산한다.
+	 */
+	@Transactional
+	public RegionCampaignResult createRegionCampaign(List<String> sidos, String discountType, Integer discountRate,
+	                                                  Integer discountAmount, Integer maxDiscountAmount,
+	                                                  Integer minOrderAmount, int validDays,
+	                                                  String reason, Long adminId, boolean notify) {
+		List<String> targetSidos = sidos == null ? List.of() : sidos.stream()
+				.filter(SidoParser.SIDO_LIST::contains).distinct().toList();
+		if (targetSidos.isEmpty() || validDays < 1) {
+			return RegionCampaignResult.invalid();
+		}
+		boolean isRate = CouponCampaignEntity.DISCOUNT_TYPE_RATE.equals(discountType);
+		boolean isAmount = CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(discountType);
+		if (!isRate && !isAmount) {
+			return RegionCampaignResult.invalid();
+		}
+		if (isRate && (discountRate == null || discountRate < 1 || discountRate > MAX_RATE)) {
+			return RegionCampaignResult.invalid();
+		}
+		if (isAmount && (discountAmount == null || discountAmount < 1)) {
+			return RegionCampaignResult.invalid();
+		}
+		int min = minOrderAmount == null ? 0 : minOrderAmount;
+		if (min < 0 || (maxDiscountAmount != null && maxDiscountAmount < 1)) {
+			return RegionCampaignResult.invalid();
+		}
+
+		List<UserEntity> recipients = findRegionRecipients(targetSidos);
+		if (recipients.isEmpty()) {
+			return RegionCampaignResult.invalid();
+		}
+
+		LocalDateTime expiresAt = LocalDateTime.now().plusDays(validDays);
+		CouponCampaignEntity campaign = CouponCampaignEntity.builder()
+				.name("지역 지정 쿠폰 · " + LocalDate.now().format(DATE_LABEL) + " (" + String.join("·", targetSidos) + ")")
+				.scope(CouponCampaignEntity.SCOPE_REGION)
+				.discountType(discountType)
+				.discountRate(isRate ? discountRate : null)
+				.discountAmount(isAmount ? discountAmount : null)
+				.maxDiscountAmount(isRate ? maxDiscountAmount : null)
+				.minOrderAmount(min)
+				.issueLimit(recipients.size())
+				.fundedBy(CouponCampaignEntity.FUNDED_BY_PLATFORM)
+				.issuedByAdminId(adminId)
+				.issueReason(reason != null && !reason.isBlank() ? reason.trim() : null)
+				.expiresAt(expiresAt)
+				.active(true)
+				.build();
+		campaignRepository.save(campaign);
+
+		for (String sido : targetSidos) {
+			couponRegionRepository.save(CouponRegionEntity.builder().campaignId(campaign.getId()).sido(sido).build());
+		}
+
+		List<CouponEntity> coupons = recipients.stream()
+				.map(u -> CouponEntity.builder()
+						.source(CouponEntity.SOURCE_PROMOTION)
+						.issuedToUserId(u.getId())
+						.campaignId(campaign.getId())
+						.scope(campaign.getScope())
+						.discountType(campaign.getDiscountType())
+						.discountRate(campaign.getDiscountRate())
+						.discountAmount(campaign.getDiscountAmount())
+						.maxDiscountAmount(campaign.getMaxDiscountAmount())
+						.minOrderAmount(campaign.getMinOrderAmount())
+						.expiresAt(expiresAt)
+						.used(false)
+						.build())
+				.toList();
+		couponRepository.saveAll(coupons);
+
+		if (notify) {
+			String discountLabel = isAmount ? discountAmount + "원" : discountRate + "%";
+			String regionLabel = targetSidos.size() == 1 ? targetSidos.get(0) : "우리 동네";
+			String message = regionLabel + " 매장에서 쓸 수 있는 " + discountLabel + " 쿠폰이 도착했어요";
+			for (UserEntity u : recipients) {
+				notificationService.createNotification(u.getId(), NotificationEntity.TYPE_STORE_COUPON_AVAILABLE,
+						message, "/coupons", "region_coupon:" + campaign.getId() + ":" + u.getId());
+			}
+		}
+		return new RegionCampaignResult(true, coupons.size());
+	}
+
+	/** 쿠폰 발행 모달 미리보기용 — 선택한 시도에 사는 발급 대상 회원 수. 실제 발행 때는 서버가 다시 계산한다. */
+	@Transactional(readOnly = true)
+	public int countRegionRecipients(List<String> sidos) {
+		if (sidos == null || sidos.isEmpty()) {
+			return 0;
+		}
+		return findRegionRecipients(sidos.stream().filter(SidoParser.SIDO_LIST::contains).distinct().toList()).size();
+	}
+
+	private List<UserEntity> findRegionRecipients(List<String> targetSidos) {
+		if (targetSidos.isEmpty()) {
+			return List.of();
+		}
+		return userRepository.findAll().stream()
+				.filter(u -> UserEntity.ROLE_USER.equals(u.getRole()))
+				.filter(u -> u.getStatus() == null || UserEntity.STATUS_ACTIVE.equals(u.getStatus()))
+				.filter(u -> targetSidos.contains(SidoParser.parse(u.getRegion())))
+				.toList();
 	}
 
 	/**
@@ -278,11 +401,26 @@ public class SuperAdminCouponService {
 				.name(c.getName())
 				.code(c.getCode())
 				.discountRate(c.getDiscountRate())
+				.discountLabel(CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(c.getDiscountType())
+						? c.getDiscountAmount() + "원" : c.getDiscountRate() + "%")
+				.scopeLabel(scopeLabel(c))
 				.expiresAtLabel(c.getExpiresAt().toLocalDate().format(DATE_LABEL))
 				.active(c.isActive())
 				.expired(expired)
 				.claimedCount(couponRepository.countByCampaignId(c.getId()))
 				.statusLabel(statusLabel)
 				.build();
+	}
+
+	// 캠페인 목록의 "코드" 칸 — 코드형은 코드, 매장/지역 지정형은 코드가 없으니 적용 범위를 보여준다.
+	private String scopeLabel(CouponCampaignEntity c) {
+		if (CouponCampaignEntity.SCOPE_REGION.equals(c.getScope())) {
+			return "지역 · " + couponRegionRepository.findByCampaignId(c.getId()).stream()
+					.map(CouponRegionEntity::getSido).collect(Collectors.joining("·"));
+		}
+		if (CouponCampaignEntity.SCOPE_STORE.equals(c.getScope())) {
+			return "매장 지정 · " + couponStoreRepository.findByCampaignId(c.getId()).size() + "곳";
+		}
+		return null;
 	}
 }
