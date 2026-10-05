@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.service.CouponService;
 import net.dsa.girigiri.service.LikeService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
@@ -31,6 +32,7 @@ public class StoreDetailController {
 
 
 	private final LikeService likeService;
+	private final CouponService couponService;
 	private final ReviewService reviewService;
 	private final LookupService lookupService;
 	private final StoreDetailService storeDetailService;
@@ -50,6 +52,8 @@ public class StoreDetailController {
 		var myReview = reviewService.getMyReview(userId, id);
 
 		model.addAttribute("store", store);
+		// 추가됨 (2026-10-01, 매장 지정 쿠폰) — 이 매장을 대상으로 지금 받을 수 있는 쿠폰 카드 목록.
+		model.addAttribute("storeCouponOffers", couponService.findStoreCouponOffers(id, userId));
 		model.addAttribute("avgRating", String.format("%.1f", reviewService.getAverageRating(id)));
 		model.addAttribute("reviewCount", reviewService.getReviewCount(id));
 		model.addAttribute("reviews", reviewService.getReviews(id, userId, role));

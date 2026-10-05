@@ -36,7 +36,9 @@ import java.util.Map;
 		SuperAdminReservationController.class,
 		// 추가됨 (2026-09-29, 담당: 송보미) — 정산 화면 신설. 위 클래스 주석의 경고(새 컨트롤러
 		// 추가 시 여기도 같이 챙길 것)를 그대로 따름.
-		SuperAdminSettlementController.class
+		SuperAdminSettlementController.class,
+		// 추가됨 (2026-10-01, 담당: 송보미) — 지역→매장 드릴다운 신설. 위 경고와 동일한 이유로 추가.
+		SuperAdminRegionController.class
 })
 @RequiredArgsConstructor
 public class SuperAdminNotificationAdvice {

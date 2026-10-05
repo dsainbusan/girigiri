@@ -3,10 +3,13 @@ package net.dsa.girigiri.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.CouponRowDto;
+import net.dsa.girigiri.domain.entity.CouponCampaignEntity;
 import net.dsa.girigiri.domain.entity.CouponEntity;
 import net.dsa.girigiri.domain.entity.CouponPolicyEntity;
+import net.dsa.girigiri.repository.CouponCampaignRepository;
 import net.dsa.girigiri.repository.CouponPolicyRepository;
 import net.dsa.girigiri.repository.CouponRepository;
+import net.dsa.girigiri.repository.CouponStoreRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +50,11 @@ public class CouponService {
 	// 슈퍼어드민이 /superadmin/coupons 화면에서 직접 수정할 수 있게 뺐다. "쿠폰은 사장님이 아니라
 	// 슈퍼어드민이 만들어서 뿌린다"는 원칙을 프로모션 쿠폰뿐 아니라 이 두 종류에도 동일하게 적용.
 	private final CouponPolicyRepository couponPolicyRepository;
+	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — 체크아웃 시 "이 매장에서 쓸 수 있는 쿠폰인지" 확인용.
+	private final CouponStoreRepository couponStoreRepository;
+	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — claimStoreCampaignCoupon()에서 발급 수량 상한을
+	// 동시성 안전하게 확인하기 위해 캠페인 행을 락 걸고 다시 조회한다.
+	private final CouponCampaignRepository couponCampaignRepository;
 
 	@Transactional(readOnly = true)
 	public List<CouponRowDto> listForUser(Long userId) {
@@ -166,9 +174,14 @@ public class CouponService {
 		);
 	}
 
-	/** 체크아웃에서 이 쿠폰을 지금 쓸 수 있는지 검증 — 본인 소유 + 미사용 + 미만료여야 한다. */
+	/**
+	 * 체크아웃에서 이 쿠폰을 지금 쓸 수 있는지 검증 — 본인 소유 + 미사용 + 미만료 + (매장 지정
+	 * 쿠폰이면) 이 매장에서 쓸 수 있는지 + 최소 주문 금액까지 확인한다.
+	 * 2026-10-01 확장 — storeId/totalPrice 파라미터 추가(매장 지정 쿠폰, 지역별 현황 드릴다운).
+	 * scope가 null인 기존 쿠폰(웰컴/매장보상/코드형 프로모션)은 매장 제한이 없어 그대로 통과한다.
+	 */
 	@Transactional(readOnly = true)
-	public CouponEntity validateForRedeem(Long userId, Long couponId) {
+	public CouponEntity validateForRedeem(Long userId, Long couponId, Long storeId, int totalPrice) {
 		CouponEntity coupon = couponRepository.findByIdAndIssuedToUserId(couponId, userId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "쿠폰을 찾을 수 없어요."));
 		if (coupon.isUsed()) {
@@ -177,7 +190,35 @@ public class CouponService {
 		if (!coupon.getExpiresAt().isAfter(LocalDateTime.now())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "기한이 지난 쿠폰이에요.");
 		}
+		if (CouponCampaignEntity.SCOPE_REGION.equals(coupon.getScope())) {
+			// 방어적 분기 — REGION은 발행 자체가 막혀 있어 정상 경로로는 여기 올 일이 없다.
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "아직 지원하지 않는 쿠폰이에요.");
+		}
+		if (CouponCampaignEntity.SCOPE_STORE.equals(coupon.getScope())
+				&& !couponStoreRepository.existsByCampaignIdAndStoreId(coupon.getCampaignId(), storeId)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이 매장에서는 쓸 수 없는 쿠폰이에요.");
+		}
+		if (coupon.getMinOrderAmount() != null && totalPrice < coupon.getMinOrderAmount()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"최소 주문 금액 " + coupon.getMinOrderAmount() + "원 이상부터 쓸 수 있는 쿠폰이에요.");
+		}
 		return coupon;
+	}
+
+	/**
+	 * 쿠폰 할인액 계산 — 정액(AMOUNT)이면 그 금액 그대로(주문 금액을 넘지 않게 캡), 정률(RATE, 기존
+	 * 쿠폰 전부 포함)이면 주문 금액의 discountRate%를 적용하고 maxDiscountAmount가 있으면 그만큼
+	 * 캡을 씌운다. ReservationService#prepareReservation에서 호출.
+	 */
+	public int computeDiscount(CouponEntity coupon, int totalPrice) {
+		if (CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(coupon.getDiscountType())) {
+			return Math.min(coupon.getDiscountAmount(), totalPrice);
+		}
+		int amount = totalPrice * coupon.getDiscountRate() / 100;
+		if (coupon.getMaxDiscountAmount() != null) {
+			amount = Math.min(amount, coupon.getMaxDiscountAmount());
+		}
+		return Math.min(amount, totalPrice);
 	}
 
 	/**
@@ -203,6 +244,78 @@ public class CouponService {
 				.build();
 		couponRepository.save(coupon);
 		return coupon;
+	}
+
+	/**
+	 * 매장 지정 쿠폰(scope=STORE)을 손님용 상세 페이지의 "쿠폰 받기" 버튼으로 받는다 — 2026-10-01
+	 * 신규(지역별 현황 드릴다운). 코드 입력이 없다는 점과 발급 수량 상한(issueLimit) 동시성 처리가
+	 * claimCampaignCoupon()과 다른 점이라 별도 메서드로 둔다 — 기존 코드형 발급 경로는 그대로 둔다.
+	 * findByIdForUpdate로 캠페인 행을 잠가서, 두 손님이 동시에 눌러도 상한을 넘겨 발급되지 않는다
+	 * (ProductRepository/StockService의 재고 차감 락과 동일한 패턴).
+	 */
+	@Transactional
+	public CouponEntity claimStoreCampaignCoupon(Long userId, Long campaignId) {
+		CouponCampaignEntity campaign = couponCampaignRepository.findByIdForUpdate(campaignId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "쿠폰을 찾을 수 없어요."));
+		if (!CouponCampaignEntity.SCOPE_STORE.equals(campaign.getScope())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "받을 수 없는 쿠폰이에요.");
+		}
+		if (!campaign.isActive() || !campaign.getExpiresAt().isAfter(LocalDateTime.now())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지금은 받을 수 없는 쿠폰이에요.");
+		}
+		if (couponRepository.existsByCampaignIdAndIssuedToUserId(campaignId, userId)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 받은 쿠폰이에요.");
+		}
+		if (campaign.getIssueLimit() != null && couponRepository.countByCampaignId(campaignId) >= campaign.getIssueLimit()) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "쿠폰이 모두 소진됐어요.");
+		}
+
+		CouponEntity coupon = CouponEntity.builder()
+				.source(CouponEntity.SOURCE_PROMOTION)
+				.issuedToUserId(userId)
+				.campaignId(campaign.getId())
+				.scope(campaign.getScope())
+				.discountType(campaign.getDiscountType())
+				.discountRate(campaign.getDiscountRate())
+				.discountAmount(campaign.getDiscountAmount())
+				.maxDiscountAmount(campaign.getMaxDiscountAmount())
+				.minOrderAmount(campaign.getMinOrderAmount())
+				.expiresAt(campaign.getExpiresAt())
+				.used(false)
+				.build();
+		couponRepository.save(coupon);
+		return coupon;
+	}
+
+	/** 손님용 상세 페이지에서 "이 매장에 지금 받을 수 있는 쿠폰이 있는지 + 이미 받았는지" 확인할 때 쓴다. */
+	@Transactional(readOnly = true)
+	public boolean hasClaimedCampaign(Long userId, Long campaignId) {
+		return couponRepository.existsByCampaignIdAndIssuedToUserId(campaignId, userId);
+	}
+
+	/**
+	 * 손님용 매장 상세 페이지 "쿠폰 받기" 카드 목록 — 2026-10-01 신규. 이 매장을 대상으로 한, 지금
+	 * 활성·미만료인 매장 지정 캠페인만 보여준다. userId가 null(비로그인)이면 claimed는 전부 false로
+	 * 내려준다 — 버튼을 눌렀을 때 로그인 화면으로 보내는 건 컨트롤러(@LoginRequired)가 처리한다.
+	 */
+	@Transactional(readOnly = true)
+	public List<net.dsa.girigiri.domain.dto.StoreCouponOfferDto> findStoreCouponOffers(Long storeId, Long userId) {
+		LocalDateTime now = LocalDateTime.now();
+		return couponStoreRepository.findByStoreId(storeId).stream()
+				.map(net.dsa.girigiri.domain.entity.CouponStoreEntity::getCampaignId)
+				.distinct()
+				.map(id -> couponCampaignRepository.findById(id).orElse(null))
+				.filter(java.util.Objects::nonNull)
+				.filter(c -> c.isActive() && c.getExpiresAt().isAfter(now))
+				.map(c -> net.dsa.girigiri.domain.dto.StoreCouponOfferDto.builder()
+						.campaignId(c.getId())
+						.discountLabel(CouponCampaignEntity.DISCOUNT_TYPE_AMOUNT.equals(c.getDiscountType())
+								? c.getDiscountAmount() + "원 할인"
+								: c.getDiscountRate() + "% 할인")
+						.expiresAtLabel(c.getExpiresAt().toLocalDate().format(DATE_LABEL) + "까지")
+						.claimed(userId != null && hasClaimedCampaign(userId, c.getId()))
+						.build())
+				.toList();
 	}
 
 	// ---------------------------------------------------------------------

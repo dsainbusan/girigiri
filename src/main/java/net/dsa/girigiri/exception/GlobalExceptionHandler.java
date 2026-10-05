@@ -69,6 +69,15 @@ public class GlobalExceptionHandler {
 		return "errorView/custom-error-page";
 	}
 
+	// 노쇼 처리 불가 (픽업 대기중이 아니거나 / 아직 픽업 예정 시각 전)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	@ExceptionHandler(NoShowNotAllowedException.class)
+	public String handleNoShowNotAllowed(NoShowNotAllowedException e, Model model) {
+		log.debug("> [GlobalException] NoShowNotAllowedException: {}", e.getMessage());
+		model.addAttribute("message", e.getMessage());
+		return "errorView/custom-error-page";
+	}
+
 	// 로그인은 했지만 본인 예약이 아닌 걸 URL 조작으로 접근하려는 경우 (취소/완료화면/QR/영수증)
 	@ResponseStatus(HttpStatus.FORBIDDEN)
 	@ExceptionHandler(ReservationAccessDeniedException.class)

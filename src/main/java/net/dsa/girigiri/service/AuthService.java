@@ -9,6 +9,7 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.BusinessNumberUtil;
 import net.dsa.girigiri.util.PhoneUtil;
+import net.dsa.girigiri.util.SidoParser;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import net.dsa.girigiri.util.StorePhoneUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -593,6 +594,7 @@ public class AuthService {
 		store.setBusinessNumber(businessNumber.trim());
 		store.setCategory(category.trim());
 		store.setAddress(address.trim());
+		store.setSido(SidoParser.parse(address));
 		store.setPhone(phone.trim());
 		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
 		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {

@@ -7,6 +7,7 @@ import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationOrderItemDto;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
+import net.dsa.girigiri.exception.NoShowNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
@@ -211,6 +212,23 @@ public class ReservationIncomingController {
 
 		reservationService.acceptReservation(id);
 		redirectAttributes.addFlashAttribute("acceptedMessage", "예약을 확인했어요. 이제 손님이 픽업하러 올 수 있어요.");
+		return "redirect:/reservation/incoming";
+	}
+
+	/**
+	 * "노쇼 처리" 버튼: 픽업 대기중(ready) 예약을 자정 자동 처리를 기다리지 않고 사장님이 그 자리에서
+	 * noshowed로 확정한다. (2026-09-30, 문창호 인수 — WBS 3.0 잔여 항목)
+	 * 다른 매장 예약 처리를 막는 소유권 체크는 accept()와 동일한 이유로 둔다.
+	 */
+	@PostMapping("/{id}/noshow")
+	public String noShow(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
+		ReservationEntity reservation = lookupService.getReservation(id);
+		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
+			throw new NoShowNotAllowedException("다른 매장의 예약은 처리할 수 없어요.");
+		}
+
+		reservationService.markNoShowByStore(id);
+		redirectAttributes.addFlashAttribute("noshowMessage", "노쇼로 처리했어요. 결제 금액은 환불되지 않아요.");
 		return "redirect:/reservation/incoming";
 	}
 }

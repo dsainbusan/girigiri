@@ -3,12 +3,15 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import net.dsa.girigiri.domain.dto.DailyPlatformStatsDto;
 import net.dsa.girigiri.domain.dto.PlatformStatsDto;
 import net.dsa.girigiri.domain.dto.StoreStatsRowDto;
-import net.dsa.girigiri.domain.dto.SuperAdminDashboardStatsDto;
 import net.dsa.girigiri.service.NotificationService;
 import net.dsa.girigiri.service.SuperAdminDashboardService;
+import net.dsa.girigiri.util.DailyPlatformReportExcelGenerator;
+import net.dsa.girigiri.util.DailyPlatformReportPdfGenerator;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -20,9 +23,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 
 /**
  * 슈퍼어드민(플랫폼 운영자) 대시보드/공통코드/알림 라우팅.
@@ -41,25 +48,97 @@ public class SuperAdminController {
 	private final SuperAdminDashboardService dashboardService;
 	private final NotificationService notificationService;
 
-	// 변경됨 (2026-09-29) — 왜: "오늘 플랫폼 지표" 4개 카드(전체 회원수/거래량/구제량/매출)가
-	// 하드코딩된 데모 숫자였다(dashboard.html 상단 TODO 주석 참고). getPlatformStats(null)이
-	// "전체" 기간 거래량/구제량/매출/CO2를 이미 계산해주고 있어서(/superadmin/stats 화면과 동일
-	// 로직) 새 계산 없이 재사용하고, 회원수만 getDashboardStats()에 새로 추가했다.
+	// 변경됨 (2026-09-30) — 통계 대시보드 전면 개편. KPI 5카드 + 처리 대기 통합 리스트로 바뀌면서
+	// 모델 속성이 SuperAdminDashboardStatsDto 하나(kpi/pendingQueue/asOfLabel/updatedAtLabel)로
+	// 단순해졌다 — 예전엔 개별 카운트 6개 + 위젯 2개를 따로 풀어서 넘겼다.
+	//
+	// 추가됨 (2026-10-05) — "달력에서 날짜를 클릭하면 그 날 현황을 보고 싶다"는 요청으로 일별 현황
+	// 달력을 추가했다. date 쿼리스트링(yyyy-MM-dd)이 있으면 그 날의 DailyPlatformStatsDto를 같이
+	// 내려주고, month(yyyy-MM)로 달력을 다른 달로 넘길 수 있다. 둘 다 없으면 이번 달 달력만 보여주고
+	// (선택된 날짜 없음) 상단 KPI 5카드(오늘 기준)는 그대로 유지한다.
 	@GetMapping("/dashboard")
-	public String dashboard(Model model) {
-		SuperAdminDashboardStatsDto stats = dashboardService.getDashboardStats();
-
-		model.addAttribute("pendingStoreInquiryCount", stats.pendingStoreInquiryCount());
-		model.addAttribute("pendingUserInquiryCount", stats.pendingUserInquiryCount());
-		model.addAttribute("pendingComplaintCount", stats.pendingComplaintCount());
-		model.addAttribute("weeklySignupBars", stats.weeklySignupBars());
-		model.addAttribute("calendarDays", stats.calendarDays());
-		model.addAttribute("calendarMonthLabel", stats.calendarMonthLabel());
-		model.addAttribute("totalMemberCount", stats.totalMemberCount());
-		model.addAttribute("todaySignupCount", stats.todaySignupCount());
-		model.addAttribute("platformStats", dashboardService.getPlatformStats(null));
-
+	public String dashboard(@RequestParam(required = false) String date,
+	                        @RequestParam(required = false) String month,
+	                        Model model) {
+		model.addAttribute("stats", dashboardService.getDashboardStats());
+		populateDailyReportModel(date, month, model);
 		return "superAdminView/dashboard";
+	}
+
+	/**
+	 * 추가됨 (2026-10-05) — 달력/월이동 클릭마다 페이지 전체가 새로고침되는 게 불편하다는 피드백으로
+	 * 추가. dashboard.html의 #daily-report 안쪽(dailyReportBody 프래그먼트)만 떼어 돌려주면,
+	 * 브라우저에서 그 부분만 fetch로 받아 innerHTML을 갈아끼운다(dashboard.html 하단 스크립트).
+	 * 모델 데이터는 dashboard()와 완전히 같은 populateDailyReportModel을 써서 — 풀페이지로 봤을 때와
+	 * 숫자가 어긋날 일이 없다.
+	 */
+	@GetMapping("/dashboard/daily")
+	public String dailyReportFragment(@RequestParam(required = false) String date,
+	                                  @RequestParam(required = false) String month,
+	                                  Model model) {
+		populateDailyReportModel(date, month, model);
+		return "superAdminView/dashboard :: dailyReportBody";
+	}
+
+	private void populateDailyReportModel(String date, String month, Model model) {
+		LocalDate selectedDate = parseDate(date);
+		YearMonth calendarMonth = month != null ? parseMonth(month)
+				: (selectedDate != null ? YearMonth.from(selectedDate) : YearMonth.now());
+		model.addAttribute("calendar", dashboardService.buildCalendar(calendarMonth, selectedDate));
+		if (selectedDate != null) {
+			model.addAttribute("dailyStats", dashboardService.getDailyPlatformStats(selectedDate));
+		}
+	}
+
+	/** 일별 현황 리포트 Excel. 화면(dailyStats)과 같은 집계라 숫자가 항상 일치한다. */
+	@GetMapping("/dashboard/daily/excel")
+	public ResponseEntity<byte[]> dailyExcel(@RequestParam String date) throws IOException {
+		LocalDate parsed = parseDate(date);
+		if (parsed == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+		DailyPlatformStatsDto stats = dashboardService.getDailyPlatformStats(parsed);
+		byte[] xlsx = DailyPlatformReportExcelGenerator.generate(stats);
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"platform-daily-report-" + parsed + ".xlsx\"")
+				.body(xlsx);
+	}
+
+	/** 일별 현황 리포트 PDF. excel()과 데이터 소스 동일, 포맷만 PDF. */
+	@GetMapping("/dashboard/daily/pdf")
+	public ResponseEntity<byte[]> dailyPdf(@RequestParam String date) throws IOException {
+		LocalDate parsed = parseDate(date);
+		if (parsed == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+		DailyPlatformStatsDto stats = dashboardService.getDailyPlatformStats(parsed);
+		byte[] pdf = DailyPlatformReportPdfGenerator.generate(stats);
+		return ResponseEntity.ok()
+				.contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"platform-daily-report-" + parsed + ".pdf\"")
+				.body(pdf);
+	}
+
+	// date는 미래 날짜/형식 오류 시 null로 취급(선택 안 한 것과 동일하게 — 아직 있을 수 없는 데이터라서).
+	private LocalDate parseDate(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		try {
+			LocalDate parsed = LocalDate.parse(raw);
+			return parsed.isAfter(LocalDate.now()) ? null : parsed;
+		} catch (DateTimeParseException e) {
+			return null;
+		}
+	}
+
+	private YearMonth parseMonth(String raw) {
+		try {
+			return YearMonth.parse(raw);
+		} catch (DateTimeParseException e) {
+			return YearMonth.now();
+		}
 	}
 
 	/**

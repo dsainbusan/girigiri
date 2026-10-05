@@ -40,6 +40,9 @@ public class StoreService {
 	private static final DateTimeFormatter DAY_LABEL_FORMAT = DateTimeFormatter.ofPattern("MM/dd");
 	// 음식 1개를 구제할 때 절감되는 CO₂ 환산량(kg). TODO(팀): 근거 있는 계수로 조정 — 지금은 임의값.
 	private static final double CO2_KG_PER_ITEM = 0.5;
+	// "품절 임박"으로 볼 남은 수량 상한. TODO(팀): 상품 특성(대량/소량 판매)에 따라 다를 수 있어
+	// 지금은 임의값 — 필요하면 매장별 설정으로 뺄 수 있다.
+	private static final int LOW_STOCK_THRESHOLD = 2;
 
 	private final StoreRepository storeRepository;
 	private final ProductRepository productRepository;
@@ -66,6 +69,11 @@ public class StoreService {
 		int sellableStock = todayProducts.stream()
 				.filter(p -> "active".equals(p.getStatus()))
 				.mapToInt(ProductEntity::getRemainingQuantity).sum();
+		// "처리할 일" 배너의 "품절 임박 재고" 카드용 — 판매중(active)인데 남은 수량이 얼마 안 남은 상품 개수.
+		int lowStockCount = (int) todayProducts.stream()
+				.filter(p -> "active".equals(p.getStatus()))
+				.filter(p -> p.getRemainingQuantity() > 0 && p.getRemainingQuantity() <= LOW_STOCK_THRESHOLD)
+				.count();
 
 		// 변경됨 (2026-10-05, 코드 프리즈 직전 QA) — 왜: 이 카드의 "판매"가 reservedAt(예약 생성 시각)이
 		// "오늘"인 것만 세고 있었는데, "등록 10개"는 이미 todayProductIds로 "오늘 등록된 상품"만 걸러낸
@@ -192,7 +200,8 @@ public class StoreService {
 				savings.rescuedCount(), formatWon(savings.recoveredAmount()), String.format("%.1f", savings.co2Kg()),
 				String.format("%.1f", soldCount * CO2_KG_PER_ITEM),
 				draftPendingCount, incomingReservationCount,
-				noAutomation, needsBankAccount, settlementPayout
+				noAutomation, needsBankAccount, settlementPayout,
+				lowStockCount
 		);
 	}
 
@@ -209,7 +218,8 @@ public class StoreService {
 				0, formatWon(0), "0.0",
 				"0.0",
 				0L, 0,
-				false, false, formatWon(0)
+				false, false, formatWon(0),
+				0
 		);
 	}
 

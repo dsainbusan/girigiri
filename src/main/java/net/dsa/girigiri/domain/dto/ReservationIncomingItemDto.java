@@ -10,6 +10,10 @@ public record ReservationIncomingItemDto(
 		int quantity,
 		int totalPrice,
 		String pickupCode,
-		String reservedAtDisplay
+		String reservedAtDisplay,
+		// 추가됨 (2026-09-30) — 픽업 대기중(ready) 목록에서 "노쇼 처리" 버튼을 픽업 예정 시각이
+		// 지난 건에만 보여주기 위해. incoming(confirmed) 목록에도 같은 DTO를 재사용하지만 거기선 안 쓴다.
+		String pickupTimeDisplay,
+		boolean pickupTimePassed
 ) {
 }

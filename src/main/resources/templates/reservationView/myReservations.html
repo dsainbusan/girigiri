@@ -13,6 +13,14 @@
 		</div>
 	</div>
 
+	<!-- 신고 접수 직후 아무 안내 없이 목록으로 돌아가서 접수됐는지 알 수 없다는 피드백으로 추가. 1회성 flash. -->
+	<div th:if="${reportedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">✅ 신고 접수</p>
+			<p class="banner__desc" th:text="${reportedMessage}">신고가 접수됐어요. 운영자가 확인 후 처리할게요.</p>
+		</div>
+	</div>
+
 	<!-- 2026-09-24 — .tab-bar/.tab-item에서 공용 .tabs/.tab(+--primary 변형)로 통합
 	     (WBS CSS 1단계 정리, C). -->
 	<nav class="tabs tabs--primary">

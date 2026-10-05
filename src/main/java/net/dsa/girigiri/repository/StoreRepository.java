@@ -35,4 +35,8 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
 
 	// 추가됨 (2026-09-17) — 마케팅 홈페이지(MarketingService)의 "참여 매장 수" 통계용.
 	long countByApprovalStatus(String approvalStatus);
+
+	// 추가됨 (2026-10-01, 지역→매장 드릴다운) — 통계 대시보드 "지역별 현황" 행 클릭 시 그 시도의
+	// 승인된 매장만 조회(SuperAdminRegionService).
+	List<StoreEntity> findBySidoAndApprovalStatus(String sido, String approvalStatus);
 }

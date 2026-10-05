@@ -20,6 +20,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
 	Optional<UserEntity> findFirstByRole(String role);
 
+	// 추가됨 (2026-09-30, 통계 대시보드 리디자인) — KPI "입점 매장" 카드의 "점주 N명" 보조 지표용.
+	long countByRole(String role);
+
 	// 이메일 찾기·비밀번호 재설정 — 번호에 유니크 제약(uk_users_phone)이 있어 단건.
 	Optional<UserEntity> findByPhone(String phone);
 

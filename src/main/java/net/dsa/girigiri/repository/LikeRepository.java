@@ -19,4 +19,8 @@ public interface LikeRepository extends JpaRepository<LikeEntity, Long> {
 	// 추가됨 (2026-09-08, 코드 감사) — LikeService#toggle이 findAll() 후 자바에서 userId+storeId로
 	// 거르던 걸 DB 쿼리로 옮긴다.
 	List<LikeEntity> findByUserIdAndStoreId(Long userId, Long storeId);
+
+	// 추가됨 (2026-10-01, 매장 지정 쿠폰 발행) — "이 매장을 찜한 손님"에게 알림 보낼 때 사용
+	// (SuperAdminCouponService#createStoreCampaign).
+	List<LikeEntity> findByStoreId(Long storeId);
 }

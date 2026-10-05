@@ -74,6 +74,25 @@
 			</div>
 		</details>
 
+		<!-- 매장 지정 쿠폰 "받기" 카드 (2026-10-01 신규 — 지역별 현황 드릴다운에서 발행된 쿠폰) -->
+		<div th:if="${!#lists.isEmpty(storeCouponOffers)}" style="margin-top:var(--s-3)">
+			<div th:each="offer : ${storeCouponOffers}" class="u-row"
+			     style="justify-content:space-between;background:var(--c-accent-weak);border-radius:var(--r-md);padding:var(--s-3);margin-top:var(--s-2)">
+				<div>
+					<b style="color:var(--c-accent-strong)" th:text="${offer.discountLabel}">10% 할인</b>
+					<div class="u-sub" style="font-size:var(--fs-xs)" th:text="${offer.expiresAtLabel}">2026-10-08까지</div>
+				</div>
+				<form th:if="${!offer.claimed}" th:action="@{/coupons/store-campaigns/{id}/claim(id=${offer.campaignId})}" method="post">
+					<input type="hidden" name="storeId" th:value="${store.id}">
+					<button type="submit" class="btn" style="background:var(--c-accent-strong);color:#fff">쿠폰 받기</button>
+				</form>
+				<span th:if="${offer.claimed}" class="u-sub" style="font-size:var(--fs-sm)">받았어요</span>
+			</div>
+		</div>
+
+		<div th:if="${couponClaimed != null}" class="u-sub" style="margin-top:var(--s-2);color:var(--c-accent-strong)" th:text="${couponClaimed}"></div>
+		<div th:if="${couponClaimError != null}" class="u-sub" style="margin-top:var(--s-2);color:var(--c-danger)" th:text="${couponClaimError}"></div>
+
 		<div class="tabs" data-tabs style="margin-top:var(--s-4)">
 			<button type="button" class="tab" th:classappend="${defaultTab == 'info'} ? ' is-active'" data-tab="info">정보</button>
 			<button type="button" class="tab" th:classappend="${defaultTab == 'product'} ? ' is-active'" data-tab="product">

@@ -58,6 +58,15 @@ public class NotificationEntity {
 	// 담는다 — 스키마 변경 없이 타입 문자열만 추가.
 	public static final String TYPE_ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED";      // 계정/매장 정지 안내
 
+	// 추가됨 (2026-10-01, 지역별 현황 드릴다운) — 매장 지정 쿠폰이 발행됐을 때 대상 매장 손님(찜한
+	// 손님/같은 시도 손님)에게 보내는 안내. SuperAdminCouponService#createStoreCampaign 참고.
+	public static final String TYPE_STORE_COUPON_AVAILABLE = "STORE_COUPON_AVAILABLE"; // 매장 지정 쿠폰 발행 안내
+
+	// 추가됨 (2026-10-01, 지역별 현황 드릴다운) — 슈퍼어드민이 점주에게 보내는 운영 제안(노출·시간·
+	// 구성 개선). "최근 조치" 열에 마지막 발송일을 보여줄 때 이 타입으로 조회한다
+	// (NotificationRepository#findTopByUserIdAndTypeOrderByCreatedAtDesc, SuperAdminRegionService).
+	public static final String TYPE_OWNER_SELL_SUGGESTION = "OWNER_SELL_SUGGESTION"; // 판매 촉진 운영 제안
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;

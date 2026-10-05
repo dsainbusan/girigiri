@@ -188,6 +188,8 @@ public class NotificationService {
 			case NotificationEntity.TYPE_ADMIN_NEW_RESERVATION -> "📅";
 			case NotificationEntity.TYPE_STORE_REJECTED -> "❌";
 			case NotificationEntity.TYPE_ACCOUNT_SUSPENDED -> "🚫";
+			case NotificationEntity.TYPE_STORE_COUPON_AVAILABLE -> "🎟️";
+			case NotificationEntity.TYPE_OWNER_SELL_SUGGESTION -> "📈";
 			default -> "🔔";
 		};
 	}
