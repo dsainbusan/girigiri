@@ -13,6 +13,9 @@ public record PendingQueueRowDto(
 		String oldestAgoLabel,
 		String linkUrl,
 		// 신고 접수에만 true — "우선 처리" danger 배지를 추가로 보여준다.
-		boolean priority
+		boolean priority,
+		// 추가됨 (2026-10-06) — 가장 오래된 건이 SLA(신고 24시간/나머지 72시간, DashboardPolicy)를
+		// 넘겼으면 true. count가 0이면 항상 false.
+		boolean overSla
 ) {
 }

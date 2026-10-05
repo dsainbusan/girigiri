@@ -272,30 +272,32 @@ public class SuperAdminDashboardService {
 
 		List<PendingQueueRowDto> rows = new ArrayList<>();
 		rows.add(pendingRow("신고 접수", "i-bell", pendingComplaints.size(),
-				oldestAgo(pendingComplaints.stream().map(ComplaintEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=report", true));
+				oldestOf(pendingComplaints.stream().map(ComplaintEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_REPORT_HOURS, "/superadmin/reports?tab=report", true));
 		rows.add(pendingRow("입점 신청", "i-box", pendingStores.size(),
-				oldestAgo(pendingStores.stream().map(StoreEntity::getCreatedAt), now),
-				"/superadmin/stores", false));
+				oldestOf(pendingStores.stream().map(StoreEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/stores", false));
 		rows.add(pendingRow("매장 문의", "i-list", pendingStoreInquiries.size(),
-				oldestAgo(pendingStoreInquiries.stream().map(InquiryEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=store", false));
+				oldestOf(pendingStoreInquiries.stream().map(InquiryEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/reports?tab=store", false));
 		rows.add(pendingRow("유저 문의", "i-user", pendingUserInquiries.size(),
-				oldestAgo(pendingUserInquiries.stream().map(InquiryEntity::getCreatedAt), now),
-				"/superadmin/reports?tab=user", false));
+				oldestOf(pendingUserInquiries.stream().map(InquiryEntity::getCreatedAt)), now,
+				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/reports?tab=user", false));
 		return rows;
 	}
 
-	private PendingQueueRowDto pendingRow(String label, String iconId, long count, String oldestAgoLabel,
-	                                       String linkUrl, boolean priority) {
-		return new PendingQueueRowDto(label, iconId, count, count > 0 ? oldestAgoLabel : null, linkUrl, priority);
+	// 변경됨 (2026-10-06) — SLA 초과 여부(overSla)를 같이 계산하려면 "가장 오래된 건" 시각 자체가
+	// 필요해서, 문자열(oldestAgoLabel)이 아니라 LocalDateTime을 받도록 바꿨다. SLA 시간은
+	// DashboardPolicy 상수(신고 24시간/나머지 72시간)에서 받아 하드코딩하지 않는다.
+	private PendingQueueRowDto pendingRow(String label, String iconId, long count, LocalDateTime oldest,
+	                                       LocalDateTime now, long slaHours, String linkUrl, boolean priority) {
+		String oldestAgoLabel = count > 0 && oldest != null ? formatAgo(oldest, now) : null;
+		boolean overSla = count > 0 && oldest != null && Duration.between(oldest, now).toHours() >= slaHours;
+		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla);
 	}
 
-	private String oldestAgo(Stream<LocalDateTime> timestamps, LocalDateTime now) {
-		return timestamps.filter(Objects::nonNull)
-				.min(Comparator.naturalOrder())
-				.map(oldest -> formatAgo(oldest, now))
-				.orElse(null);
+	private LocalDateTime oldestOf(Stream<LocalDateTime> timestamps) {
+		return timestamps.filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
 	}
 
 	private String formatAgo(LocalDateTime from, LocalDateTime now) {
