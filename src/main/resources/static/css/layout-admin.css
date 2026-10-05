@@ -911,7 +911,10 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
   font-size: 13px; font-weight: 600; color: var(--blue-500);
 }
 .region-table__more:hover { background: var(--gray-50); text-decoration: underline; }
-.region-table__more .icon { width: 15px; height: 15px; }
+.region-table__more .icon { width: 15px; height: 15px; transition: transform .15s; }
+/* 추가됨 (2026-10-06) — 더보기↔접기 토글. 다 펼쳐진 상태(aria-expanded=true, "접기")면 화살표를
+   180도 돌려 위를 가리키게 한다. */
+.region-table__more[aria-expanded="true"] .icon { transform: rotate(180deg); }
 
 /* 통계 대시보드 "일별 현황" 달력 + 선택한 날의 리포트 패널 (2026-10-05 추가). region-layout과
    같은 2열 그리드 비율(달력 340px 고정 + 패널 가변)을 그대로 따른다. */

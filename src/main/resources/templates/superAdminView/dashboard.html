@@ -262,21 +262,26 @@
         var loadMoreBtn = document.getElementById('region-table-load-more');
         var loadMoreLabel = document.getElementById('region-table-load-more__label');
 
+        // 변경됨 (2026-10-06) — "더보기만 있고 접기가 없다"는 피드백으로 토글로 바꿨다. 다 펼쳐진
+        // 상태(hasMore=false)에서 버튼을 다시 누르면 처음 5개로 되접힌다 — 펼쳐도 숨길 수 없던 것을
+        // 고쳤다. 지역이 PAGE_SIZE(5) 이하면 더보기/접기 자체가 의미 없어 버튼을 아예 숨긴다.
         function renderReveal() {
           rows.forEach(function (r, i) {
             r.style.display = i < revealed ? '' : 'none';
           });
           var hasMore = rows.length > revealed;
-          if (loadMoreRow) loadMoreRow.hidden = !hasMore;
+          var expandable = rows.length > PAGE_SIZE;
+          if (loadMoreRow) loadMoreRow.hidden = !expandable;
           if (loadMoreBtn) {
-            if (loadMoreLabel) loadMoreLabel.textContent = (rows.length - revealed) + '개 더보기';
+            if (loadMoreLabel) loadMoreLabel.textContent = hasMore ? (rows.length - revealed) + '개 더보기' : '접기';
             loadMoreBtn.setAttribute('aria-expanded', hasMore ? 'false' : 'true');
           }
         }
 
         if (loadMoreBtn) {
           loadMoreBtn.addEventListener('click', function () {
-            revealed += PAGE_SIZE;
+            var hasMore = rows.length > revealed;
+            revealed = hasMore ? revealed + PAGE_SIZE : PAGE_SIZE;
             renderReveal();
           });
         }
