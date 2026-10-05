@@ -40,6 +40,13 @@
 --               전혀 없던 고아 테이블, ReportEntity/ReportRepository도 코드에서 삭제) + user_social_accounts/
 --               user_archive(2026-09-22)/store_announcement(2026-09-29) 3개 테이블 신규 반영 +
 --               oauth_provider 네이버→라인 정정 → 총 26개 테이블
+--   2026-10-05  (송채현) 위 갱신에서 빠진 컬럼 2개 보강 — users.deleted_at(soft delete, 문서에는
+--               있었는데 이 DDL엔 빠져있었음), coupon.used_at(2026-09-22 추가, 문서/DDL 둘 다 누락돼 있었음)
+--   2026-10-05  (송채현) IntelliJ 라이브 코드 26개 엔티티 전체 재대조 — 문창호 전수조사에서도 빠졌던
+--               컬럼 8개 추가 보강: users.language(2026-09-22), store.image_url(2026-09-21)/
+--               settlement_alert_enabled(2026-09-22)/automation_alert_enabled(2026-09-22),
+--               product.owner_discount_rate, review.reply_content/reply_created_at/reply_edited
+--               (2026-09-17, 문창호 "사장님 리뷰 답글" 기능)
 -- =====================================================================
 
 -- ── 1. 회원 / 매장 / 상품 ───────────────────────────────────────────
@@ -64,8 +71,10 @@ CREATE TABLE users (
     privacy_agreed        TINYINT(1) NOT NULL DEFAULT 0,
     marketing_agreed      TINYINT(1) NOT NULL DEFAULT 0,
     agreed_at             DATETIME,
+    language              VARCHAR(10) COMMENT '환경설정 언어 선택값 (2026-09-22 추가) — NULL이면 "ko"(한국어) 취급, 실제 다국어 처리는 아직 없음',
     created_at            DATETIME,
     updated_at            DATETIME,
+    deleted_at            DATETIME COMMENT 'soft delete 기준(2026-09-22 추가) — NULL이면 활성, 값 있으면 탈퇴 처리 시각. UserPurgeScheduler가 보존기간 후 실제 삭제',
     UNIQUE KEY uk_users_oauth (oauth_provider, oauth_id),
     UNIQUE KEY uk_users_phone (phone)
 );
@@ -107,6 +116,7 @@ CREATE TABLE store (
     latitude               DOUBLE,
     longitude              DOUBLE,
     operating_hours        VARCHAR(100),
+    image_url              VARCHAR(255) COMMENT '매장 사진 (2026-09-21 추가) — NULL이면 화면에서 아바타로 대체',
     prep_time_minutes      INT DEFAULT 20 COMMENT 'NULL이면 매장이 아직 설정 전(항상 주문 가능 취급)',
     last_pickup_time       TIME COMMENT '이 시간 이후 당일 주문/픽업 마감',
     rescue_goal_percent    INT DEFAULT 70 COMMENT '대시보드 구제율 목표치(%), 점주가 직접 수정 가능',
@@ -127,6 +137,8 @@ CREATE TABLE store (
     reliability_suspended_until  DATETIME COMMENT '신뢰도(취소율) 자동 정지 해제 시각. NULL/과거면 정지 아님 (2026-09-16 추가)',
     reliability_suspension_count INT NOT NULL DEFAULT 0 COMMENT '신뢰도 위반 누적 정지 횟수(0~3), 해제돼도 리셋 안 됨',
     reliability_banned           TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'true면 영구정지(4회차 위반)',
+    settlement_alert_enabled     TINYINT(1) COMMENT '정산 알림 토글 (2026-09-22 추가) — NULL/true=켜짐, false만 꺼짐. 저장만 하고 발송 로직 연결은 아직 안 됨',
+    automation_alert_enabled     TINYINT(1) COMMENT '자동 등록 알림 토글 (2026-09-22 추가) — 위와 동일한 NULL-안전 패턴',
     created_at             DATETIME,
     updated_at             DATETIME,
     INDEX idx_store_category (category),
@@ -176,6 +188,7 @@ CREATE TABLE product (
     name                VARCHAR(100) NOT NULL,
     original_price      INT NOT NULL,
     discounted_price    INT NOT NULL,
+    owner_discount_rate INT COMMENT '점주가 직접 정한 할인율(%) 하한값. NULL이면 전부 자동(마감 임박도 기준). 값이 있으면 자동값이 이보다 낮아지지 않게 하는 하한선으로만 쓰임',
     quantity            INT NOT NULL,
     remaining_quantity  INT NOT NULL,
     image_url           VARCHAR(255),
@@ -283,6 +296,7 @@ CREATE TABLE coupon (
     discount_rate           INT NOT NULL COMMENT '정률 할인(%)',
     expires_at              DATETIME NOT NULL,
     used                    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '체크아웃에서 쓰면 true. 매장귀책/일반 취소 시 복구(false), 회원 노쇼는 복구 안 함',
+    used_at                 DATETIME COMMENT 'used가 true로 바뀐 시점(2026-09-22 추가). markUsed()에서 채우고, restore()로 복구되면 다시 NULL',
     created_at              DATETIME,
     INDEX idx_coupon_issued_to_user_id (issued_to_user_id),
     FOREIGN KEY (issued_to_user_id) REFERENCES users(id),
@@ -321,6 +335,9 @@ CREATE TABLE review (
     image_url   VARCHAR(500) COMMENT '사진 리뷰 (2026-08 강노은 추가)',
     edited      TINYINT(1) NOT NULL DEFAULT 0 COMMENT '재작성(덮어쓰기) 시 true',
     created_at  DATETIME,
+    reply_content     VARCHAR(500) COMMENT '사장님 답글 (2026-09-17 추가, 문창호)',
+    reply_created_at  DATETIME COMMENT '답글 작성일시',
+    reply_edited      TINYINT(1) NOT NULL DEFAULT 0 COMMENT '답글 수정(덮어쓰기) 시 true — edited와 동일한 패턴',
     INDEX idx_review_user_id (user_id),
     INDEX idx_review_store_id (store_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
