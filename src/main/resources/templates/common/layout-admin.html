@@ -20,10 +20,13 @@
                'notices' | 'coupons' | 'codes')
    - badge   : topbar 브랜드 옆 작은 라벨(예: '슈퍼어드민'), 안 쓰면 ''
 
-  통계 스트립(pendingTotalCount/pendingReportCount)과 알림 드로어(unreadNotificationCount/
-  groupedNotifications)는 SuperAdminNotificationAdvice(@ControllerAdvice)가 모든 SuperAdminController
-  응답에 자동으로 채워준다 — 여기서는 그 모델 속성을 그대로 바인딩만 한다. 알림이 실제로 "생기는" 트리거는
-  AdminNotificationTriggerScheduler(1분마다 스캔, 강노은의 NotificationTriggerScheduler와 동일 패턴).
+  알림 드로어(unreadNotificationCount/groupedNotifications)는 SuperAdminNotificationAdvice
+  (@ControllerAdvice)가 모든 SuperAdminController 응답에 자동으로 채워준다 — 여기서는 그 모델
+  속성을 그대로 바인딩만 한다. 알림이 실제로 "생기는" 트리거는 AdminNotificationTriggerScheduler
+  (1분마다 스캔, 강노은의 NotificationTriggerScheduler와 동일 패턴).
+
+  상단바 "처리 대기 N건(신고 N)" 통계 스트립은 2026-10-06에 넣었다가, 대시보드에 이미 더 자세한
+  처리 대기 카드가 있어서 중복이라는 피드백으로 같은 날 다시 뺐다(topbar__stats 자체를 삭제).
 
   권한 체크는 여기서 하지 않는다 — role 기준 접근 제어는 서버(시큐리티/컨트롤러) 레이어 책임이고
   (CLAUDE.md "권한 체크는 항상 role 기준" 참고), 이 프래그먼트는 이미 통과한 요청의 화면만 그린다.
@@ -66,13 +69,6 @@
 <!-- 상단 유틸 바 -->
 <div class="topbar">
   <div class="container topbar__inner">
-    <!-- 변경됨 (2026-10-06) — "신규회원/승인대기 매장"을 "처리 대기 N건(신고 N)"으로. 운영자가
-         첫눈에 "지금 뭘 처리해야 하는지"를 보게 해달라는 요청 — 모든 슈퍼어드민 화면 공통. -->
-    <div class="topbar__stats">
-      <span>처리 대기 <b th:text="${pendingTotalCount} + '건'">0건</b></span>
-      <span>(신고 <b th:text="${pendingReportCount}">0</b>)</span>
-      (<span th:text="${todayLabel}">2026-08-31</span> 기준)</span>
-    </div>
     <div class="topbar__util">
       <span class="util-btn util-btn--user">
         <span class="avatar"><svg class="icon"><use href="#i-user"/></svg></span>
