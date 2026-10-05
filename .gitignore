@@ -41,6 +41,9 @@ out/
 .env
 /upload/
 
+test-output-qr.png
+test-output-receipt.pdf
+
 receipts/
 
 *.class
