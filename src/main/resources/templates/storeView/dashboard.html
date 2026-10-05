@@ -44,7 +44,7 @@
 		<div class="dash-hero__stat-bar">
 			<a th:href="@{/store/products}" class="dash-hero__stat-col" title="재고관리 바로가기">
 				<span class="dash-hero__stat-name">판매중 재고</span>
-				<span class="dash-hero__stat-num"><span th:text="${idleCount}">0</span><small>개</small></span>
+				<span class="dash-hero__stat-num"><span th:text="${sellableStock}">0</span><small>개</small></span>
 				<span class="dash-hero__stat-sub" th:text="${sellingNowCount} + '종 판매중'">0종 판매중</span>
 			</a>
 			<div class="dash-hero__stat-divider"></div>

@@ -93,6 +93,7 @@ public class StoreController {
 		model.addAttribute("soldCount", stats.soldCount());
 		model.addAttribute("registeredCount", stats.registeredCount());
 		model.addAttribute("sellingNowCount", stats.sellingNowCount());
+		model.addAttribute("sellableStock", stats.sellableStock());
 		model.addAttribute("reservationCount", stats.reservationCount());
 		model.addAttribute("reservationWaiting", stats.reservationWaiting());
 		model.addAttribute("reservationDone", stats.reservationDone());

@@ -45,9 +45,16 @@
     return "주소창 왼쪽의 자물쇠 또는 정보(ⓘ) 아이콘을 눌러 '위치' 권한을 '허용'으로 바꾼 뒤 새로고침 해주세요.";
   };
 
-  // 뒤로가기 버튼
+  // 뒤로가기 버튼. data-back-href가 있으면 브라우저 히스토리 대신 그 경로로 고정 이동한다
+  // (2026-10-05 추가 — 왜: 리뷰 관리처럼 페이지네이션(?page=N)으로 히스토리가 여러 겹 쌓이는
+  // 화면은 history.back()이 이전 페이지 번호로만 한 칸씩 돌아가 사장님 입장에서 "뒤로"가
+  // 대시보드로 안 가고 계속 리뷰 목록 안에서만 맴도는 문제가 있었다).
   document.querySelectorAll("[data-back]").forEach(function (el) {
-    el.addEventListener("click", function () { history.back(); });
+    el.addEventListener("click", function () {
+      var href = el.getAttribute("data-back-href");
+      if (href) { location.href = href; return; }
+      history.back();
+    });
   });
 
   // 카테고리 칩: 클릭 시 활성 표시 (실제 필터는 서버 요청/쿼리스트링으로)

@@ -99,22 +99,22 @@ public final class LedgerPdfGenerator {
 				<head>
 				<title>%s</title>
 				<style>
-					body { font-family: '%s', sans-serif; padding: 24px; color: #1f2937; }
-					h1 { font-size: 18px; margin: 0; display: inline-block; }
-					h2 { font-size: 13px; margin: 20px 0 6px; }
+					body { font-family: '%s', sans-serif; padding: 24px; color: #1C1C1C; }
+					h1 { font-size: 18px; margin: 0; display: inline-block; color: #0F2B8C; }
+					h2 { font-size: 13px; margin: 20px 0 6px; color: #0F2B8C; }
 					.tier { display: inline-block; margin-left: 10px; padding: 3px 10px; border-radius: 999px;
-					        background: #dcfce7; color: #166534; font-size: 12px; font-weight: bold; }
-					.sub { color: #6b7280; font-size: 12px; margin: 6px 0 16px; }
+					        background: #0F2B8C; color: #F6F0E3; font-size: 12px; font-weight: bold; }
+					.sub { color: #5C5545; font-size: 12px; margin: 6px 0 16px; }
 					.stat-row { width: 100%%; border-collapse: collapse; margin-bottom: 14px; }
-					.stat-row td { width: 25%%; border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; }
-					.stat-row .label { display: block; font-size: 10px; color: #6b7280; margin-bottom: 3px; }
-					.stat-row .value { display: block; font-size: 15px; font-weight: bold; color: #15803d; }
-					.goal { font-size: 11px; color: #16a34a; margin-bottom: 12px; }
+					.stat-row td { width: 25%%; border: 1px solid #C7D2EA; background: #F6F0E3; padding: 8px 10px; text-align: center; }
+					.stat-row .label { display: block; font-size: 10px; color: #7D735E; margin-bottom: 3px; }
+					.stat-row .value { display: block; font-size: 15px; font-weight: bold; color: #0F2B8C; }
+					.goal { font-size: 11px; color: #0F2B8C; margin-bottom: 12px; }
 					table { width: 100%%; border-collapse: collapse; font-size: 11px; }
-					th, td { border: 1px solid #e5e7eb; padding: 5px 7px; text-align: left; }
-					th { background: #f3f4f6; }
+					th, td { border: 1px solid #C7D2EA; padding: 5px 7px; text-align: left; }
+					th { background: #0F2B8C; color: #F6F0E3; }
 					td.n { text-align: right; }
-					tr.total td { background: #f9fafb; font-weight: bold; }
+					tr.total td { background: #F6F0E3; font-weight: bold; border-top: 1.5px solid #0F2B8C; }
 				</style></head>
 				<body>
 					<h1>%s님의 절약 가계부</h1><span class="tier">%s</span>

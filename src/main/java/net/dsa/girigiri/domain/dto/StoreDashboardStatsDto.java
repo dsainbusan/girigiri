@@ -16,6 +16,13 @@ public record StoreDashboardStatsDto(
 		int soldCount,
 		int registeredCount,
 		int sellingNowCount,
+		// 추가됨 (2026-10-05) — 왜: idleCount는 상태와 무관하게 remainingQuantity를 전부 더해서
+		// "남음"(마감 전)/"폐기"(마감 후) 양쪽에 쓰인다 — 사장님이 직접 "품절" 처리한 재고도 결국
+		// 못 판 거라 폐기 집계엔 맞게 남겨둬야 한다. 하지만 hero 카드의 "판매중 재고"는 글자 그대로
+		// "지금 손님이 살 수 있는 재고"를 뜻하므로, status=active인 상품의 재고만 센 별도 값이 필요했다
+		// (품절 처리 직후 idleCount는 그대로인데 sellingNowCount만 0이 되며 숫자가 모순돼 보이는
+		// 문제를 사용자가 발견 — 품절/재개 버튼에 바로 반응해야 함).
+		int sellableStock,
 		int reservationCount,
 		int reservationWaiting,
 		int reservationDone,

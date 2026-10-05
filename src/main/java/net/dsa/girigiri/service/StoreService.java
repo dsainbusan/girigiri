@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 점주 대시보드 도메인 서비스 (2026-09-03, 레이어 규칙 2단계).
@@ -61,12 +62,22 @@ public class StoreService {
 
 		int totalQuantity = todayProducts.stream().mapToInt(ProductEntity::getQuantity).sum();
 		int idleCount = todayProducts.stream().mapToInt(ProductEntity::getRemainingQuantity).sum();
+		// hero 카드 "판매중 재고" 전용 — sellingNowCount와 같은 기준(status=active)으로 재고를 센다.
+		int sellableStock = todayProducts.stream()
+				.filter(p -> "active".equals(p.getStatus()))
+				.mapToInt(ProductEntity::getRemainingQuantity).sum();
 
+		// 변경됨 (2026-10-05, 코드 프리즈 직전 QA) — 왜: 이 카드의 "판매"가 reservedAt(예약 생성 시각)이
+		// "오늘"인 것만 세고 있었는데, "등록 10개"는 이미 todayProductIds로 "오늘 등록된 상품"만 걸러낸
+		// 상태라 거기에 시간 필터를 또 얹을 필요가 없었다(사용자 지적으로 발견) — 오히려 그 이중 필터
+		// 때문에 "오늘 등록한 상품인데 예약은 다른 날 잡힌" 건이 숫자에서 빠지며 최근 7일 통계(상품
+		// 등록일 기준 집계)와 어긋났다. 상품으로 이미 "오늘"이 정해졌으니 예약 쪽은 시간 필터 없이
+		// 그 상품들을 향한 예약 전부를 센다. 노쇼는 "판매"에서 제외 — 손님이 안 가져간 거라 idleCount
+		// (실제론 product.remainingQuantity)에 그대로 남아있고, 그게 마감 후 폐기로 집계되는 게 맞다
+		// (noshow 처리 시 재고를 복구하지 않으므로 remainingQuantity가 자연히 그 1개를 계속 들고 있다).
 		List<Long> todayProductIds = todayProducts.stream().map(ProductEntity::getId).toList();
 		List<ReservationEntity> todayProductReservations =
-				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds).stream()
-						.filter(r -> r.getReservedAt() != null && !r.getReservedAt().isBefore(todayStart) && r.getReservedAt().isBefore(todayEnd))
-						.toList();
+				todayProductIds.isEmpty() ? List.of() : reservationRepository.findByProductIdIn(todayProductIds);
 		int pickedCount = todayProductReservations.stream()
 				.filter(r -> "picked".equals(r.getStatus()))
 				.mapToInt(ReservationEntity::getReservedQuantity)
@@ -171,7 +182,7 @@ public class StoreService {
 
 		return new StoreDashboardStatsDto(
 				formatWon(todaySales), salesDelta, salesDeltaClass,
-				soldCount, registeredCount, sellingNowCount,
+				soldCount, registeredCount, sellingNowCount, sellableStock,
 				reservationCount, reservationWaiting, reservationDone, reservationCancelled,
 				expiredCount, rescueRate, rescueGoalPercent, rescueGoal,
 				totalQuantity, pickedCount, reservedNotPickedCount, idleCount,
@@ -188,7 +199,7 @@ public class StoreService {
 	public StoreDashboardStatsDto emptyDashboardStats() {
 		return new StoreDashboardStatsDto(
 				formatWon(0), "", "u-mut",
-				0, 0, 0,
+				0, 0, 0, 0,
 				0, 0, 0, 0,
 				0, 0, 70, "목표 70%",
 				0, 0, 0, 0,
@@ -270,34 +281,42 @@ public class StoreService {
 	 * 추가됨 — 왜: "오늘 판매 현황" 도넛 옆 최근 7일 막대그래프.
 	 * 변경됨 (2026-08-27) — 왜: WBS "판매/폐기 절감 통계 그래프" 항목명대로 판매만이 아니라 폐기도
 	 * 같이 봐야 해서 판매(초록)/폐기(빨강) 2색 스택으로 바꿨다.
-	 * - 판매: 픽업 일자(pickupTime) 기준, 취소/미결제 제외 ("오늘 매출"과 동일 정책)
-	 * - 폐기:
-	 *   1) 과거 날짜(어제~6일 전) 상품: 마감일이 지났으므로 미판매 잔여 수량(remainingQuantity)을 폐기로 집계.
-	 *   2) 오늘 상품: 명시적 status='expired' 이거나 당일 영업 마감(isClosed=true)일 때 폐기로 집계.
+	 * 변경됨 (2026-10-05, 코드 프리즈 직전 QA) — 왜: "판매"를 pickupTime(픽업 예정 시각) 기준으로
+	 * 세고 있었는데, "오늘 판매 현황" 카드(buildDashboardStats)는 상품 등록일 기준이라 같은 "오늘"인데
+	 * 숫자가 서로 달랐다(사용자 지적으로 발견). "며칠치 상품을 등록해서 그중 얼마나 나갔나"를 보여주는
+	 * 그래프이니, 판매도 폐기와 똑같이 **상품 등록일(registeredAt)** 기준으로 통일한다 — 그 상품을
+	 * 향한 예약이면 실제 예약/픽업 시각과 무관하게 "그 상품이 등록된 날"의 막대에 집계된다. 노쇼는
+	 * "판매"에서 제외(대시보드 카드와 동일 기준) — 손님이 안 가져간 건 remainingQuantity에 그대로
+	 * 남아있다가 마감 후 아래 폐기 집계로 넘어간다.
 	 */
 	private List<DailySalesBarDto> buildWeeklySalesBars(Long storeId, boolean isClosed) {
 		LocalDate today = LocalDate.now();
 		LocalDate windowStart = today.minusDays(6);
-		LocalDateTime rangeStart = windowStart.atStartOfDay();
-		LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
+
+		List<ProductEntity> recentProducts = productRepository.findByStoreId(storeId).stream()
+				.filter(p -> p.getRegisteredAt() != null)
+				.filter(p -> !"draft".equals(p.getStatus()) && !"skipped".equals(p.getStatus()))
+				.filter(p -> {
+					LocalDate d = p.getRegisteredAt().toLocalDate();
+					return !d.isBefore(windowStart) && !d.isAfter(today);
+				})
+				.toList();
+		Map<Long, LocalDate> productDateById = recentProducts.stream()
+				.collect(Collectors.toMap(ProductEntity::getId, p -> p.getRegisteredAt().toLocalDate()));
 
 		Map<LocalDate, Integer> soldByDate = new HashMap<>();
-		for (ReservationEntity r : reservationRepository.findByStoreIdAndPickupTimeBetween(storeId, rangeStart, rangeEnd)) {
-			if ("cancelled".equals(r.getStatus()) || "pending".equals(r.getStatus())) {
-				continue;
+		if (!productDateById.isEmpty()) {
+			for (ReservationEntity r : reservationRepository.findByProductIdIn(new ArrayList<>(productDateById.keySet()))) {
+				if (!"picked".equals(r.getStatus())) {
+					continue;
+				}
+				soldByDate.merge(productDateById.get(r.getProductId()), r.getReservedQuantity(), Integer::sum);
 			}
-			soldByDate.merge(r.getPickupTime().toLocalDate(), r.getReservedQuantity(), Integer::sum);
 		}
 
 		Map<LocalDate, Integer> wasteByDate = new HashMap<>();
-		for (ProductEntity p : productRepository.findByStoreId(storeId)) {
-			if ("draft".equals(p.getStatus()) || "skipped".equals(p.getStatus()) || p.getRegisteredAt() == null) {
-				continue;
-			}
-			LocalDate d = p.getRegisteredAt().toLocalDate();
-			if (d.isBefore(windowStart) || d.isAfter(today)) {
-				continue;
-			}
+		for (ProductEntity p : recentProducts) {
+			LocalDate d = productDateById.get(p.getId());
 			int remaining = p.getRemainingQuantity() == null ? 0 : p.getRemainingQuantity();
 			if (remaining <= 0) {
 				continue;

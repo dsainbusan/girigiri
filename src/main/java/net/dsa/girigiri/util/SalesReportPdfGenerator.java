@@ -43,36 +43,36 @@ public final class SalesReportPdfGenerator {
 				<html>
 				<head><style>
 					@page { size: A4; margin: 30px 34px 34px; }
-					body { font-family: '%s', sans-serif; color: #1f2937; font-size: 11px; }
+					body { font-family: '%s', sans-serif; color: #1C1C1C; font-size: 11px; }
 
-					.head { border-top: 4px solid #15803D; padding-top: 12px; }
-					.head h1 { font-size: 21px; font-weight: bold; margin: 0; letter-spacing: -0.02em; }
+					.head { border-top: 4px solid #0F2B8C; padding-top: 12px; }
+					.head h1 { font-size: 21px; font-weight: bold; margin: 0; letter-spacing: -0.02em; color: #0F2B8C; }
 					.head .store { font-size: 12px; font-weight: bold; margin-top: 3px; }
-					.metabar { width: 100%%; margin-top: 10px; border-bottom: 2px solid #1f2937; padding-bottom: 8px; }
-					.metabar td { font-size: 10.5px; color: #4b5563; }
+					.metabar { width: 100%%; margin-top: 10px; border-bottom: 2px solid #0F2B8C; padding-bottom: 8px; }
+					.metabar td { font-size: 10.5px; color: #5C5545; }
 					.metabar .right { text-align: right; }
 
 					.kpi { width: 100%%; border-collapse: separate; border-spacing: 7px 0; margin: 16px 0 6px; }
-					.kpi td { width: 25%%; border: 1px solid #d1d5db; background: #fafafa; padding: 9px 10px; vertical-align: top; }
-					.kpi .label { display: block; font-size: 9.5px; color: #6b7280; margin-bottom: 5px; }
+					.kpi td { width: 25%%; border: 1px solid #C7D2EA; background: #F6F0E3; padding: 9px 10px; vertical-align: top; }
+					.kpi .label { display: block; font-size: 9.5px; color: #7D735E; margin-bottom: 5px; }
 					.kpi .value { display: block; font-size: 15px; font-weight: bold; }
-					.kpi .value.accent { color: #15803D; }
+					.kpi .value.accent { color: #0F2B8C; }
 
-					.aux { font-size: 10px; color: #4b5563; margin: 6px 2px 0; }
-					.aux .up { color: #15803D; font-weight: bold; }
-					.aux .down { color: #DC2626; font-weight: bold; }
+					.aux { font-size: 10px; color: #5C5545; margin: 6px 2px 0; }
+					.aux .up { color: #0F2B8C; font-weight: bold; }
+					.aux .down { color: #B91C1C; font-weight: bold; }
 
-					h2 { font-size: 12px; font-weight: bold; margin: 20px 0 6px; padding-left: 7px; border-left: 3px solid #15803D; }
+					h2 { font-size: 12px; font-weight: bold; margin: 20px 0 6px; padding-left: 7px; border-left: 3px solid #0F2B8C; color: #0F2B8C; }
 
 					table.grid { width: 100%%; border-collapse: collapse; font-size: 10.5px; }
-					table.grid th, table.grid td { border: 1px solid #e5e7eb; padding: 5px 8px; text-align: left; }
-					table.grid th { background: #DCFCE7; color: #14532D; font-weight: bold; }
+					table.grid th, table.grid td { border: 1px solid #C7D2EA; padding: 5px 8px; text-align: left; }
+					table.grid th { background: #0F2B8C; color: #F6F0E3; font-weight: bold; }
 					table.grid td.n { text-align: right; font-variant-numeric: tabular-nums; }
-					table.grid tr:nth-child(2n) td { background: #fbfbfb; }
-					table.grid tr.total td { background: #f0fdf4; font-weight: bold; border-top: 1.5px solid #15803D; }
-					table.grid td.waste { color: #DC2626; }
+					table.grid tr:nth-child(2n) td { background: #FBF8F1; }
+					table.grid tr.total td { background: #F6F0E3; font-weight: bold; border-top: 1.5px solid #0F2B8C; }
+					table.grid td.waste { color: #B91C1C; }
 
-					.foot { margin-top: 18px; border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 9px; color: #9ca3af; }
+					.foot { margin-top: 18px; border-top: 1px solid #C7D2EA; padding-top: 8px; font-size: 9px; color: #7D735E; }
 				</style></head>
 				<body>
 					<div class="head">

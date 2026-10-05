@@ -152,6 +152,14 @@
 					setTimeout(function () { btn.hidden = false; }, 0);
 				});
 			});
+
+			// 상단바 뒤로가기를 대시보드로 고정 (2026-10-05) — 왜: 페이지네이션(?page=N)으로 들어오면
+			// history.back()이 리뷰 목록 안의 이전 페이지로만 돌아가, 몇 페이지를 넘기고 들어왔든
+			// "뒤로"를 누르면 항상 /store/dashboard로 나가야 하는 사장님 기대와 어긋났다. app.js의
+			// data-back 핸들러가 data-back-href를 우선 보도록 바꿔두고, 여기서 그 값만 심어준다
+			// (app.js는 이 스크립트보다 body 아래쪽에서 로드되므로 반드시 먼저 실행된다).
+			var backBtn = document.querySelector('.topbar__back[data-back]');
+			if (backBtn) { backBtn.setAttribute('data-back-href', '/store/dashboard'); }
 		})();
 	</script>
 </div>

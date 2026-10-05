@@ -106,9 +106,9 @@
 			</div>
 			<form method="get" th:action="@{/store/sales-report}" class="settle-range"
 			      th:classappend="${report.periodKey == 'custom'} ? '' : ' is-hidden'" id="sales-range-form">
-				<input type="date" name="from" th:value="${report.fromDate}" class="settle-range__date" aria-label="시작일" required>
+				<input type="date" name="from" th:value="${report.fromDate}" th:max="${T(java.time.LocalDate).now()}" class="settle-range__date" aria-label="시작일" required>
 				<span class="settle-range__tilde">~</span>
-				<input type="date" name="to" th:value="${report.toDate}" class="settle-range__date" aria-label="종료일" required>
+				<input type="date" name="to" th:value="${report.toDate}" th:max="${T(java.time.LocalDate).now()}" class="settle-range__date" aria-label="종료일" required>
 				<button type="submit" class="settle-range__btn is-active">조회</button>
 			</form>
 

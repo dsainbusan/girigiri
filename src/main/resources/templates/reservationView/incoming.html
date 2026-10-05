@@ -206,12 +206,6 @@
 				</form>
 			</div>
 		</div>
-
-		<!-- 대기 목록이 있을 때 하단 전체 QR 스캐너 바로가기 버튼 -->
-		<a th:if="${!#lists.isEmpty(ready)}" th:href="@{/reservation/pickup}" class="btn btn--block btn--primary" style="margin-top:var(--s-4); display:flex; align-items:center; justify-content:center; gap:8px">
-			<svg class="icon" style="width:18px;height:18px"><use href="#i-camera"/></svg>
-			<span>전체 QR 픽업 스캐너 열기</span>
-		</a>
 	</div>
 	<!-- /panel-waiting-pickup -->
 
