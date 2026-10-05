@@ -7,8 +7,10 @@ import net.dsa.girigiri.domain.dto.PickupLookupResponseDto;
 import net.dsa.girigiri.domain.dto.SupportReportsDataDto;
 import net.dsa.girigiri.domain.entity.ComplaintEntity;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
+import net.dsa.girigiri.domain.entity.RefundEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
+import net.dsa.girigiri.service.AdminRefundService;
 import net.dsa.girigiri.service.InquiryService;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
@@ -40,6 +42,7 @@ public class SuperAdminSupportController {
 	private final InquiryService inquiryService;
 	private final LookupService lookupService;
 	private final ReservationService reservationService;
+	private final AdminRefundService adminRefundService;
 
 	/**
 	 * 신고접수/매장문의/유저문의를 탭으로 나눠 보여준다 — 다른 필터 탭들과 동일하게 쿼리파라미터(tab)로
@@ -101,18 +104,16 @@ public class SuperAdminSupportController {
 		return "superAdminView/inquiryDetail";
 	}
 
-	// 신고자의 "최근 주문" 목록을 몇 건까지 보여줄지 — 너무 길면 픽업 코드 입력란보다 더 복잡해진다.
-	private static final int REPORTER_RECENT_ORDERS_LIMIT = 5;
-
 	/**
-	 * 신고 상세. targetReservationId가 있는 신고(2026-09-08 이후 "예약 상세에서 신고하기"로 접수된
-	 * 것)는 픽업 코드 검색 없이 바로 그 예약 정보를 보여준다 — 그 전에 SQL로 넣은 신고나 매장 관련
-	 * 신고는 이 값이 없어서 기존처럼 검색으로 대응한다(complaintDetail.html의 분기 참고).
+	 * 신고 상세. targetReservationId(=스펙의 "order_id")가 있는 신고는 픽업 코드 검색 없이 바로
+	 * "신고 대상 주문" 카드를 보여주고, 픽업완료(picked) 상태면 환불 버튼까지 보여준다. 그 전에
+	 * SQL로 직접 넣었거나 매장 관련으로 접수된(order_id 없는) 신고만 기존처럼 픽업 코드 검색으로
+	 * 대응한다(complaintDetail.html의 분기 참고, 그 UI는 접어서 보여준다).
 	 *
-	 * 추가됨 (2026-10-06) — targetReservationId가 없는 신고라도 신고자가 실제 회원(reporterId
-	 * 있음)이면, 운영자가 픽업 코드를 맨땅에서 입력하지 않도록 그 회원의 최근 주문 목록을 같이
-	 * 보여준다("이 신고자가 무슨 주문을 갖고 있는지"). 비회원 신고(reporterId 없음)는 조회할
-	 * 대상 자체가 없어 그대로 빈 목록.
+	 * 수정됨 (2026-10-06, 신고 기반 리팩터링) — 신고 진입점이 "주문 상세의 [신고하기]"로 바뀌면서
+	 * 새로 들어오는 신고는 전부 order_id를 갖게 되므로, order_id 없을 때의 "신고자 최근 주문" 보조
+	 * 목록(2026-10-06 직전에 추가했던 기능)은 더 이상 필요 없어 제거했다 — order_id가 없는 신고는
+	 * 이제 진짜 매장 전체 신고뿐이라 그 UI 자체가 접힌 픽업코드 검색 하나로 충분하다.
 	 */
 	@GetMapping("/complaints/{id}")
 	public String complaintDetail(@PathVariable Long id, Model model) {
@@ -122,18 +123,43 @@ public class SuperAdminSupportController {
 		if (complaint.getTargetReservationId() != null) {
 			reservationService.findById(complaint.getTargetReservationId()).ifPresent(reservation -> {
 				model.addAttribute("linkedReservation", reservation);
-				model.addAttribute("linkedReservationBlockedMessage", reservationService.blockedCancelMessage(reservation));
+				model.addAttribute("linkedReservationStatusLabel", reservationService.statusLabel(reservation));
 				model.addAttribute("linkedReservationStoreName", reservationService.findStoreById(reservation.getStoreId())
 						.map(store -> store.getStoreName())
 						.orElse("-"));
+
+				if ("refunded".equals(reservation.getStatus())) {
+					adminRefundService.findRefund(reservation.getId()).ifPresent(refund -> {
+						model.addAttribute("refundInfo", refund);
+						model.addAttribute("refundProcessedByName", supportService.adminDisplayName(refund.getRequestedBy()));
+					});
+				} else {
+					model.addAttribute("linkedReservationBlockedMessage", adminRefundService.blockedRefundMessage(reservation));
+				}
 			});
-		} else if (complaint.getReporterId() != null) {
-			model.addAttribute("reporterRecentOrders", reservationService.getOrdersForUser(complaint.getReporterId()).stream()
-					.limit(REPORTER_RECENT_ORDERS_LIMIT)
-					.toList());
 		}
 
 		return "superAdminView/complaintDetail";
+	}
+
+	/**
+	 * [환불 처리] 확인 모달 제출 — AdminRefundService.refund 하나로 환불·신고 처리완료·답변 저장까지
+	 * 끝낸다(스펙 B.6). 버튼은 클릭 즉시 JS로 비활성화하지만(complaintDetail.html), 이중 제출이
+	 * 뚫려도 RefundEntity.orderId UNIQUE + findByOrderId 재사용 로직이 서버에서 한 번 더 막는다.
+	 */
+	@PostMapping("/complaints/{id}/refund")
+	public String refund(@PathVariable Long id,
+	                      @RequestParam String reason,
+	                      @RequestParam String replyContent,
+	                      HttpSession session,
+	                      RedirectAttributes redirectAttributes) {
+		Long adminId = (Long) session.getAttribute("userId");
+		AdminRefundService.RefundResult result = adminRefundService.refund(id, reason, replyContent, adminId);
+
+		redirectAttributes.addFlashAttribute("cancelledMessage", result.success()
+				? "환불 처리됐어요."
+				: "환불에 실패했어요: " + result.failReason());
+		return "redirect:/superadmin/complaints/" + id;
 	}
 
 	@PostMapping("/complaints/{id}/reply")

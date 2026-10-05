@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
+import net.dsa.girigiri.exception.ReportNotAllowedException;
 import net.dsa.girigiri.exception.ReservationAccessDeniedException;
 import net.dsa.girigiri.service.ComplaintService;
 import net.dsa.girigiri.service.LookupService;
@@ -38,6 +39,11 @@ public class ReservationReportController {
 		if (!reservation.getUserId().equals(ReservationController.resolveCurrentUserId(session))) {
 			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
 		}
+		// 화면에서 버튼을 숨기는 것과 별개로, URL을 직접 쳐서 들어오는 경우까지 서버에서 막는다.
+		String blockedMessage = complaintService.blockedReportMessage(reservation);
+		if (blockedMessage != null) {
+			throw new ReportNotAllowedException(blockedMessage);
+		}
 
 		model.addAttribute("reservation", reservation);
 		return "reservationView/report";
@@ -52,6 +58,11 @@ public class ReservationReportController {
 		ReservationEntity reservation = lookupService.getReservation(id);
 		if (!reservation.getUserId().equals(ReservationController.resolveCurrentUserId(session))) {
 			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
+		}
+		// 폼이 떠 있는 동안 48시간이 지나거나 다른 경로로 먼저 신고가 접수됐을 수 있어 제출 시점에도 재검증한다.
+		String blockedMessage = complaintService.blockedReportMessage(reservation);
+		if (blockedMessage != null) {
+			throw new ReportNotAllowedException(blockedMessage);
 		}
 
 		complaintService.submitFromReservation(reservation, reason, content);

@@ -231,12 +231,12 @@ CREATE TABLE reservation (
     coupon_id          BIGINT COMMENT '이 예약에 쓴 쿠폰. 안 썼으면 NULL (2026-09-07 추가)',
     pickup_time        DATETIME,
     pickup_code        VARCHAR(30) COMMENT 'QR/현장 확인 코드',
-    status             VARCHAR(20) NOT NULL COMMENT 'pending/confirmed/ready/picked/cancelled/noshowed',
+    status             VARCHAR(20) NOT NULL COMMENT 'pending/confirmed/ready/picked/cancelled/noshowed/refunded (refunded는 2026-10-06 추가, AdminRefundService 전용)',
     reserved_at        DATETIME,
     accepted_at        DATETIME COMMENT '매장이 수락한 시각(confirmed→ready 전환 시점)',
     picked_at          DATETIME,
-    cancelled_by       VARCHAR(10) COMMENT 'USER/STORE/ADMIN, status=cancelled일 때만 값 존재',
-    cancel_reason      VARCHAR(255) COMMENT 'STORE/ADMIN 취소 시 사유',
+    cancelled_by       VARCHAR(10) COMMENT 'USER/STORE/ADMIN, status=cancelled 또는 refunded일 때만 값 존재',
+    cancel_reason      VARCHAR(255) COMMENT 'STORE/ADMIN 취소·환불 시 사유',
     INDEX idx_reservation_user_id (user_id),
     INDEX idx_reservation_product_id (product_id),
     INDEX idx_reservation_store_id (store_id),
@@ -244,6 +244,20 @@ CREATE TABLE reservation (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (product_id) REFERENCES product(id),
     FOREIGN KEY (store_id) REFERENCES store(id)
+);
+
+-- 예약 상태 변경 이력 (2026-10-06 추가, 신고 기반 리팩터링). 범위를 일부러 좁게 잡아서
+-- AdminRefundService의 "picked → refunded" 전이 1건만 여기 기록한다 — 기존 취소/노쇼/픽업
+-- 전이는 그대로 이력 없이 둔다(요청받지 않음).
+CREATE TABLE reservation_status_history (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    reservation_id  BIGINT NOT NULL,
+    from_status     VARCHAR(20) NOT NULL,
+    to_status       VARCHAR(20) NOT NULL,
+    changed_by      BIGINT NOT NULL COMMENT '처리한 관리자 userId',
+    reason          VARCHAR(255),
+    created_at      DATETIME,
+    FOREIGN KEY (reservation_id) REFERENCES reservation(id)
 );
 
 -- 결제 1건 (PortOne/아임포트). 담당: 송채현.
@@ -438,7 +452,7 @@ CREATE TABLE complaint (
     id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
     target_name             VARCHAR(100) NOT NULL COMMENT '신고 대상(매장/유저) 이름 스냅샷',
     target_store_id         BIGINT COMMENT '대상이 매장이면 채움. FK 미설정(감사 로그 성격)',
-    target_reservation_id   BIGINT COMMENT '예약 상세 "신고하기"로 접수된 경우 그 예약 (2026-09-08 추가). FK 미설정',
+    target_reservation_id   BIGINT COMMENT '= 스펙상 "order_id". 주문 상세 "신고하기"로 접수된 경우 그 예약(2026-09-08 추가, 2026-10-06부터 신규 신고는 전부 필수). 그 전에 SQL로 넣었거나 매장 전체 신고만 NULL. FK 미설정',
     reason                  VARCHAR(100) NOT NULL,
     content                 VARCHAR(1000) NOT NULL,
     reporter_name           VARCHAR(50) NOT NULL,
@@ -447,6 +461,26 @@ CREATE TABLE complaint (
     admin_reply             VARCHAR(1000),
     created_at              DATETIME,
     resolved_at             DATETIME
+);
+
+-- 신고 처리로 발생한 관리자 환불 1건 (2026-10-06 추가, 신고 기반 리팩터링 — 스펙 C). 유저 본인
+-- 취소(payment/payment_cancel 경로)와는 완전히 분리된 테이블 — PG 상태의 단일 진실 소스는 여전히
+-- payment.pay_status라서(정산이 그것만 본다), 이 테이블은 "신고 처리 환불 1건"이라는 사실 자체와
+-- "환불 완료" 배지 표시(일시·처리자)용으로만 쓴다.
+CREATE TABLE refund (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT NOT NULL COMMENT '= reservation.id ("주문")',
+    report_id       BIGINT NOT NULL COMMENT '= complaint.id, 이 환불의 근거가 된 신고',
+    amount          INT NOT NULL,
+    reason          VARCHAR(255) NOT NULL,
+    status          VARCHAR(20) NOT NULL COMMENT 'REQUESTED/DONE/FAILED (enum, 대문자 저장)',
+    pg_refund_tid   VARCHAR(50) COMMENT 'PG 환불 거래 참조값(현재는 merchantUid 재사용, PortOneClient 참고)',
+    requested_by    BIGINT NOT NULL COMMENT '처리한 슈퍼어드민 userId',
+    created_at      DATETIME,
+    updated_at      DATETIME,
+    UNIQUE KEY uk_refund_order_id (order_id),
+    FOREIGN KEY (order_id) REFERENCES reservation(id),
+    FOREIGN KEY (report_id) REFERENCES complaint(id)
 );
 
 -- ── 5. 정산 / 리포트 / 뱃지 ──────────────────────────────────────────

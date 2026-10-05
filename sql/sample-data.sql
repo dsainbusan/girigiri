@@ -20,6 +20,10 @@
 -- =====================================================================
 
 -- 기존 데이터 초기화 (재실행 대비, FK 매핑이 아직 없어 순서 상관없이 삭제 가능)
+-- refund/reservation_status_history 추가됨 (2026-10-06, 신고 기반 리팩터링) — 둘 다 reservation/
+-- complaint를 참조하므로 그보다 먼저 지운다.
+DELETE FROM refund;
+DELETE FROM reservation_status_history;
 DELETE FROM notification;
 DELETE FROM user_badge;
 DELETE FROM complaint;
