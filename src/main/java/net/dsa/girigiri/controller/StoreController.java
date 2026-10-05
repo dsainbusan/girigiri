@@ -131,6 +131,7 @@ public class StoreController {
 		model.addAttribute("needsBankAccount", stats.needsBankAccount());
 
 		model.addAttribute("settlementPayout", stats.settlementPayout());
+		model.addAttribute("lowStockCount", stats.lowStockCount());
 
 		// 추가됨 (2026-09-17) — "리뷰 관리" 카드가 다른 카드들처럼 라벨+값 2줄 구조를 갖게(평점·건수).
 		model.addAttribute("reviewAverageRating", store == null ? 0 : reviewService.getAverageRating(store.getId()));

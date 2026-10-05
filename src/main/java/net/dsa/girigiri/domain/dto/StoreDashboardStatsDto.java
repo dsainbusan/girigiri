@@ -57,6 +57,10 @@ public record StoreDashboardStatsDto(
 		int incomingReservationCount,
 		boolean needsAutomationSetup,
 		boolean needsBankAccount,
-		String settlementPayout
+		String settlementPayout,
+		// 추가됨 (2026-09-30, 문창호 인수 — WBS 3.0 잔여 항목) — 오버부킹(동시 결제로 인한 재고 부족
+		// 실패)은 이미 재고 락(ProductRepository.findByIdForUpdate)으로 막혀 있지만, 어드민 화면에서는
+		// "곧 품절될 상품"을 사전에 알 방법이 없었다. 판매중(active) 상품 중 남은 수량이 적은 것의 개수.
+		int lowStockCount
 ) {
 }

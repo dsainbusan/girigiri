@@ -18,6 +18,7 @@ import net.dsa.girigiri.repository.ReviewSummaryRepository;
 import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
+import net.dsa.girigiri.util.SidoParser;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -279,6 +280,7 @@ public class SuperAdminStoreService {
 		store.setCategory(category.trim());
 		store.setPhone(phone.trim());
 		store.setAddress(address.trim());
+		store.setSido(SidoParser.parse(address));
 		store.setBusinessNumber(businessNumber != null && !businessNumber.isBlank() ? businessNumber.trim() : null);
 		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
 		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {

@@ -66,9 +66,32 @@ public class CouponEntity {
 	@Column(name = "source_reservation_id")
 	private Long sourceReservationId;
 
+	// 2026-10-01 추가 — 발급 시점의 캠페인 scope를 그대로 복사(CouponCampaignEntity.SCOPE_*).
+	// null = 제한 없음(웰컴/매장보상/기존 코드형 캠페인 전부 여기 해당 — 하위호환).
+	@Column(name = "scope", length = 10)
+	private String scope;
+
 	// 정률 할인(%). 기존 상품 할인율(DiscountRateCalculator)과 같은 방식.
-	@Column(name = "discount_rate", nullable = false)
+	// nullable로 완화됨 (2026-10-01) — discountType=AMOUNT인 매장 지정 쿠폰은 이 필드 대신
+	// discountAmount를 쓴다. 웰컴/매장보상/코드형은 전부 그대로 값이 채워진다(하위호환).
+	@Column(name = "discount_rate")
 	private Integer discountRate;
+
+	// 2026-10-01 추가 — discountType=AMOUNT(정액, 원)일 때만 채워짐. null이면 discountRate(정률)
+	// 방식 그대로 — 기존 발급 경로(웰컴/매장보상/코드형)는 전부 이 필드가 null이다.
+	@Column(name = "discount_type", length = 10)
+	private String discountType;
+
+	@Column(name = "discount_amount")
+	private Integer discountAmount;
+
+	// discountType=RATE일 때만 의미 있음 — 정률 할인의 최대 할인 금액 캡. null이면 캡 없음.
+	@Column(name = "max_discount_amount")
+	private Integer maxDiscountAmount;
+
+	// 이 쿠폰을 쓰려면 주문 금액(할인 전)이 이 값 이상이어야 한다. null/0이면 제한 없음.
+	@Column(name = "min_order_amount")
+	private Integer minOrderAmount;
 
 	// 이 시각(포함) 이후로는 만료 처리.
 	@Column(name = "expires_at", nullable = false)

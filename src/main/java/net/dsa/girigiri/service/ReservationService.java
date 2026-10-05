@@ -21,6 +21,7 @@ import net.dsa.girigiri.domain.entity.CouponEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.exception.AcceptNotAllowedException;
 import net.dsa.girigiri.exception.CancellationNotAllowedException;
+import net.dsa.girigiri.exception.NoShowNotAllowedException;
 import net.dsa.girigiri.exception.OrderNotAllowedException;
 import net.dsa.girigiri.exception.PaymentVerificationException;
 import net.dsa.girigiri.exception.PickupNotAllowedException;
@@ -166,27 +167,33 @@ public class ReservationService {
 			throw new OrderNotAllowedException(storeReliabilityService.blockedReservationMessage(store));
 		}
 
-		// 1. 쿠폰을 골랐다면 재고를 건드리기 전에 먼저 검증한다 (본인 소유 + 미사용 + 미만료).
+		// 1. 쿠폰 검증 전에 먼저 할인 전 금액을 계산해둔다 — 2026-10-01부터 쿠폰의 최소 주문 금액
+		//    검증에 이 값이 필요해서 가격 계산(옛 3번)을 여기로 당겨왔다. 금액 자체는 그대로다.
+		int rawTotalPrice = product.getDiscountedPrice() * quantity;
+
+		// 2. 쿠폰을 골랐다면 재고를 건드리기 전에 먼저 검증한다 (본인 소유 + 미사용 + 미만료 +
+		//    매장 지정 쿠폰이면 이 매장에서 쓸 수 있는지 + 최소 주문 금액).
 		//    유효하지 않으면 CouponService.validateForRedeem이 ResponseStatusException을 던지고,
 		//    이 메서드가 @Transactional이라 여기까지 온 변경사항(아직 없음)은 자동 롤백된다.
-		CouponEntity coupon = couponId != null ? couponService.validateForRedeem(userId, couponId) : null;
+		CouponEntity coupon = couponId != null
+				? couponService.validateForRedeem(userId, couponId, product.getStoreId(), rawTotalPrice)
+				: null;
 
-		// 2. 재고 차감. 재고가 없으면 여기서 OutOfStockException이 터지면서 아래 코드는 실행되지 않는다.
+		// 3. 재고 차감. 재고가 없으면 여기서 OutOfStockException이 터지면서 아래 코드는 실행되지 않는다.
 		//    (동시에 여러 명이 예약해도 안전하게 처리되는 부분은 StockService가 이미 책임진다.)
 		stockService.decreaseStock(productId, quantity);
 
-		// 3. 가격 계산 (0번에서 이미 조회해둔 product를 그대로 쓴다)
-		int totalPrice = product.getDiscountedPrice() * quantity;
+		// 4. 쿠폰 할인 적용 (정액/정률 + 최대 할인 금액 캡은 CouponService.computeDiscount가 처리).
+		int totalPrice = rawTotalPrice;
 		if (coupon != null) {
-			int discountAmount = totalPrice * coupon.getDiscountRate() / 100;
-			totalPrice = Math.max(totalPrice - discountAmount, 0);
+			totalPrice = Math.max(totalPrice - couponService.computeDiscount(coupon, rawTotalPrice), 0);
 		}
 
-		// 4. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
+		// 5. 픽업 확인용 QR 코드 문자열 생성 (결제 전이지만 미리 발급 — 픽업 코드 자체는 결제 여부와
 		//    무관하게 예약 하나당 하나면 되고, confirmed로 바뀐 뒤에 새로 만들 이유가 없다)
 		String pickupCode = generateUniquePickupCode();
 
-		// 5. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
+		// 6. 예약 레코드 저장 — 아직 결제 전이므로 pending으로 저장
 		ReservationEntity reservation = ReservationEntity.builder()
 				.userId(userId)
 				.productId(productId)
@@ -201,13 +208,13 @@ public class ReservationService {
 				.build();
 		reservation = reservationRepository.save(reservation);
 
-		// 5-1. 쿠폰을 실제로 골랐으면 이 시점에 사용 처리한다 (재고와 동일한 낙관적 처리 — 위 메서드
+		// 6-1. 쿠폰을 실제로 골랐으면 이 시점에 사용 처리한다 (재고와 동일한 낙관적 처리 — 위 메서드
 		// 설명 참고). 같은 쿠폰으로 결제창을 여러 번 열어서 중복 적용하는 걸 여기서 막는다.
 		if (couponId != null) {
 			couponService.markUsed(couponId);
 		}
 
-		// 6. 결제 레코드를 "ready"(결제 대기)로 미리 만들어둔다. merchantUid가 곧 PortOne의
+		// 7. 결제 레코드를 "ready"(결제 대기)로 미리 만들어둔다. merchantUid가 곧 PortOne의
 		//    paymentId다 — 서버가 미리 발급해서 프론트에 내려주고, 프론트는 이 값 그대로
 		//    PortOne.requestPayment()에 넘긴다 (프론트가 마음대로 paymentId를 만들게 하면 나중에
 		//    confirmPayment에서 어떤 결제 기록과 매칭해야 할지 알 수 없어서, 반드시 서버가 먼저
@@ -814,13 +821,16 @@ public class ReservationService {
 	}
 
 	private ReservationIncomingItemDto toIncomingItemDto(ReservationEntity reservation) {
+		LocalDateTime pickupTime = reservation.getPickupTime();
 		return new ReservationIncomingItemDto(
 				reservation.getId(),
 				reservation.getProductName(),
 				reservation.getReservedQuantity(),
 				reservation.getTotalPrice(),
 				reservation.getPickupCode(),
-				reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-"
+				reservation.getReservedAt() != null ? reservation.getReservedAt().format(LIST_DISPLAY_FORMAT) : "-",
+				pickupTime != null ? pickupTime.format(LIST_DISPLAY_FORMAT) : null,
+				pickupTime != null && !LocalDateTime.now().isBefore(pickupTime)
 		);
 	}
 
@@ -965,6 +975,39 @@ public class ReservationService {
 
 		// 쓴 쿠폰이 있으면 복구 — 손님 본인 노쇼(processNoShows)를 제외한 모든 취소 경로와 동일한 정책.
 		couponService.restore(reservation.getCouponId());
+
+		receiptService.generateReceipt(reservationId);
+
+		return saved;
+	}
+
+	/**
+	 * 사장님이 픽업 대기중(ready)인 예약을 자정까지 기다리지 않고 직접 "노쇼"로 확정 처리한다.
+	 * (2026-09-30, 문창호 인수 — WBS 3.0 "들어온 예약 목록/상태 관리" 잔여 항목) processNoShows()
+	 * 스케줄러는 주문일 다음날 자정이 지나야만 자동으로 처리하는데, 사장님이 현장에서 "이 손님은
+	 * 이제 안 온다"고 이미 확신했을 때 그때까지 재고를 묶어두지 않고 바로 정리하기 위한 보조 수단이다.
+	 *
+	 * processOneNoShow와 정책은 동일하게 맞춘다 — 재고 복구/환불/쿠폰 복구 전부 하지 않는다(노쇼는
+	 * 손님 잘못이라는 기존 정책 그대로). 다만 자정 컷오프 대신 "픽업 예정 시각이 지났는지"만 확인해서,
+	 * 아직 올 수 있는 손님을 오인 클릭으로 노쇼 처리해버리는 사고를 막는다.
+	 */
+	@Transactional
+	public ReservationEntity markNoShowByStore(Long reservationId) {
+		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
+				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
+
+		if (!"ready".equals(reservation.getStatus())) {
+			throw new NoShowNotAllowedException("픽업 대기 중인 예약만 노쇼 처리할 수 있어요.");
+		}
+
+		LocalDateTime now = LocalDateTime.now();
+		if (reservation.getPickupTime() != null && now.isBefore(reservation.getPickupTime())) {
+			throw new NoShowNotAllowedException(
+					"아직 픽업 예정 시각(" + reservation.getPickupTime().format(LIST_DISPLAY_FORMAT) + ") 전이라 노쇼 처리할 수 없어요.");
+		}
+
+		reservation.setStatus("noshowed");
+		ReservationEntity saved = reservationRepository.save(reservation);
 
 		receiptService.generateReceipt(reservationId);
 

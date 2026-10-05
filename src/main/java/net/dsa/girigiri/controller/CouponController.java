@@ -11,10 +11,12 @@ import net.dsa.girigiri.service.SuperAdminCouponService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -58,5 +60,25 @@ public class CouponController {
 			return "redirect:/coupons/claim?error=cannot";
 		}
 		return "redirect:/coupons";
+	}
+
+	/**
+	 * 매장 지정 쿠폰 "쿠폰 받기" 버튼 — 2026-10-01 신규. 코드 입력 없이 버튼 클릭으로 받는다
+	 * (CouponService#claimStoreCampaignCoupon). 받은 뒤엔 원래 보던 매장 상세로 돌아간다.
+	 */
+	@LoginRequired
+	@PostMapping("/store-campaigns/{campaignId}/claim")
+	public String claimStoreCampaign(@PathVariable Long campaignId,
+	                                  @RequestParam Long storeId,
+	                                  HttpSession session,
+	                                  RedirectAttributes redirectAttributes) {
+		Long userId = (Long) session.getAttribute("userId");
+		try {
+			couponService.claimStoreCampaignCoupon(userId, campaignId);
+			redirectAttributes.addFlashAttribute("couponClaimed", "쿠폰을 받았어요! 내 쿠폰함에서 확인할 수 있어요.");
+		} catch (ResponseStatusException e) {
+			redirectAttributes.addFlashAttribute("couponClaimError", e.getReason());
+		}
+		return "redirect:/user/stores/" + storeId;
 	}
 }

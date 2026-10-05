@@ -44,6 +44,13 @@ public class StoreEntity {
 	@Column(name = "address", length = 200)
 	private String address;
 
+	// 추가됨 (2026-09-30, 통계 대시보드 "지역별 현황") — address는 자유텍스트라 그룹핑에 못 쓴다.
+	// 17개 시도 표준 명칭 중 하나(예: "서울", "경기")로 SidoParser가 address에서 뽑아 저장한다.
+	// address를 세팅하는 곳(AuthService#ownerApply, SuperAdminStoreService#updateStoreInfo)에서
+	// 같이 세팅 — 주소가 시도로 시작하지 않는 등 파싱 실패 시 null(화면에서 "미분류").
+	@Column(name = "sido", length = 10)
+	private String sido;
+
 	@Column(name = "latitude")
 	private Double latitude;
 

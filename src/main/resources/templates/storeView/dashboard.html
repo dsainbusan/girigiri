@@ -71,7 +71,7 @@
 		<div id="panel-overview" class="stat-panel">
 
 			<!-- 처리할 일 알림 배너 (항상 우선 표시. 건수 없으면 숨김) -->
-			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount}" class="todo-banner">
+			<div th:if="${draftPendingCount > 0 or incomingReservationCount > 0 or needsAutomationSetup or needsBankAccount or lowStockCount > 0}" class="todo-banner">
 				<!-- 1. 오늘의 구제 판매 대기 (19시 등 마감세일 시각 자동 생성된 초안) -->
 				<a th:if="${draftPendingCount > 0}" th:href="@{/store/products}" class="todo-banner__card" title="판매 대기 상품 확인">
 					<div class="todo-banner__icon">
@@ -113,6 +113,21 @@
 					</div>
 					<div class="todo-banner__action">
 						<span class="todo-banner__badge todo-banner__badge--warning">등록</span>
+						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
+					</div>
+				</a>
+
+				<!-- 5. 품절 임박 재고 (2026-09-30, 문창호 인수) -->
+				<a th:if="${lowStockCount > 0}" th:href="@{/store/products}" class="todo-banner__card todo-banner__card--warning" title="재고관리에서 확인">
+					<div class="todo-banner__icon">
+						<svg class="icon"><use href="#i-warning"/></svg>
+					</div>
+					<div class="todo-banner__body">
+						<div class="todo-banner__title">품절 임박 재고</div>
+						<div class="todo-banner__desc">남은 수량이 얼마 안 남은 상품이 있어요</div>
+					</div>
+					<div class="todo-banner__action">
+						<span class="todo-banner__badge todo-banner__badge--warning" th:text="${lowStockCount} + '종'">1종</span>
 						<svg class="icon todo-banner__arrow"><use href="#i-chevron-right"/></svg>
 					</div>
 				</a>

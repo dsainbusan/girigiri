@@ -809,6 +809,187 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
 .stat-grid--2 { grid-template-columns: repeat(2, 1fr); }
 /* .stat-grid를 3열로(플랫폼 통계의 거래량/구제량/매출 카드 3개, 2026-09-09) */
 .stat-grid--3 { grid-template-columns: repeat(3, 1fr); }
+/* .stat-grid를 5열로(통계 대시보드 KPI 카드 5개, 2026-09-30) */
+.stat-grid--5 { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1100px) {
+  .stat-grid--5 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* 통계 대시보드 상단 "기준일 · 마지막 업데이트 · 새로고침" 한 줄 (2026-09-30) */
+.dash-meta-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px; font-size: 13px; color: var(--gray-600);
+}
+.dash-meta-row__sep { color: var(--gray-300); }
+.dash-meta-row__refresh { margin-left: auto; }
+
+/* subhead 옆 보조 건수("처리 대기 총 N건", 2026-09-30) */
+.subhead__count { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--gray-500); }
+
+/* 통계 대시보드 KPI 카드의 강조 보조지표(구해낸 음식 → CO2 절감, 2026-09-30) — 다른 delta는
+   중립 회색, 이것만 브랜드 톤(blue)으로 튀게 해서 "환경 기여" 지표라는 걸 한눈에 구분한다. */
+.stat-card__delta--accent { color: var(--blue-600); font-weight: 700; }
+
+/* info-row 왼쪽 아이콘 원(처리 대기 리스트, 2026-09-30) — 기본은 브랜드 톤(blue) 틴트,
+   "우선 처리" 행(신고 접수)만 danger 톤으로 구분한다. */
+.info-row__icon {
+  display: flex; align-items: center; justify-content: center; flex: none;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--blue-50); color: var(--blue-600);
+}
+.info-row__icon--danger { background: var(--red-100); color: var(--red-500); }
+.info-row__icon .icon { width: 20px; height: 20px; }
+/* 대기 0건인 행은 흐리게 — 내용은 그대로 두되 시선 우선순위만 낮춘다. */
+.info-row.is-empty { opacity: .55; }
+.info-row.is-empty:hover { background: none; }
+/* 처리 대기 "신고 접수" 행의 "우선 처리" 배지를 제목 옆에 (2026-09-30) */
+.info-row__title .badge { margin-left: 8px; vertical-align: 1px; }
+
+/* 통계 대시보드 "마감 상품 소진 현황"(최근 7일, SKU 기준) 카드 (2026-09-30).
+   판매(진한 파랑)/미판매(연한 파랑) 스택 막대 + 소진율 꺾은선(인라인 SVG, 라이브러리 없음) —
+   storeView 대시보드의 판매/폐기 막대그래프와 같은 기법(막대 높이 %는 서비스가 미리 계산). */
+/* 소진 현황 카드와 처리 대기 카드를 한 줄에 나란히(7:5) — 2026-10-01, 참고 디자인 반영.
+   처리 대기 쪽이 내용이 짧아도 늘어나지 않게 align-items:start. */
+.dash-two-col { display: grid; grid-template-columns: 7fr 5fr; gap: 20px; align-items: start; }
+@media (max-width: 1100px) {
+  .dash-two-col { grid-template-columns: 1fr; }
+}
+.sell-through-card { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 20px; }
+.sell-through-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.sell-through-card__subtitle { font-size: 13px; color: var(--gray-600); margin: 0; }
+.sell-through-card__rate { text-align: right; flex: none; }
+.sell-through-card__rate-label { display: block; font-size: 12px; color: var(--gray-500); }
+.sell-through-card__rate-value { display: block; margin-top: 2px; font-size: 28px; font-weight: 800; color: var(--blue-600); }
+
+/* 소진 현황 범례 + 꺾은선 위 점 마커 (2026-09-30, 참고 디자인 레이아웃 반영) */
+.sell-through-legend { display: flex; align-items: center; gap: 20px; font-size: 13px; color: var(--gray-600); margin-bottom: 12px; }
+.sell-through-legend__swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.sell-through-legend__swatch--sold { background: var(--blue-600); }
+.sell-through-legend__swatch--unsold { background: var(--blue-100); }
+.sell-through-legend__line { display: inline-block; width: 16px; height: 2px; background: var(--gray-900); margin-right: 8px; vertical-align: 3px; }
+.sell-through-legend__hint { margin-left: auto; }
+.sell-through-chart__gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--gray-200); }
+.sell-through-chart__dot {
+  position: absolute; width: 10px; height: 10px; margin-left: -5px; margin-bottom: -5px;
+  border-radius: 50%; background: var(--white); border: 2px solid var(--gray-900); box-sizing: border-box;
+}
+.sell-through-chart__dot.is-today { width: 12px; height: 12px; margin-left: -6px; margin-bottom: -6px; background: var(--gray-900); border-color: var(--white); }
+.sell-through-chart { display: flex; gap: 10px; }
+.sell-through-chart__axis {
+  flex: none; width: 32px; height: 160px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-size: 11px; color: var(--gray-500); text-align: right;
+}
+.sell-through-chart__body { flex: 1; min-width: 0; }
+.sell-through-chart__plot { position: relative; display: flex; align-items: flex-end; gap: 6px; height: 160px; }
+.sell-through-chart__line { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.sell-through-chart__col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.sell-through-chart__count { font-size: 11px; color: var(--gray-600); margin-bottom: 2px; height: 14px; }
+.sell-through-chart__track {
+  flex: 1; width: 100%; max-width: 28px; margin-top: auto;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: var(--gray-50); border-radius: var(--radius-sm);
+}
+.sell-through-chart__fill { width: 100%; min-height: 2px; display: flex; flex-direction: column; border-radius: 3px 3px 0 0; overflow: hidden; }
+.sell-through-chart__seg { width: 100%; display: flex; align-items: flex-start; justify-content: center; }
+.sell-through-chart__seg--unsold { background: var(--blue-100); }
+.sell-through-chart__seg--sold { background: var(--blue-600); }
+.sell-through-chart__seg--sold span { font-size: 10px; color: var(--white); font-weight: 700; margin-top: 1px; }
+.sell-through-chart__dates, .sell-through-chart__rates {
+  display: flex; gap: 6px; margin-top: 6px;
+}
+.sell-through-chart__dates span, .sell-through-chart__rates span {
+  flex: 1; min-width: 0; text-align: center; font-size: 11px; color: var(--gray-500);
+}
+.sell-through-chart__dates span.is-today { color: var(--blue-600); font-weight: 700; }
+.sell-through-chart__rates { margin-top: 2px; font-weight: 600; color: var(--gray-700); }
+
+/* 통계 대시보드 "지역별 현황" (2026-09-30) — 17개 시도 타일맵(4열×6행 고정 배치) + 운영 지역 표. */
+.region-card { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 20px; }
+.region-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; margin-top: 16px; align-items: start; }
+@media (max-width: 1100px) {
+  .region-layout { grid-template-columns: 1fr; }
+}
+.region-tilemap { display: grid; grid-template-columns: repeat(4, 76px); grid-auto-rows: 60px; gap: 8px; }
+.region-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: var(--radius-sm); background: var(--gray-100); color: var(--gray-700);
+  font-size: 12px; font-weight: 600;
+  /* 버튼 기본값 리셋(타일이 <button>, 2026-10-01 클릭 필터 기능 추가) */
+  border: 0; padding: 0; margin: 0; font-family: inherit; cursor: pointer;
+}
+.region-tile.is-blank { background: transparent; cursor: default; }
+.region-tile__value { font-size: 11px; font-weight: 400; opacity: .85; }
+.region-tile.tile--none { background: var(--gray-100); color: var(--gray-500); }
+.region-tile.tile--low { background: var(--blue-100); color: var(--blue-600); }
+.region-tile.tile--mid { background: var(--blue-500); color: var(--white); }
+.region-tile.tile--good { background: var(--blue-600); color: var(--white); }
+/* 선택된 타일 = 링, 선택 중일 때 나머지 타일은 흐리게 (2026-10-01, 클릭 필터) */
+.region-tile[aria-pressed="true"] { outline: 2px solid var(--blue-600); outline-offset: 2px; }
+.region-tilemap.is-filtering .region-tile:not([aria-pressed="true"]) { opacity: .5; }
+.region-filter-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 12px; padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--blue-50); color: var(--blue-600); font-size: 13px; font-weight: 700;
+}
+/* [hidden]과 .region-filter-banner가 명시도가 같아서(둘 다 0,1,0) 이 display:flex가 뒤에 와
+   [hidden]의 display:none을 덮어씀 — 그래서 JS가 hidden=true로 바꿔도 배너가 안 사라지고
+   "전체 보기" 버튼을 눌러도 아무 반응 없는 것처럼 보였다. .modal-overlay[hidden]과 동일한 처방. */
+.region-filter-banner[hidden] { display: none; }
+.region-table-wrap { min-width: 0; }
+.region-table-wrap__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.region-bar { display: flex; align-items: center; gap: 8px; }
+.region-bar__track { flex: 1; height: 6px; border-radius: var(--radius-pill); background: var(--gray-100); overflow: hidden; }
+.region-bar__fill { height: 100%; background: var(--blue-600); border-radius: var(--radius-pill); }
+.region-table__total { font-weight: 700; background: var(--gray-50); }
+/* "지역별 현황" 표 더보기 — 박스형 outline 버튼 대신 다른 테이블 액션(.link-action)과 톤을
+   맞춘 가운데 정렬 텍스트 링크. 표 바깥 느낌이 나지 않게 가로 꽉 채운 셀 안에 둔다. */
+.region-table__more {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px 0; border: 0; background: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--blue-500);
+}
+.region-table__more:hover { background: var(--gray-50); text-decoration: underline; }
+.region-table__more .icon { width: 15px; height: 15px; }
+
+/* 통계 대시보드 "일별 현황" 달력 + 선택한 날의 리포트 패널 (2026-10-05 추가). region-layout과
+   같은 2열 그리드 비율(달력 340px 고정 + 패널 가변)을 그대로 따른다. */
+.daily-report-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; margin-top: 16px; align-items: start; }
+@media (max-width: 1100px) {
+  .daily-report-layout { grid-template-columns: 1fr; }
+}
+.cal-card { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 16px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-label { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+.cal-nav {
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+  border-radius: var(--radius-sm); color: var(--gray-700); font-size: 16px; text-decoration: none;
+}
+.cal-nav:hover { background: var(--gray-100); }
+.cal-nav.is-disabled { color: var(--gray-300); pointer-events: none; }
+.cal-weekdays, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-weekdays { margin-bottom: 4px; font-size: 11px; color: var(--gray-500); text-align: center; }
+.cal-cell {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm); font-size: 13px; color: var(--gray-800); text-decoration: none;
+}
+.cal-cell:not(.is-future):hover { background: var(--blue-50); }
+.cal-cell.is-outside { color: var(--gray-300); }
+.cal-cell.is-today { font-weight: 700; color: var(--blue-600); box-shadow: inset 0 0 0 1px var(--blue-600); }
+.cal-cell.is-selected { background: var(--blue-600); color: var(--white); font-weight: 700; }
+.cal-cell.is-future { color: var(--gray-300); cursor: default; }
+.daily-panel__empty { display: flex; align-items: center; justify-content: center; height: 100%; min-height: 180px; color: var(--gray-500); font-size: 13px; }
+.daily-panel__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.daily-panel__head h3 { font-size: 15px; font-weight: 700; color: var(--gray-900); margin: 0; }
+.daily-panel__actions { display: flex; gap: 8px; }
+.daily-panel__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.daily-panel__grid > div { border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 12px; }
+.daily-panel__grid .label { display: block; font-size: 12px; color: var(--gray-600); margin-bottom: 4px; }
+.daily-panel__grid .value { display: block; font-size: 18px; font-weight: 700; color: var(--gray-900); }
+.daily-panel__grid .delta { display: block; font-size: 11px; font-weight: 600; margin-top: 4px; }
+.daily-panel__grid .delta.is-up { color: var(--blue-600); }
+.daily-panel__grid .delta.is-down { color: var(--red-500); }
+.daily-panel__aux { margin-top: 12px; font-size: 12px; color: var(--gray-600); }
 
 /* .search를 고정 260px가 아니라 꽉 채워 쓸 때 */
 .search--block { width: 100%; }
@@ -865,3 +1046,36 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 지역→매장 드릴다운(regionStores.html) — 체크 선택 시 필터 바로 아래 뜨는 선택 액션바.
+   2026-10-01 — 처음엔 하단 고정 어두운 바로 만들었는데, 필터/정렬 바로 아래로 옮기고 나니
+   이 화면 다른 요소(흰 카드, data-table, .region-filter-banner)와 톤이 안 맞는다는 피드백 —
+   .region-filter-banner(지역별 현황 필터 안내)와 같은 blue-50 톤으로 맞췄다. */
+.selection-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  background: var(--blue-50); border: 1px solid var(--blue-100);
+}
+.selection-bar__count { font-size: 13px; font-weight: 700; color: var(--blue-600); }
+.selection-bar__actions { display: flex; gap: 8px; }
+
+/* 쿠폰 발행 / 점주 제안 모달 — storeEdit.html의 주소검색 오버레이와 동일한 기법
+   (display:none ↔ hidden 속성, overlay-scrim/z-modal 토큰 재사용). */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: var(--z-modal);
+  background: var(--overlay-scrim);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.modal-overlay[hidden] { display: none; }
+.modal-card {
+  background: var(--white); border-radius: var(--radius-md); padding: 24px;
+  width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.modal-card__title { margin: 0 0 4px; font-size: 17px; font-weight: 900; color: var(--gray-900); }
+.modal-card__footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* 라디오/체크박스를 가로로 늘어놓을 때(field-group은 기본 세로 스택) */
+.u-row { display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--gray-700); }
+.u-row input[type="checkbox"], .u-row input[type="radio"] { margin-right: 6px; }

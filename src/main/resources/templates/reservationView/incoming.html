@@ -47,6 +47,14 @@
 		</div>
 	</div>
 
+	<!-- 노쇼 처리 직후 안내 배너 -->
+	<div th:if="${noshowMessage != null}" class="banner banner--danger" style="margin-bottom:var(--s-3)">
+		<div>
+			<p class="banner__title">🙅 노쇼 처리 완료</p>
+			<p class="banner__desc" th:text="${noshowMessage}">노쇼로 처리했어요. 결제 금액은 환불되지 않아요.</p>
+		</div>
+	</div>
+
 	<!-- 새 주문 / 픽업 대기중 탭 토글 -->
 	<div class="seg-tabs" role="tablist" style="margin-bottom:var(--s-3)">
 		<button type="button" role="tab" class="seg-tab is-active" data-target="panel-new-orders" id="tab-new-orders" aria-selected="true">
@@ -205,7 +213,20 @@
 					<button type="submit" class="btn-reject-submit">취소 처리 확정</button>
 				</form>
 			</div>
+
+			<!-- 픽업 예정 시각이 지난 건에만 노출 — 아직 올 수 있는 손님을 오인 클릭으로 노쇼 처리하는 사고 방지 -->
+			<form th:if="${r.pickupTimePassed}" th:action="@{/reservation/{id}/noshow(id=${r.reservationId})}" method="post"
+			      onsubmit="return confirm('픽업 예정 시각이 지났어요. 노쇼로 처리할까요? 결제 금액은 환불되지 않아요.')"
+			      style="margin-top:var(--s-2)">
+				<button type="submit" class="btn btn--danger btn--sm btn--block">노쇼 처리</button>
+			</form>
 		</div>
+
+		<!-- 대기 목록이 있을 때 하단 전체 QR 스캐너 바로가기 버튼 -->
+		<a th:if="${!#lists.isEmpty(ready)}" th:href="@{/reservation/pickup}" class="btn btn--block btn--primary" style="margin-top:var(--s-4); display:flex; align-items:center; justify-content:center; gap:8px">
+			<svg class="icon" style="width:18px;height:18px"><use href="#i-camera"/></svg>
+			<span>전체 QR 픽업 스캐너 열기</span>
+		</a>
 	</div>
 	<!-- /panel-waiting-pickup -->
 

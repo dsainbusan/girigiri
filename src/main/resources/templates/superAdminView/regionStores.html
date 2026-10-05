@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<!--/*
+  지역 → 매장 드릴다운. /superadmin/regions/{sido}/stores 로 접속 — 통계 대시보드 "지역별 현황"
+  표 행을 클릭하면 들어온다(2026-10-01 신규).
+
+  운영자가 "소진율 낮은 지역을 봤다 → 어느 매장이 문제인지 안다 → 그 자리에서 쿠폰/제안으로
+  조치한다"를 한 화면에서 끝내는 게 목적. 체크박스로 매장을 고르면 하단에 고정 액션바가 뜨고,
+  [쿠폰 발행]/[점주에게 제안 보내기] 모달로 이어진다. 둘 다 서버 POST + 재검증
+  (SuperAdminCouponService#createStoreCampaign / SuperAdminRegionService#sendOwnerSuggestions)이고,
+  이 화면은 입력만 모아 넘긴다.
+
+  할인율을 더 올리라는 제안은 의도적으로 뺐다(원칙: 마감 상품은 이미 싸다) — 제안 템플릿은
+  노출/시간/구성 개선만 다룬다. 자동 삽입값이 없는 매장은 그 템플릿으로 보내도 조용히 건너뛴다
+  (SuperAdminRegionService, 숫자를 지어내지 않음).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('매장 관리', ~{:: #content}, 'stores', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <a class="link-action mb-16" th:href="@{/superadmin/dashboard}">&larr; 대시보드</a>
+
+  <div class="detail-header">
+    <h2 class="detail-header__title" th:text="${sido} + ' 매장 현황'">지역 매장 현황</h2>
+  </div>
+  <p class="text-muted mb-16"
+     th:text="'최근 ' + ${days} + '일 · 매장 ' + ${storeCount} + '곳 · 소진율 ' + (${overallPercent} != null ? (${overallPercent} + '%') : '-')">
+    최근 7일 · 매장 0곳 · 소진율 -
+  </p>
+
+  <p th:if="${couponSuccess != null}" class="text-muted text-muted--sm mb-16" th:text="${couponSuccess}"></p>
+  <p th:if="${couponError != null}" class="text-muted text-muted--sm mb-16" style="color:var(--red-500)" th:text="${couponError}"></p>
+  <p th:if="${suggestionSuccess != null}" class="text-muted text-muted--sm mb-16" th:text="${suggestionSuccess}"></p>
+
+  <div class="toolbar mb-16">
+    <div class="tabs">
+      <a class="tab" th:classappend="${days == 7} ? ' is-active'" th:href="@{/superadmin/regions/{sido}/stores(sido=${sido}, days=7)}">7일</a>
+      <a class="tab" th:classappend="${days == 30} ? ' is-active'" th:href="@{/superadmin/regions/{sido}/stores(sido=${sido}, days=30)}">30일</a>
+    </div>
+    <div class="toolbar__spacer"></div>
+    <button type="button" class="link-action" id="select-attention-btn">전체 선택</button>
+  </div>
+
+  <!-- 체크 1건 이상이면 여기(필터 바로 아래)에 뜬다 — 2026-10-01, 하단 고정바에서 위치 변경(피드백 반영). -->
+  <div id="selection-bar" class="selection-bar mb-16" hidden>
+    <span id="selection-bar__count" class="selection-bar__count">0개 매장 선택됨</span>
+    <div class="selection-bar__actions">
+      <button type="button" class="btn btn--outline-neutral btn--sm" id="open-suggestion-modal">점주에게 제안 보내기</button>
+      <button type="button" class="btn btn--sm" id="open-coupon-modal">쿠폰 발행</button>
+    </div>
+  </div>
+
+  <form id="bulk-form"></form>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col style="width:4%"><col><col style="width:10%"><col style="width:8%"><col style="width:8%">
+        <col style="width:8%"><col style="width:16%"><col style="width:10%"><col style="width:10%">
+        <col style="width:10%"><col style="width:10%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="th-check"><input class="checkbox" type="checkbox" id="select-all" aria-label="전체 선택"></th>
+          <th>매장명</th><th>점주</th><th>등록</th><th>판매</th><th>폐기</th>
+          <th>소진율</th><th>픽업 가능 시간</th><th>마지막 상품 등록일</th><th>최근 조치</th><th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(rows)}">
+          <td colspan="11" class="table-empty">이 지역에는 아직 입점 매장이 없어요</td>
+        </tr>
+        <tr th:each="r : ${rows}" th:attr="data-needs-attention=${r.needsAttention}">
+          <td>
+            <input class="checkbox row-check" type="checkbox" name="storeIds" aria-label="매장 선택"
+                   th:value="${r.storeId}" form="bulk-form">
+          </td>
+          <td class="cell-name" th:text="${r.storeName}">매장명</td>
+          <td th:text="${r.ownerNickname}">점주</td>
+          <td th:text="${r.registeredCount} + '개'">0개</td>
+          <td th:text="${r.soldCount} + '개'">0개</td>
+          <td th:text="${r.expiredCount} + '개'">0개</td>
+          <td>
+            <div class="region-bar" th:if="${r.sellThroughPercent != null}">
+              <div class="region-bar__track"><div class="region-bar__fill" th:style="'width:' + ${r.sellThroughPercent} + '%'"></div></div>
+              <span th:text="${r.sellThroughPercent} + '%'">0%</span>
+            </div>
+            <span th:unless="${r.sellThroughPercent != null}">-</span>
+          </td>
+          <td th:text="${r.pickupTimeLabel}">제한 없음</td>
+          <td th:text="${r.lastRegisteredAtLabel}">-</td>
+          <td th:text="${r.lastActionLabel}">-</td>
+          <td>
+            <span class="badge badge--danger" th:if="${r.statusLabel == '점검 필요'}" th:text="${r.statusLabel}">점검 필요</span>
+            <span class="badge badge--warning" th:if="${r.statusLabel == '보통'}" th:text="${r.statusLabel}">보통</span>
+            <span class="badge badge--open" th:if="${r.statusLabel == '양호'}" th:text="${r.statusLabel}">양호</span>
+            <span class="badge badge--neutral" th:if="${r.statusLabel == '등록 없음'}" th:text="${r.statusLabel}">등록 없음</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 쿠폰 발행 모달 -->
+  <div id="coupon-modal" role="dialog" aria-modal="true" aria-label="쿠폰 발행" class="modal-overlay" hidden th:attr="data-sido=${sido}">
+    <form class="modal-card" th:action="@{/superadmin/regions/{sido}/stores/coupons(sido=${sido}, days=${days})}" method="post" id="coupon-form">
+      <h3 class="modal-card__title" id="coupon-modal-title">선택한 매장 대상 쿠폰을 발행할까요?</h3>
+      <p class="text-muted text-muted--sm" id="coupon-modal-store-list"></p>
+
+      <div class="field-group">
+        <label class="field-group__label">적용 범위</label>
+        <input class="field" type="text" value="선택한 매장 상품만" disabled>
+        <span class="text-muted text-muted--sm">지역 전체 적용은 준비 중이에요.</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-group__label">할인 방식</label>
+        <div class="u-row">
+          <label><input type="radio" name="discountType" value="RATE" checked> 정률(%)</label>
+          <label><input type="radio" name="discountType" value="AMOUNT"> 정액(원)</label>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="discountRate">할인율(%)</label>
+        <input class="field" type="number" id="discountRate" name="discountRate" min="1" max="90" value="10">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="discountAmount">할인 금액(원)</label>
+        <input class="field" type="number" id="discountAmount" name="discountAmount" min="1" step="100" disabled>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="maxDiscountAmount">최대 할인 금액(원, 정률일 때만)</label>
+        <input class="field" type="number" id="maxDiscountAmount" name="maxDiscountAmount" min="1" step="100">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="minOrderAmount">최소 주문 금액(원)</label>
+        <input class="field" type="number" id="minOrderAmount" name="minOrderAmount" min="0" step="100" value="0">
+      </div>
+      <div class="field-group">
+        <label class="field-group__label">발행 수량 상한</label>
+        <input class="field" type="text" id="issueLimitDisplay" value="-" disabled>
+        <span class="text-muted text-muted--sm">선택한 매장을 찜한 손님 수예요 — 모두에게 돌아가도록 자동 계산되고, 직접 입력할 수 없어요.</span>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="validDays">유효 기간(일)</label>
+        <input class="field" type="number" id="validDays" name="validDays" min="1" value="7">
+      </div>
+      <p id="coupon-cost-estimate" class="text-muted text-muted--sm">예상 최대 비용: -</p>
+
+      <div class="field-group">
+        <label class="field-group__label" for="reason">발행 사유</label>
+        <input class="field" type="text" id="reason" name="reason" maxlength="200" placeholder="예: 소진율 점검 필요">
+      </div>
+
+      <div class="field-group">
+        <label class="field-group__label">알림 발송</label>
+        <label class="u-row"><input type="checkbox" name="notifyLiked" value="true"> 대상 매장을 찜한 손님에게 알림</label>
+        <label class="u-row" id="notify-region-row" hidden><input type="checkbox" name="notifySameRegion" value="true"> 같은 시도 손님에게도 알림</label>
+      </div>
+
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-modal>취소</button>
+        <button type="submit" class="btn btn--sm">발행하기</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 점주 제안 모달 -->
+  <div id="suggestion-modal" role="dialog" aria-modal="true" aria-label="점주에게 제안 보내기" class="modal-overlay" hidden>
+    <form class="modal-card" th:action="@{/superadmin/regions/{sido}/stores/suggestions(sido=${sido}, days=${days})}" method="post">
+      <h3 class="modal-card__title">점주에게 운영 제안 보내기</h3>
+      <p class="text-muted text-muted--sm" id="suggestion-modal-store-list"></p>
+
+      <div class="field-group">
+        <label class="field-group__label">제안 템플릿</label>
+        <select class="field" name="template" id="suggestion-template">
+          <option value="CLOSING_TIME_EARLIER">할인 시작 시간 앞당기기</option>
+          <option value="PICKUP_TIME_LONGER">픽업 가능 시간 늘리기</option>
+          <option value="PHOTO_DESCRIPTION">상품 사진·설명 보강</option>
+          <option value="BUNDLE_SUGGESTION">묶음 구성 제안</option>
+          <option value="REGISTER_ENCOURAGE">상품 등록 독려</option>
+          <option value="CUSTOM">직접 작성</option>
+        </select>
+      </div>
+      <div class="field-group" id="custom-message-group" hidden>
+        <label class="field-group__label" for="customMessage">메시지</label>
+        <textarea class="field" id="customMessage" name="customMessage" rows="3" maxlength="200"></textarea>
+      </div>
+      <p class="text-muted text-muted--sm">자동 삽입값이 없는 매장(예: 픽업 시간 미설정)은 조용히 건너뛰어요.</p>
+
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-modal>취소</button>
+        <button type="submit" class="btn btn--sm">보내기</button>
+      </div>
+    </form>
+  </div>
+
+  <script th:inline="none">
+  (function () {
+    var checkboxes = function () { return Array.prototype.slice.call(document.querySelectorAll('.row-check')); };
+    var selectAll = document.getElementById('select-all');
+    var selectionBar = document.getElementById('selection-bar');
+    var selectionCount = document.getElementById('selection-bar__count');
+
+    function updateBar() {
+      var checked = checkboxes().filter(function (c) { return c.checked; });
+      if (checked.length > 0) {
+        selectionBar.hidden = false;
+        selectionCount.textContent = checked.length + '개 매장 선택됨';
+      } else {
+        selectionBar.hidden = true;
+      }
+      if (selectAll) {
+        selectAll.checked = checked.length > 0 && checked.length === checkboxes().length;
+      }
+    }
+
+    document.addEventListener('change', function (e) {
+      if (e.target.classList && e.target.classList.contains('row-check')) {
+        updateBar();
+      }
+    });
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function () {
+        checkboxes().forEach(function (c) { c.checked = selectAll.checked; });
+        updateBar();
+      });
+    }
+
+    var attentionBtn = document.getElementById('select-attention-btn');
+    if (attentionBtn) {
+      attentionBtn.addEventListener('click', function () {
+        checkboxes().forEach(function (c) {
+          var row = c.closest('tr');
+          c.checked = row && row.getAttribute('data-needs-attention') === 'true';
+        });
+        updateBar();
+      });
+    }
+
+    function selectedStoreNames() {
+      return checkboxes().filter(function (c) { return c.checked; })
+          .map(function (c) { return c.closest('tr').querySelector('.cell-name').textContent; });
+    }
+
+    function openModal(modal, titleTargetId) {
+      var names = selectedStoreNames();
+      if (names.length === 0) { return; }
+      modal.hidden = false;
+      var listEl = modal.querySelector('[id$="-store-list"]');
+      if (listEl) { listEl.textContent = names.join(', '); }
+      var title = document.getElementById(titleTargetId);
+      if (title) { title.textContent = names.length + '개 매장 대상 쿠폰을 발행할까요?'; }
+    }
+
+    function closeModal(modal) { modal.hidden = true; }
+
+    var currentIssueLimit = 0;
+    var issueLimitDisplay = document.getElementById('issueLimitDisplay');
+    var couponSubmitBtn = document.querySelector('#coupon-form button[type="submit"]');
+
+    function refreshIssueLimit() {
+      var modal = document.getElementById('coupon-modal');
+      var sido = modal.dataset.sido;
+      var ids = checkboxes().filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+      if (ids.length === 0) { return; }
+      issueLimitDisplay.value = '불러오는 중...';
+      var params = ids.map(function (id) { return 'storeIds=' + encodeURIComponent(id); }).join('&');
+      fetch('/superadmin/regions/' + encodeURIComponent(sido) + '/stores/liked-count?' + params)
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            currentIssueLimit = data.count || 0;
+            if (currentIssueLimit === 0) {
+              issueLimitDisplay.value = '0명 — 찜한 손님이 없어 발행할 수 없어요';
+              couponSubmitBtn.disabled = true;
+            } else {
+              issueLimitDisplay.value = currentIssueLimit + '명';
+              couponSubmitBtn.disabled = false;
+            }
+            updateCostEstimate();
+          })
+          .catch(function () { issueLimitDisplay.value = '-'; });
+    }
+
+    document.getElementById('open-coupon-modal').addEventListener('click', function () {
+      openModal(document.getElementById('coupon-modal'), 'coupon-modal-title');
+      refreshIssueLimit();
+    });
+    document.getElementById('open-suggestion-modal').addEventListener('click', function () {
+      openModal(document.getElementById('suggestion-modal'), null);
+    });
+    document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+      btn.addEventListener('click', function () { closeModal(btn.closest('.modal-overlay')); });
+    });
+
+    // 체크된 매장 id를 각 모달 폼에도 숨은 필드로 복사해 넣는다(bulk-form과는 별개 form 요소라서).
+    document.querySelectorAll('#coupon-form, #suggestion-modal form').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        checkboxes().filter(function (c) { return c.checked; }).forEach(function (c) {
+          var hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'storeIds';
+          hidden.value = c.value;
+          form.appendChild(hidden);
+        });
+      });
+    });
+
+    // 할인 방식 라디오 — 정률/정액 입력 토글.
+    var rateInput = document.getElementById('discountRate');
+    var amountInput = document.getElementById('discountAmount');
+    document.querySelectorAll('input[name="discountType"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var isRate = radio.value === 'RATE' && radio.checked;
+        if (radio.checked) {
+          rateInput.disabled = !isRate;
+          amountInput.disabled = isRate;
+        }
+        updateCostEstimate();
+      });
+    });
+
+    var maxDiscountInput = document.getElementById('maxDiscountAmount');
+    var costEstimateEl = document.getElementById('coupon-cost-estimate');
+    function updateCostEstimate() {
+      var limit = currentIssueLimit;
+      if (limit === 0) {
+        costEstimateEl.textContent = '예상 최대 비용: -';
+        return;
+      }
+      var isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
+      var perCoupon = isRate ? (parseInt(maxDiscountInput.value, 10) || 0) : (parseInt(amountInput.value, 10) || 0);
+      if (isRate && !maxDiscountInput.value) {
+        costEstimateEl.textContent = '예상 최대 비용: 최대 할인 금액을 입력하면 계산돼요 (대상 ' + limit + '명)';
+        return;
+      }
+      costEstimateEl.textContent = '예상 최대 비용: ' + (limit * perCoupon).toLocaleString() + '원 (대상 ' + limit + '명 × 최대 ' + perCoupon.toLocaleString() + '원)';
+    }
+    [maxDiscountInput, amountInput].forEach(function (el) {
+      el.addEventListener('input', updateCostEstimate);
+    });
+
+    // 알림 "같은 시도 손님" 체크박스 — 이 지역 정보가 확실하니 항상 노출(서버에서 users.region 파싱
+    // 실패분은 그냥 매칭 안 됨으로 처리).
+    document.getElementById('notify-region-row').hidden = false;
+
+    // 직접 작성 템플릿일 때만 메시지 입력란 노출.
+    var templateSelect = document.getElementById('suggestion-template');
+    var customGroup = document.getElementById('custom-message-group');
+    templateSelect.addEventListener('change', function () {
+      customGroup.hidden = templateSelect.value !== 'CUSTOM';
+    });
+  })();
+  </script>
+
+</div>
+</body>
+</html>

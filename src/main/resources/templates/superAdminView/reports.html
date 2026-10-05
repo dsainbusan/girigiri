@@ -62,8 +62,12 @@
           <td th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
           <td th:text="${c.resolvedAt != null} ? ${#temporals.format(c.resolvedAt, 'yyyy-MM-dd')} : '-'">-</td>
           <!-- 변경됨 (2026-09-22, UI/UX 감사) — 대기 목록에 경과일수가 없어서 오래 방치된 신고가
-               새 신고 사이에 파묻혔다. 3일 이상 대기 중이면 배지를 danger로 올리고 경과일을 보여준다. -->
-          <td th:with="daysWaiting=${T(java.time.temporal.ChronoUnit).DAYS.between(c.createdAt, #temporals.createNowLocalDateTime())}">
+               새 신고 사이에 파묻혔다. 3일 이상 대기 중이면 배지를 danger로 올리고 경과일을 보여준다.
+               버그 수정 (2026-09-30) — #temporals.createNowLocalDateTime()은 Thymeleaf Temporals에
+               존재하지 않는 메서드라(정확한 이름은 createNow()인데, 그건 LocalDateTime이 아니라
+               Calendar를 돌려줘서 ChronoUnit.DAYS.between과 애초에 안 맞음) 이 화면(/superadmin/reports)
+               자체가 500 에러로 죽어 있었다 — T(java.time.LocalDateTime).now()로 교체. -->
+          <td th:with="daysWaiting=${T(java.time.temporal.ChronoUnit).DAYS.between(c.createdAt, T(java.time.LocalDateTime).now())}">
             <span class="badge badge--danger" th:if="${c.status == 'PENDING' and daysWaiting >= 3}" th:text="${daysWaiting} + '일째 대기'">3일째 대기</span>
             <span class="badge badge--neutral" th:if="${c.status == 'PENDING' and daysWaiting < 3}">대기</span>
             <span class="badge badge--success" th:unless="${c.status == 'PENDING'}">처리완료</span>
