@@ -6,6 +6,88 @@
    색은 전부 tokens.css의 --c-... 변수만 쓴다.
    ===================================================================== */
 
+/* 추가됨 (2026-10-05, 사용자 요청) — [현황] 패널 비주얼 개선(docs/mockup/savings-ledger.html 참고).
+   tokens.css에 이미 있는 값(--c-primary/-strong/-mid, --c-bg, --c-surface, --c-text*, --c-danger,
+   --c-line)은 그대로 재사용하고, 여기 없는 값만 ledger 전용 지역 변수로 추가한다 — tokens.css
+   (오너: 송보미)는 건드리지 않는다, 이 파일 안에서만 쓰는 스코프.
+   --ledger-primary-soft: 연한 네이비 틴트 배경(환경 배너·대표 뱃지 칩) — 기존 토큰 중엔
+     --c-primary-weak(#F6F0E3, 크림)뿐이라 흰 카드 위에서 구분이 안 돼 새로 추가.
+   --ledger-up/-up-bg: 전월 대비 "증가" 뱃지 전용 초록 — 2026-09-17 전면 네이비 리스킨 때
+     환경 배너(CO2/나무)만 그린 예외로 남겼던 것과 같은 이유로, "더 아꼈다"는 축하 신호는
+     네이비보다 그린이 직관적이라는 사용자 판단에 따른 두 번째 스코프 예외.
+   --ledger-card-radius: 20px — 기존 --r-xl(18px)과 근접하지만, 이 화면 카드들만 사용자가 명시한
+     정확한 값으로 고정.
+   변경됨 (2026-10-05) — 처음엔 카드 클래스 몇 개(.ledger-hero 등)에만 이 변수들을 정의해뒀는데,
+   거기 안 들어있던 .ledger-eco-banner는 변수 자체를 못 받아 background가 "정의 안 됨"으로 빠지면서
+   테두리만 있고 안은 크림 배경이 그대로 비치는 버그가 났다(사용자 리포트로 발견) — 그 목록에
+   클래스를 하나씩 추가하는 대신, [현황] 패널 전체를 감싸는 #panel-summary에 한 번만 선언해서
+   그 안의 모든 자손이 상속받게 한다(CSS 커스텀 프로퍼티는 상속되므로). */
+#panel-summary {
+  --ledger-primary-soft: #EEF1FA;
+  --ledger-up: #15803D;
+  --ledger-up-bg: #E9F6EE;
+  --ledger-card-radius: 20px;
+}
+
+/* 추가됨 (2026-10-05, 사용자 요청) — "현황/상세" 세그 토글의 파란 테두리 제거 및 부드러운 필 스타일,
+   "내역/분석/목표/뱃지" 탭은 첫 번째 목업 사진과 동일하게 흰색 카드 박스 + 딥 네이비 밑줄 스타일로 개선 */
+.seg-tabs:not(.seg-tabs--underline):not(.seg-tabs--sub) {
+  border: 1px solid var(--c-line) !important;
+  background: var(--c-line-weak) !important;
+  border-radius: 16px !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  margin: var(--s-2) 0 var(--s-3) !important;
+}
+.seg-tabs:not(.seg-tabs--underline):not(.seg-tabs--sub) .seg-tab {
+  border-radius: 12px !important;
+  padding: 8px 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--c-text-sub) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.seg-tabs:not(.seg-tabs--underline):not(.seg-tabs--sub) .seg-tab.is-active {
+  background: var(--c-primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(15, 43, 140, 0.2) !important;
+}
+
+/* 가계부 하위 '내역 / 분석 / 목표 / 뱃지' 탭: 목업과 동일한 화이트 카드 + 네이비 밑줄 스타일 */
+.seg-tabs--underline {
+  background: var(--c-surface) !important;
+  border: 1px solid var(--c-line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 43, 140, 0.05), 0 2px 6px -1px rgba(92, 85, 69, 0.04) !important;
+  padding: 4px 8px 0 !important;
+  margin: var(--s-2) 0 var(--s-3) !important;
+  gap: 0 !important;
+}
+.seg-tabs--underline .seg-tab {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 10px 0 8px !important;
+  font-size: 13px !important;
+  color: var(--c-text-sub) !important;
+  font-weight: 500 !important;
+  border-bottom: 2.5px solid transparent !important;
+  box-shadow: none !important;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.seg-tabs--underline .seg-tab:hover {
+  color: var(--c-primary) !important;
+}
+.seg-tabs--underline .seg-tab.is-active {
+  background: transparent !important;
+  color: var(--c-primary) !important;
+  font-weight: 700 !important;
+  border-bottom: 2.5px solid var(--c-primary) !important;
+  box-shadow: none !important;
+}
+
 /* ---------- 새 뱃지 획득 토스트 (page 최상단, 히어로 카드 위) ---------- */
 .ledger-badge-toast {
   background: linear-gradient(135deg, var(--c-badge-rep), var(--c-badge-rep-border));
@@ -43,80 +125,173 @@
 }
 .ledger-badge-toast__share-btn:hover { background: #fff; }
 
-/* ---------- 히어로 카드 ---------- */
+/* ---------- 히어로 카드 ----------
+   변경됨 (2026-10-05) — 배경이 페이지 배경(--c-bg, 크림)과 같은 --c-primary-weak라 카드와 배경이
+   구분 안 되고 전체가 베이지 덩어리로 보인다는 피드백(사용자 리포트) — 흰 카드(--c-surface) +
+   테두리 + 그림자로 분리한다. */
 .ledger-hero {
-  background: var(--c-primary-weak);
-  border: 1px solid var(--c-primary-border);
-  border-radius: var(--r-lg);
-  padding: var(--s-4);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--ledger-card-radius);
+  box-shadow: var(--shadow-card);
+  padding: 22px 22px 20px;
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
+/* 히어로 상단: 좌측 "이번 달 절약" 라벨, 우측 대표 뱃지 칩 */
 .ledger-hero__top {
-  display: flex; align-items: center; gap: var(--s-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: 2px;
 }
-.ledger-hero__label { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-primary-strong); }
+.ledger-hero__label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
 /* 등급(뱃지) — 탭 안에 숨기지 말고 히어로 카드에서 바로 보이게. 눌러서 "뱃지" 탭으로 이동. */
 .ledger-tier-chip {
-  margin-left: auto; font-size: var(--fs-xs); font-weight: var(--fw-bold);
-  color: var(--c-primary-strong); background: var(--c-surface);
-  padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid var(--c-primary-border);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  color: var(--c-primary-strong); background: var(--ledger-primary-soft);
+  padding: 5px 10px 5px 8px; border-radius: var(--r-pill); border: none;
+  display: inline-flex; align-items: center; gap: 6px;
   cursor: pointer; transition: box-shadow .15s ease, transform .15s ease;
 }
-/* 호버 때 배경을 흐리게(opacity)하면 카드 배경이랑 섞여 경계가 흐려진다 — 대신 살짝 뜨는 그림자로. */
 .ledger-tier-chip:hover { box-shadow: 0 3px 8px rgba(0,0,0,.12); transform: translateY(-1px); }
 .ledger-tier-chip:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
 .ledger-tier-chip.is-rep {
   background: linear-gradient(135deg, var(--c-badge-rep), var(--c-badge-rep-border));
   color: var(--c-badge-rep-on);
-  border-color: var(--c-badge-rep-accent);
   box-shadow: 0 1px 4px rgba(245, 158, 11, 0.2);
 }
 .ledger-tier-chip.is-empty {
   color: var(--c-text-mut);
   background: var(--c-bg);
-  border-color: var(--c-line);
+  border: 1px dashed var(--c-line);
   font-weight: var(--fw-medium);
 }
-/* 눌러서 "내역" 탭(이번 달 필터)으로 이동. 호버 때 흰 카드처럼 살짝 떠 보이게 —
-   opacity로 흐리게 하면 카드 배경(연두색)이랑 섞여서 경계가 애매해지니 배경+그림자로. */
-.ledger-hero__amount { display: flex; align-items: baseline; gap: var(--s-2); margin-top: 6px; flex-wrap: wrap;
-  cursor: pointer; border-radius: var(--r-md); padding: 4px 8px; margin-left: -8px; margin-right: -8px;
-  transition: background .15s ease, box-shadow .15s ease; }
-.ledger-hero__amount:hover { background: var(--c-surface); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
-.ledger-hero__amount:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
-.ledger-hero__amount > span:first-child {
-  font-size: 32px; font-weight: var(--fw-black); color: var(--c-primary-strong); letter-spacing: -.02em;
-}
-/* 전월 대비 — 금액을 크게, %는 옆에 보조로. "0원인데 ▼100%"처럼 헷갈리는 표시를 막는다. */
-.ledger-hero__delta {
-  display: flex; align-items: baseline; gap: 4px; margin-top: 2px;
-  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-mut);
-}
-.ledger-hero__delta.is-up { color: var(--c-primary); }
-/* 2026-09-24, docs/design-system.md WCAG 부채 항목 — 13px bold는 large-text 기준 미달이라
-   본문 AA(4.5:1) 적용 대상 — 크림 배경 실측 대비 ≈3.3:1 → --c-danger-strong으로 교체 */
-.ledger-hero__delta.is-down { color: var(--c-danger-strong); }
-.ledger-hero__delta-sub { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--c-text-mut); margin-left: 2px; }
 
-.ledger-hero__row { display: flex; gap: var(--s-3); margin-top: var(--s-4); }
-/* 눌러서 각각 "내역"(누적)/"분석"(절약률) 탭으로 이동. 흰 배경은 항상 유지하고(카드 배경인
-   연두색이랑 섞이지 않게), 호버 때는 테두리+그림자로 살짝 뜨는 느낌만 준다. */
+/* 메인 금액: 단독 행 배치 */
+.ledger-hero__amount-row {
+  margin: 4px 0 2px;
+  display: flex;
+  align-items: baseline;
+}
+.ledger-hero__amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  cursor: pointer;
+  border-radius: var(--r-md);
+  padding: 2px 4px;
+  margin-left: -4px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.ledger-hero__amount:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.ledger-hero__amount:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+}
+.ledger-hero__amount > span:first-child {
+  font-size: 42px;
+  line-height: 1.05;
+  font-weight: var(--fw-black);
+  color: var(--c-primary);
+  letter-spacing: -.035em;
+}
+.ledger-hero__chevron {
+  font-size: 22px;
+  color: var(--c-primary-mid);
+  margin-left: 2px;
+  transform: translateY(-2px);
+}
+
+/* 목업처럼 금액 밑에 긋는 직선 (Divider) */
+.ledger-hero__divider {
+  width: 100%;
+  height: 1px;
+  background: var(--c-line);
+  margin: 14px 0 12px;
+  opacity: 0.65;
+}
+
+/* 하단 정보 행: 좌측 전월 대비, 우측 상세 보기 */
+.ledger-hero__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.ledger-hero__delta-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ledger-hero__delta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+  background: var(--c-bg);
+  color: var(--c-text-mut);
+}
+.ledger-hero__delta-pill.is-up {
+  background: var(--ledger-up-bg);
+  color: var(--ledger-up);
+}
+.ledger-hero__delta-pill.is-down {
+  background: var(--c-danger-weak);
+  color: var(--c-danger-strong);
+}
+.ledger-hero__delta-text {
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  color: var(--c-text-sub);
+}
+.ledger-hero__more {
+  font-size: 13px;
+  font-weight: var(--fw-bold);
+  color: var(--c-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, text-decoration 0.15s ease;
+}
+.ledger-hero__more:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+/* 변경됨 (2026-10-05) — 히어로 카드 바깥의 독립 카드로 분리되면서, 다른 패널 블록들과 같은
+   12px(--s-3) 간격으로 통일(목업의 .panel-stack { gap:12px }와 동일 값). */
+.ledger-hero__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); margin-top: var(--s-3); }
+/* 눌러서 각각 "내역"(누적)/"분석"(절약률) 탭으로 이동. 독립된 흰 카드로 분리(히어로 안쪽이 아니라
+   페이지 배경 위에 떠 있는 느낌) + 테두리/그림자로 눌러진다는 신호를 준다. */
 .ledger-hero__stat {
-  flex: 1; background: var(--c-surface); border-radius: var(--r-md);
-  border: 1px solid transparent;
-  padding: var(--s-3); display: flex; flex-direction: column; gap: 2px;
+  background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--ledger-card-radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px 16px 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
   cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .ledger-hero__stat:hover {
-  border-color: var(--c-primary-border);
-  box-shadow: 0 3px 10px rgba(0,0,0,.08);
+  border-color: var(--c-primary-mid);
   transform: translateY(-1px);
 }
 .ledger-hero__stat:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
-.ledger-hero__stat-label { font-size: var(--fs-xs); color: var(--c-text-mut); display: flex; align-items: center; gap: 3px; }
-.ledger-hero__stat-value { font-size: var(--fs-md); font-weight: var(--fw-black); color: var(--c-text); }
+.ledger-hero__stat-label { font-size: 12.5px; color: var(--c-text-sub); display: flex; align-items: center; gap: 3px; }
+.ledger-hero__stat-value { display: block; margin-top: 4px; font-size: 21px; font-weight: var(--fw-black); color: var(--c-text); letter-spacing: -.02em; }
 /* 추가됨 (2026-09-22, UI/UX 감사) — 모바일 전용 앱이라 :hover 그림자만으로는 "누를 수 있음"이
    안 보인다는 지적. hero-goal-btn의 기존 "42% ›" 패턴과 같은 화살표를 나머지 클릭 카드에도. */
-.ledger-hero__chevron { margin-left: auto; color: var(--c-text-mut); font-weight: var(--fw-bold); }
+.ledger-hero__chevron { margin-left: auto; color: var(--c-text-mut); font-weight: var(--fw-bold); flex-shrink: 0; }
 
 .ledger-info-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -130,28 +305,52 @@
 }
 .ledger-info-text.is-hidden { display: none; }
 
-/* 목표 줄 — 눌러서 "목표" 탭으로 바로 가는 div[role=button]. 클릭 가능해 보이게 살짝 여백 확장 + 호버.
-   반투명 흰색(rgba)만 얹으면 카드 배경(연두색)이랑 섞여 흐릿해 보이니, 다른 히어로 요소들과 통일되게
-   불투명 흰 배경 + 그림자로 또렷하게 뜨는 느낌을 준다. */
-.ledger-hero__goal {
-  display: block; width: 100%; margin-top: var(--s-4);
-  padding: var(--s-2); margin-left: calc(var(--s-2) * -1); margin-right: calc(var(--s-2) * -1);
-  text-align: left; cursor: pointer; border-radius: var(--r-md);
-  transition: background .15s ease, box-shadow .15s ease;
+/* 추가됨 (2026-10-05) — 목업처럼 "목표+그래프" 묶음을 별도 흰 카드로 분리(히어로와 분리된 카드).
+   ledger.html에서 hero-goal-btn 바깥을 이 클래스로 감싼다. */
+.ledger-chart-card {
+  background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--ledger-card-radius);
+  box-shadow: var(--shadow-card); padding: var(--s-5); margin-top: var(--s-3);
 }
-.ledger-hero__goal:hover { background: var(--c-surface); box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.ledger-chart-card__divider { height: 1px; background: var(--c-line); margin: 20px 0 18px; }
+.ledger-chart-card__title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.ledger-chart-card__title h3 { margin: 0; font-size: 15px; font-weight: var(--fw-bold); color: var(--c-text); letter-spacing: -.01em; }
+.ledger-chart-card__title span { font-size: 12px; color: var(--c-text-mut); }
+
+/* 목표 줄 — 눌러서 "목표" 탭으로 바로 가는 div[role=button]. 카드 안에 있으므로 호버는 테두리 강조로. */
+.ledger-hero__goal {
+  display: block; width: 100%;
+  text-align: left; cursor: pointer; border-radius: var(--r-md);
+  padding: var(--s-1); margin: calc(var(--s-1) * -1);
+  transition: background .15s ease;
+}
+.ledger-hero__goal:hover { background: var(--c-bg); }
 .ledger-hero__goal:focus-visible { outline: 2px solid var(--c-primary); outline-offset: -2px; }
-.ledger-hero__goal-label { font-size: var(--fs-xs); color: var(--c-text-sub); }
-.ledger-hero__goal-percent { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--c-primary); }
+.ledger-hero__goal-label { font-size: 13.5px; color: var(--c-text-sub); }
+.ledger-hero__goal-percent { font-size: 18px; font-weight: var(--fw-black); color: var(--c-primary); letter-spacing: -.02em; }
 /* 게이지가 세션 첫 진입 때 0%에서 목표%까지 스르륵 채워지도록(아래 스크립트가 폭을 두 번 바꾼다) —
    공용 .progress__bar엔 트랜지션이 없어서 이 페이지 것만 여기 따로 건다. */
 #hero-goal-bar { transition: width .6s ease; }
-/* 목표 게이지 3단계 색 — 0~79% 기본 초록(공용 .progress__bar 그대로), 80~99% 주황(is-near,
-   "거의 다 왔다" 긴장감), 100%+ 골드(is-achieved, 달성!). */
-.progress__bar.is-near { background: var(--c-accent); }
-/* 목표 달성 — 골드 톤으로 눈에 띄게. */
-.ledger-hero__goal.is-achieved .ledger-hero__goal-label { color: #b45309; font-weight: var(--fw-bold); }
-.progress__bar.is-achieved { background: linear-gradient(90deg, var(--c-badge-rep-accent), #fbbf24); }
+.ledger-hero__goal .progress {
+  border-radius: var(--r-pill);
+}
+/* 변경됨 (2026-10-05, 사용자 요청) — 목표 게이지의 모든 상태(기본, 80~99% is-near, 100%+ 달성 is-achieved)를
+   주황/골드 대신 시원하고 세련된 파란 계열 그라데이션으로 변경 */
+#hero-goal-bar,
+.ledger-hero__goal .progress__bar,
+.ledger-hero__goal .progress__bar.is-near,
+.ledger-hero__goal .progress__bar.is-achieved,
+.progress__bar.is-near,
+.progress__bar.is-achieved {
+  background: linear-gradient(90deg, #38BDF8 0%, #2563EB 50%, var(--c-primary) 100%) !important;
+  border-radius: var(--r-pill, 9999px) !important;
+  box-shadow: 0 1px 4px rgba(15, 43, 140, 0.22);
+}
+
+/* 목표 달성 축하 텍스트도 주황색(#b45309) 대신 깊은 네이비 블루로 통일 */
+.ledger-hero__goal.is-achieved .ledger-hero__goal-label {
+  color: var(--c-primary) !important;
+  font-weight: var(--fw-bold);
+}
 
 .ledger-goal-error {
   margin-top: var(--s-3); padding: 10px var(--s-3);
@@ -160,21 +359,52 @@
 }
 .ledger-goal-error.is-hidden { display: none; }
 
-/* 목표 프리셋 칩 */
-.ledger-goal-presets { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.ledger-goal-preset {
-  flex: 1; min-width: 64px; padding: 8px 0; border-radius: var(--r-md);
-  border: 1px solid var(--c-line); background: var(--c-surface);
-  font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--c-text-sub); cursor: pointer;
-  transition: all .15s ease;
+/* 목표 프리셋 버튼 (1만원 / 3만원 / 5만원 / 10만원) — 입체감과 시인성 개선 */
+.ledger-goal-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: var(--s-2);
 }
-.ledger-goal-preset:hover { border-color: var(--c-primary-border); }
-.ledger-goal-preset.is-active { background: var(--c-primary-weak); border-color: var(--c-primary); color: var(--c-primary-strong); }
+.ledger-goal-preset {
+  flex: 1;
+  min-width: 68px;
+  padding: 11px 0;
+  border-radius: 14px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface); /* 순백색 */
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--c-text);
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ledger-goal-preset:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(15, 43, 140, 0.08);
+}
+.ledger-goal-preset:active {
+  transform: scale(0.97);
+}
+/* 활성 상태: 기존의 배경과 똑같던 베이지색(#F6F0E3)을 없애고,
+   선명한 딥 네이비(#0F2B8C) + 순백색 폰트 + 부드러운 입체 그림자로 시원하게 강조 */
+.ledger-goal-preset.is-active {
+  background: var(--c-primary) !important;
+  border-color: var(--c-primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(15, 43, 140, 0.28), 0 2px 4px rgba(15, 43, 140, 0.15) !important;
+  transform: translateY(-1px);
+}
 
 /* 최근 6개월 미니 막대 그래프 (호버/터치 툴팁 + 이번달 하이라이트 + 클릭 필터링) */
 .ledger-bar-chart {
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: var(--s-1); height: 64px; margin-top: var(--s-4); position: relative;
+  gap: var(--s-2); height: 100px; margin-top: var(--s-4); position: relative;
 }
 .ledger-bar-chart__col {
   flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;
@@ -203,19 +433,17 @@
 }
 
 .ledger-bar-chart__track {
-  flex: 1; width: 14px; display: flex; flex-direction: column; justify-content: flex-end;
-  background: var(--c-surface); border-radius: var(--r-sm); overflow: hidden;
-  border: 1px solid transparent;
+  flex: 1; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end;
+  border-bottom: 1px solid var(--c-line);
 }
-.ledger-bar-chart__col.is-current .ledger-bar-chart__track {
-  border-color: var(--c-primary-border); background: var(--c-primary-weak);
-}
+/* 변경됨 (2026-10-05) — 목업 지정: 지난달 이전 막대는 연한 네이비(--c-primary-mid, 기존 토큰 재사용),
+   이번 달 막대만 진한 네이비. 기존엔 전부 진한 네이비라 "이번 달"이 안 두드러졌다. */
 .ledger-bar-chart__fill {
-  width: 100%; min-height: 2px; background: var(--c-primary); border-radius: var(--r-sm);
+  width: 100%; min-height: 3px; background: var(--c-primary-mid); border-radius: 9px 9px 3px 3px;
   transition: height .4s ease, background-color .15s ease;
 }
 .ledger-bar-chart__col.is-current .ledger-bar-chart__fill {
-  background: linear-gradient(180deg, var(--c-primary), var(--c-primary-strong));
+  background: var(--c-primary);
 }
 .ledger-bar-chart__col:hover .ledger-bar-chart__fill {
   background: var(--c-primary-strong);
@@ -233,20 +461,23 @@
 
 /* ---------- 내보내기 (라벨 있는 버튼 2개 — 이전엔 작은 아이콘이라 눈에 안 띄었다) ---------- */
 /* ---------- 환경 기여도 배너 (히어로 카드 바로 아래, 항상 보임) ----------
-   2026-09-17 네이비 리스킨에서 일부러 제외 — CO2/나무 절감처럼 "환경"을 뜻하는 곳은 브랜드
-   컬러(네이비)와 상관없이 그린이 훨씬 직관적이라 하드코딩 그린을 그대로 뒀다.
-   .ledger-share-card[data-category="환경"](아래)도 같은 이유로 그린 유지. */
-/* 2026-09-21 — 색이 안 맞는다는 피드백. 그린 리스킨 전 팔레트(Tailwind emerald, 차가운 민트
-   톤)를 그대로 남겨뒀던 곳이라 크림/네이비 위주의 지금 화면과 온도감이 어긋나 보였다 — "환경"
-   의미상 그린은 유지하되(ledger.css 위쪽 주석 참고), 톤을 따뜻한 세이지/올리브 그린으로
-   바꿔서 나머지 화면과 같은 온기 안에 들어오게 했다(대비 7.45:1, 기존 7.29:1과 동급 유지). */
+   변경됨 (2026-10-05, 사용자 요청) — 2026-09-17 네이비 리스킨 때는 "환경 표시는 그린이 더
+   직관적"이라는 이유로 일부러 그린 예외로 남겨뒀었는데, 이번 [현황] 패널 개편 목업에서 연한
+   네이비 틴트(#EEF1FA)로 지정하면서 그 예외를 거뒀다 — 카드형 흰 배경 위주 레이아웃으로 바뀌며
+   그린 배너 하나만 튀어 보였기 때문. .ledger-share-card[data-category="환경"](SNS 공유 카드)는
+   이 변경과 무관한 별개 영역이라 그대로 그린 유지. */
 .ledger-eco-banner {
-  margin-top: var(--s-3); padding: 10px var(--s-4); text-align: center;
-  background: #EEF2E1; border: 1px solid #C7D4A8; border-radius: var(--r-md);
-  font-size: var(--fs-sm); color: #3F5323;
+  margin-top: var(--s-3); padding: 16px 18px; display: flex; align-items: center; gap: 14px; text-align: left;
+  background: var(--ledger-primary-soft); border: 1px solid var(--c-primary-border); border-radius: var(--ledger-card-radius);
 }
-.ledger-eco-banner strong { font-weight: var(--fw-black); }
-.ledger-eco-banner__tree { display: block; margin-top: 2px; font-size: 11px; opacity: .85; }
+.ledger-eco-banner p { margin: 0; font-size: 13.5px; color: var(--c-text-sub); line-height: 1.55; }
+.ledger-eco-banner__icon {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px;
+  background: var(--c-surface); color: var(--c-primary);
+  display: flex; align-items: center; justify-content: center;
+}
+.ledger-eco-banner strong { color: var(--c-primary); font-weight: var(--fw-black); }
+.ledger-eco-banner__tree { display: block; font-size: 12px; color: var(--c-text-mut); }
 
 /* ---------- 분석 탭: 카테고리 탐험 유도 문구 (카테고리 1개뿐일 때만) ---------- */
 .ledger-explore-nudge {
@@ -256,8 +487,215 @@
 }
 .ledger-explore-nudge strong { font-weight: var(--fw-black); }
 
-.ledger-export-row { display: flex; gap: var(--s-2); margin-top: var(--s-3); }
-.ledger-export-btn { flex: 1; text-align: center; text-decoration: none; }
+/* =====================================================================
+   내보내기 카드 및 기간 선택 패널 (2026-10-05: 목업 디자인 전면 반영)
+   - 순백색 카드 박스 안에 [내보내기] 제목과 우측 이번 달 날짜 범위 표시
+   - 3개 알약 버튼: PDF로 보기(네이비 꽉 찬), CSV로 저장(아웃라인), 기간 선택 PDF(네이비 아웃라인)
+   - "기간 선택 PDF" 클릭 시 아래로 부드럽게 펼쳐지는 날짜 범위 + "이 기간 PDF 만들기" 버튼
+   ===================================================================== */
+.ledger-export-card {
+  margin-top: var(--s-3);
+  padding: 20px 22px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--ledger-card-radius, 20px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.ledger-export-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ledger-export-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ledger-export-card__date {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-mut);
+}
+
+.ledger-export-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ledger-export-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  text-align: center;
+  text-decoration: none;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. PDF로 보기: 네이비 꽉 찬 버튼 */
+.ledger-export-btn--pdf {
+  background: var(--c-primary) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid var(--c-primary) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(15, 43, 140, 0.18);
+}
+.ledger-export-btn--pdf:hover {
+  background: var(--c-primary-strong, #091a56) !important;
+  border-color: var(--c-primary-strong, #091a56) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 10px rgba(15, 43, 140, 0.28);
+  transform: translateY(-1px);
+}
+
+/* 2. CSV로 저장: 깔끔한 흰색 아웃라인 버튼 */
+.ledger-export-btn--csv {
+  background: var(--c-surface) !important;
+  border: 1px solid var(--c-line) !important;
+  color: var(--c-text) !important;
+}
+.ledger-export-btn--csv:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  transform: translateY(-1px);
+}
+
+/* 3. 기간 선택 PDF: 네이비 테두리 버튼 */
+.ledger-export-btn--range {
+  background: var(--c-surface) !important;
+  border: 1.5px solid var(--c-primary) !important;
+  color: var(--c-primary) !important;
+}
+.ledger-export-btn--range:hover,
+.ledger-export-btn--range.is-active {
+  background: rgba(15, 43, 140, 0.06) !important;
+  border-color: var(--c-primary) !important;
+  color: var(--c-primary) !important;
+}
+
+/* 기간 선택 펼침 패널 (목업처럼 은은한 베이지/크림 배경 박스) */
+.ledger-range-panel {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--c-line-weak);
+  border: 1px solid var(--c-line);
+  box-sizing: border-box;
+}
+
+.ledger-range-panel.is-hidden {
+  display: none !important;
+}
+
+.ledger-range-panel:not(.is-hidden) {
+  animation: ledgerSlideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes ledgerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ledger-range-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ledger-range-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ledger-range-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-sub);
+  margin: 0;
+}
+
+.ledger-range-input {
+  background: var(--c-surface) !important;
+  border: 1px solid var(--c-line) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font-size: 13.5px !important;
+  font-family: inherit !important;
+  color: var(--c-text) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ledger-range-input:focus {
+  border-color: var(--c-primary) !important;
+  box-shadow: 0 0 0 3px rgba(15, 43, 140, 0.1) !important;
+  outline: none;
+}
+
+.ledger-range-tilde {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text-mut);
+  padding-bottom: 12px;
+  align-self: flex-end;
+}
+
+/* 목업의 와이드 딥 네이비 제출 버튼: "이 기간 PDF 만들기" */
+.ledger-range-submit-btn {
+  display: block;
+  width: 100%;
+  margin-top: 13px;
+  padding: 13px 0;
+  background: var(--c-primary) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(15, 43, 140, 0.22);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ledger-range-submit-btn:hover {
+  background: var(--c-primary-strong, #091a56) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(15, 43, 140, 0.32);
+}
+
+.ledger-range-submit-btn:active {
+  transform: scale(0.99);
+}
+
+@media (max-width: 400px) {
+  .ledger-export-btn {
+    font-size: 12px;
+    padding: 9px 2px;
+  }
+}
 
 /* .seg-tabs/.seg-tab(+--sub/--underline)는 2026-09-24 components.css로 이동 (WBS CSS 1단계
    정리 — store.css의 .stat-toggle-tabs와 값이 거의 동일해서 하나로 통합). 탭 패널 페이드인
