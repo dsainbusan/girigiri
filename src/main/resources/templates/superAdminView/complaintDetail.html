@@ -98,6 +98,24 @@
     <p class="form-hint mb-8">
       신고와 관련된 예약을 픽업 코드로 찾아 취소·환불 처리해요. 시간 제한 없이 언제든 가능해요.
     </p>
+
+    <!-- 추가됨 (2026-10-06) — "신고자가 무슨 주문을 가졌는지도 같이 보여야지" 요청. 신고자가
+         실제 회원이면(reporterId 있음) 최근 주문 목록을 보여주고, 클릭하면 아래 픽업 코드 입력란이
+         자동으로 채워지고 조회까지 바로 실행된다 — 운영자가 코드를 맨땅에서 입력할 필요가 없다. -->
+    <div th:if="${reporterRecentOrders != null}" class="mb-8">
+      <p class="form-hint" th:if="${!#lists.isEmpty(reporterRecentOrders)}">이 신고자의 최근 주문 — 클릭하면 아래 픽업 코드가 채워져요.</p>
+      <div class="stack" style="gap:6px" th:if="${!#lists.isEmpty(reporterRecentOrders)}">
+        <button type="button" class="btn btn--outline-neutral btn--sm reporter-order-pick"
+                style="justify-content:flex-start;text-align:left"
+                th:each="o : ${reporterRecentOrders}"
+                th:attr="data-pickup-code=${o.pickupCode}"
+                th:text="${o.storeName} + ' · ' + ${o.productName} + ' × ' + ${o.quantity} + '개 · ' + ${o.reservedAtDisplay} + ' · ' + ${o.statusLabel} + ' · ' + ${o.pickupCode}">
+          매장명 · 상품명 × 1개 · 2026-08-19 13:20 · 픽업완료 · PICK-1004
+        </button>
+      </div>
+      <p class="text-muted text-muted--sm" th:if="${#lists.isEmpty(reporterRecentOrders)}">이 신고자의 주문 내역이 없어요.</p>
+    </div>
+
     <div class="flex-row">
       <label for="cancelPickupCode" class="sr-only">픽업 코드</label>
       <input class="field" type="text" id="cancelPickupCode" placeholder="예: PICK-1004" maxlength="30" style="flex:1">
@@ -130,11 +148,13 @@
           statusEl.style.display = 'inline-block';
         }
 
-        lookupBtn.addEventListener('click', function () {
-          var code = (codeInput.value || '').trim();
+        // 변경됨 (2026-10-06) — "조회" 버튼 클릭과 "이 주문으로 선택" 클릭이 같은 조회 로직을
+        // 타야 해서 함수로 뺐다(기존엔 lookupBtn의 클릭 핸들러 안에만 있었음).
+        function runLookup(code) {
           if (!code) {
             return;
           }
+          codeInput.value = code;
           form.style.display = 'none';
           setStatus('조회 중...', 'neutral');
 
@@ -153,6 +173,16 @@
             .catch(function () {
               setStatus('조회에 실패했어요. 다시 시도해 주세요.', 'danger');
             });
+        }
+
+        lookupBtn.addEventListener('click', function () {
+          runLookup((codeInput.value || '').trim());
+        });
+
+        Array.prototype.slice.call(document.querySelectorAll('.reporter-order-pick')).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            runLookup(btn.dataset.pickupCode);
+          });
         });
       })();
     </script>
