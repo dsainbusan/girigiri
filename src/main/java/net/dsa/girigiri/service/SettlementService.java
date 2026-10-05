@@ -229,6 +229,7 @@ public class SettlementService {
 			case "ready" -> "픽업 대기";
 			case "confirmed" -> "수락 대기";
 			case "cancelled" -> "취소됨";
+			case "refunded" -> "환불됨";   // 추가됨 (2026-10-06, 신고 기반 리팩터링)
 			default -> r.getStatus();
 		};
 	}

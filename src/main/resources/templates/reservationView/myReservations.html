@@ -82,11 +82,15 @@
 			 같은 시각적 무게를 가져서 위계가 안 보인다는 지적. 신고/문의는 부가 액션이라 텍스트
 			 링크로 격하하고 한 줄에 나란히 뒀다 — 주 액션(영수증/취소)만 버튼으로 남긴다. -->
 		<div class="u-row" style="justify-content:center;gap:var(--s-4);margin-top:var(--s-3)">
-			<!-- 추가됨 (2026-09-08) — 어느 탭이든(진행중/픽업완료/노쇼·취소) 신고할 수 있게 뒀다.
-				 신고 사유가 될 만한 문제(픽업 응대, 노쇼 처리 오류 등)가 상태와 무관하게 생길 수 있어서
-				 특정 탭으로 제한하지 않았다. -->
-			<a th:href="@{/reservation/{id}/report(id=${r.reservationId})}"
+			<!-- 수정됨 (2026-10-06, 신고 기반 리팩터링) — "픽업완료 + 48시간 이내 + 중복 신고 없음"일
+				 때만 신고 가능하게 바뀌면서, 그 조건 밖인 주문엔 버튼 대신 이유 문구를 보여준다
+				 (reportBlockedMessage는 ComplaintService.blockedReportMessage와 동일 판정,
+				 ReservationService#toListItemDto에서 계산해 내려온다). -->
+			<a th:if="${r.reportBlockedMessage == null}"
+			   th:href="@{/reservation/{id}/report(id=${r.reservationId})}"
 			   class="u-primary" style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">신고하기</a>
+			<span th:unless="${r.reportBlockedMessage == null}"
+			      class="u-sub" style="font-size:var(--fs-sm)" th:text="${r.reportBlockedMessage}">픽업 완료된 주문만 신고할 수 있어요.</span>
 
 			<!-- 추가됨 (2026-09-08) — 신고(문제 제기)와 별개로, 단순 질문도 있을 수 있어서
 				 문의 게시판(InquiryController)의 기존 "가게에 문의하기" 흐름을 예약 단위로도 열었다.

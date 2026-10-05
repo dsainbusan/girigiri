@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <!--/*
-  신고 상세. /superadmin/complaints/{id} 로 접속(SuperAdminController#complaintDetail).
+  신고 상세. /superadmin/complaints/{id} 로 접속(SuperAdminSupportController#complaintDetail).
   reports.html의 신고 접수 탭에서 행을 클릭하면 여기로 온다 — inquiryDetail.html과 같은 구조(제목/
   메타정보/본문 + 답변)를 쓰되, 신고는 댓글 스레드가 아니라 ComplaintEntity.adminReply 하나뿐이라 목록
   대신 "이미 답변했으면 .reply-view로 보여주고, 아직이면 .reply-box 폼만 보여준다"로 더 단순하다.
   답변 등록(POST /superadmin/complaints/{id}/reply)은 저장과 동시에 상태를 처리완료(RESOLVED)로
-  바꾸고 이 페이지로 되돌아온다 — 답변을 다시 제출하면 내용을 덮어쓸 수 있다(수정 개념).
+  바꾸고 이 페이지로 되돌아온다 — 답변을 다시 제출하면 내용을 덮어쓸 수 있다(수정 개념). 이 폼은
+  환불 없이 "답변만 남기고 종결"하는 경로(예: 매장 응대 불만을 확인만 하고 끝내는 경우)로 그대로 둔다.
 
   신고자/대상 클릭 → 상세 이동: reporterId/targetStoreId가 있을 때만 각각 회원 상세/매장 상세로 링크한다
   (둘 다 nullable — 비회원 신고·매장 무관 신고는 텍스트만 보여줌). "신고자/매장 클릭하면 디테일 보이게
@@ -14,29 +15,20 @@
   "사이즈 줄여서 센터로" 요청 — inquiryDetail.html과 동일하게 .form-narrow(520px, margin auto)로
   본문을 감쌌다.
 
-  "'목록으로' css를 매장 목록/회원 목록/회원 상세로랑 똑같이" 피드백 — 여기만 .text-muted(회색, 작은
-  글씨)를 쓰고 있어서 storeDetail.html/memberDetail.html의 .link-action(파란색, 좀 더 굵음)과 톤이
-  달랐다 — 클래스만 .link-action mb-16으로 맞췄다(라벨 텍스트는 탭에 따라 돌아가는 곳이 달라
-  "목록으로"를 그대로 둠).
-
-  추가됨 (2026-09-08) — 왜: "신고 상세에서 바로 예약 취소" 요청. 지금까지 운영자는 신고에 텍스트 답변만
-  남길 뿐 실제 예약/결제는 못 건드렸다. Complaint 엔티티엔 어떤 예약 때문인지 연결하는 컬럼이 없어서
-  (신고 대상은 매장/회원 단위) 픽업 코드를 직접 입력해서 찾는 방식으로 뒀다 — 예약할 때 발급되는
-  픽업 코드는 손님/매장이 이미 알고 있는 값이라 신고 내용에 같이 적혀오는 경우가 많다.
-  reservationView/pickup.html의 스캔 확인 fetch 패턴을 그대로 재사용
-  (GET /superadmin/complaints/reservation-lookup으로 미리보기 → 맞으면 POST .../cancel-reservation
-  으로 실제 취소). 취소는 ReservationService.cancelByAdmin이 처리 — 시간 제한 없이 가능, 환불까지
-  자동, 매장 귀책(STORE)과는 분리해서 cancelledBy="ADMIN"으로 남는다(매장 신뢰도 통계에 안 잡히게).
-  보상 쿠폰은 자동 지급 안 함 — 귀책이 어느 쪽인지는 운영자가 답변에서 판단.
-  이 액션은 답변(reply)과 별개라 신고 상태를 자동으로 처리완료로 바꾸지 않는다 — 취소만 하고 답변은
-  따로 남겨야 "처리완료" 배지가 붙는다.
-
-  추가됨 (2026-09-08) — 왜: "예약 상세에서 신고하기" 버튼(reservationView/report.html, 손님용)이
-  생기면서 ComplaintEntity.targetReservationId가 채워지는 신고가 생겼다. 이 값이 있으면
-  SuperAdminSupportController#complaintDetail이 미리 그 예약을 조회해서(linkedReservation) 픽업
-  코드 검색 UI를 건너뛰고 바로 미리보기+취소 폼을 보여준다 — 이미 취소/픽업완료/노쇼된 예약이면
-  linkedReservationBlockedMessage로 배지만 보여주고 폼은 숨긴다. targetReservationId가 없는(그
-  전에 SQL로 넣었거나 매장 관련) 신고는 예전처럼 검색 방식 그대로 쓴다.
+  전면 수정됨 (2026-10-06, 신고 기반 리팩터링 — 스펙 B) — 왜: 지금까지 "신고 처리"는 텍스트 답변과
+  "예약 취소"가 분리된 액션이었고, 그 취소(ReservationService.cancelByAdmin)는 픽업완료(picked) 상태를
+  아예 막아서 — 신고가 접수되는 시점엔 이미 픽업이 끝난 경우가 대부분이라 — 실제로는 거의 항상 "취소
+  불가" 메시지만 떴다. 이제 신고 진입점 자체가 "주문 상세의 [신고하기]"로 바뀌고 픽업완료 주문만 신고
+  대상이 되므로, 아예 별도 "관리자 환불"(AdminRefundService, PICKED 전용) 경로로 바꿨다:
+    - targetReservationId(=order_id)가 있는 신고 → "신고 대상 주문" 카드(상품/수량/결제금액/픽업시각/
+      상태/픽업코드)를 보여주고, picked 상태면 [환불 처리] → 확인 모달(사유 + 답변 템플릿) → 확정 시
+      AdminRefundService.refund 하나로 환불+신고 처리완료+답변 저장까지 끝낸다. 이미 환불됐으면
+      "환불 완료(일시, 처리자)"만 보여주고 폼은 숨긴다. picked도 refunded도 아니면(아직 픽업 전/취소/
+      노쇼) 이유 배지만 보여준다.
+    - order_id가 없는(그 전에 SQL로 넣었거나 매장 전체 신고) 경우만 기존 픽업 코드 검색 방식을 쓰는데,
+      이제 그런 신고가 거의 없어질 거라 기본은 접어두고(<details>) 필요할 때만 펼친다.
+  "신고자의 최근 주문" 보조 목록(바로 전 턴에 추가했던 기능)은 제거했다 — order_id가 항상 채워지는
+  새 흐름에서는 더 이상 필요 없다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('신고 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
@@ -66,38 +58,88 @@
     </div>
   </div>
 
-  <p class="text-muted text-muted--sm" th:if="${cancelledMessage != null}" th:text="${cancelledMessage}">취소 처리 결과</p>
+  <p class="text-muted text-muted--sm" th:if="${cancelledMessage != null}" th:text="${cancelledMessage}">처리 결과</p>
 
-  <!-- "예약 상세에서 신고하기"로 접수된 신고(targetReservationId 있음) — 검색 없이 바로 보여준다. -->
+  <!-- "주문 상세에서 신고하기"로 접수된 신고(order_id=targetReservationId 있음) — "신고 대상 주문" 카드. -->
+  <!-- 수정됨 (2026-10-06) — 점(·)으로 이어 붙인 한 문장이던 주문 정보를 라벨/값 행으로 풀고, 주문 상태는
+       카드 제목 옆 배지 하나로 옮겼다(환불완료가 문장과 배지에 두 번 나오던 것 정리). 환불 완료는 "성공"
+       파랑이 아니라 중립 회색 배지로, 처리 일시·처리자는 아래 작은 글씨로 뺐다. -->
   <div class="reply-box" th:if="${linkedReservation != null}">
-    <div class="reply-box__label">예약 취소</div>
-    <p class="form-hint mb-8">이 신고와 연결된 예약이에요 — 픽업 코드를 검색하지 않아도 바로 처리할 수 있어요.</p>
-    <div class="info-row--pre"
-         th:text="${linkedReservationStoreName} + ' · ' + ${linkedReservation.productName} + ' × ' + ${linkedReservation.reservedQuantity} + '개 · ' + ${linkedReservation.totalPrice} + '원 · ' + ${linkedReservation.pickupCode}">
-      매장명 · 상품명 × 1개 · 3000원 · PICK-1004
+    <div class="order-card__head">
+      <div class="reply-box__label">신고 대상 주문</div>
+      <span class="badge"
+            th:classappend="${linkedReservation.status == 'picked'} ? 'badge--success'
+                          : (${linkedReservation.status == 'cancelled'} ? 'badge--danger'
+                          : (${linkedReservation.status == 'noshowed'} ? 'badge--warning' : 'badge--neutral'))"
+            th:text="${linkedReservationStatusLabel}">픽업완료</span>
     </div>
+    <dl class="order-card__list">
+      <div class="order-card__row"><dt>매장</dt><dd th:text="${linkedReservationStoreName}">매장명</dd></div>
+      <div class="order-card__row"><dt>상품</dt><dd th:text="${linkedReservation.productName} + ' × ' + ${linkedReservation.reservedQuantity} + '개'">상품명 × 1개</dd></div>
+      <div class="order-card__row"><dt>결제금액</dt><dd class="order-card__amount" th:text="${#numbers.formatInteger(linkedReservation.totalPrice, 3, 'COMMA')} + '원'">3,000원</dd></div>
+      <div class="order-card__row"><dt>픽업일시</dt><dd th:text="${linkedReservation.pickedAt != null} ? ${#temporals.format(linkedReservation.pickedAt, 'yyyy-MM-dd HH:mm')} : '-'">2026-08-19 13:20</dd></div>
+      <div class="order-card__row"><dt>픽업 코드</dt><dd th:text="${linkedReservation.pickupCode}">PICK-1004</dd></div>
+    </dl>
 
-    <span class="badge badge--danger mt-8" th:if="${linkedReservationBlockedMessage != null}" th:text="${linkedReservationBlockedMessage}">이미 취소된 예약이에요.</span>
+    <!-- 이미 환불 완료 — 버튼 대신 처리 내역만 보여준다. -->
+    <p class="order-card__note" th:if="${refundInfo != null}"
+       th:text="'환불 처리 ' + ${#temporals.format(refundInfo.updatedAt, 'yyyy-MM-dd HH:mm')} + ' · ' + ${refundProcessedByName}">
+      환불 처리 2026-10-06 14:00 · 송보미
+    </p>
 
-    <form th:if="${linkedReservationBlockedMessage == null}"
-          th:action="@{/superadmin/complaints/{id}/cancel-reservation(id=${complaint.id})}" method="post"
-          onsubmit="return confirm('이 예약을 취소하고 환불할까요? 되돌릴 수 없어요.')" class="mt-8">
-      <input type="hidden" name="pickupCode" th:value="${linkedReservation.pickupCode}">
+    <!-- 환불 대상 아님(아직 픽업 전 / 취소 / 노쇼) -->
+    <p class="order-card__note" th:if="${refundInfo == null and linkedReservationBlockedMessage != null}"
+       th:text="${linkedReservationBlockedMessage}">아직 픽업 전인 주문이라 환불할 수 없어요.</p>
+
+    <!-- 환불 가능(picked) — 모달을 여는 버튼만, 실제 제출은 모달 폼이 한다. -->
+    <button type="button" id="open-refund-modal" class="btn btn--outline-danger btn--sm mt-8"
+            th:if="${refundInfo == null and linkedReservationBlockedMessage == null}">환불 처리</button>
+  </div>
+
+  <!-- 확인 모달: 금액 · 사유 · 답변 템플릿. 확정 시 POST /complaints/{id}/refund 하나로 환불+처리완료+답변 저장. -->
+  <div th:if="${linkedReservation != null and refundInfo == null and linkedReservationBlockedMessage == null}"
+       id="refund-modal" role="dialog" aria-modal="true" aria-label="환불 처리" class="modal-overlay" hidden>
+    <form class="modal-card" th:action="@{/superadmin/complaints/{id}/refund(id=${complaint.id})}" method="post" id="refund-form">
+      <h3 class="modal-card__title">이 주문을 환불할까요?</h3>
+      <p class="text-muted text-muted--sm" th:text="${linkedReservation.productName} + ' · ' + ${linkedReservation.totalPrice} + '원 전액 환불 · 되돌릴 수 없어요.'">
+        상품명 · 3000원 전액 환불 · 되돌릴 수 없어요.
+      </p>
+
       <div class="field-group">
-        <label class="field-group__label" for="cancelReasonLinked">취소 사유</label>
-        <input class="field" type="text" id="cancelReasonLinked" name="reason" maxlength="255"
-               placeholder="예: 매장 응대 지연으로 신고 접수, 확인 후 취소 처리">
+        <label class="field-group__label" for="refundReason">환불 사유</label>
+        <input class="field" type="text" id="refundReason" name="reason" maxlength="255" required
+               placeholder="예: 신고 내용 확인 후 환불 처리">
       </div>
-      <button type="submit" class="btn btn--outline-danger btn--sm mt-8">예약 취소 · 환불 처리</button>
+
+      <div class="field-group">
+        <label class="field-group__label">답변 템플릿</label>
+        <select class="field" id="refund-reply-template">
+          <option value="상품 상태를 확인했습니다. 불편을 드려 죄송하며, 전액 환불 처리했습니다.">상품 상태 불량</option>
+          <option value="주문하신 상품과 다르게 전달된 점을 확인했습니다. 전액 환불 처리했습니다.">상품 불일치</option>
+          <option value="매장 응대 관련 내용을 확인했습니다. 전액 환불 처리했습니다.">매장 응대</option>
+          <option value="CUSTOM">직접 작성</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-group__label" for="refundReplyContent">신고자에게 남길 답변</label>
+        <textarea class="field" id="refundReplyContent" name="replyContent" rows="4" maxlength="1000" required></textarea>
+      </div>
+
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-modal>취소</button>
+        <button type="submit" class="btn btn--sm" id="refund-submit-btn">환불 확정</button>
+      </div>
     </form>
   </div>
 
-  <!-- 그 전에 SQL로 넣은 신고, 매장 관련 신고 등 targetReservationId가 없는 경우 — 기존 검색 방식. -->
-  <div class="reply-box" th:if="${linkedReservation == null}">
-    <div class="reply-box__label">예약 취소</div>
-    <p class="form-hint mb-8">
-      신고와 관련된 예약을 픽업 코드로 찾아 취소·환불 처리해요. 시간 제한 없이 언제든 가능해요.
+  <!-- 그 전에 SQL로 넣은 신고, 매장 관련 신고 등 order_id(targetReservationId)가 없는 경우만 — 기존
+       픽업 코드 검색. 새 흐름에선 거의 안 생기는 경로라 기본은 접어둔다. -->
+  <details class="reply-box" th:if="${linkedReservation == null}">
+    <summary style="cursor:pointer" class="reply-box__label">예약 취소 (픽업 코드로 찾기)</summary>
+    <p class="form-hint mb-8" style="margin-top:8px">
+      이 신고엔 연결된 주문 정보가 없어요. 신고와 관련된 예약을 픽업 코드로 찾아 취소·환불 처리해요. 시간 제한 없이 언제든 가능해요.
     </p>
+
     <div class="flex-row">
       <label for="cancelPickupCode" class="sr-only">픽업 코드</label>
       <input class="field" type="text" id="cancelPickupCode" placeholder="예: PICK-1004" maxlength="30" style="flex:1">
@@ -130,11 +172,11 @@
           statusEl.style.display = 'inline-block';
         }
 
-        lookupBtn.addEventListener('click', function () {
-          var code = (codeInput.value || '').trim();
+        function runLookup(code) {
           if (!code) {
             return;
           }
+          codeInput.value = code;
           form.style.display = 'none';
           setStatus('조회 중...', 'neutral');
 
@@ -153,10 +195,14 @@
             .catch(function () {
               setStatus('조회에 실패했어요. 다시 시도해 주세요.', 'danger');
             });
+        }
+
+        lookupBtn.addEventListener('click', function () {
+          runLookup((codeInput.value || '').trim());
         });
       })();
     </script>
-  </div>
+  </details>
 
   <div class="reply-view" th:if="${complaint.adminReply != null}">
     <div class="reply-view__label">운영자 답변 · <span th:text="${#temporals.format(complaint.resolvedAt, 'yyyy-MM-dd HH:mm')}">2026-08-01</span></div>
@@ -173,6 +219,44 @@
     </div>
   </form>
   </div>
+
+  <!-- 환불 모달 열기/닫기, 답변 템플릿 select 연동, 제출 즉시 버튼 비활성화(스펙 C.11 — 이중 제출 1차 방어,
+       서버는 RefundEntity.orderId UNIQUE로 2차 방어). regionStores.html의 모달 패턴과 동일. -->
+  <script th:inline="none" th:if="${linkedReservation != null and refundInfo == null and linkedReservationBlockedMessage == null}">
+    (function () {
+      var modal = document.getElementById('refund-modal');
+      var openBtn = document.getElementById('open-refund-modal');
+      var templateSelect = document.getElementById('refund-reply-template');
+      var replyTextarea = document.getElementById('refundReplyContent');
+      var form = document.getElementById('refund-form');
+      var submitBtn = document.getElementById('refund-submit-btn');
+
+      openBtn.addEventListener('click', function () {
+        modal.hidden = false;
+      });
+      modal.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () { modal.hidden = true; });
+      });
+
+      templateSelect.addEventListener('change', function () {
+        if (templateSelect.value !== 'CUSTOM') {
+          replyTextarea.value = templateSelect.value;
+        } else {
+          replyTextarea.value = '';
+          replyTextarea.focus();
+        }
+      });
+      templateSelect.dispatchEvent(new Event('change'));
+
+      form.addEventListener('submit', function (e) {
+        if (!confirm('이 주문을 환불할까요? 되돌릴 수 없어요.')) {
+          e.preventDefault();
+          return;
+        }
+        submitBtn.disabled = true;
+      });
+    })();
+  </script>
 
 </div>
 </body>

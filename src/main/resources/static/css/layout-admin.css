@@ -235,6 +235,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   transition: background-color .12s, border-color .12s, color .12s;
 }
 .btn .icon { width: 17px; height: 17px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
 
 .btn--primary { background: var(--blue-500); color: var(--white); }
 .btn--primary:hover { background: var(--blue-600); }
@@ -781,6 +782,17 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
    오른쪽 정렬(반드시 다 채울 필요 없는 짧은 액션이라)로 바꿨다. */
 .reply-box { margin-top: 24px; padding: 18px; border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--gray-50); }
 .reply-box__label { font-size: 14px; font-weight: 700; color: var(--gray-800); margin-bottom: 10px; }
+/* 신고 상세의 "신고 대상 주문" 카드 — 라벨/값 두 열 + 제목 옆 상태 배지 (2026-10-06) */
+.order-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.order-card__head .reply-box__label { margin-bottom: 0; }
+.order-card__list { margin: 0; }
+.order-card__row { display: flex; align-items: baseline; gap: 16px; padding: 8px 0; border-top: 1px solid var(--gray-200); font-size: 14px; }
+.order-card__row:first-child { border-top: none; }
+.order-card__row dt { flex: none; width: 76px; color: var(--gray-500); }
+.order-card__row dd { margin: 0; color: var(--gray-900); word-break: break-all; }
+.order-card__amount { font-size: 18px; font-weight: 700; }
+.order-card__note { margin: 10px 0 0; font-size: 13px; color: var(--gray-600); }
+
 .reply-box__textarea { width: 100%; min-height: 140px; background: var(--white); box-sizing: border-box; }
 .reply-box__footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
 
