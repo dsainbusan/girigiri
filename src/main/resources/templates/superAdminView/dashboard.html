@@ -97,7 +97,7 @@
             th:classappend="${stats.kpi.memberDeltaPercent >= 0} ? ' is-up' : ' is-down'"
             th:text="(${stats.kpi.memberDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.memberDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
-    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats(period='today')}">
       <span class="stat-card__label">오늘 거래</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayTransactionCount, 0, 'COMMA')} + '건'">0건</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalTransactionCount, 0, 'COMMA')} + '건'">전체 0건</span>
@@ -105,7 +105,7 @@
             th:classappend="${stats.kpi.transactionDeltaPercent >= 0} ? ' is-up' : ' is-down'"
             th:text="(${stats.kpi.transactionDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.transactionDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
-    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats(period='today')}">
       <span class="stat-card__label">오늘 거래액</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRevenue, 0, 'COMMA')} + '원'">0원</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRevenue, 0, 'COMMA')} + '원'">전체 0원</span>
@@ -113,7 +113,7 @@
             th:classappend="${stats.kpi.revenueDeltaPercent >= 0} ? ' is-up' : ' is-down'"
             th:text="(${stats.kpi.revenueDeltaPercent >= 0} ? '▲ 어제 대비 +' : '▼ 어제 대비 ') + ${stats.kpi.revenueDeltaPercent} + '%'">▲ 어제 대비 +0%</span>
     </a>
-    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats}">
+    <a class="stat-card stat-card--link" th:href="@{/superadmin/stats(period='today')}">
       <span class="stat-card__label">오늘 구해낸 음식</span>
       <span class="stat-card__value" th:text="${#numbers.formatInteger(stats.kpi.todayRescuedQuantity, 0, 'COMMA')} + '개'">0개</span>
       <span class="stat-card__delta" th:text="'전체 ' + ${#numbers.formatInteger(stats.kpi.totalRescuedQuantity, 0, 'COMMA')} + '개'">전체 0개</span>
