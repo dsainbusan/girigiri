@@ -6,12 +6,11 @@ import net.dsa.girigiri.domain.dto.ReservationCompletedItemDto;
 import net.dsa.girigiri.domain.dto.ReservationIncomingItemDto;
 import net.dsa.girigiri.domain.dto.ReservationOrderItemDto;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
-import net.dsa.girigiri.exception.AcceptNotAllowedException;
-import net.dsa.girigiri.exception.NoShowNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.util.PaginationUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
@@ -206,8 +206,11 @@ public class ReservationIncomingController {
 	@PostMapping("/{id}/accept")
 	public String accept(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
 		ReservationEntity reservation = lookupService.getReservation(id);
+		// 수정됨 (2026-10-06, 코드 리뷰 #4) — 소유권(IDOR) 체크를 "이미 수락됨/픽업·취소·노쇼됨" 같은
+		// 상태 문제용 예외(AcceptNotAllowedException)로 표현하던 걸 ResponseStatusException(FORBIDDEN)
+		// 으로 통일. ReservationStoreController#storeCancelById와 동일한 이유.
 		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
-			throw new AcceptNotAllowedException("다른 매장의 예약은 수락할 수 없어요.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 매장의 예약은 수락할 수 없어요.");
 		}
 
 		reservationService.acceptReservation(id);
@@ -223,8 +226,9 @@ public class ReservationIncomingController {
 	@PostMapping("/{id}/noshow")
 	public String noShow(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
 		ReservationEntity reservation = lookupService.getReservation(id);
+		// 수정됨 (2026-10-06, 코드 리뷰 #4) — accept()와 동일한 이유로 ResponseStatusException(FORBIDDEN)으로 통일.
 		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
-			throw new NoShowNotAllowedException("다른 매장의 예약은 처리할 수 없어요.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 매장의 예약은 처리할 수 없어요.");
 		}
 
 		reservationService.markNoShowByStore(id);

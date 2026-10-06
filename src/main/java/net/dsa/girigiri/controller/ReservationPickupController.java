@@ -16,11 +16,13 @@ import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.util.SupabaseStorageClient;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -136,8 +138,12 @@ public class ReservationPickupController {
 	public String pickup(@RequestParam String pickupCode, HttpSession session, Model model) {
 		ReservationEntity target = reservationService.findByPickupCode(pickupCode)
 				.orElseThrow(() -> new EntityNotFoundException("픽업 코드를 찾을 수 없습니다: " + pickupCode));
+		// 수정됨 (2026-10-06, 코드 리뷰 #4) — 소유권(IDOR) 체크를 상태 오류용 예외(PickupNotAllowedException)
+		// 대신 ResponseStatusException(FORBIDDEN)으로 통일. 위 pickupBatch()의 같은 체크는 그대로
+		// 둔다 — 거기는 코드 하나 실패해도 나머지를 계속 처리하려고 EntityNotFoundException과
+		// 묶어서 catch하는 배치 패턴이라, 바꾸면 그 catch에 안 잡혀 배치 전체가 깨진다.
 		if (!target.getStoreId().equals(resolveCurrentStoreId(session))) {
-			throw new PickupNotAllowedException("다른 매장의 예약은 픽업 처리할 수 없어요.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 매장의 예약은 픽업 처리할 수 없어요.");
 		}
 
 		ReservationEntity reservation = reservationService.confirmPickup(pickupCode);

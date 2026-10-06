@@ -9,13 +9,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class StoreHoursValidationTest {
 
+	// 수정됨 (2026-10-06, 코드 리뷰 #9) — 이 테스트는 원래 OperatingHoursUtil이 StoreHoursUtil에
+	// 제대로 위임하는지 확인하는 용도였다. 그 래퍼(1줄 위임뿐이었음)를 삭제하면서, parseClosingTime
+	// 자체에 대한 테스트로 바꿔 커버리지를 유지한다.
 	@Test
-	@DisplayName("OperatingHoursUtil이 StoreHoursUtil과 동일하게 정상 위임 동작하는지 확인")
-	void operatingHoursUtilDelegation() {
-		assertEquals(LocalTime.of(22, 0), OperatingHoursUtil.parseClosingTime("09:00 ~ 22:00"));
-		assertEquals(LocalTime.of(21, 30), OperatingHoursUtil.parseClosingTime("09:00 ~ 21:30 (마감 세일 20:00~)"));
-		assertThrows(IllegalArgumentException.class, () -> OperatingHoursUtil.parseClosingTime("invalid"));
-		assertThrows(IllegalArgumentException.class, () -> OperatingHoursUtil.parseClosingTime(null));
+	@DisplayName("parseClosingTime 정상/비정상 케이스")
+	void parseClosingTimeCases() {
+		assertEquals(LocalTime.of(22, 0), StoreHoursUtil.parseClosingTime("09:00 ~ 22:00"));
+		assertEquals(LocalTime.of(21, 30), StoreHoursUtil.parseClosingTime("09:00 ~ 21:30 (마감 세일 20:00~)"));
+		assertThrows(IllegalArgumentException.class, () -> StoreHoursUtil.parseClosingTime("invalid"));
+		assertThrows(IllegalArgumentException.class, () -> StoreHoursUtil.parseClosingTime(null));
 	}
 
 	@Test

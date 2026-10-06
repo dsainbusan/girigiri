@@ -3,6 +3,7 @@ package net.dsa.girigiri.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dsa.girigiri.domain.dto.PaymentConfirmResponseDto;
 import net.dsa.girigiri.domain.dto.ReservationListItemDto;
 import net.dsa.girigiri.domain.dto.ReservationPrepareResponseDto;
@@ -20,6 +21,7 @@ import net.dsa.girigiri.service.StoreReliabilityService;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
 import net.dsa.girigiri.util.PortOneClient;
 import net.dsa.girigiri.util.QrCodeUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -49,6 +51,7 @@ import java.util.List;
  * ReservationService.prepareReservation 자체는 그대로 둔다 — 테스트에서 시간대와 무관하게
  * 결정적으로 동작해야 하는데, 서비스 안에 넣으면 실행 시각에 따라 테스트가 흔들릴 수 있어서다.
  */
+@Slf4j
 @Controller
 @RequestMapping("/reservation")
 @RequiredArgsConstructor
@@ -267,19 +270,33 @@ public class ReservationController {
 
 	/**
 	 * 완료 화면의 <img> 태그가 실제로 부르는 QR 이미지 바이트. 본인 예약이 아니면 막는다(complete 참고).
+	 *
+	 * 수정됨 (2026-10-06, 코드 리뷰 #3) — 왜: 이 엔드포인트는 @ResponseBody로 PNG 바이트를 내려주는데,
+	 * 예약을 못 찾거나(EntityNotFoundException) 본인 예약이 아니거나(ReservationAccessDeniedException)
+	 * QR 생성이 실패하면(IllegalStateException) 전부 GlobalExceptionHandler로 던져졌다 — 그 핸들러들은
+	 * errorView/custom-error-page라는 Thymeleaf HTML 뷰(문자열)를 반환하므로, <img src="...">가
+	 * image/png를 기대하는 자리에 HTML이 내려가는 상황이었다(깨진 이미지로만 보여서 평소엔 티가
+	 * 안 났을 뿐). 다른 화면들은 이 세 예외를 HTML 에러 페이지로 보여주는 게 맞으므로
+	 * GlobalExceptionHandler는 그대로 두고, 이 엔드포인트만 로컬에서 잡아 상태코드만 돌려준다.
 	 */
 	@GetMapping("/{id}/qr-image")
 	@ResponseBody
 	public ResponseEntity<byte[]> qrImage(@PathVariable Long id, HttpSession session) {
-		ReservationEntity reservation = lookupService.getReservation(id);
+		ReservationEntity reservation;
+		try {
+			reservation = lookupService.getReservation(id);
+		} catch (EntityNotFoundException e) {
+			return ResponseEntity.notFound().build();
+		}
 		if (!reservation.getUserId().equals(resolveCurrentUserId(session))) {
-			throw new ReservationAccessDeniedException("본인 예약의 QR만 볼 수 있어요.");
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
 		try {
 			byte[] png = QrCodeUtil.generateQrImage(reservation.getPickupCode(), 240);
 			return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(png);
 		} catch (Exception e) {
-			throw new IllegalStateException("QR 이미지 생성에 실패했습니다. reservationId=" + id, e);
+			log.warn("> [ReservationController] QR 이미지 생성 실패 - reservationId={}", id, e);
+			return ResponseEntity.internalServerError().build();
 		}
 	}
 

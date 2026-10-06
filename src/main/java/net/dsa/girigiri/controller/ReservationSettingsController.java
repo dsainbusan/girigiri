@@ -6,7 +6,7 @@ import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
-import net.dsa.girigiri.util.OperatingHoursUtil;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import net.dsa.girigiri.util.PickupAvailabilityUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,14 +38,16 @@ public class ReservationSettingsController {
 	}
 
 	// 수정됨 (2026-08-24, 점검/정리) — 왜: 여기 직접 만들었던 정규식 기반 파서가
-	// ReservationService.isTooCloseToClosing()이 이미 쓰고 있던 net.dsa.girigiri.util.OperatingHoursUtil의
+	// ReservationService.isTooCloseToClosing()이 이미 쓰고 있던 net.dsa.girigiri.util.StoreHoursUtil의
 	// parseClosingTime과 로직이 겹치면서(중복), 실패 시 동작도 서로 달랐다(이쪽은 null 반환, 저쪽은
 	// IllegalArgumentException 발생) — 같은 "영업시간 문자열 파싱"을 두 곳에서 다르게 하고 있던 셈이라
-	// 한쪽만 고치면 다른 쪽은 안 고쳐지는 버그가 나기 쉬웠다. OperatingHoursUtil을 유일한 파서로 쓰고,
+	// 한쪽만 고치면 다른 쪽은 안 고쳐지는 버그가 나기 쉬웠다. StoreHoursUtil을 유일한 파서로 쓰고,
 	// 여기서는 그 예외를 잡아서 이 화면이 원래 기대하던 "파싱 실패 시 null(= 이 옵션 숨김)" 동작만 감싸준다.
+	// (2026-10-06, 코드 리뷰 #9) — 그동안 OperatingHoursUtil을 경유했는데, 그 클래스는 이 메서드로
+	// 위임만 하는 1줄짜리 래퍼였어서 StoreHoursUtil을 직접 쓰도록 바꾸고 래퍼는 삭제했다.
 	private LocalTime parseClosingTime(String operatingHours) {
 		try {
-			return OperatingHoursUtil.parseClosingTime(operatingHours);
+			return StoreHoursUtil.parseClosingTime(operatingHours);
 		} catch (IllegalArgumentException e) {
 			return null;
 		}

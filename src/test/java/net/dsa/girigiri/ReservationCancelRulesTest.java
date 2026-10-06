@@ -8,8 +8,8 @@ import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.repository.PaymentRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.service.ReservationService;
-import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PortOneClient;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -103,7 +103,7 @@ class ReservationCancelRulesTest {
 
 	@Test
 	void 영업시간_문자열에서_마감시간을_정확히_읽는다() {
-		assertEquals(LocalTime.of(22, 0), OperatingHoursUtil.parseClosingTime("09:00 ~ 22:00"));
+		assertEquals(LocalTime.of(22, 0), StoreHoursUtil.parseClosingTime("09:00 ~ 22:00"));
 	}
 
 	@Test

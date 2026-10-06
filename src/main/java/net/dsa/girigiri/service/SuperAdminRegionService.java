@@ -17,8 +17,8 @@ import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.DashboardPolicy;
-import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.SellThroughClassifier;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -195,7 +195,7 @@ public class SuperAdminRegionService {
 	private String buildClosingTimeMessage(StoreEntity store) {
 		LocalTime closingTime;
 		try {
-			closingTime = OperatingHoursUtil.parseClosingTime(store.getOperatingHours());
+			closingTime = StoreHoursUtil.parseClosingTime(store.getOperatingHours());
 		} catch (IllegalArgumentException e) {
 			return null;
 		}

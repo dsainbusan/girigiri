@@ -3,7 +3,6 @@ package net.dsa.girigiri.controller;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
-import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReviewService;
 import net.dsa.girigiri.util.CategoryDisplayUtil;
@@ -21,14 +20,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class ProductController {
 
 
-	private final StoreRepository storeRepository;
 	private final ReviewService reviewService;
 	private final LookupService lookupService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable Long id, Model model) {
 		ProductEntity product = lookupService.getProduct(id);
-		StoreEntity store = storeRepository.findById(product.getStoreId()).orElse(null);
+		StoreEntity store = lookupService.findStore(product.getStoreId()).orElse(null);
 
 		int discountRate = DiscountRateCalculator.fromPrices(product.getOriginalPrice(), product.getDiscountedPrice());
 		int savedAmount = DiscountRateCalculator.savedAmount(product.getOriginalPrice(), product.getDiscountedPrice());

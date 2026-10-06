@@ -12,9 +12,11 @@ import net.dsa.girigiri.util.PhoneUtil;
 import net.dsa.girigiri.util.SidoParser;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import net.dsa.girigiri.util.StorePhoneUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -87,6 +89,11 @@ public class AuthService {
 	public UserEntity completeEmailSignup(String email, String encodedPassword) {
 		if (userRepository.findByOauthProviderAndOauthId("email", email).isPresent()
 				|| socialAccountRepository.existsByProviderAndProviderId("email", email)) {
+			// 수정 안 함 (2026-10-06, 코드 리뷰 #2 점검 중 확인) — AuthController#verifyOtp가 이 메서드를
+			// try-catch(IllegalStateException)로 감싸서 {"verified":false,"reason":"duplicate"} JSON을
+			// 돌려준다(화면이 알림창 없이 그 자리에서 처리). ResponseStatusException으로 바꾸면 그 catch에
+			// 안 잡혀 JSON 응답 자리에 HTML이 내려가는, 코드 리뷰 #3(qrImage)과 같은 종류의 버그가 생겨서
+			// 여기만 원래 타입을 그대로 둔다.
 			throw new IllegalStateException("이미 가입된 이메일입니다.");
 		}
 
@@ -233,9 +240,9 @@ public class AuthService {
 	@Transactional
 	public UserEntity linkEmailPasswordToAccount(Long targetUserId, String email, String encodedPasswordHash) {
 		UserEntity target = userRepository.findById(targetUserId)
-				.orElseThrow(() -> new IllegalArgumentException("연동 대상 계정을 찾을 수 없습니다."));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연동 대상 계정을 찾을 수 없습니다."));
 		if (UserEntity.STATUS_SUSPENDED.equals(target.getStatus())) {
-			throw new IllegalStateException("정지된 계정에는 연동할 수 없습니다.");
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "정지된 계정에는 연동할 수 없습니다.");
 		}
 
 		if (!socialAccountRepository.existsByProviderAndProviderId("email", email)) {
@@ -265,6 +272,10 @@ public class AuthService {
 		UserEntity pendingUser = loadPendingUser(currentPendingUserId);
 		UserEntity targetUser = loadTargetUserByPhone(phone);
 
+		// 수정 안 함 (2026-10-06, 코드 리뷰 #2 점검 중 확인) — AuthController#linkAccount가 이 두 예외를
+		// catch (IllegalArgumentException | IllegalStateException)로 잡아 "/auth/signup?error=link_failed"로
+		// 리다이렉트한다. ResponseStatusException으로 바꾸면 그 catch를 비켜가서 알림+홈 리다이렉트로
+		// 빠지는, 기존보다 안 좋은 UX 변경이 돼서 여기만 원래 타입을 그대로 둔다.
 		if (targetUser.getPassword() == null || targetUser.getPassword().isBlank()) {
 			throw new IllegalStateException("비밀번호 인증을 지원하지 않는 계정입니다. 해당 계정으로 다시 로그인해 본인 확인이 필요합니다.");
 		}
@@ -286,15 +297,21 @@ public class AuthService {
 	public UserEntity linkSocialAccountAfterReauth(Long currentPendingUserId, Long verifiedTargetUserId) {
 		UserEntity pendingUser = loadPendingUser(currentPendingUserId);
 		UserEntity targetUser = userRepository.findById(verifiedTargetUserId)
-				.orElseThrow(() -> new IllegalArgumentException("연동 대상 계정을 찾을 수 없습니다."));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연동 대상 계정을 찾을 수 없습니다."));
 
 		if (UserEntity.STATUS_SUSPENDED.equals(targetUser.getStatus())) {
-			throw new IllegalStateException("정지된 계정에는 연동할 수 없습니다.");
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "정지된 계정에는 연동할 수 없습니다.");
 		}
 
 		return mergeAccounts(pendingUser, targetUser);
 	}
 
+	// 수정 안 함 (2026-10-06, 코드 리뷰 #2 점검 중 확인) — 이 메서드는 linkSocialAccountWithPassword
+	// (AuthController가 IllegalArgumentException | IllegalStateException으로 좁게 catch)와
+	// linkSocialAccountAfterReauth(OAuth2LoginSuccessHandler가 RuntimeException으로 넓게 catch)
+	// 둘 다에서 호출된다. 뒤쪽은 어느 타입이든 상관없지만 앞쪽은 원래 타입이어야만 잡히므로,
+	// 공유 메서드인 여기는 원래 타입을 그대로 둔다(아래 loadTargetUserByPhone도 linkSocialAccountWithPassword
+	// 전용이라 같은 이유).
 	private UserEntity loadPendingUser(Long currentPendingUserId) {
 		if (currentPendingUserId == null) {
 			throw new IllegalArgumentException("로그인된 세션 정보가 없습니다.");
@@ -438,18 +455,23 @@ public class AuthService {
 	@Transactional
 	public void unlinkSocialAccount(Long userId, Long socialAccountId) {
 		if (userId == null || socialAccountId == null) {
-			throw new IllegalArgumentException("필수 파라미터가 누락되었습니다.");
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "필수 파라미터가 누락되었습니다.");
 		}
 		UserEntity user = findUserOrThrow(userId);
+		// 수정 안 함 (2026-10-06, 코드 리뷰 #2 점검 중 확인) — MypageController#unlinkSocial이 이 예외를
+		// catch (IllegalStateException)로 따로 잡아 "?unlinkError=minimum"(다른 실패와 구분되는 안내)으로
+		// 리다이렉트한다. ResponseStatusException으로 바꾸면 그 밑의 catch(Exception)으로 떨어져
+		// 구분된 안내를 잃는다 — 여기만 원래 타입을 그대로 둔다.
 		if (!canUnlinkSocialAccount(userId)) {
 			throw new IllegalStateException("최소 1개의 로그인 수단은 유지되어야 합니다.");
 		}
 
 		SocialAccountEntity targetSocial = socialAccountRepository.findById(socialAccountId)
-				.orElseThrow(() -> new IllegalArgumentException("해당 소셜 계정 연동 정보를 찾을 수 없습니다."));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 소셜 계정 연동 정보를 찾을 수 없습니다."));
 
+		// IDOR 방지 — 소유권 체크는 코드 리뷰 #4와 동일하게 ResponseStatusException(FORBIDDEN)으로.
 		if (!targetSocial.getUser().getId().equals(userId)) {
-			throw new IllegalArgumentException("본인의 소셜 계정만 연동 해제할 수 있습니다.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 소셜 계정만 연동 해제할 수 있습니다.");
 		}
 
 		String unlinkedProvider = targetSocial.getProvider();
@@ -598,7 +620,7 @@ public class AuthService {
 		store.setPhone(phone.trim());
 		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
 		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {
-			throw new IllegalArgumentException("영업시간 형식이 올바르지 않아요: " + trimmedHours);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "영업시간 형식이 올바르지 않아요: " + trimmedHours);
 		}
 		store.setOperatingHours(trimmedHours);
 		store.setApprovalStatus(StoreEntity.STATUS_PENDING); // 승인 대기 상태
@@ -606,7 +628,12 @@ public class AuthService {
 		return storeRepository.save(store);
 	}
 
+	// 수정됨 (2026-10-06, 코드 리뷰 #2) — orElseThrow()에 아무 메시지도 안 줘서 NoSuchElementException이
+	// 그대로 던져졌다. GlobalExceptionHandler엔 이 타입 핸들러가 없어 맨 아래 catch-all(Exception)로
+	// 떨어져 "알 수 없는 오류가 발생했습니다"로만 보였다 — 실제로는 "회원을 못 찾았다"는 구체적 이유가
+	// 있는데 묻혔던 경우. 다른 raw exception들과 같이 ResponseStatusException으로 통일한다.
 	private UserEntity findUserOrThrow(Long userId) {
-		return userRepository.findById(userId).orElseThrow();
+		return userRepository.findById(userId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
 	}
 }

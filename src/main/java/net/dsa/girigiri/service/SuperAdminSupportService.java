@@ -118,9 +118,7 @@ public class SuperAdminSupportService {
 		ComplaintEntity complaint = lookupService.getComplaint(id);
 
 		if (content != null && !content.isBlank()) {
-			complaint.setAdminReply(content.trim());
-			complaint.setStatus(ComplaintEntity.STATUS_RESOLVED);
-			complaint.setResolvedAt(LocalDateTime.now());
+			complaint.resolve(content.trim());
 			complaintRepository.save(complaint);
 		}
 	}

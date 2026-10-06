@@ -10,8 +10,10 @@ import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.ReceiptPdfGenerator;
 import net.dsa.girigiri.util.SupabaseStorageClient;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -98,7 +100,8 @@ public class ReceiptService {
 		try {
 			pdf = ReceiptPdfGenerator.generate(data);
 		} catch (IOException e) {
-			throw new IllegalStateException("영수증 PDF 생성에 실패했습니다. reservationId=" + reservationId, e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+					"영수증 PDF 생성에 실패했습니다. reservationId=" + reservationId, e);
 		}
 
 		// 파일명은 항상 reservationId 기준으로 고정 -> 취소/노쇼로 다시 만들 때 같은 자리에 덮어써진다
@@ -138,7 +141,8 @@ public class ReceiptService {
 			Files.write(savedPath, pdf);
 			return savedPath.toString();
 		} catch (IOException e) {
-			throw new IllegalStateException("영수증 파일 저장에 실패했습니다. reservationId=" + reservationId, e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+					"영수증 파일 저장에 실패했습니다. reservationId=" + reservationId, e);
 		}
 	}
 }

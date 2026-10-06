@@ -31,14 +31,16 @@ import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
-import net.dsa.girigiri.util.OperatingHoursUtil;
 import net.dsa.girigiri.util.PortOneClient;
+import net.dsa.girigiri.util.StoreHoursUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -285,9 +287,7 @@ public class ReservationService {
 			payment.fail(result.failReason());
 			paymentRepository.save(payment);
 
-			reservation.setStatus("cancelled");
-			reservation.setCancelledBy("SYSTEM");
-			reservation.setCancelReason("결제 실패: " + result.failReason());
+			reservation.cancel("SYSTEM", "결제 실패: " + result.failReason());
 			reservationRepository.save(reservation);
 
 			// 결제가 실제로 안 됐으니 쿠폰을 쓴 적이 있어도 손님 잘못이 아니라 복구한다.
@@ -302,7 +302,7 @@ public class ReservationService {
 		payment.approve(result.transactionId(), result.amount(), result.payMethod(), result.pgPaidAt());
 		paymentRepository.save(payment);
 
-		reservation.setStatus("confirmed");
+		reservation.confirm();
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 결제가 실제로 확인된 이 시점에야 영수증 PDF를 만든다.
@@ -347,9 +347,7 @@ public class ReservationService {
 			paymentRepository.save(payment);
 		});
 
-		reservation.setStatus("cancelled");
-		reservation.setCancelledBy("SYSTEM");
-		reservation.setCancelReason("결제 미완료로 취소됨");
+		reservation.cancel("SYSTEM", "결제 미완료로 취소됨");
 
 		// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
 		couponService.restore(reservation.getCouponId());
@@ -450,9 +448,7 @@ public class ReservationService {
 				paymentRepository.save(payment);
 			});
 
-			reservation.setStatus("cancelled");
-			reservation.setCancelledBy("SYSTEM");
-			reservation.setCancelReason("결제 시간 초과로 자동 취소됨");
+			reservation.cancel("SYSTEM", "결제 시간 초과로 자동 취소됨");
 
 			// 결제가 안 끝나서 취소된 거라 쿠폰을 썼어도 손님 잘못이 아니다 — 복구.
 			couponService.restore(reservation.getCouponId());
@@ -480,8 +476,7 @@ public class ReservationService {
 			throw new PickupNotAllowedException(blockedMessage);
 		}
 
-		reservation.setStatus("picked");
-		reservation.setPickedAt(java.time.LocalDateTime.now());
+		reservation.markPicked(java.time.LocalDateTime.now());
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 문창호 (2026-09-07) — 픽업이 확정됐으니 이 매장의 오늘 매출을 Supabase 매출 리포트에 반영.
@@ -510,8 +505,7 @@ public class ReservationService {
 			default -> { }   // "confirmed" 상태만 정상적으로 아래 로직 진행
 		}
 
-		reservation.setStatus("ready");
-		reservation.setAcceptedAt(LocalDateTime.now());
+		reservation.markReady(LocalDateTime.now());
 		return reservationRepository.save(reservation);
 	}
 
@@ -895,8 +889,7 @@ public class ReservationService {
 		markPaymentCancelled(reservationId, "손님 요청으로 취소");
 
 		// 5. 예약 상태 변경 + 취소 주체 기록
-		reservation.setStatus("cancelled");
-		reservation.setCancelledBy("USER");
+		reservation.cancel("USER", null);
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 5-1. 쿠폰을 썼던 거면 복구 (2026-09-07, 채채 확인) — 손님이 "물건을 샀다가 취소"한 일반적인
@@ -935,9 +928,7 @@ public class ReservationService {
 		// (매장 취소는 재고 착오 등 매장 사정이 이유라서) 로컬 상태는 예외 없이 항상 "cancelled"로 바뀐다.
 		markPaymentCancelled(reservationId, resolvedReason);
 
-		reservation.setStatus("cancelled");
-		reservation.setCancelledBy("STORE");
-		reservation.setCancelReason(resolvedReason);
+		reservation.cancel("STORE", resolvedReason);
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 매장 귀책 취소 (2026-09-07, 채채 확인) — 손님 잘못이 전혀 없는 취소라 두 가지를 한다:
@@ -987,9 +978,7 @@ public class ReservationService {
 
 		markPaymentCancelled(reservationId, resolvedReason);
 
-		reservation.setStatus("cancelled");
-		reservation.setCancelledBy("ADMIN");
-		reservation.setCancelReason(resolvedReason);
+		reservation.cancel("ADMIN", resolvedReason);
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		// 쓴 쿠폰이 있으면 복구 — 손님 본인 노쇼(processNoShows)를 제외한 모든 취소 경로와 동일한 정책.
@@ -1025,7 +1014,7 @@ public class ReservationService {
 					"아직 픽업 예정 시각(" + reservation.getPickupTime().format(LIST_DISPLAY_FORMAT) + ") 전이라 노쇼 처리할 수 없어요.");
 		}
 
-		reservation.setStatus("noshowed");
+		reservation.markNoShowed();
 		ReservationEntity saved = reservationRepository.save(reservation);
 
 		receiptService.generateReceipt(reservationId);
@@ -1092,7 +1081,8 @@ public class ReservationService {
 			}
 			log.warn("> [ReservationService] 픽업 코드 충돌 발생, 재생성합니다 - candidate={}, attempt={}", candidate, attempt + 1);
 		}
-		throw new IllegalStateException("픽업 코드 생성에 반복적으로 실패했어요. 잠시 후 다시 시도해주세요.");
+		throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+				"픽업 코드 생성에 반복적으로 실패했어요. 잠시 후 다시 시도해주세요.");
 	}
 
 	// 추가됨 (2026-09-08, 코드 감사) — "취소 가능한 상태"를 checkCancellableState(예외 던지는 쪽)와
@@ -1158,7 +1148,7 @@ public class ReservationService {
 	/**
 	 * 매장 영업종료시간까지 30분 이내로 남았거나 이미 지났으면 true.
 	 *
-	 * 수정됨 (2026-08-24, 점검/정리) — 왜: OperatingHoursUtil.parseClosingTime은 operatingHours 형식이
+	 * 수정됨 (2026-08-24, 점검/정리) — 왜: StoreHoursUtil.parseClosingTime은 operatingHours 형식이
 	 * 이상하면(매장 정보 화면 쪽에서 자유 텍스트로 입력받는 값이라 완벽한 형식 보장이 없음)
 	 * IllegalArgumentException을 던지는데, 여기서 그걸 안 잡고 있어서 손님이 "취소하기"를 눌렀을 때
 	 * (cancelReservation 경유) 이 값 하나 때문에 예외가 그대로 튀어나가 알 수 없는 오류 화면으로 떨어질
@@ -1168,7 +1158,7 @@ public class ReservationService {
 	private boolean isTooCloseToClosing(StoreEntity store, LocalDateTime now) {
 		LocalTime closingTime;
 		try {
-			closingTime = OperatingHoursUtil.parseClosingTime(store.getOperatingHours());
+			closingTime = StoreHoursUtil.parseClosingTime(store.getOperatingHours());
 		} catch (IllegalArgumentException e) {
 			return false;
 		}
@@ -1302,7 +1292,7 @@ public class ReservationService {
 				return false;
 			}
 
-			reservation.setStatus("noshowed");
+			reservation.markNoShowed();
 			// (2026-09-07, 채채 확인) — 여기서는 의도적으로 couponService.restore()를 호출하지 않는다.
 			// 손님이 안 나타난 건 본인 잘못이라, 썼던 쿠폰이 있어도 복구해주지 않기로 했다 — 다른
 			// 취소 경로(위 cancelReservation/cancelByStore/결제실패 등)와 유일하게 다른 부분이다.
@@ -1348,7 +1338,7 @@ public class ReservationService {
 			// refunded 추가됨 (2026-10-06, 신고 기반 리팩터링) — 신고 처리로 환불된 주문도 손님 쪽에선
 			// "더 이상 유효하지 않은 주문"이라는 점에서 취소·노쇼와 성격이 같아 같은 탭에 묶는다.
 			case TAB_CANCELLED -> List.of("cancelled", "noshowed", "refunded");
-			default -> throw new IllegalArgumentException("알 수 없는 탭입니다: " + tab);
+			default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "알 수 없는 탭입니다: " + tab);
 		};
 
 		List<ReservationEntity> reservations =
@@ -1474,7 +1464,7 @@ public class ReservationService {
 
 	private LocalTime parseClosingTimeOrNull(String operatingHours) {
 		try {
-			return OperatingHoursUtil.parseClosingTime(operatingHours);
+			return StoreHoursUtil.parseClosingTime(operatingHours);
 		} catch (IllegalArgumentException e) {
 			return null;
 		}

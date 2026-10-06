@@ -17,6 +17,8 @@ import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * 단건 조회 공통 헬퍼 (2026-09-03 추가, 레이어 규칙 1단계).
  *
@@ -50,6 +52,15 @@ public class LookupService {
 	public StoreEntity getStore(Long id) {
 		return storeRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("매장을 찾을 수 없습니다: " + id));
+	}
+
+	// 추가됨 (2026-10-06, 코드 리뷰 #1) — ProductController가 StoreRepository를 직접 주입받아 쓰던
+	// storeRepository.findById(id).orElse(null)을 대체. getStore()와 달리 매장이 없어도 404로
+	// 끝내지 않고 화면이 성립해야 하는 호출부(상품은 있는데 매장이 고아가 된 경우)를 위한 것 —
+	// 동작을 바꾸지 않는 게 목적이라 orElseThrow로 통일하지 않았다.
+	@Transactional(readOnly = true)
+	public Optional<StoreEntity> findStore(Long id) {
+		return storeRepository.findById(id);
 	}
 
 	@Transactional(readOnly = true)

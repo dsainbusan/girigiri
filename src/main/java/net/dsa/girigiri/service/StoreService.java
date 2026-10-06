@@ -16,8 +16,10 @@ import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.StoreHoursUtil;
 import net.dsa.girigiri.util.StorePhoneUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -261,7 +263,7 @@ public class StoreService {
 		store.setPhone(phone.trim());
 		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
 		if (trimmedHours != null && !StoreHoursUtil.isValidFormat(trimmedHours)) {
-			throw new IllegalArgumentException("영업시간 형식이 올바르지 않아요: " + trimmedHours);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "영업시간 형식이 올바르지 않아요: " + trimmedHours);
 		}
 		store.setOperatingHours(trimmedHours);
 		store.setLatitude(latitude);

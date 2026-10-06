@@ -3,12 +3,13 @@ package net.dsa.girigiri.controller;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
-import net.dsa.girigiri.exception.CancellationNotAllowedException;
 import net.dsa.girigiri.service.LookupService;
 import net.dsa.girigiri.service.ReservationService;
 import net.dsa.girigiri.service.StoreAccessService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -56,8 +57,13 @@ public class ReservationStoreController {
 								   HttpSession session,
 								   RedirectAttributes redirectAttributes) {
 		ReservationEntity reservation = lookupService.getReservation(id);
+		// 수정됨 (2026-10-06, 코드 리뷰 #4) — 소유권(IDOR) 체크는 "이 매장 예약이 아니다"라는 권한
+		// 문제고, CancellationNotAllowedException은 "이미 픽업/취소/노쇼된 예약"이라는 상태 문제라
+		// 의미가 안 맞았다. ProductService 등 서비스 레이어의 매장 소유 체크와 동일하게
+		// ResponseStatusException(FORBIDDEN)으로 통일 — GlobalExceptionHandler가 이미 상태코드를
+		// 그대로 실어 errorView/alert-redirect(알림 후 홈으로)로 처리한다.
 		if (!reservation.getStoreId().equals(resolveCurrentStoreId(session))) {
-			throw new CancellationNotAllowedException("다른 매장의 예약은 취소할 수 없어요.");
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 매장의 예약은 취소할 수 없어요.");
 		}
 
 		reservationService.cancelByStore(id, reason);

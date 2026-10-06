@@ -22,7 +22,6 @@ import net.dsa.girigiri.util.PaymentGateway;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -132,16 +131,12 @@ public class AdminRefundService {
 		refundRepository.save(refund);
 
 		String fromStatus = reservation.getStatus();
-		reservation.setStatus("refunded");
-		reservation.setCancelledBy("ADMIN");
-		reservation.setCancelReason(resolvedReason);
+		reservation.refund("ADMIN", resolvedReason);
 		reservationRepository.save(reservation);
 		statusHistoryRepository.save(
 				ReservationStatusHistoryEntity.of(reservationId, fromStatus, "refunded", adminUserId, resolvedReason));
 
-		complaint.setStatus(ComplaintEntity.STATUS_RESOLVED);
-		complaint.setAdminReply(replyContent);
-		complaint.setResolvedAt(LocalDateTime.now());
+		complaint.resolve(replyContent);
 		complaintRepository.save(complaint);
 
 		receiptService.generateReceipt(reservationId);

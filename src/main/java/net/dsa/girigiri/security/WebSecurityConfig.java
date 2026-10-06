@@ -81,9 +81,11 @@ public class WebSecurityConfig {
 			// 강노은: 문의 게시판(/user/inquiries/**)은 작성자·문의 대상 가게 사장·관리자만 열람 가능해야 해서
 			// 공개 목록에 넣지 않는다 — 로그인 자체는 Spring Security가 막고, "누구 걸 볼 수 있는지"는
 			// InquiryController/InquiryService에서 세션의 userId/role로 추가 필터링한다.
-			// TODO(송보미): 개발 참고용 스타일가이드 페이지. 운영 배포 전 dev 프로필 한정 노출 등으로 교체할 것.
+			// 개발 참고용 스타일가이드 페이지. 2026-10-06, 제출 전 점검 — StyleguideController에
+			// @Profile("dev")를 붙여서 dev 프로필이 아니면 컨트롤러 자체가 없어져 404가 된다.
+			// 여기 permitAll은 그대로 둬도 안전함(매핑이 없으면 permitAll이어도 404).
 			, "/styleguide"
-			, "/styleguide/admin"   // 슈퍼어드민 wide 레이아웃 미리보기 (위와 같은 이유로 임시 공개)
+			, "/styleguide/admin"   // 슈퍼어드민 wide 레이아웃 미리보기 (위와 같은 이유)
 			// "/superadmin/**"는 여기 있었다 — 코드 감사(2026-09-08)에서 발견: 로그인 없이 매장
 			// 삭제·회원 강제탈퇴·신고 처리로 예약 취소·회원 CSV 다운로드까지 익명으로 가능했다.
 			// 이 줄을 빼서 "로그인은 했는지"를 여기서 걸러내고, "ADMIN이 맞는지"는

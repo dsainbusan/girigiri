@@ -19,10 +19,12 @@ import java.time.LocalDateTime;
  * 회원/매장의 실제 이름과 맞춰서 저장, 매번 다시 조회하지 않음 — 문의만큼 자주 안 바뀌는 정보라 스냅샷도
  * 허용).
  */
+// 수정됨 (2026-10-06, 코드 리뷰 #6) — 블랭킷 @Setter를 없애고 resolve() 하나로 좁혔다. status/
+// adminReply/resolvedAt 세 필드가 "답변 등록" 시 항상 같이 바뀌는 묶음이라(ReservationEntity와
+// 같은 이유), 나머지 필드(targetName 등)는 생성 후 안 바뀌어서 @Getter만 둔다.
 @Entity
 @Table(name = "complaint")
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -75,4 +77,11 @@ public class ComplaintEntity {
 
 	@Column(name = "resolved_at")
 	private LocalDateTime resolvedAt;
+
+	/** 답변 등록 — status를 RESOLVED로 바꾸고 adminReply/resolvedAt을 같이 채운다. */
+	public void resolve(String adminReply) {
+		this.adminReply = adminReply;
+		this.status = STATUS_RESOLVED;
+		this.resolvedAt = LocalDateTime.now();
+	}
 }
