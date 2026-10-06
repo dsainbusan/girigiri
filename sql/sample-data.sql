@@ -87,34 +87,34 @@ INSERT INTO store (id, store_name, category, address, latitude, longitude, opera
 -- ---------------------------------------------------------------------
 INSERT INTO product (id, store_id, name, original_price, discounted_price, quantity, remaining_quantity, image_url, description, status, registered_at) VALUES
 -- 다이스키 베이커리 (store 1)
-(1, 1, '식빵 마감세트', 6000, 3000, 10, 4, '/images/product1.jpg', '오늘 구운 식빵, 마감 할인 50%', 'active', NOW()),
-(2, 1, '크루아상 3개입', 9000, 4500, 5, 0, '/images/product2.jpg', '버터 크루아상 3개 세트', 'sold', NOW()),
-(3, 1, '어제 만든 케이크', 15000, 6000, 3, 3, '/images/product3.jpg', '유통기한 임박 조각 케이크', 'expired', NOW()),
-(4, 1, '단팥빵 5개입', 7000, 4200, 8, 5, '/images/product4.jpg', '팥이 꽉 찬 단팥빵 5개 세트', 'active', NOW()),
+(1, 1, '식빵 마감세트', 6000, 3000, 10, 4, '/images/pixabay/bakery/bakery-1077984.jpg', '오늘 구운 식빵, 마감 할인 50%', 'active', NOW()),
+(2, 1, '크루아상 3개입', 9000, 4500, 5, 0, '/images/pixabay/bakery/bakery-1743939.jpg', '버터 크루아상 3개 세트', 'sold', NOW()),
+(3, 1, '어제 만든 케이크', 15000, 6000, 3, 3, '/images/pixabay/dessert/dessert-1224044.jpg', '유통기한 임박 조각 케이크', 'expired', NOW()),
+(4, 1, '단팥빵 5개입', 7000, 4200, 8, 5, '/images/pixabay/bakery/bakery-1868573.jpg', '팥이 꽉 찬 단팥빵 5개 세트', 'active', NOW()),
 -- 브런치카페 온 (store 3)
-(5, 3, '크로플 세트 (2개)', 8000, 4800, 6, 2, '/images/product5.jpg', '바삭한 크로플 2개 + 시럽', 'active', NOW()),
-(6, 3, '오늘의 샌드위치', 7500, 3750, 4, 4, '/images/product6.jpg', '마감 임박 수제 샌드위치', 'active', NOW()),
-(7, 3, '아메리카노 원두 마감', 12000, 6000, 2, 0, '/images/product7.jpg', '오늘 로스팅한 원두 봉지', 'sold', NOW()),
+(5, 3, '크로플 세트 (2개)', 8000, 4800, 6, 2, '/images/pixabay/dessert/dessert-1263099.jpg', '바삭한 크로플 2개 + 시럽', 'active', NOW()),
+(6, 3, '오늘의 샌드위치', 7500, 3750, 4, 4, '/images/pixabay/food-general/food-general-1155132.jpg', '마감 임박 수제 샌드위치', 'active', NOW()),
+(7, 3, '아메리카노 원두 마감', 12000, 6000, 2, 0, '/images/pixabay/cafe/cafe-2608864.jpg', '오늘 로스팅한 원두 봉지', 'sold', NOW()),
 -- 커피와우 명동점 (store 4)
-(8, 4, '베이글 2개 세트', 6500, 3200, 7, 3, '/images/product8.jpg', '플레인/에브리싱 베이글 2개', 'active', NOW()),
-(9, 4, '디저트 3종 모음', 11000, 5500, 3, 1, '/images/product9.jpg', '마감 임박 디저트 3종', 'active', NOW()),
-(10, 4, '어제 구운 스콘 4개', 9000, 3600, 4, 4, '/images/product10.jpg', '유통기한 임박 스콘 4개입', 'expired', NOW()),
+(8, 4, '베이글 2개 세트', 6500, 3200, 7, 3, '/images/pixabay/bakery/bakery-1194428.jpg', '플레인/에브리싱 베이글 2개', 'active', NOW()),
+(9, 4, '디저트 3종 모음', 11000, 5500, 3, 1, '/images/pixabay/dessert/dessert-1850011.jpg', '마감 임박 디저트 3종', 'active', NOW()),
+(10, 4, '어제 구운 스콘 4개', 9000, 3600, 4, 4, '/images/pixabay/bakery/bakery-3467243.jpg', '유통기한 임박 스콘 4개입', 'expired', NOW()),
 -- 엄마손반찬 (store 5)
-(11, 5, '오늘의 나물 반찬세트', 12000, 7200, 6, 2, '/images/product11.jpg', '3가지 제철 나물 반찬 세트', 'active', NOW()),
-(12, 5, '잡채 한 팩', 9000, 5400, 5, 5, '/images/product12.jpg', '당일 조리 잡채 500g', 'active', NOW()),
-(13, 5, '계란말이 + 진미채', 8000, 4000, 4, 0, '/images/product13.jpg', '밑반찬 2종 세트', 'sold', NOW()),
+(11, 5, '오늘의 나물 반찬세트', 12000, 7200, 6, 2, '/images/pixabay/banchan/banchan-1141242.jpg', '3가지 제철 나물 반찬 세트', 'active', NOW()),
+(12, 5, '잡채 한 팩', 9000, 5400, 5, 5, '/images/pixabay/banchan/banchan-207235.jpg', '당일 조리 잡채 500g', 'active', NOW()),
+(13, 5, '계란말이 + 진미채', 8000, 4000, 4, 0, '/images/pixabay/banchan/banchan-207242.jpg', '밑반찬 2종 세트', 'sold', NOW()),
 -- 정성반찬가게 (store 6)
-(14, 6, '김치찌개용 김치 1kg', 10000, 6000, 5, 3, '/images/product14.jpg', '숙성 배추김치 1kg', 'active', NOW()),
-(15, 6, '멸치볶음 + 콩자반', 7000, 3500, 6, 6, '/images/product15.jpg', '밑반찬 2종 세트', 'active', NOW()),
-(16, 6, '어제 만든 불고기', 14000, 5600, 2, 2, '/images/product16.jpg', '유통기한 임박 양념 불고기', 'expired', NOW()),
+(14, 6, '김치찌개용 김치 1kg', 10000, 6000, 5, 3, '/images/pixabay/banchan/banchan-2390565.jpg', '숙성 배추김치 1kg', 'active', NOW()),
+(15, 6, '멸치볶음 + 콩자반', 7000, 3500, 6, 6, '/images/pixabay/banchan/banchan-2449656.jpg', '밑반찬 2종 세트', 'active', NOW()),
+(16, 6, '어제 만든 불고기', 14000, 5600, 2, 2, '/images/pixabay/restaurant/restaurant-1284351.jpg', '유통기한 임박 양념 불고기', 'expired', NOW()),
 -- 든든도시락 (store 7)
-(17, 7, '제육볶음 도시락', 8500, 4250, 8, 4, '/images/product17.jpg', '오늘의 제육볶음 도시락', 'active', NOW()),
-(18, 7, '오늘의 도시락 (랜덤)', 7000, 3500, 10, 6, '/images/product18.jpg', '남은 반찬으로 구성한 랜덤 도시락', 'active', NOW()),
-(19, 7, '돈까스 도시락', 9000, 3600, 3, 0, '/images/product19.jpg', '바삭한 돈까스 도시락', 'sold', NOW()),
+(17, 7, '제육볶음 도시락', 8500, 4250, 8, 4, '/images/pixabay/dosirak/dosirak-1702652.jpg', '오늘의 제육볶음 도시락', 'active', NOW()),
+(18, 7, '오늘의 도시락 (랜덤)', 7000, 3500, 10, 6, '/images/pixabay/dosirak/dosirak-1743370.jpg', '남은 반찬으로 구성한 랜덤 도시락', 'active', NOW()),
+(19, 7, '돈까스 도시락', 9000, 3600, 3, 0, '/images/pixabay/dosirak/dosirak-2720481.jpg', '바삭한 돈까스 도시락', 'sold', NOW()),
 -- 매일도시락 용산점 (store 8)
-(20, 8, '샐러드 도시락', 8000, 4800, 5, 2, '/images/product20.jpg', '건강한 샐러드+닭가슴살 도시락', 'active', NOW()),
-(21, 8, '김밥 3줄 세트', 6000, 3000, 6, 3, '/images/product21.jpg', '당일 마감 김밥 3줄', 'active', NOW()),
-(22, 8, '어제 만든 불고기 도시락', 8500, 3400, 2, 2, '/images/product22.jpg', '유통기한 임박 불고기 도시락', 'expired', NOW());
+(20, 8, '샐러드 도시락', 8000, 4800, 5, 2, '/images/pixabay/dosirak/dosirak-2720483.jpg', '건강한 샐러드+닭가슴살 도시락', 'active', NOW()),
+(21, 8, '김밥 3줄 세트', 6000, 3000, 6, 3, '/images/pixabay/dosirak/dosirak-2806566.jpg', '당일 마감 김밥 3줄', 'active', NOW()),
+(22, 8, '어제 만든 불고기 도시락', 8500, 3400, 2, 2, '/images/pixabay/dosirak/dosirak-4933112.jpg', '유통기한 임박 불고기 도시락', 'expired', NOW());
 
 -- ---------------------------------------------------------------------
 -- reservation (상태 다양하게: pending/confirmed/ready/picked/cancelled/noshowed)
