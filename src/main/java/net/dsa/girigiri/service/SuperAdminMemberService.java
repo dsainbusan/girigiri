@@ -132,7 +132,7 @@ public class SuperAdminMemberService {
 			activity.add(new MemberActivityRowDto("문의", i.getTitle(), i.getCreatedAt(), "/superadmin/inquiries/" + i.getId()));
 		}
 		for (ComplaintEntity c : complaintRepository.findByReporterId(userId, byNewest)) {
-			activity.add(new MemberActivityRowDto("신고", c.getReason(), c.getCreatedAt(), "/superadmin/complaints/" + c.getId()));
+			activity.add(new MemberActivityRowDto("환불 신청", c.getReason(), c.getCreatedAt(), "/superadmin/complaints/" + c.getId()));
 		}
 		activity.sort(Comparator.comparing(MemberActivityRowDto::createdAt, Comparator.nullsLast(Comparator.reverseOrder())));
 		return activity;

@@ -33,12 +33,12 @@
   공유하지만 각 탭의 링크가 자기 totalPages 안에서만 생성되므로 탭을 넘나들며 섞이지 않는다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout-admin :: layoutAdmin('신고 · 문의', ~{:: #content}, 'reports', '슈퍼어드민')}">
+      th:replace="~{common/layout-admin :: layoutAdmin('환불 · 문의', ~{:: #content}, 'reports', '슈퍼어드민')}">
 <body>
 <div id="content" th:fragment="content">
 
   <div class="tabs">
-    <a class="tab" th:classappend="${tab == 'report'} ? ' is-active'" th:href="@{/superadmin/reports(tab='report')}">신고 접수</a>
+    <a class="tab" th:classappend="${tab == 'report'} ? ' is-active'" th:href="@{/superadmin/reports(tab='report')}">환불 신청</a>
     <a class="tab" th:classappend="${tab == 'store'} ? ' is-active'" th:href="@{/superadmin/reports(tab='store')}">매장 문의</a>
     <a class="tab" th:classappend="${tab == 'user'} ? ' is-active'" th:href="@{/superadmin/reports(tab='user')}">유저 문의</a>
   </div>
@@ -53,12 +53,12 @@
       </thead>
       <tbody>
         <tr th:if="${#lists.isEmpty(complaints)}">
-          <td colspan="6" class="table-empty">접수된 신고가 없습니다.</td>
+          <td colspan="6" class="table-empty">접수된 환불 신청이 없습니다.</td>
         </tr>
         <tr class="row-clickable" th:each="c : ${complaints}" th:attr="data-href=@{/superadmin/complaints/{id}(id=${c.id})}">
           <td class="cell-name"><a th:href="@{/superadmin/complaints/{id}(id=${c.id})}" th:text="${c.reason}">사유</a></td>
           <td th:text="${c.targetName}">매장명</td>
-          <td th:text="${c.reporterName}">신고자</td>
+          <td th:text="${c.reporterName}">신청자</td>
           <td th:text="${#temporals.format(c.createdAt, 'yyyy-MM-dd')}">2026-08-01</td>
           <td th:text="${c.resolvedAt != null} ? ${#temporals.format(c.resolvedAt, 'yyyy-MM-dd')} : '-'">-</td>
           <!-- 변경됨 (2026-09-22, UI/UX 감사) — 대기 목록에 경과일수가 없어서 오래 방치된 신고가

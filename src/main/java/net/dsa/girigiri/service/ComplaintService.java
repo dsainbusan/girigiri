@@ -49,14 +49,14 @@ public class ComplaintService {
 	 */
 	public String blockedReportMessage(ReservationEntity reservation) {
 		if (!"picked".equals(reservation.getStatus())) {
-			return "픽업 완료된 주문만 신고할 수 있어요.";
+			return "픽업 완료된 주문만 환불 신청할 수 있어요.";
 		}
 		if (reservation.getPickedAt() == null
 				|| Duration.between(reservation.getPickedAt(), LocalDateTime.now()).toHours() >= REPORT_WINDOW_HOURS) {
-			return "픽업 후 " + REPORT_WINDOW_HOURS + "시간이 지나 신고할 수 없어요.";
+			return "픽업 후 " + REPORT_WINDOW_HOURS + "시간이 지나 환불 신청할 수 없어요.";
 		}
 		if (complaintRepository.existsByTargetReservationIdAndStatus(reservation.getId(), ComplaintEntity.STATUS_PENDING)) {
-			return "이미 신고가 접수됐어요. 운영자 처리를 기다려주세요.";
+			return "이미 환불 신청이 접수됐어요. 운영자 처리를 기다려주세요.";
 		}
 		return null;
 	}

@@ -7,7 +7,7 @@
   사유는 storeCancel.html의 칩 프리셋 패턴을 재사용(직접 입력도 가능).
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout :: layout('신고하기', ~{:: #content}, '', false, '', null)}">
+      th:replace="~{common/layout :: layout('환불 신청', ~{:: #content}, '', false, '', null)}">
 <body>
 <div id="content" th:fragment="content" class="page">
 
@@ -21,21 +21,21 @@
 
 	<form th:action="@{/reservation/{id}/report(id=${reservation.id})}" method="post" style="margin-top:var(--s-3)">
 		<div class="field">
-			<label class="field__label">신고 사유</label>
+			<label class="field__label">환불 사유</label>
 			<div class="chip-row" style="flex-wrap:wrap; margin: var(--s-2) 0">
 				<button type="button" class="chip" data-reason="상품 상태 불량">상품 상태 불량</button>
 				<button type="button" class="chip" data-reason="상품 불일치">상품 불일치</button>
 				<button type="button" class="chip" data-reason="매장 응대">매장 응대</button>
 				<button type="button" class="chip" data-reason="">기타 (직접 입력)</button>
 			</div>
-			<input type="text" name="reason" id="reasonInput" class="input" required maxlength="100" placeholder="신고 사유를 골라주세요">
+			<input type="text" name="reason" id="reasonInput" class="input" required maxlength="100" placeholder="환불 사유를 골라주세요">
 		</div>
 		<div class="field" style="margin-top:var(--s-3)">
 			<label class="field__label">상세 내용</label>
 			<textarea name="content" class="input" required maxlength="1000" style="min-height:140px;resize:vertical"
 			          placeholder="무슨 일이 있었는지 자세히 적어주세요"></textarea>
 		</div>
-		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">신고 접수</button>
+		<button type="submit" class="btn btn--block" style="margin-top:var(--s-4)">환불 신청</button>
 	</form>
 
 	<script th:inline="none">

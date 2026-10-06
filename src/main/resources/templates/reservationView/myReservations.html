@@ -16,8 +16,8 @@
 	<!-- 신고 접수 직후 아무 안내 없이 목록으로 돌아가서 접수됐는지 알 수 없다는 피드백으로 추가. 1회성 flash. -->
 	<div th:if="${reportedMessage != null}" class="banner" style="margin-bottom:var(--s-3)">
 		<div>
-			<p class="banner__title">✅ 신고 접수</p>
-			<p class="banner__desc" th:text="${reportedMessage}">신고가 접수됐어요. 운영자가 확인 후 처리할게요.</p>
+			<p class="banner__title">✅ 환불 신청 접수</p>
+			<p class="banner__desc" th:text="${reportedMessage}">환불 신청이 접수됐어요. 운영자가 확인 후 처리할게요.</p>
 		</div>
 	</div>
 
@@ -88,9 +88,9 @@
 				 ReservationService#toListItemDto에서 계산해 내려온다). -->
 			<a th:if="${r.reportBlockedMessage == null}"
 			   th:href="@{/reservation/{id}/report(id=${r.reservationId})}"
-			   class="u-primary" style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">신고하기</a>
+			   class="u-primary" style="font-size:var(--fs-sm);font-weight:var(--fw-bold)">환불 신청</a>
 			<span th:unless="${r.reportBlockedMessage == null}"
-			      class="u-sub" style="font-size:var(--fs-sm)" th:text="${r.reportBlockedMessage}">픽업 완료된 주문만 신고할 수 있어요.</span>
+			      class="u-sub" style="font-size:var(--fs-sm)" th:text="${r.reportBlockedMessage}">픽업 완료된 주문만 환불 신청할 수 있어요.</span>
 
 			<!-- 추가됨 (2026-09-08) — 신고(문제 제기)와 별개로, 단순 질문도 있을 수 있어서
 				 문의 게시판(InquiryController)의 기존 "가게에 문의하기" 흐름을 예약 단위로도 열었다.

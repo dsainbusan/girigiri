@@ -271,7 +271,7 @@ public class SuperAdminDashboardService {
 		List<InquiryEntity> pendingUserInquiries = pendingInquiries.stream().filter(i -> i.getStoreId() == null).toList();
 
 		List<PendingQueueRowDto> rows = new ArrayList<>();
-		rows.add(pendingRow("신고 접수", "i-bell", pendingComplaints.size(),
+		rows.add(pendingRow("환불 신청", "i-bell", pendingComplaints.size(),
 				oldestOf(pendingComplaints.stream().map(ComplaintEntity::getCreatedAt)), now,
 				DashboardPolicy.SLA_REPORT_HOURS, "/superadmin/reports?tab=report", true));
 		rows.add(pendingRow("입점 신청", "i-box", pendingStores.size(),

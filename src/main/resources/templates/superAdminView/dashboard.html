@@ -72,7 +72,7 @@
       <span class="info-row__icon" th:classappend="${row.priority} ? ' info-row__icon--danger'"><svg class="icon"><use th:attr="href='#' + ${row.iconId}"/></svg></span>
       <div class="info-row__body">
         <div class="info-row__title">
-          <span th:text="${row.label}">신고 접수</span>
+          <span th:text="${row.label}">환불 신청</span>
           <span class="badge badge--danger" th:if="${row.priority and row.count > 0}">우선 처리</span>
         </div>
         <div class="info-row__sub"

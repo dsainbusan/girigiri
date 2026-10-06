@@ -37,7 +37,7 @@ public class ReservationReportController {
 	public String reportForm(@PathVariable Long id, HttpSession session, Model model) {
 		ReservationEntity reservation = lookupService.getReservation(id);
 		if (!reservation.getUserId().equals(ReservationController.resolveCurrentUserId(session))) {
-			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
+			throw new ReservationAccessDeniedException("본인 예약만 환불 신청할 수 있어요.");
 		}
 		// 화면에서 버튼을 숨기는 것과 별개로, URL을 직접 쳐서 들어오는 경우까지 서버에서 막는다.
 		String blockedMessage = complaintService.blockedReportMessage(reservation);
@@ -57,7 +57,7 @@ public class ReservationReportController {
 							   RedirectAttributes redirectAttributes) {
 		ReservationEntity reservation = lookupService.getReservation(id);
 		if (!reservation.getUserId().equals(ReservationController.resolveCurrentUserId(session))) {
-			throw new ReservationAccessDeniedException("본인 예약만 신고할 수 있어요.");
+			throw new ReservationAccessDeniedException("본인 예약만 환불 신청할 수 있어요.");
 		}
 		// 폼이 떠 있는 동안 48시간이 지나거나 다른 경로로 먼저 신고가 접수됐을 수 있어 제출 시점에도 재검증한다.
 		String blockedMessage = complaintService.blockedReportMessage(reservation);
@@ -66,7 +66,7 @@ public class ReservationReportController {
 		}
 
 		complaintService.submitFromReservation(reservation, reason, content);
-		redirectAttributes.addFlashAttribute("reportedMessage", "신고가 접수됐어요. 운영자가 확인 후 처리할게요.");
+		redirectAttributes.addFlashAttribute("reportedMessage", "환불 신청이 접수됐어요. 운영자가 확인 후 처리할게요.");
 		return "redirect:/reservation/my";
 	}
 }

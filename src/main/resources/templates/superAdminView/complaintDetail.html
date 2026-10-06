@@ -31,7 +31,7 @@
   새 흐름에서는 더 이상 필요 없다.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{common/layout-admin :: layoutAdmin('신고 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
+      th:replace="~{common/layout-admin :: layoutAdmin('환불 신청 상세', ~{:: #content}, 'reports', '슈퍼어드민')}">
 <body>
 <div id="content" th:fragment="content">
 
@@ -41,20 +41,20 @@
   <div class="info-list" style="margin-top:12px">
     <div class="info-row info-row--stack">
       <div class="flex-row" style="justify-content:space-between">
-        <div class="info-row__title" th:text="${complaint.targetName} + ' 신고 — \'' + ${complaint.reason} + '\''">매장명 신고 — '사유'</div>
+        <div class="info-row__title" th:text="${complaint.targetName} + ' 환불 신청 — \'' + ${complaint.reason} + '\''">매장명 환불 신청 — '사유'</div>
         <span class="badge" th:classappend="${complaint.status == 'RESOLVED'} ? 'badge--success' : 'badge--neutral'"
               th:text="${complaint.status == 'RESOLVED'} ? '처리완료' : '대기'">대기</span>
       </div>
       <div class="info-row__sub">
-        <span>신고자 </span>
-        <a class="link-action" th:if="${complaint.reporterId != null}" th:href="@{/superadmin/members/{id}(id=${complaint.reporterId})}" th:text="${complaint.reporterName}">신고자</a>
-        <span th:unless="${complaint.reporterId != null}" th:text="${complaint.reporterName}">신고자</span>
+        <span>신청자 </span>
+        <a class="link-action" th:if="${complaint.reporterId != null}" th:href="@{/superadmin/members/{id}(id=${complaint.reporterId})}" th:text="${complaint.reporterName}">신청자</a>
+        <span th:unless="${complaint.reporterId != null}" th:text="${complaint.reporterName}">신청자</span>
         <span> · 대상 </span>
         <a class="link-action" th:if="${complaint.targetStoreId != null}" th:href="@{/superadmin/stores/{id}(id=${complaint.targetStoreId})}" th:text="${complaint.targetName}">대상</a>
         <span th:unless="${complaint.targetStoreId != null}" th:text="${complaint.targetName}">대상</span>
         <span th:text="' · ' + ${#temporals.format(complaint.createdAt, 'yyyy-MM-dd HH:mm')} + ' 접수'"></span>
       </div>
-      <div class="info-row__value info-row--pre" th:text="${complaint.content}">신고 내용</div>
+      <div class="info-row__value info-row--pre" th:text="${complaint.content}">환불 신청 내용</div>
     </div>
   </div>
 
@@ -66,7 +66,7 @@
        파랑이 아니라 중립 회색 배지로, 처리 일시·처리자는 아래 작은 글씨로 뺐다. -->
   <div class="reply-box" th:if="${linkedReservation != null}">
     <div class="order-card__head">
-      <div class="reply-box__label">신고 대상 주문</div>
+      <div class="reply-box__label">환불 대상 주문</div>
       <span class="badge"
             th:classappend="${linkedReservation.status == 'picked'} ? 'badge--success'
                           : (${linkedReservation.status == 'cancelled'} ? 'badge--danger'
@@ -108,7 +108,7 @@
       <div class="field-group">
         <label class="field-group__label" for="refundReason">환불 사유</label>
         <input class="field" type="text" id="refundReason" name="reason" maxlength="255" required
-               placeholder="예: 신고 내용 확인 후 환불 처리">
+               placeholder="예: 환불 신청 내용 확인 후 환불 처리">
       </div>
 
       <div class="field-group">
@@ -121,7 +121,7 @@
         </select>
       </div>
       <div class="field-group">
-        <label class="field-group__label" for="refundReplyContent">신고자에게 남길 답변</label>
+        <label class="field-group__label" for="refundReplyContent">신청자에게 남길 답변</label>
         <textarea class="field" id="refundReplyContent" name="replyContent" rows="4" maxlength="1000" required></textarea>
       </div>
 

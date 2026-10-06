@@ -20,6 +20,7 @@ import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.SidoParser;
 import net.dsa.girigiri.util.StoreHoursUtil;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,10 +63,12 @@ public class SuperAdminStoreService {
 	// 추가됨 (2026-09-08) — 왜: 매장 검색 기능 요청. SuperAdminMemberService.findFilteredMembers()와
 	// 같은 자리(필터 전에)에서 걸러낸다 — 매장명/주소/연락처 중 하나라도 검색어를 포함하면 매칭.
 	// 이미 findAll() 후 자바에서 필터링하던 기존 방식 그대로라, 리포지토리 쿼리 메서드는 새로 안 만들었다.
+	// 정렬 추가 (2026-10-07) — 회원 관리(SuperAdminMemberService.findFilteredMembers)는 이미
+	// createdAt desc로 최신순인데 매장 관리만 정렬 없이 findAll() 기본 순서(PK 오름차순)였다. 통일.
 	@Transactional(readOnly = true)
 	public List<StoreEntity> findStores(String q, String normalizedFilter) {
 		String keyword = q == null ? "" : q.trim();
-		List<StoreEntity> all = storeRepository.findAll().stream()
+		List<StoreEntity> all = storeRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
 				.filter(s -> !StoreEntity.STATUS_REJECTED.equals(s.getApprovalStatus()))
 				.filter(s -> keyword.isEmpty() || matchesKeyword(s, keyword))
 				.toList();

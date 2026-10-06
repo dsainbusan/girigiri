@@ -126,17 +126,17 @@
     </div>
   </th:block>
 
-  <h3 class="subhead mt-24">문의 · 신고 내역 <span class="text-muted text-muted--sm">(<span th:text="${memberActivity.size()}">0</span>건)</span></h3>
+  <h3 class="subhead mt-24">문의 · 환불 신청 내역 <span class="text-muted text-muted--sm">(<span th:text="${memberActivity.size()}">0</span>건)</span></h3>
   <div class="info-list">
     <a class="info-row" th:each="a : ${memberActivity}" th:href="@{${a.linkUrl}}">
       <div class="info-row__body">
         <div class="info-row__title" th:text="${a.title}">제목</div>
         <div class="info-row__sub" th:text="${#temporals.format(a.createdAt, 'yyyy-MM-dd')}">2026-08-01</div>
       </div>
-      <span class="badge" th:classappend="${a.label == '신고'} ? 'badge--danger' : 'badge--neutral'" th:text="${a.label}">문의</span>
+      <span class="badge" th:classappend="${a.label == '환불 신청'} ? 'badge--danger' : 'badge--neutral'" th:text="${a.label}">문의</span>
       <span class="info-row__arrow">&rsaquo;</span>
     </a>
-    <p class="text-muted" th:if="${#lists.isEmpty(memberActivity)}" style="padding:16px">문의·신고 내역이 없습니다.</p>
+    <p class="text-muted" th:if="${#lists.isEmpty(memberActivity)}" style="padding:16px">문의·환불 신청 내역이 없습니다.</p>
   </div>
   </div>
 
