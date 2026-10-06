@@ -166,13 +166,13 @@
 		// -> confirm-payment 서버 검증 -> 완료 화면 이동)으로 바꿨다. "예약 확정하기" 버튼도 더 이상
 		// 폼을 제출하지 않는 일반 버튼이라, checkout-form 자체는 productId/quantity를 담아두는
 		// 용도로만 남아있다(실제 전송은 fetch로 함).
-		var reserveBtn = document.getElementById('reserve-confirm-btn');
-		var modal = document.getElementById('cancel-notice-modal');
-		var CANCEL_NOTICE_DISMISS_KEY = 'giriCancelNoticeDismissed';
+		let reserveBtn = document.getElementById('reserve-confirm-btn');
+		let modal = document.getElementById('cancel-notice-modal');
+		let CANCEL_NOTICE_DISMISS_KEY = 'giriCancelNoticeDismissed';
 
 		if (reserveBtn && modal) {
 			reserveBtn.addEventListener('click', function () {
-				var dismissed = false;
+				let dismissed = false;
 				try { dismissed = localStorage.getItem(CANCEL_NOTICE_DISMISS_KEY) === '1'; } catch (e) { /* 프라이빗 모드 등 — 매번 보여주는 쪽이 안전 */ }
 				if (dismissed) {
 					startPayment();
@@ -183,9 +183,9 @@
 		}
 
 		if (modal) {
-			var confirmBtn = document.getElementById('cancel-notice-confirm');
-			var closeBtn = document.getElementById('cancel-notice-close');
-			var dismissCheck = document.getElementById('cancel-notice-dismiss-check');
+			let confirmBtn = document.getElementById('cancel-notice-confirm');
+			let closeBtn = document.getElementById('cancel-notice-close');
+			let dismissCheck = document.getElementById('cancel-notice-dismiss-check');
 
 			confirmBtn.addEventListener('click', function () {
 				if (dismissCheck && dismissCheck.checked) {
@@ -212,31 +212,31 @@
 		// 서버에 바로 알려서, 재고를 즉시 풀어주도록 바꿨다 (스케줄러는 이제 프론트가 못 알리고 그냥
 		// 브라우저를 꺼버린 경우를 위한 안전망으로만 남는다).
 		async function startPayment() {
-			var portOneConfigured = /*[[${portOneConfigured}]]*/ false;
+			let portOneConfigured = /*[[${portOneConfigured}]]*/ false;
 			if (!portOneConfigured) {
 				window.girigiriAlert('결제 시스템이 아직 준비중이에요. 잠시 후 다시 시도해주세요.');
 				return;
 			}
 
-			var productId = /*[[${productId}]]*/ 0;
-			var hiddenInput = document.getElementById('qty-hidden-input');
-			var qty = parseInt(hiddenInput.value, 10);
+			let productId = /*[[${productId}]]*/ 0;
+			let hiddenInput = document.getElementById('qty-hidden-input');
+			let qty = parseInt(hiddenInput.value, 10);
 			// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 드롭다운에서 고른 쿠폰 id. 안 골랐으면 빈
 			// 문자열이라 couponId 파라미터 자체를 아예 안 보낸다(서버는 없으면 null로 받아 기존과 동일하게 동작).
-			var couponSelect = document.getElementById('coupon-select');
-			var couponId = couponSelect ? couponSelect.value : '';
+			let couponSelect = document.getElementById('coupon-select');
+			let couponId = couponSelect ? couponSelect.value : '';
 
 			// prepare()가 성공하면(=재고가 이미 차감된 상태) 이 값이 채워진다. 그 뒤 어디서 실패하든
 			// (결제창 취소, PortOne 호출 자체 오류 등) 이 값이 있으면 releasePending()으로 재고를 바로
 			// 풀어줘야 한다 — 안 그러면 서버의 15분 자동정리 스케줄러가 돌 때까지 재고가 묶여있다.
-			var prepared = null;
+			let prepared = null;
 
 			try {
-				var prepareBody = 'productId=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty);
+				let prepareBody = 'productId=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty);
 				if (couponId) {
 					prepareBody += '&couponId=' + encodeURIComponent(couponId);
 				}
-				var prepareRes = await fetch('/reservation/prepare', {
+				let prepareRes = await fetch('/reservation/prepare', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 					body: prepareBody
@@ -257,10 +257,10 @@
 					return;
 				}
 
-				var storeId = /*[[${portOneStoreId}]]*/ '';
-				var channelKey = /*[[${portOneChannelKey}]]*/ '';
+				let storeId = /*[[${portOneStoreId}]]*/ '';
+				let channelKey = /*[[${portOneChannelKey}]]*/ '';
 
-				var paymentResponse = await PortOne.requestPayment({
+				let paymentResponse = await PortOne.requestPayment({
 					storeId: storeId,
 					channelKey: channelKey,
 					paymentId: prepared.paymentId,
@@ -280,12 +280,12 @@
 					return;
 				}
 
-				var confirmRes = await fetch('/reservation/' + prepared.reservationId + '/confirm-payment', {
+				let confirmRes = await fetch('/reservation/' + prepared.reservationId + '/confirm-payment', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 					body: 'paymentId=' + encodeURIComponent(prepared.paymentId)
 				});
-				var confirmed = await confirmRes.json();
+				let confirmed = await confirmRes.json();
 
 				if (confirmed.success) {
 					// 변경됨 (2026-10-05, 결제완료 뒤로가기 버그 수정) — 왜: location.href로 이동하면
@@ -329,40 +329,40 @@
 			}
 		}
 
-		var soldOut = /*[[${soldOut}]]*/ false;
+		let soldOut = /*[[${soldOut}]]*/ false;
 		if (soldOut) { return; }   // 품절이면 이 아래 카드들 자체가 화면에 없으니 아무것도 안 한다
 
 		// 수정됨 (2026-09-28, 채채 확인 — 수량 이중 선택 UX 문제) — 왜: 수량은 더 이상 이 화면에서
 		// 조작하지 않는다(상세 페이지에서 고른 값을 hidden input(qty-hidden-input)에 그대로 담아
 		// 서버가 넘겨준 ${quantity}로 고정). 그래서 qty는 이제 쿠폰 선택에 따른 결제 예정 금액
 		// 미리보기 계산에만 쓰이고, +/- 버튼·직접입력·수량 clamp 로직은 전부 지웠다.
-		var qty = /*[[${quantity}]]*/ 1;
-		var unitPrice = /*[[${discountedPrice}]]*/ 0;
-		var totalEl = document.getElementById('total-price-display');
+		let qty = /*[[${quantity}]]*/ 1;
+		let unitPrice = /*[[${discountedPrice}]]*/ 0;
+		let totalEl = document.getElementById('total-price-display');
 		// 수정됨 (2026-09-28, 채채 확인 — 세로 영수증 형태로 변경) — "쿠폰 할인" 줄 자체를 있을 때만
 		// 보여주고(display none/flex 토글), 값은 discount-price-display에 넣는다. subtotal-price-display
 		// ("상품 금액")는 쿠폰과 무관하게 항상 같은 값이라 Thymeleaf가 이미 서버에서 렌더링해뒀고
 		// JS에서 따로 갱신하지 않는다.
-		var discountRowEl = document.getElementById('discount-row');
-		var discountPriceEl = document.getElementById('discount-price-display');
+		let discountRowEl = document.getElementById('discount-row');
+		let discountPriceEl = document.getElementById('discount-price-display');
 		// 추가됨 (2026-09-07, 체크아웃 쿠폰 연동) — 화면 표시용 할인 미리보기 계산에만 쓴다.
 		// 실제 최종 결제금액은 이 값을 그대로 믿지 않고 /reservation/prepare에서 서버가 다시 계산해서
 		// 확정한다(위 startPayment 참고) — 여기서 discountRate를 조작해도 실제 결제금액엔 영향 없다.
-		var couponSelectEl = document.getElementById('coupon-select');
-		var couponDiscountEl = document.getElementById('coupon-discount-display');
+		let couponSelectEl = document.getElementById('coupon-select');
+		let couponDiscountEl = document.getElementById('coupon-discount-display');
 
 		function selectedCouponRate() {
 			if (!couponSelectEl || !couponSelectEl.value) { return 0; }
-			var selectedOption = couponSelectEl.options[couponSelectEl.selectedIndex];
-			var match = selectedOption.textContent.match(/^(\d+)%/);
+			let selectedOption = couponSelectEl.options[couponSelectEl.selectedIndex];
+			let match = selectedOption.textContent.match(/^(\d+)%/);
 			return match ? parseInt(match[1], 10) : 0;
 		}
 
 		function render() {
-			var subtotal = unitPrice * qty;
-			var rate = selectedCouponRate();
-			var discountAmount = Math.floor(subtotal * rate / 100);
-			var finalTotal = Math.max(subtotal - discountAmount, 0);
+			let subtotal = unitPrice * qty;
+			let rate = selectedCouponRate();
+			let discountAmount = Math.floor(subtotal * rate / 100);
+			let finalTotal = Math.max(subtotal - discountAmount, 0);
 			totalEl.textContent = finalTotal.toLocaleString() + '원';
 			if (discountRowEl && discountPriceEl) {
 				if (rate > 0) {

@@ -172,12 +172,12 @@
      서버 왕복 없이 이미 렌더된 목록을 data-category로 보이기/숨기기만 한다. */-->
 <script>
   (function () {
-    var openBtn = document.getElementById('admin-notif-open');
-    var closeBtn = document.getElementById('admin-drawer-close');
-    var drawer = document.getElementById('admin-drawer');
-    var backdrop = document.getElementById('admin-drawer-backdrop');
+    let openBtn = document.getElementById('admin-notif-open');
+    let closeBtn = document.getElementById('admin-drawer-close');
+    let drawer = document.getElementById('admin-drawer');
+    let backdrop = document.getElementById('admin-drawer-backdrop');
 
-    var toggleDrawer = function (open) {
+    let toggleDrawer = function (open) {
       drawer.classList.toggle('is-open', open);
       backdrop.classList.toggle('is-open', open);
     };
@@ -186,20 +186,20 @@
     if (backdrop) backdrop.addEventListener('click', function () { toggleDrawer(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleDrawer(false); });
 
-    var tabButtons = document.querySelectorAll('[data-notif-tab]');
+    let tabButtons = document.querySelectorAll('[data-notif-tab]');
     tabButtons.forEach(function (btn) {
       btn.addEventListener('click', function () {
         tabButtons.forEach(function (b) { b.classList.remove('is-active'); });
         btn.classList.add('is-active');
-        var category = btn.getAttribute('data-notif-tab');
+        let category = btn.getAttribute('data-notif-tab');
 
         document.querySelectorAll('.noti').forEach(function (row) {
-          var show = category === 'ALL' || row.getAttribute('data-category') === category;
+          let show = category === 'ALL' || row.getAttribute('data-category') === category;
           row.style.display = show ? '' : 'none';
         });
         document.querySelectorAll('.noti-date').forEach(function (heading) {
-          var group = heading.nextElementSibling;
-          var visible = false;
+          let group = heading.nextElementSibling;
+          let visible = false;
           while (group && group.classList && group.classList.contains('noti')) {
             if (group.style.display !== 'none') { visible = true; }
             group = group.nextElementSibling;

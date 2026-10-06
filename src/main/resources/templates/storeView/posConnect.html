@@ -170,7 +170,7 @@
 	     동일하게 대시보드로 고정한다. -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) { return; }
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
@@ -180,11 +180,11 @@
 	// 그 id의 전체 설명을 펼치고/접고, 버튼 라벨도 "자세히 보기" ↔ "접기"로 바꾼다.
 	(function () {
 		document.querySelectorAll('[data-info-toggle]').forEach(function (btn) {
-			var target = document.getElementById(btn.getAttribute('data-info-toggle'));
-			var label = btn.querySelector('span');
+			let target = document.getElementById(btn.getAttribute('data-info-toggle'));
+			let label = btn.querySelector('span');
 			if (!target || !label) { return; }
 			btn.addEventListener('click', function () {
-				var open = target.classList.toggle('is-hidden') === false;
+				let open = target.classList.toggle('is-hidden') === false;
 				btn.classList.toggle('is-open', open);
 				label.textContent = open ? '접기' : '자세히 보기';
 			});

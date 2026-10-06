@@ -50,18 +50,18 @@
 	*/-->
 	<script th:inline="none">
 		(function () {
-			var KEY = "girigiri.rememberedEmail";
-			var email = document.getElementById("email");
-			var check = document.getElementById("rememberEmail");
+			let KEY = "girigiri.rememberedEmail";
+			let email = document.getElementById("email");
+			let check = document.getElementById("rememberEmail");
 			if (!email || !check) { return; }
-			var form = email.closest("form");
+			let form = email.closest("form");
 
 			try {
-				var saved = localStorage.getItem(KEY);
+				let saved = localStorage.getItem(KEY);
 				if (saved) {
 					email.value = saved;
 					check.checked = true;
-					var pw = document.getElementById("password");
+					let pw = document.getElementById("password");
 					if (pw) { pw.focus(); }
 				}
 			} catch (e) { /* localStorage 차단 환경 — 무시 */ }

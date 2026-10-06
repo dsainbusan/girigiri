@@ -294,32 +294,32 @@
 	<script th:inline="none">
 	(function () {
 		// 하단 탭바가 없는 화면이므로 레이아웃 기본 하단 여백 제거
-		var main = document.querySelector('.app__main');
+		let main = document.querySelector('.app__main');
 		if (main) { main.style.paddingBottom = '0px'; }
 
 		// 뒤로가기 버튼 -> /store/dashboard
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (back) {
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/store/dashboard'; });
 		}
 
-		var salesHero = document.getElementById('sales-hero');
-		var salesBody = document.getElementById('sales-body');
+		let salesHero = document.getElementById('sales-hero');
+		let salesBody = document.getElementById('sales-body');
 
 		// 차트 y축 눈금 계산 — #sales-body가 AJAX로 통째로 갈아끼워질 때마다 다시 불러야 해서 함수로 뺐다.
 		// aria-pressed 갱신은 함수 밖 위임 클릭 리스너가 담당(차트 DOM 자체가 매번 새로 생기므로).
 		function initChart() {
-			var chart = document.querySelector('.dash-chart');
+			let chart = document.querySelector('.dash-chart');
 			if (!chart) return;
-			var cols = chart.querySelectorAll('.bar-chart__col');
-			var maxVal = 0;
+			let cols = chart.querySelectorAll('.bar-chart__col');
+			let maxVal = 0;
 			cols.forEach(function (col) {
-				var tot = parseInt(col.getAttribute('data-total') || '0', 10);
+				let tot = parseInt(col.getAttribute('data-total') || '0', 10);
 				if (tot > maxVal) maxVal = tot;
 			});
-			var maxSpan = chart.querySelector('.dash-chart__axis .is-max');
-			var midSpan = chart.querySelector('.dash-chart__axis .is-mid');
+			let maxSpan = chart.querySelector('.dash-chart__axis .is-max');
+			let midSpan = chart.querySelector('.dash-chart__axis .is-mid');
 			if (maxVal > 0) {
 				if (maxSpan) { maxSpan.textContent = maxVal; maxSpan.classList.remove('is-hidden'); }
 				if (midSpan) {
@@ -360,9 +360,9 @@
 			fetch(url, { credentials: 'same-origin' })
 				.then(function (res) { return res.ok ? res.text() : Promise.reject(new Error('요청 실패')); })
 				.then(function (html) {
-					var doc = new DOMParser().parseFromString(html, 'text/html');
-					var freshHero = doc.getElementById('sales-hero');
-					var freshBody = doc.getElementById('sales-body');
+					let doc = new DOMParser().parseFromString(html, 'text/html');
+					let freshHero = doc.getElementById('sales-hero');
+					let freshBody = doc.getElementById('sales-body');
 					if (salesHero && freshHero) { salesHero.innerHTML = freshHero.innerHTML; }
 					if (salesBody && freshBody) { salesBody.innerHTML = freshBody.innerHTML; }
 					if (pushHistory) { history.pushState(null, '', url); }
@@ -376,20 +376,20 @@
 
 		document.addEventListener('click', function (e) {
 			// 기간 프리셋 pill(오늘/이번 주/지난 주)
-			var pill = e.target.closest('[data-period]');
+			let pill = e.target.closest('[data-period]');
 			if (pill) {
 				fetchAndSwap('/store/sales-report?period=' + encodeURIComponent(pill.getAttribute('data-period')));
 				return;
 			}
 			// "직접 선택" 토글 — #sales-body가 갈아끼워지므로 위임으로 처리.
 			if (e.target.closest('#sales-range-toggle')) {
-				var toggleBtn = document.getElementById('sales-range-toggle');
-				var rangeForm = document.getElementById('sales-range-form');
+				let toggleBtn = document.getElementById('sales-range-toggle');
+				let rangeForm = document.getElementById('sales-range-form');
 				if (rangeForm) {
-					var opened = rangeForm.classList.toggle('is-hidden') === false;
+					let opened = rangeForm.classList.toggle('is-hidden') === false;
 					if (toggleBtn) { toggleBtn.setAttribute('aria-expanded', opened); }
 					if (opened) {
-						var first = rangeForm.querySelector('input[name="from"]');
+						let first = rangeForm.querySelector('input[name="from"]');
 						if (first) { first.focus(); }
 					}
 				}
@@ -397,11 +397,11 @@
 		});
 
 		document.addEventListener('submit', function (e) {
-			var form = e.target.closest('#sales-range-form');
+			let form = e.target.closest('#sales-range-form');
 			if (!form) return;
 			e.preventDefault();
-			var from = form.querySelector('input[name="from"]').value;
-			var to = form.querySelector('input[name="to"]').value;
+			let from = form.querySelector('input[name="from"]').value;
+			let to = form.querySelector('input[name="to"]').value;
 			if (!from || !to) return;
 			fetchAndSwap('/store/sales-report?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
 		});

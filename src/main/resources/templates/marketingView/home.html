@@ -277,9 +277,9 @@
      처리. prefers-reduced-motion: reduce인 사용자에게는 재생을 멈추고 포스터 프레임만 보여준다. -->
 <script>
 	(function () {
-		var video = document.querySelector('.mkt-mock__video');
+		let video = document.querySelector('.mkt-mock__video');
 		if (!video) return;
-		var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+		let reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 		if (reduceMotion.matches) {
 			video.pause();
 			video.removeAttribute('autoplay');

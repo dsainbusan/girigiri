@@ -182,15 +182,15 @@
 
 	<script>
 		(function () {
-			var input = document.getElementById('image');
-			var preview = document.getElementById('imagePreview');
-			var hint = document.getElementById('uploaderHint');
-			var removeBtn = document.getElementById('imageRemoveBtn');
-			var removeFlag = document.getElementById('removeImage');
+			let input = document.getElementById('image');
+			let preview = document.getElementById('imagePreview');
+			let hint = document.getElementById('uploaderHint');
+			let removeBtn = document.getElementById('imageRemoveBtn');
+			let removeFlag = document.getElementById('removeImage');
 
 			if (input) {
 				input.addEventListener('change', function () {
-					var file = input.files && input.files[0];
+					let file = input.files && input.files[0];
 					if (!file) return;
 					preview.src = URL.createObjectURL(file);
 					preview.classList.remove('is-hidden');
@@ -231,15 +231,15 @@
 	     "포커스할 수 없다"며 아예 제출 자체를 막아버린다). -->
 	<script>
 		(function () {
-			var select = document.getElementById('menuItemSelect');
+			let select = document.getElementById('menuItemSelect');
 			if (!select) return;
 
-			var nameInput = document.getElementById('name');
-			var priceInput = document.getElementById('originalPrice');
-			var currentImageUrl = document.getElementById('currentImageUrl');
-			var preview = document.getElementById('imagePreview');
-			var hint = document.getElementById('uploaderHint');
-			var backBtn = document.getElementById('backToListBtn');
+			let nameInput = document.getElementById('name');
+			let priceInput = document.getElementById('originalPrice');
+			let currentImageUrl = document.getElementById('currentImageUrl');
+			let preview = document.getElementById('imagePreview');
+			let hint = document.getElementById('uploaderHint');
+			let backBtn = document.getElementById('backToListBtn');
 
 			function showCustomInput() {
 				select.style.display = 'none';
@@ -260,7 +260,7 @@
 			}
 
 			select.addEventListener('change', function () {
-				var option = select.options[select.selectedIndex];
+				let option = select.options[select.selectedIndex];
 				if (option.value === '__custom__') {
 					showCustomInput();
 					return;
@@ -269,7 +269,7 @@
 				nameInput.value = option.getAttribute('data-name') || '';
 				priceInput.value = option.getAttribute('data-price') || '';
 
-				var imageUrl = option.getAttribute('data-image');
+				let imageUrl = option.getAttribute('data-image');
 				if (currentImageUrl) currentImageUrl.value = imageUrl || '';
 				if (preview && hint) {
 					if (imageUrl) {
@@ -296,21 +296,21 @@
 	     부가 기능이라 실패해도 상품 등록 자체는 그대로 가능해야 한다. -->
 	<script>
 		(function () {
-			var input = document.getElementById('image');
-			var nameInput = document.getElementById('name');
-			var loading = document.getElementById('photoTagLoading');
-			var hint = document.getElementById('photoTagHint');
-			var categorySpan = document.getElementById('photoTagCategory');
-			var nameSpan = document.getElementById('photoTagName');
+			let input = document.getElementById('image');
+			let nameInput = document.getElementById('name');
+			let loading = document.getElementById('photoTagLoading');
+			let hint = document.getElementById('photoTagHint');
+			let categorySpan = document.getElementById('photoTagCategory');
+			let nameSpan = document.getElementById('photoTagName');
 			if (!input || !nameInput || !loading || !hint) return;
 
 			input.addEventListener('change', function () {
-				var file = input.files && input.files[0];
+				let file = input.files && input.files[0];
 				hint.classList.add('is-hidden');
 				if (!file) return;
 
 				loading.classList.remove('is-hidden');
-				var formData = new FormData();
+				let formData = new FormData();
 				formData.append('image', file);
 
 				fetch('/api/store/products/photo-tag', { method: 'POST', body: formData })
@@ -340,24 +340,24 @@
 	<!-- 추가됨 (2026-09-22, UI/UX 감사) — 원가·할인율 실시간 예상 판매가 미리보기. -->
 	<script>
 		(function () {
-			var originalInput = document.getElementById('originalPrice');
-			var discountInput = document.getElementById('discountRate');
-			var preview = document.getElementById('expected-price-preview');
+			let originalInput = document.getElementById('originalPrice');
+			let discountInput = document.getElementById('discountRate');
+			let preview = document.getElementById('expected-price-preview');
 			if (!originalInput || !discountInput || !preview) return;
 
-			var DEFAULT_RATE = 20; // 서버 자동계산의 "그 외" 구간 기본값 — 정확한 값은 마감시간에 따라 서버가 계산.
+			let DEFAULT_RATE = 20; // 서버 자동계산의 "그 외" 구간 기본값 — 정확한 값은 마감시간에 따라 서버가 계산.
 
 			function render() {
-				var original = parseInt(originalInput.value, 10);
+				let original = parseInt(originalInput.value, 10);
 				if (!original || original <= 0) {
 					preview.textContent = '';
 					return;
 				}
-				var rateInput = parseInt(discountInput.value, 10);
-				var hasExplicitRate = discountInput.value.trim() !== '' && !isNaN(rateInput);
-				var rate = hasExplicitRate ? rateInput : DEFAULT_RATE;
-				var expected = Math.round(original * (1 - rate / 100));
-				var label = hasExplicitRate
+				let rateInput = parseInt(discountInput.value, 10);
+				let hasExplicitRate = discountInput.value.trim() !== '' && !isNaN(rateInput);
+				let rate = hasExplicitRate ? rateInput : DEFAULT_RATE;
+				let expected = Math.round(original * (1 - rate / 100));
+				let label = hasExplicitRate
 					? '예상 판매가 ' + expected.toLocaleString() + '원'
 					: '예상 판매가 ' + expected.toLocaleString() + '원 (자동 -' + rate + '% 기준 예시 — 마감시간에 따라 달라질 수 있어요)';
 				preview.textContent = label;

@@ -87,18 +87,18 @@
 		(function () {
 			// mode/endpoint는 호출부(mypage.html/marketingView/home.html)가 넘겨준 값을 그대로
 			// 문자열로 굳힌다 — 아래 로직은 이 두 값만 다르고 나머지는 완전히 동일하다.
-			var CHAT_ENDPOINT = /*[[${endpoint}]]*/ '/mypage/chat/message';
+			let CHAT_ENDPOINT = /*[[${endpoint}]]*/ '/mypage/chat/message';
 
-			var chatHistory = [];
-			var panel = document.getElementById('chat-panel');
-			var fabBtn = document.getElementById('chat-fab-btn');
-			var closeBtn = document.getElementById('chat-close-btn');
-			var resetBtn = document.getElementById('chat-reset-btn');
-			var messagesEl = document.getElementById('chat-messages');
-			var form = document.getElementById('chat-form');
-			var input = document.getElementById('chat-input');
-			var sendBtn = document.getElementById('chat-send-btn');
-			var greetingText = messagesEl.textContent.trim();
+			let chatHistory = [];
+			let panel = document.getElementById('chat-panel');
+			let fabBtn = document.getElementById('chat-fab-btn');
+			let closeBtn = document.getElementById('chat-close-btn');
+			let resetBtn = document.getElementById('chat-reset-btn');
+			let messagesEl = document.getElementById('chat-messages');
+			let form = document.getElementById('chat-form');
+			let input = document.getElementById('chat-input');
+			let sendBtn = document.getElementById('chat-send-btn');
+			let greetingText = messagesEl.textContent.trim();
 
 			if (!panel || !fabBtn) { return; }
 
@@ -122,7 +122,7 @@
 			}
 
 			function appendMessage(who, text) {
-				var bubble = document.createElement('div');
+				let bubble = document.createElement('div');
 				bubble.className = who === 'user' ? 'chat-bubble chat-bubble--user' : 'chat-bubble chat-bubble--bot';
 				bubble.textContent = text;
 				messagesEl.appendChild(bubble);
@@ -134,7 +134,7 @@
 			// 텍스트 대신 점 3개가 통통 튀는 CSS 애니메이션을 넣는다. 응답이 오면 아래 fetch 로직이
 			// 그대로 loadingBubble.textContent를 덮어써서 이 마크업이 자연스럽게 답변 텍스트로 바뀐다.
 			function appendLoadingBubble() {
-				var bubble = document.createElement('div');
+				let bubble = document.createElement('div');
 				bubble.className = 'chat-bubble chat-bubble--bot';
 				bubble.innerHTML = '<span class="chat-typing"><span></span><span></span><span></span></span>';
 				messagesEl.appendChild(bubble);
@@ -153,7 +153,7 @@
 			// 로직을 중복 구현하지 않기 위함.
 			window.girigiriOpenChat = openPanel;
 
-			var chatbotRow = document.getElementById('btn-open-chatbot-row');
+			let chatbotRow = document.getElementById('btn-open-chatbot-row');
 			if (chatbotRow) {
 				chatbotRow.addEventListener('click', openPanel);
 			}
@@ -172,7 +172,7 @@
 			// 추가됨 (2026-09-15, WBS "빠른 질문(퀵 리플라이) 버튼 노출") — 버튼을 누르면 그 질문을
 			// 입력창에 채우고 채팅 폼을 그대로 제출한다. 실제 전송/로딩/에러 처리는 전부 아래 form의
 			// submit 핸들러를 그대로 타므로 별도 전송 로직을 새로 만들지 않는다.
-			var quickReplyButtons = document.querySelectorAll('.chat-quick-reply');
+			let quickReplyButtons = document.querySelectorAll('.chat-quick-reply');
 			quickReplyButtons.forEach(function (btn) {
 				btn.addEventListener('click', function () {
 					if (sendBtn.disabled) { return; } // 이미 답변 기다리는 중이면 무시
@@ -184,7 +184,7 @@
 			form.addEventListener('submit', async function (e) {
 				e.preventDefault();
 				if (sendBtn.disabled) { return; } // 이미 응답 기다리는 중이면 무시 (중복 제출 방지)
-				var text = input.value.trim();
+				let text = input.value.trim();
 				if (!text) {
 					// (WBS "빈 메시지 전송 방지") — 서버(ChatService)도 한 번 더 막아주지만, 프론트에서
 					// 아예 안 보내는 게 더 빠르고, alert로 명확하게 안내한다.
@@ -194,11 +194,11 @@
 
 				appendMessage('user', text);
 				input.value = '';
-				var loadingBubble = appendLoadingBubble();
+				let loadingBubble = appendLoadingBubble();
 				setSending(true);
 
 				try {
-					var res = await fetch(CHAT_ENDPOINT, {
+					let res = await fetch(CHAT_ENDPOINT, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ message: text, history: chatHistory })
@@ -209,7 +209,7 @@
 						return;
 					}
 
-					var data = await res.json();
+					let data = await res.json();
 					if (data.success) {
 						loadingBubble.textContent = data.reply;
 						chatHistory.push({ role: 'user', content: text });

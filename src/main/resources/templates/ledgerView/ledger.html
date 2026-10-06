@@ -677,23 +677,23 @@
 			// 이번 달 절약액 카운트업 + 목표 게이지 채우기 — 로그인 세션 안에서 가계부를 "처음" 열 때만
 			// 재생한다. 매번 재생하면(뒤로가기로 왔다갔다할 때마다) 피곤하다는 피드백으로, sessionStorage
 			// 플래그로 한 번만 보여주고 그 다음부터는 바로 최종 값을 보여준다.
-			var ANIMATE_ONCE_KEY = 'ledgerAnimatedOnce';
-			var shouldAnimate = false;
+			let ANIMATE_ONCE_KEY = 'ledgerAnimatedOnce';
+			let shouldAnimate = false;
 			try { shouldAnimate = !sessionStorage.getItem(ANIMATE_ONCE_KEY); } catch (e) { /* 시크릿 모드 등 */ }
 			if (shouldAnimate) {
 				try { sessionStorage.setItem(ANIMATE_ONCE_KEY, '1'); } catch (e) { /* no-op */ }
 			}
 
-			var heroAmountEl = document.getElementById('hero-amount-value');
+			let heroAmountEl = document.getElementById('hero-amount-value');
 			if (heroAmountEl) {
-				var targetAmount = parseInt(heroAmountEl.getAttribute('data-amount'), 10) || 0;
+				let targetAmount = parseInt(heroAmountEl.getAttribute('data-amount'), 10) || 0;
 				if (shouldAnimate && targetAmount > 0) {
-					var start = null;
-					var duration = 500;
+					let start = null;
+					let duration = 500;
 					function stepAmount(timestamp) {
 						if (start === null) { start = timestamp; }
-						var progress = Math.min(1, (timestamp - start) / duration);
-						var current = Math.round(targetAmount * progress);
+						let progress = Math.min(1, (timestamp - start) / duration);
+						let current = Math.round(targetAmount * progress);
 						heroAmountEl.textContent = current.toLocaleString('ko-KR') + '원';
 						if (progress < 1) { requestAnimationFrame(stepAmount); }
 					}
@@ -702,17 +702,17 @@
 				// shouldAnimate가 false거나 목표가 0원이면 서버가 렌더한 최종 값을 그대로 둔다.
 			}
 
-			var heroGoalBar = document.getElementById('hero-goal-bar');
+			let heroGoalBar = document.getElementById('hero-goal-bar');
 			if (heroGoalBar && shouldAnimate) {
-				var targetPercent = parseInt(heroGoalBar.getAttribute('data-target-percent'), 10) || 0;
+				let targetPercent = parseInt(heroGoalBar.getAttribute('data-target-percent'), 10) || 0;
 				heroGoalBar.style.width = '0%';
 				void heroGoalBar.offsetWidth; // 강제 리플로우 — 이게 없으면 0%->목표% 변경이 한 프레임에 합쳐져서 트랜지션이 안 보인다.
 				heroGoalBar.style.width = targetPercent + '%';
 			}
 
 			document.querySelectorAll('.seg-tabs').forEach(function (group) {
-				var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
-				var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('data-target')); });
+				let tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
+				let panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('data-target')); });
 				tabs.forEach(function (tab, i) {
 					tab.addEventListener('click', function () {
 						tabs.forEach(function (t) { t.classList.remove('is-active'); });
@@ -727,34 +727,34 @@
 			// 이동하는 모든 경로가 먼저 "상세" 섹션 자체를 펼쳐야 한다 — 안 그러면 하위 탭은 전환되지만
 			// 부모인 panel-detail이 여전히 숨겨져 있어 화면엔 아무 변화가 없어 보인다.
 			function showDetailSection() {
-				var detailTab = document.querySelector('.seg-tab[data-target="panel-detail"]');
+				let detailTab = document.querySelector('.seg-tab[data-target="panel-detail"]');
 				if (detailTab && !detailTab.classList.contains('is-active')) { detailTab.click(); }
 			}
 
-			var params = new URLSearchParams(location.search);
-			var targetTab = params.get('tab');
+			let params = new URLSearchParams(location.search);
+			let targetTab = params.get('tab');
 			if (targetTab === 'goal') {
 				showDetailSection();
-				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
+				let goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
 				if (goalTab) { goalTab.click(); }
 			} else if (targetTab === 'badge') {
 				showDetailSection();
-				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
+				let badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
 				if (badgeTab) { badgeTab.click(); }
 			}
 
 			// 목표를 최소 금액(1만원) 미만으로 저장하려다 서버에서 막힌 경우 안내 문구 표시.
 			if (params.get('error') === 'goalTooLow') {
-				var goalTooLowMsg = document.getElementById('goal-too-low-msg');
+				let goalTooLowMsg = document.getElementById('goal-too-low-msg');
 				if (goalTooLowMsg) { goalTooLowMsg.classList.remove('is-hidden'); }
 			}
 
 			// 히어로 카드의 목표 줄(div[role=button]) — 눌러서 바로 "목표" 탭으로 이동 + 입력창 포커스.
-			var heroGoalBtn = document.getElementById('hero-goal-btn');
-			var goalInput = document.getElementById('goalAmount');
+			let heroGoalBtn = document.getElementById('hero-goal-btn');
+			let goalInput = document.getElementById('goalAmount');
 			function jumpToGoalTab() {
 				showDetailSection();
-				var goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
+				let goalTab = document.querySelector('.seg-tab[data-target="panel-goal"]');
 				if (goalTab) { goalTab.click(); }
 				if (goalInput) {
 					goalInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -772,12 +772,12 @@
 			}
 
 			// 히어로 카드의 대표 뱃지 칩 — 눌러서 "뱃지" 탭으로 이동 + 그 위치로 스크롤.
-			var heroBadgeChip = document.getElementById('hero-badge-chip');
+			let heroBadgeChip = document.getElementById('hero-badge-chip');
 			function jumpToBadgeTab() {
 				showDetailSection();
-				var badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
+				let badgeTab = document.querySelector('.seg-tab[data-target="panel-badge"]');
 				if (badgeTab) { badgeTab.click(); }
-				var badgePanel = document.getElementById('panel-badge');
+				let badgePanel = document.getElementById('panel-badge');
 				if (badgePanel) { badgePanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 			}
 			if (heroBadgeChip) {
@@ -791,17 +791,17 @@
 			}
 
 			// 히어로 카드의 "상세 보기 ›" 클릭 시 상세 섹션 펼치기
-			var heroMoreBtn = document.getElementById('hero-more-btn');
+			let heroMoreBtn = document.getElementById('hero-more-btn');
 			if (heroMoreBtn) {
 				heroMoreBtn.addEventListener('click', showDetailSection);
 			}
 
 			// 내보내기: "기간 선택 PDF" 클릭 시 아래 날짜 선택 폼 토글 (목업 구현)
-			var rangeBtn = document.getElementById('ledger-pdf-range-btn');
-			var rangeForm = document.getElementById('ledger-pdf-range-form');
+			let rangeBtn = document.getElementById('ledger-pdf-range-btn');
+			let rangeForm = document.getElementById('ledger-pdf-range-form');
 			if (rangeBtn && rangeForm) {
 				rangeBtn.addEventListener('click', function () {
-					var isHidden = rangeForm.classList.contains('is-hidden');
+					let isHidden = rangeForm.classList.contains('is-hidden');
 					if (isHidden) {
 						rangeForm.classList.remove('is-hidden');
 						rangeBtn.classList.add('is-active');
@@ -817,16 +817,16 @@
 			// 히어로 카드의 이번 달 절약/누적 절약/절약률 — 각각 관련 탭으로 바로 이동.
 			function jumpToHistoryTab() {
 				showDetailSection();
-				var tab = document.querySelector('.seg-tab[data-target="panel-history"]');
+				let tab = document.querySelector('.seg-tab[data-target="panel-history"]');
 				if (tab) { tab.click(); }
-				var panel = document.getElementById('panel-history');
+				let panel = document.getElementById('panel-history');
 				if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 			}
 			function jumpToCategoryTab() {
 				showDetailSection();
-				var tab = document.querySelector('.seg-tab[data-target="panel-category"]');
+				let tab = document.querySelector('.seg-tab[data-target="panel-category"]');
 				if (tab) { tab.click(); }
-				var panel = document.getElementById('panel-category');
+				let panel = document.getElementById('panel-category');
 				if (panel) { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 			}
 			function bindClickAndKeydown(el, handler) {
@@ -841,23 +841,23 @@
 			}
 
 			// 월별 내역 필터링 (전체 / 이번 달 / 지난달 칩 + 연도·월 분리 선택 + 그래프 막대 클릭 공용)
-			var historyCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-card'));
-			var historyChips = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-chip'));
-			var yearSelect = document.getElementById('history-year-select');
-			var monthSelect = document.getElementById('history-month-select');
-			var summaryTitle = document.getElementById('history-summary-title');
-			var visibleCountEl = document.getElementById('history-visible-count');
-			var historyMonthEmpty = document.getElementById('history-month-empty');
+			let historyCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-card'));
+			let historyChips = Array.prototype.slice.call(document.querySelectorAll('.ledger-history-chip'));
+			let yearSelect = document.getElementById('history-year-select');
+			let monthSelect = document.getElementById('history-month-select');
+			let summaryTitle = document.getElementById('history-summary-title');
+			let visibleCountEl = document.getElementById('history-visible-count');
+			let historyMonthEmpty = document.getElementById('history-month-empty');
 
-			var now = new Date();
-			var curYear = String(now.getFullYear());
-			var curMonth = String(now.getMonth() + 1).padStart(2, '0');
-			var thisMonthPrefix = curYear + '.' + curMonth;
+			let now = new Date();
+			let curYear = String(now.getFullYear());
+			let curMonth = String(now.getMonth() + 1).padStart(2, '0');
+			let thisMonthPrefix = curYear + '.' + curMonth;
 
-			var lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-			var lastYear = String(lastMonthDate.getFullYear());
-			var lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
-			var lastMonthPrefix = lastYear + '.' + lastMonth;
+			let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+			let lastYear = String(lastMonthDate.getFullYear());
+			let lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+			let lastMonthPrefix = lastYear + '.' + lastMonth;
 
 			function filterHistory(filterMode, customLabel) {
 				// 칩 활성화 상태 업데이트
@@ -865,8 +865,8 @@
 					chip.classList.toggle('is-active', chip.getAttribute('data-filter') === filterMode);
 				});
 
-				var targetPrefix = '';
-				var labelText = '전체 내역';
+				let targetPrefix = '';
+				let labelText = '전체 내역';
 
 				if (filterMode === 'all') {
 					if (yearSelect) { yearSelect.value = curYear; }
@@ -889,8 +889,8 @@
 					if (monthSelect) { monthSelect.value = lastMonth; }
 					labelText = lastYear + '년 ' + parseInt(lastMonth, 10) + '월 내역 (지난달)';
 				} else if (filterMode === 'date-select') {
-					var y = yearSelect ? yearSelect.value : curYear;
-					var m = monthSelect ? monthSelect.value : 'all';
+					let y = yearSelect ? yearSelect.value : curYear;
+					let m = monthSelect ? monthSelect.value : 'all';
 					if (m === 'all') {
 						targetPrefix = y + '.';
 						labelText = y + '년 전체 내역';
@@ -901,16 +901,16 @@
 
 					// 선택한 연도/월이 이번 달 또는 지난달과 같으면 칩 활성화
 					if (targetPrefix === thisMonthPrefix) {
-						var tmChip = document.querySelector('.ledger-history-chip[data-filter="this-month"]');
+						let tmChip = document.querySelector('.ledger-history-chip[data-filter="this-month"]');
 						if (tmChip) tmChip.classList.add('is-active');
 					} else if (targetPrefix === lastMonthPrefix) {
-						var lmChip = document.querySelector('.ledger-history-chip[data-filter="last-month"]');
+						let lmChip = document.querySelector('.ledger-history-chip[data-filter="last-month"]');
 						if (lmChip) lmChip.classList.add('is-active');
 					}
 				} else {
 					// e.g. 그래프 막대 클릭 시 넘어오는 값 "2026.09"
 					targetPrefix = filterMode;
-					var parts = filterMode.split('.');
+					let parts = filterMode.split('.');
 					if (parts.length >= 2) {
 						if (yearSelect) { yearSelect.value = parts[0]; }
 						if (monthSelect) { monthSelect.value = parts[1]; }
@@ -918,9 +918,9 @@
 					labelText = customLabel || (targetPrefix.replace('.', '년 ') + '월 내역');
 				}
 
-				var visibleCount = 0;
+				let visibleCount = 0;
 				historyCards.forEach(function (card) {
-					var isMatch = (card.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
+					let isMatch = (card.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
 					card.style.display = isMatch ? '' : 'none';
 					if (isMatch) { visibleCount++; }
 				});
@@ -935,7 +935,7 @@
 			// 칩 클릭 이벤트
 			historyChips.forEach(function (chip) {
 				chip.addEventListener('click', function () {
-					var filter = chip.getAttribute('data-filter');
+					let filter = chip.getAttribute('data-filter');
 					filterHistory(filter);
 				});
 			});
@@ -955,8 +955,8 @@
 			// 그래프 막대 클릭 시 -> 내역 탭으로 이동 + 해당 월 필터링
 			document.querySelectorAll('.ledger-bar-chart__col').forEach(function (col) {
 				bindClickAndKeydown(col, function () {
-					var monthKey = col.getAttribute('data-month-key');
-					var monthLabel = col.getAttribute('data-month-label');
+					let monthKey = col.getAttribute('data-month-key');
+					let monthLabel = col.getAttribute('data-month-label');
 					jumpToHistoryTab();
 					filterHistory(monthKey, monthKey.replace('.', '년 ') + '월 내역');
 				});
@@ -974,8 +974,8 @@
 			bindClickAndKeydown(document.getElementById('hero-rate-btn'), jumpToCategoryTab);
 
 			// 절약률 (?) 설명 — stopPropagation으로 부모(hero-rate-btn)의 탭 이동 클릭이 같이 안 걸리게 막는다.
-			var rescueRateInfoBtn = document.getElementById('rescue-rate-info-btn');
-			var rescueRateInfoText = document.getElementById('rescue-rate-info-text');
+			let rescueRateInfoBtn = document.getElementById('rescue-rate-info-btn');
+			let rescueRateInfoText = document.getElementById('rescue-rate-info-text');
 			if (rescueRateInfoBtn && rescueRateInfoText) {
 				rescueRateInfoBtn.addEventListener('click', function (e) {
 					e.stopPropagation();
@@ -984,10 +984,10 @@
 			}
 
 			// 새 뱃지 획득 토스트 — 눌러서 뱃지 도감으로, 닫기 버튼, 8초 뒤 자동으로 사라짐.
-			var badgeToast = document.getElementById('new-badge-toast');
+			let badgeToast = document.getElementById('new-badge-toast');
 			if (badgeToast) {
-				var closeToastBtn = document.getElementById('close-badge-toast-btn');
-				var autoHideTimer = setTimeout(function () { badgeToast.classList.add('is-hidden'); }, 8000);
+				let closeToastBtn = document.getElementById('close-badge-toast-btn');
+				let autoHideTimer = setTimeout(function () { badgeToast.classList.add('is-hidden'); }, 8000);
 				badgeToast.addEventListener('click', function (e) {
 					if (e.target === closeToastBtn || e.target.closest('.ledger-share-trigger-btn')) { return; }
 					jumpToBadgeTab();
@@ -1002,7 +1002,7 @@
 			}
 
 			// 목표 금액 프리셋
-			var presetButtons = Array.prototype.slice.call(document.querySelectorAll('.ledger-goal-preset'));
+			let presetButtons = Array.prototype.slice.call(document.querySelectorAll('.ledger-goal-preset'));
 			function markActivePreset() {
 				presetButtons.forEach(function (b) {
 					b.classList.toggle('is-active', goalInput && b.getAttribute('data-amount') === goalInput.value);
@@ -1022,9 +1022,9 @@
 
 			// 바텀시트 모달 공통 열기/닫기 (뱃지 도감 모달 + 랭킹 모달, 둘 다 같은 동작)
 			function setupModal(modalId, openBtnId, closeBtnId) {
-				var modal = document.getElementById(modalId);
-				var openBtn = document.getElementById(openBtnId);
-				var closeBtn = document.getElementById(closeBtnId);
+				let modal = document.getElementById(modalId);
+				let openBtn = document.getElementById(openBtnId);
+				let closeBtn = document.getElementById(closeBtnId);
 				if (!modal) { return; }
 
 				function open() {
@@ -1050,11 +1050,11 @@
 			setupModal('ranking-modal', 'open-ranking-modal-btn', 'close-ranking-modal-btn');
 
 			// 뱃지 카테고리 필터링
-			var filterBtns = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-filter'));
-			var badgeCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-card'));
+			let filterBtns = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-filter'));
+			let badgeCards = Array.prototype.slice.call(document.querySelectorAll('.ledger-badge-card'));
 			filterBtns.forEach(function (btn) {
 				btn.addEventListener('click', function () {
-					var cat = btn.getAttribute('data-cat');
+					let cat = btn.getAttribute('data-cat');
 					filterBtns.forEach(function (b) { b.classList.remove('is-active'); });
 					btn.classList.add('is-active');
 					badgeCards.forEach(function (card) {
@@ -1071,15 +1071,15 @@
 			// 가로로 넘치는 줄(카테고리 필터, 획득한 뱃지 프리뷰 아이콘) 공용 — 넘칠 때만 좌우 페이드 +
 			// 화살표를 보여준다. 오른쪽("›")은 한 칸씩 더, 왼쪽("‹")은 맨 처음으로 바로 돌아간다.
 			function setupHorizontalScrollHint(scrollElId, fadeRightId, nextBtnId, fadeLeftId, prevBtnId) {
-				var scrollEl = document.getElementById(scrollElId);
+				let scrollEl = document.getElementById(scrollElId);
 				if (!scrollEl) { return null; }
-				var fadeRight = document.getElementById(fadeRightId);
-				var nextBtn = document.getElementById(nextBtnId);
-				var fadeLeft = document.getElementById(fadeLeftId);
-				var prevBtn = document.getElementById(prevBtnId);
+				let fadeRight = document.getElementById(fadeRightId);
+				let nextBtn = document.getElementById(nextBtnId);
+				let fadeLeft = document.getElementById(fadeLeftId);
+				let prevBtn = document.getElementById(prevBtnId);
 				function update() {
-					var hasMoreToRight = scrollEl.scrollWidth - scrollEl.clientWidth - scrollEl.scrollLeft > 4;
-					var hasMoreToLeft = scrollEl.scrollLeft > 4;
+					let hasMoreToRight = scrollEl.scrollWidth - scrollEl.clientWidth - scrollEl.scrollLeft > 4;
+					let hasMoreToLeft = scrollEl.scrollLeft > 4;
 					if (fadeRight) { fadeRight.classList.toggle('is-hidden', !hasMoreToRight); }
 					if (nextBtn) { nextBtn.classList.toggle('is-hidden', !hasMoreToRight); }
 					if (fadeLeft) { fadeLeft.classList.toggle('is-hidden', !hasMoreToLeft); }
@@ -1093,13 +1093,13 @@
 				return update;
 			}
 
-			var updateFiltersScrollHint = setupHorizontalScrollHint(
+			let updateFiltersScrollHint = setupHorizontalScrollHint(
 					'badge-filters', 'badge-filters-fade', 'badge-filters-next', 'badge-filters-fade-left', 'badge-filters-prev');
 			setupHorizontalScrollHint(
 					'badge-preview-icons', 'badge-preview-fade', 'badge-preview-next', 'badge-preview-fade-left', 'badge-preview-prev');
 
 			// 모달이 열릴 때(display:none -> 보임)도 필터 줄 폭이 다시 계산되도록 오픈 시점에 한 번 더 확인.
-			var openBadgeModalBtn = document.getElementById('open-badge-modal-btn');
+			let openBadgeModalBtn = document.getElementById('open-badge-modal-btn');
 			if (openBadgeModalBtn && updateFiltersScrollHint) {
 				openBadgeModalBtn.addEventListener('click', function () {
 					setTimeout(updateFiltersScrollHint, 50);
@@ -1109,20 +1109,20 @@
 			// 뱃지 공유 카드 — 토스트/도감 어디서 눌러도 같은 카드 1개를 채워서 보여준다.
 			// openBtnId 없이 setupModal을 재사용해서(존재하지 않는 id를 넘김) 닫기/배경클릭/ESC만 얻어온다.
 			setupModal('share-card-modal', null, 'close-share-card-modal-btn');
-			var shareSource = document.getElementById('ledger-share-source');
-			var shareCard = document.getElementById('share-card');
-			var shareCardModal = document.getElementById('share-card-modal');
+			let shareSource = document.getElementById('ledger-share-source');
+			let shareCard = document.getElementById('share-card');
+			let shareCardModal = document.getElementById('share-card-modal');
 			function openShareCard(btn) {
 				if (!shareCard || !shareCardModal || !shareSource) { return; }
 				shareCard.setAttribute('data-category', btn.getAttribute('data-category') || '');
 				document.getElementById('share-card-icon').textContent = btn.getAttribute('data-icon') || '';
 				document.getElementById('share-card-name').textContent = btn.getAttribute('data-name') || '';
 				document.getElementById('share-card-nickname').textContent = shareSource.getAttribute('data-nickname') || '';
-				var earned = btn.getAttribute('data-earned');
+				let earned = btn.getAttribute('data-earned');
 				document.getElementById('share-card-date').textContent = '✓ ' + (earned ? earned.replace(' 달성', '') + ' 인증' : '오늘 인증');
-				var totalSaved = parseInt(shareSource.getAttribute('data-total-saved'), 10) || 0;
+				let totalSaved = parseInt(shareSource.getAttribute('data-total-saved'), 10) || 0;
 				document.getElementById('share-card-total').textContent = totalSaved.toLocaleString('ko-KR') + '원';
-				var co2Kg = parseFloat(shareSource.getAttribute('data-co2')) || 0;
+				let co2Kg = parseFloat(shareSource.getAttribute('data-co2')) || 0;
 				document.getElementById('share-card-co2').textContent = co2Kg.toFixed(1) + 'kg';
 				// TREE_ANNUAL_ABSORPTION_KG(Co2EstimateUtil)와 동일한 기준(20kg = 소나무 1그루/년).
 				document.getElementById('share-card-tree').textContent = (co2Kg / 20).toFixed(1) + '그루';
@@ -1141,7 +1141,7 @@
 			// 옵션이 안 보인다는 피드백으로 버튼을 분리했다 — OS 공유 시트에 저장 기능이 항상
 			// 있다고 가정하면 안 된다).
 			function buildShareCardBlob() {
-				var shareIconEl = document.getElementById('share-card-icon');
+				let shareIconEl = document.getElementById('share-card-icon');
 				if (typeof twemoji !== 'undefined' && shareIconEl) {
 					twemoji.parse(shareIconEl, {
 						folder: '72x72', ext: '.png',
@@ -1156,7 +1156,7 @@
 			}
 			function withBusyLabel(btn, busyLabel, task) {
 				btn.disabled = true;
-				var originalLabel = btn.textContent;
+				let originalLabel = btn.textContent;
 				btn.textContent = busyLabel;
 				return task().finally(function () {
 					btn.disabled = false;
@@ -1164,14 +1164,14 @@
 				});
 			}
 
-			var shareShareCardBtn = document.getElementById('share-share-card-btn');
+			let shareShareCardBtn = document.getElementById('share-share-card-btn');
 			if (shareShareCardBtn && shareCard) {
 				shareShareCardBtn.addEventListener('click', function () {
 					if (typeof html2canvas !== 'function') { return; }
 					withBusyLabel(shareShareCardBtn, '이미지 생성 중...', function () {
-						var name = document.getElementById('share-card-name').textContent || '뱃지';
+						let name = document.getElementById('share-card-name').textContent || '뱃지';
 						return buildShareCardBlob().then(function (blob) {
-							var file = new File([blob], '기리기리_' + name + '.png', { type: 'image/png' });
+							let file = new File([blob], '기리기리_' + name + '.png', { type: 'image/png' });
 							if (navigator.canShare && navigator.canShare({ files: [file] })) {
 								return navigator.share({ files: [file], title: '기리기리 뱃지 획득', text: name + ' 뱃지를 획득했어요!' })
 									.catch(function (err) {
@@ -1185,14 +1185,14 @@
 				});
 			}
 
-			var downloadShareCardBtn = document.getElementById('download-share-card-btn');
+			let downloadShareCardBtn = document.getElementById('download-share-card-btn');
 			if (downloadShareCardBtn && shareCard) {
 				downloadShareCardBtn.addEventListener('click', function () {
 					if (typeof html2canvas !== 'function') { return; }
 					withBusyLabel(downloadShareCardBtn, '이미지 생성 중...', function () {
-						var name = document.getElementById('share-card-name').textContent || '뱃지';
+						let name = document.getElementById('share-card-name').textContent || '뱃지';
 						return buildShareCardBlob().then(function (blob) {
-							var link = document.createElement('a');
+							let link = document.createElement('a');
 							link.download = '기리기리_' + name + '.png';
 							link.href = URL.createObjectURL(blob);
 							link.click();
@@ -1205,7 +1205,7 @@
 			// 클립보드에 이미지 데이터 자체를 복사 — "공유하기"가 파일 참조만 넘겨서 디스코드 같은
 			// 일부 앱에서 자동 붙여넣기가 안 되는 문제(실사용 확인됨)를 우회한다. 스크린샷을 복사했을
 			// 때와 동일한 클립보드 형식이라 Ctrl+V로 어디든(카톡 PC판, 디스코드 등) 바로 붙는다.
-			var copyShareCardBtn = document.getElementById('copy-share-card-btn');
+			let copyShareCardBtn = document.getElementById('copy-share-card-btn');
 			if (copyShareCardBtn && shareCard) {
 				copyShareCardBtn.addEventListener('click', function () {
 					if (typeof html2canvas !== 'function') { return; }

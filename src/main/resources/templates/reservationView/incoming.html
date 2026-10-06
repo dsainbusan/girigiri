@@ -22,7 +22,7 @@
 	<!-- 상단바 뒤로가기 오버라이드: 항상 점주 대시보드로 이동 -->
 	<script th:inline="none">
 	(function () {
-		var backBtn = document.querySelector('.topbar__back');
+		let backBtn = document.querySelector('.topbar__back');
 		if (!backBtn) { return; }
 		backBtn.removeAttribute('data-back');
 		backBtn.addEventListener('click', function () {
@@ -235,8 +235,8 @@
 		// 새 주문 / 픽업 대기중 탭 토글 (2026-09-24 — .stat-toggle-tabs에서 .seg-tabs로 통합,
 		// WBS CSS 1단계 정리 B)
 		document.querySelectorAll('.seg-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
-			var panels = tabs
+			let tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
+			let panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);
 			tabs.forEach(function (tab, i) {
@@ -256,9 +256,9 @@
 		// 취소 패널 토글 버튼
 		document.querySelectorAll('.reject-toggle-btn').forEach(function (btn) {
 			btn.addEventListener('click', function () {
-				var panel = document.getElementById(btn.getAttribute('data-target'));
+				let panel = document.getElementById(btn.getAttribute('data-target'));
 				if (panel) {
-					var isHidden = (panel.style.display === 'none' || panel.style.display === '');
+					let isHidden = (panel.style.display === 'none' || panel.style.display === '');
 					panel.style.display = isHidden ? 'block' : 'none';
 					if (isHidden) {
 						panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -269,13 +269,13 @@
 
 		// 취소 사유 칩 선택
 		document.querySelectorAll('.reject-panel').forEach(function (panel) {
-			var chips = panel.querySelectorAll('.reject-chip');
-			var reasonInput = panel.querySelector('.reject-reason-input');
+			let chips = panel.querySelectorAll('.reject-chip');
+			let reasonInput = panel.querySelector('.reject-reason-input');
 			chips.forEach(function (chip) {
 				chip.addEventListener('click', function () {
 					chips.forEach(function (c) { c.classList.remove('is-active'); });
 					chip.classList.add('is-active');
-					var preset = chip.getAttribute('data-reason');
+					let preset = chip.getAttribute('data-reason');
 					if (preset) {
 						reasonInput.value = preset;
 					} else {

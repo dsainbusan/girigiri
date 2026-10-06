@@ -83,11 +83,11 @@
 	     app.js(하단)보다 먼저 실행돼서 data-back을 떼두면 history.back()이 안 붙는다. -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) return;
 		back.removeAttribute('data-back');
-		var ref = document.referrer || '';
-		var target = ref.indexOf('/store/dashboard') !== -1 ? '/store/dashboard' : '/store/products';
+		let ref = document.referrer || '';
+		let target = ref.indexOf('/store/dashboard') !== -1 ? '/store/dashboard' : '/store/products';
 		back.addEventListener('click', function () { location.href = target; });
 	})();
 	</script>

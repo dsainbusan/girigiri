@@ -167,12 +167,12 @@
   <script th:if="${session.userId != null}">
     (function () {
       if (!window.EventSource) return;
-      var source = new EventSource('/user/alerts/stream');
+      let source = new EventSource('/user/alerts/stream');
 
       source.addEventListener('unread-count', function (e) {
-        var count = parseInt(e.data, 10) || 0;
-        var bell = document.getElementById('alert-bell');
-        var dot = document.getElementById('alert-dot');
+        let count = parseInt(e.data, 10) || 0;
+        let bell = document.getElementById('alert-bell');
+        let dot = document.getElementById('alert-dot');
         if (!bell) return;
         if (count > 0 && !dot) {
           dot = document.createElement('span');
@@ -190,7 +190,7 @@
         if (window.location.pathname === '/user/alerts') return;
         if (document.getElementById('girigiri-toast-new-alert')) return;
 
-        var toast = document.createElement('a');
+        let toast = document.createElement('a');
         toast.id = 'girigiri-toast-new-alert';
         toast.href = '/user/alerts';
         toast.className = 'girigiri-toast';

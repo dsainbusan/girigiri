@@ -196,13 +196,13 @@
 
   <script th:inline="none">
   (function () {
-    var checkboxes = function () { return Array.prototype.slice.call(document.querySelectorAll('.row-check')); };
-    var selectAll = document.getElementById('select-all');
-    var selectionBar = document.getElementById('selection-bar');
-    var selectionCount = document.getElementById('selection-bar__count');
+    let checkboxes = function () { return Array.prototype.slice.call(document.querySelectorAll('.row-check')); };
+    let selectAll = document.getElementById('select-all');
+    let selectionBar = document.getElementById('selection-bar');
+    let selectionCount = document.getElementById('selection-bar__count');
 
     function updateBar() {
-      var checked = checkboxes().filter(function (c) { return c.checked; });
+      let checked = checkboxes().filter(function (c) { return c.checked; });
       if (checked.length > 0) {
         selectionBar.hidden = false;
         selectionCount.textContent = checked.length + '개 매장 선택됨';
@@ -227,11 +227,11 @@
       });
     }
 
-    var attentionBtn = document.getElementById('select-attention-btn');
+    let attentionBtn = document.getElementById('select-attention-btn');
     if (attentionBtn) {
       attentionBtn.addEventListener('click', function () {
         checkboxes().forEach(function (c) {
-          var row = c.closest('tr');
+          let row = c.closest('tr');
           c.checked = row && row.getAttribute('data-needs-attention') === 'true';
         });
         updateBar();
@@ -244,28 +244,28 @@
     }
 
     function openModal(modal, titleTargetId) {
-      var names = selectedStoreNames();
+      let names = selectedStoreNames();
       if (names.length === 0) { return; }
       modal.hidden = false;
-      var listEl = modal.querySelector('[id$="-store-list"]');
+      let listEl = modal.querySelector('[id$="-store-list"]');
       if (listEl) { listEl.textContent = names.join(', '); }
-      var title = document.getElementById(titleTargetId);
+      let title = document.getElementById(titleTargetId);
       if (title) { title.textContent = names.length + '개 매장 대상 쿠폰을 발행할까요?'; }
     }
 
     function closeModal(modal) { modal.hidden = true; }
 
-    var currentIssueLimit = 0;
-    var issueLimitDisplay = document.getElementById('issueLimitDisplay');
-    var couponSubmitBtn = document.querySelector('#coupon-form button[type="submit"]');
+    let currentIssueLimit = 0;
+    let issueLimitDisplay = document.getElementById('issueLimitDisplay');
+    let couponSubmitBtn = document.querySelector('#coupon-form button[type="submit"]');
 
     function refreshIssueLimit() {
-      var modal = document.getElementById('coupon-modal');
-      var sido = modal.dataset.sido;
-      var ids = checkboxes().filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+      let modal = document.getElementById('coupon-modal');
+      let sido = modal.dataset.sido;
+      let ids = checkboxes().filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
       if (ids.length === 0) { return; }
       issueLimitDisplay.value = '불러오는 중...';
-      var params = ids.map(function (id) { return 'storeIds=' + encodeURIComponent(id); }).join('&');
+      let params = ids.map(function (id) { return 'storeIds=' + encodeURIComponent(id); }).join('&');
       fetch('/superadmin/regions/' + encodeURIComponent(sido) + '/stores/liked-count?' + params)
           .then(function (res) { return res.json(); })
           .then(function (data) {
@@ -297,7 +297,7 @@
     document.querySelectorAll('#coupon-form, #suggestion-modal form').forEach(function (form) {
       form.addEventListener('submit', function () {
         checkboxes().filter(function (c) { return c.checked; }).forEach(function (c) {
-          var hidden = document.createElement('input');
+          let hidden = document.createElement('input');
           hidden.type = 'hidden';
           hidden.name = 'storeIds';
           hidden.value = c.value;
@@ -307,11 +307,11 @@
     });
 
     // 할인 방식 라디오 — 정률/정액 입력 토글.
-    var rateInput = document.getElementById('discountRate');
-    var amountInput = document.getElementById('discountAmount');
+    let rateInput = document.getElementById('discountRate');
+    let amountInput = document.getElementById('discountAmount');
     document.querySelectorAll('input[name="discountType"]').forEach(function (radio) {
       radio.addEventListener('change', function () {
-        var isRate = radio.value === 'RATE' && radio.checked;
+        let isRate = radio.value === 'RATE' && radio.checked;
         if (radio.checked) {
           rateInput.disabled = !isRate;
           amountInput.disabled = isRate;
@@ -320,16 +320,16 @@
       });
     });
 
-    var maxDiscountInput = document.getElementById('maxDiscountAmount');
-    var costEstimateEl = document.getElementById('coupon-cost-estimate');
+    let maxDiscountInput = document.getElementById('maxDiscountAmount');
+    let costEstimateEl = document.getElementById('coupon-cost-estimate');
     function updateCostEstimate() {
-      var limit = currentIssueLimit;
+      let limit = currentIssueLimit;
       if (limit === 0) {
         costEstimateEl.textContent = '예상 최대 비용: -';
         return;
       }
-      var isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
-      var perCoupon = isRate ? (parseInt(maxDiscountInput.value, 10) || 0) : (parseInt(amountInput.value, 10) || 0);
+      let isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
+      let perCoupon = isRate ? (parseInt(maxDiscountInput.value, 10) || 0) : (parseInt(amountInput.value, 10) || 0);
       if (isRate && !maxDiscountInput.value) {
         costEstimateEl.textContent = '예상 최대 비용: 최대 할인 금액을 입력하면 계산돼요 (대상 ' + limit + '명)';
         return;
@@ -345,8 +345,8 @@
     document.getElementById('notify-region-row').hidden = false;
 
     // 직접 작성 템플릿일 때만 메시지 입력란 노출.
-    var templateSelect = document.getElementById('suggestion-template');
-    var customGroup = document.getElementById('custom-message-group');
+    let templateSelect = document.getElementById('suggestion-template');
+    let customGroup = document.getElementById('custom-message-group');
     templateSelect.addEventListener('change', function () {
       customGroup.hidden = templateSelect.value !== 'CUSTOM';
     });

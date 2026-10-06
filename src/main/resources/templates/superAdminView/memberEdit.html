@@ -163,15 +163,15 @@
   <script th:inline="javascript">
     /*<![CDATA[*/
     (function () {
-      var currentRegion = /*[[${member.region}]]*/ '';
+      let currentRegion = /*[[${member.region}]]*/ '';
       if (!currentRegion) return;
-      var select = document.getElementById('region');
-      var matched = false;
-      for (var i = 0; i < select.options.length; i++) {
+      let select = document.getElementById('region');
+      let matched = false;
+      for (let i = 0; i < select.options.length; i++) {
         if (select.options[i].value === currentRegion) { matched = true; break; }
       }
       if (!matched) {
-        var opt = document.createElement('option');
+        let opt = document.createElement('option');
         opt.value = currentRegion;
         opt.textContent = currentRegion + ' (목록에 없음)';
         select.insertBefore(opt, select.firstChild);

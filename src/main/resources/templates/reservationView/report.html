@@ -40,13 +40,13 @@
 
 	<script th:inline="none">
 		(function () {
-			var chips = document.querySelectorAll('.chip[data-reason]');
-			var reasonInput = document.getElementById('reasonInput');
+			let chips = document.querySelectorAll('.chip[data-reason]');
+			let reasonInput = document.getElementById('reasonInput');
 			chips.forEach(function (chip) {
 				chip.addEventListener('click', function () {
 					chips.forEach(function (c) { c.classList.remove('is-active'); });
 					chip.classList.add('is-active');
-					var preset = chip.getAttribute('data-reason');
+					let preset = chip.getAttribute('data-reason');
 					reasonInput.value = preset;
 					if (!preset) {
 						reasonInput.focus();

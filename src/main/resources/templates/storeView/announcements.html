@@ -82,7 +82,7 @@
 	<!-- 뒤로가기는 항상 점주 대시보드로 (2026-09-29) — 대시보드 메뉴에서만 진입한다. -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) { return; }
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });

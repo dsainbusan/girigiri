@@ -112,11 +112,11 @@
 
 	<script th:inline="none">
 	(function () {
-		var radios = document.querySelectorAll('input[name="pickupTimeMode"]');
-		var timeInput = document.getElementById('lastPickupTime');
+		let radios = document.querySelectorAll('input[name="pickupTimeMode"]');
+		let timeInput = document.getElementById('lastPickupTime');
 
 		function updateTimeInputState() {
-			var selected = document.querySelector('input[name="pickupTimeMode"]:checked');
+			let selected = document.querySelector('input[name="pickupTimeMode"]:checked');
 			// "직접 입력"이 선택된 경우에만 시간 입력을 활성화(=폼 제출에 포함)한다.
 			// 나머지 두 옵션은 disabled로 바꿔서, 제출할 때 lastPickupTime 값이 아예 안 넘어가게 한다
 			// (서버가 pickupTimeMode 기준으로 알아서 계산/저장하므로 이 값은 "직접 입력"일 때만 쓰인다).
@@ -130,7 +130,7 @@
 
 		// 자세히 보기 접기/펼치기 토글
 		document.querySelectorAll('[data-info-toggle]').forEach(function (btn) {
-			var target = document.getElementById(btn.getAttribute('data-info-toggle'));
+			let target = document.getElementById(btn.getAttribute('data-info-toggle'));
 			if (!target) return;
 			btn.addEventListener('click', function () {
 				target.classList.toggle('is-hidden');

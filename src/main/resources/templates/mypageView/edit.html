@@ -227,9 +227,9 @@
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
 	<script th:inline="javascript">
 		kakao.maps.load(function () {
-			var geocoder = new kakao.maps.services.Geocoder();
-			var regionInput = document.getElementById('region');
-			var statusEl = document.getElementById('gpsRegionStatus');
+			let geocoder = new kakao.maps.services.Geocoder();
+			let regionInput = document.getElementById('region');
+			let statusEl = document.getElementById('gpsRegionStatus');
 
 			function shortenSido(name) {
 				return name.replace('특별자치시', '').replace('특별자치도', '').replace('광역시', '').replace('특별시', '').replace(/도$/, '');
@@ -251,8 +251,8 @@
 				navigator.geolocation.getCurrentPosition(function (pos) {
 					geocoder.coord2Address(pos.coords.longitude, pos.coords.latitude, function (result, status) {
 						if (status === kakao.maps.services.Status.OK) {
-							var addr = result[0].address;
-							var dong = addr.region_3depth_name || addr.region_2depth_name;
+							let addr = result[0].address;
+							let dong = addr.region_3depth_name || addr.region_2depth_name;
 							regionInput.value = (shortenSido(addr.region_1depth_name) + ' ' + dong).trim();
 							setGpsStatus('위치 확인됨', 'success');
 						} else {
@@ -268,10 +268,10 @@
 
 	<script th:inline="none">
 		(function () {
-			var p = document.getElementById('phone');
+			let p = document.getElementById('phone');
 			if (!p) { return; }
 			p.addEventListener('input', function () {
-				var d = p.value.replace(/\D/g, '').slice(0, 11);
+				let d = p.value.replace(/\D/g, '').slice(0, 11);
 				p.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)
 					: d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d;
 			});
@@ -280,11 +280,11 @@
 
 	<script th:inline="none">
 		(function () {
-			var form = document.getElementById('password-change-form');
+			let form = document.getElementById('password-change-form');
 			if (!form) { return; }
 			form.addEventListener('submit', function (e) {
-				var newPw = document.getElementById('newPassword').value;
-				var confirmPw = document.getElementById('newPasswordConfirm').value;
+				let newPw = document.getElementById('newPassword').value;
+				let confirmPw = document.getElementById('newPasswordConfirm').value;
 				if (newPw !== confirmPw) {
 					e.preventDefault();
 					window.girigiriAlert('새 비밀번호가 일치하지 않아요.');
@@ -342,11 +342,11 @@
 
 	<script th:inline="none">
 		(function () {
-			var modal = document.getElementById('withdraw-choice-modal');
-			var openBtn = document.getElementById('btn-open-withdraw-choice');
-			var closeBtn = document.getElementById('btn-close-withdraw-choice');
-			var gotoUnlinkBtn = document.getElementById('btn-goto-unlink');
-			var linkedCard = document.getElementById('linked-accounts-card');
+			let modal = document.getElementById('withdraw-choice-modal');
+			let openBtn = document.getElementById('btn-open-withdraw-choice');
+			let closeBtn = document.getElementById('btn-close-withdraw-choice');
+			let gotoUnlinkBtn = document.getElementById('btn-goto-unlink');
+			let linkedCard = document.getElementById('linked-accounts-card');
 			if (openBtn && modal) {
 				openBtn.addEventListener('click', function () {
 					modal.style.display = 'flex';
@@ -382,7 +382,7 @@
 	     동일 패턴 — app.js의 기본 data-back 위임보다 먼저 떼어낸다). */-->
 	<script th:inline="none">
 		(function () {
-			var back = document.querySelector('.topbar__back[data-back]');
+			let back = document.querySelector('.topbar__back[data-back]');
 			if (!back) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/mypage'; });

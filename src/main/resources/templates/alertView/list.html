@@ -44,7 +44,7 @@
 		(function () {
 			window.addEventListener('girigiri:new-notification', function () {
 				if (document.getElementById('live-refresh-banner')) return;
-				var banner = document.createElement('a');
+				let banner = document.createElement('a');
 				banner.id = 'live-refresh-banner';
 				banner.href = '/user/alerts';
 				banner.className = 'banner';
@@ -52,7 +52,7 @@
 				banner.innerHTML = '<svg class="icon" style="width:16px;height:16px"><use href="#i-bell"></use></svg>'
 					+ '<div><div class="banner__title">새 알림이 도착했어요</div>'
 					+ '<div class="banner__desc">눌러서 새로고침</div></div>';
-				var content = document.getElementById('content');
+				let content = document.getElementById('content');
 				content.insertBefore(banner, content.children[1]);
 			});
 		})();

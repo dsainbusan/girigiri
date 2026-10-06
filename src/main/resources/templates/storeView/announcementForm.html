@@ -45,7 +45,7 @@
 	<!-- 뒤로가기는 항상 공지 목록으로 (2026-09-29) — 작성/수정 둘 다 이 화면을 공유한다. -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) { return; }
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/announcements'; });

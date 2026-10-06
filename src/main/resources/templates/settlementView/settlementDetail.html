@@ -134,7 +134,7 @@
 
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) { return; }
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/settlement'; });
@@ -142,14 +142,14 @@
 
 	// "직접 선택" 토글 — 누를 때만 날짜 입력칸이 열린다.
 	(function () {
-		var btn = document.getElementById('settle-range-toggle');
-		var form = document.getElementById('settle-range-form');
+		let btn = document.getElementById('settle-range-toggle');
+		let form = document.getElementById('settle-range-form');
 		if (!btn || !form) { return; }
 		btn.addEventListener('click', function () {
-			var opened = form.classList.toggle('is-hidden') === false;
+			let opened = form.classList.toggle('is-hidden') === false;
 			btn.setAttribute('aria-expanded', opened);
 			if (opened) {
-				var first = form.querySelector('input[name="from"]');
+				let first = form.querySelector('input[name="from"]');
 				if (first) { first.focus(); }
 			}
 		});

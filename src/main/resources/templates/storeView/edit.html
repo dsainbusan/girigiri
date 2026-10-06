@@ -193,15 +193,15 @@
 	<script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
 	<script th:inline="javascript">
 		kakao.maps.load(function () {
-			var geocoder = new kakao.maps.services.Geocoder();
-			var statusEl = document.getElementById('geocodeStatus');
-			var badgeEl = document.getElementById('geocodeBadge');
-			var mapEl = document.getElementById('locationPreviewMap');
-			var map = null;
-			var marker = null;
+			let geocoder = new kakao.maps.services.Geocoder();
+			let statusEl = document.getElementById('geocodeStatus');
+			let badgeEl = document.getElementById('geocodeBadge');
+			let mapEl = document.getElementById('locationPreviewMap');
+			let map = null;
+			let marker = null;
 
 			function showPreview(lat, lng) {
-				var position = new kakao.maps.LatLng(lat, lng);
+				let position = new kakao.maps.LatLng(lat, lng);
 				mapEl.style.display = 'block';
 
 				if (!map) {
@@ -214,14 +214,14 @@
 				}
 			}
 
-			var initialLat = document.getElementById('latitude').value;
-			var initialLng = document.getElementById('longitude').value;
+			let initialLat = document.getElementById('latitude').value;
+			let initialLng = document.getElementById('longitude').value;
 			if (initialLat && initialLng) {
 				showPreview(Number(initialLat), Number(initialLng));
 			}
 
 			document.getElementById('geocodeBtn').addEventListener('click', function () {
-				var address = document.getElementById('address').value.trim();
+				let address = document.getElementById('address').value.trim();
 				if (!address) {
 					statusEl.textContent = '주소를 먼저 입력해 주세요.';
 					return;
@@ -230,8 +230,8 @@
 
 				geocoder.addressSearch(address, function (result, status) {
 					if (status === kakao.maps.services.Status.OK) {
-						var lat = result[0].y;
-						var lng = result[0].x;
+						let lat = result[0].y;
+						let lng = result[0].x;
 						document.getElementById('latitude').value = lat;
 						document.getElementById('longitude').value = lng;
 						statusEl.textContent = '✅ 확인: ' + result[0].address_name;
@@ -258,7 +258,7 @@
 	<!-- 뒤로가기 오버라이드 -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) return;
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
@@ -268,15 +268,15 @@
 	<!-- 전화번호 자동 하이픈 -->
 	<script th:inline="none">
 	(function () {
-		var phoneInput = document.getElementById('phone');
+		let phoneInput = document.getElementById('phone');
 		if (!phoneInput) return;
 		phoneInput.addEventListener('input', function () {
-			var d = phoneInput.value.replace(/\D/g, '');
-			var frontLen = d.slice(0, 2) === '02' ? 2 : 3;
+			let d = phoneInput.value.replace(/\D/g, '');
+			let frontLen = d.slice(0, 2) === '02' ? 2 : 3;
 			d = d.slice(0, frontLen === 2 ? 10 : 11);
-			var out = d;
+			let out = d;
 			if (d.length > frontLen) {
-				var midEnd = d.length - 4;
+				let midEnd = d.length - 4;
 				out = midEnd <= frontLen
 					? d.slice(0, frontLen) + '-' + d.slice(frontLen)
 					: d.slice(0, frontLen) + '-' + d.slice(frontLen, midEnd) + '-' + d.slice(midEnd);
@@ -289,30 +289,30 @@
 	<!-- 영업시간 파싱 및 동기화 -->
 	<script th:inline="none">
 	(function () {
-		var hiddenInput = document.getElementById('operatingHours');
-		var openEl = document.getElementById('openTimeInput');
-		var closeEl = document.getElementById('closeTimeInput');
-		var saleCheck = document.getElementById('saleTimeCheck');
-		var saleRow = document.getElementById('saleTimeRow');
-		var saleEl = document.getElementById('saleTimeInput');
-		var form = hiddenInput ? hiddenInput.closest('form') : null;
+		let hiddenInput = document.getElementById('operatingHours');
+		let openEl = document.getElementById('openTimeInput');
+		let closeEl = document.getElementById('closeTimeInput');
+		let saleCheck = document.getElementById('saleTimeCheck');
+		let saleRow = document.getElementById('saleTimeRow');
+		let saleEl = document.getElementById('saleTimeInput');
+		let form = hiddenInput ? hiddenInput.closest('form') : null;
 
 		if (!hiddenInput || !openEl || !closeEl) return;
 
-		var raw = hiddenInput.value ? hiddenInput.value.trim() : '';
+		let raw = hiddenInput.value ? hiddenInput.value.trim() : '';
 		if (raw) {
-			var parts = raw.split('~');
+			let parts = raw.split('~');
 			if (parts.length >= 2) {
-				var openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
+				let openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
 				if (openMatch) {
 					openEl.value = openMatch[1].length === 4 ? '0' + openMatch[1] : openMatch[1];
 				}
-				var closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
+				let closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
 				if (closeMatch) {
 					closeEl.value = closeMatch[1].length === 4 ? '0' + closeMatch[1] : closeMatch[1];
 				}
 			}
-			var saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
+			let saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
 			if (saleMatch && saleEl && saleCheck) {
 				saleCheck.checked = true;
 				if (saleRow) saleRow.style.display = 'block';
@@ -321,13 +321,13 @@
 		}
 
 		function updateHidden() {
-			var openVal = openEl.value;
-			var closeVal = closeEl.value;
+			let openVal = openEl.value;
+			let closeVal = closeEl.value;
 			if (!openVal || !closeVal) {
 				hiddenInput.value = '';
 				return;
 			}
-			var res = openVal + ' ~ ' + closeVal;
+			let res = openVal + ' ~ ' + closeVal;
 			if (saleCheck && saleCheck.checked && saleEl && saleEl.value) {
 				res += ' (마감 세일 ' + saleEl.value + '~)';
 			}

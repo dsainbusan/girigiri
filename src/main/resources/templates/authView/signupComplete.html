@@ -30,7 +30,7 @@
 	<!--/* 완료 화면이라 뒤로가기가 회원가입 폼으로 가면 안 된다 — 홈으로 고정(dashboard.html과 동일 방식). */-->
 	<script th:inline="none">
 		(function () {
-			var back = document.querySelector('.topbar__back[data-back]');
+			let back = document.querySelector('.topbar__back[data-back]');
 			if (!back) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/app'; });

@@ -107,7 +107,7 @@
 		 두고, 이 페이지 안에서만 data-back 속성을 떼어내 오버라이드한다. -->
 	<script>
 		(function () {
-			var backBtn = document.querySelector('.topbar__back');
+			let backBtn = document.querySelector('.topbar__back');
 			if (!backBtn) return;
 			backBtn.removeAttribute('data-back'); // app.js의 기본 history.back() 바인딩을 막는다
 			backBtn.addEventListener('click', function () {

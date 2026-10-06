@@ -220,20 +220,20 @@
   <script th:inline="none">
   (function () {
     // ---- 탭 필터: 서버 왕복 없이 행의 data-status 로 걸러낸다 ----
-    var tabs = document.querySelectorAll('.tabs button.tab');
-    var rows = document.querySelectorAll('#campaign-table tbody tr[data-status]');
-    var emptyRow = document.getElementById('filter-empty-row');
+    let tabs = document.querySelectorAll('.tabs button.tab');
+    let rows = document.querySelectorAll('#campaign-table tbody tr[data-status]');
+    let emptyRow = document.getElementById('filter-empty-row');
     tabs.forEach(function (tab) {
       tab.addEventListener('click', function () {
-        var filter = tab.dataset.filter;
+        let filter = tab.dataset.filter;
         tabs.forEach(function (t) {
-          var on = t === tab;
+          let on = t === tab;
           t.classList.toggle('is-active', on);
           t.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-        var visible = 0;
+        let visible = 0;
         rows.forEach(function (row) {
-          var show = filter === 'all' || row.dataset.status === filter;
+          let show = filter === 'all' || row.dataset.status === filter;
           row.hidden = !show;
           if (show) { visible++; }
         });
@@ -242,16 +242,16 @@
     });
 
     // ---- 지역 지정 쿠폰 모달 ----
-    var modal = document.getElementById('region-coupon-modal');
-    var recipientEl = document.getElementById('rcRecipientDisplay');
-    var costEl = document.getElementById('rcCostEstimate');
-    var submitBtn = document.getElementById('rcSubmit');
-    var rate = document.getElementById('rcDiscountRate');
-    var amount = document.getElementById('rcDiscountAmount');
-    var maxDiscount = document.getElementById('rcMaxDiscount');
-    var sidoBoxes = Array.prototype.slice.call(document.querySelectorAll('.region-sido'));
-    var recipients = 0;
-    var lastTrigger = null;
+    let modal = document.getElementById('region-coupon-modal');
+    let recipientEl = document.getElementById('rcRecipientDisplay');
+    let costEl = document.getElementById('rcCostEstimate');
+    let submitBtn = document.getElementById('rcSubmit');
+    let rate = document.getElementById('rcDiscountRate');
+    let amount = document.getElementById('rcDiscountAmount');
+    let maxDiscount = document.getElementById('rcMaxDiscount');
+    let sidoBoxes = Array.prototype.slice.call(document.querySelectorAll('.region-sido'));
+    let recipients = 0;
+    let lastTrigger = null;
 
     function selected() { return sidoBoxes.filter(function (c) { return c.checked; }).map(function (c) { return c.value; }); }
     function setSummary(el, text, strong) {
@@ -260,16 +260,16 @@
     }
     function updateCost() {
       if (recipients === 0) { setSummary(costEl, '-', false); return; }
-      var isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
+      let isRate = document.querySelector('input[name="discountType"]:checked').value === 'RATE';
       if (isRate && !maxDiscount.value) {
         setSummary(costEl, '최대 할인 금액을 입력하면 계산돼요', false);
         return;
       }
-      var per = parseInt(isRate ? maxDiscount.value : amount.value, 10) || 0;
+      let per = parseInt(isRate ? maxDiscount.value : amount.value, 10) || 0;
       setSummary(costEl, (recipients * per).toLocaleString() + '원 (' + recipients.toLocaleString() + '명 × 최대 ' + per.toLocaleString() + '원)', true);
     }
     function refreshRecipients() {
-      var sidos = selected();
+      let sidos = selected();
       if (sidos.length === 0) {
         recipients = 0; setSummary(recipientEl, '지역을 선택해 주세요', false); submitBtn.disabled = true; updateCost(); return;
       }
@@ -292,7 +292,7 @@
     function openModal(trigger) {
       lastTrigger = trigger;
       modal.hidden = false;
-      var first = sidoBoxes[0];
+      let first = sidoBoxes[0];
       if (first) { first.focus(); }
     }
     function closeModal() {
@@ -307,7 +307,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) { closeModal(); } });
 
     // 빠른 선택
-    var CAPITAL = ['서울', '경기', '인천'];
+    let CAPITAL = ['서울', '경기', '인천'];
     document.querySelectorAll('[data-preset]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         sidoBoxes.forEach(function (c) {
@@ -321,7 +321,7 @@
     document.querySelectorAll('input[name="discountType"]').forEach(function (radio) {
       radio.addEventListener('change', function () {
         if (!radio.checked) { return; }
-        var isRate = radio.value === 'RATE';
+        let isRate = radio.value === 'RATE';
         rate.disabled = !isRate;
         maxDiscount.disabled = !isRate;
         amount.disabled = isRate;

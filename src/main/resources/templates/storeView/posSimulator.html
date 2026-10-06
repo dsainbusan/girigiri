@@ -303,23 +303,23 @@
 <script th:inline="none">
 (function () {
 	// 1. 실시간 디지털 시계
-	var clockEl = document.getElementById('pos-clock');
+	let clockEl = document.getElementById('pos-clock');
 	function updateClock() {
 		if (!clockEl) return;
-		var now = new Date();
-		var y = now.getFullYear();
-		var m = String(now.getMonth() + 1).padStart(2, '0');
-		var d = String(now.getDate()).padStart(2, '0');
-		var hh = String(now.getHours()).padStart(2, '0');
-		var mm = String(now.getMinutes()).padStart(2, '0');
-		var ss = String(now.getSeconds()).padStart(2, '0');
+		let now = new Date();
+		let y = now.getFullYear();
+		let m = String(now.getMonth() + 1).padStart(2, '0');
+		let d = String(now.getDate()).padStart(2, '0');
+		let hh = String(now.getHours()).padStart(2, '0');
+		let mm = String(now.getMinutes()).padStart(2, '0');
+		let ss = String(now.getSeconds()).padStart(2, '0');
 		clockEl.textContent = y + '-' + m + '-' + d + ' ' + hh + ':' + mm + ':' + ss + ' KST';
 	}
 	setInterval(updateClock, 1000);
 	updateClock();
 
 	// 2. 전체화면 토글
-	var btnFs = document.getElementById('btn-fullscreen');
+	let btnFs = document.getElementById('btn-fullscreen');
 	if (btnFs) {
 		btnFs.addEventListener('click', function () {
 			if (!document.fullscreenElement) {
@@ -333,35 +333,35 @@
 	}
 
 	// 3. POS 재고 및 통신 제어
-	var list = document.getElementById('sim-menu');
+	let list = document.getElementById('sim-menu');
 	if (!list) { return; }
 
-	var logEl = document.getElementById('sim-log');
-	var rows = Array.prototype.slice.call(list.querySelectorAll('.stock-item'));
+	let logEl = document.getElementById('sim-log');
+	let rows = Array.prototype.slice.call(list.querySelectorAll('.stock-item'));
 
-	var statTotalItems = document.getElementById('stat-total-items');
-	var statTotalStock = document.getElementById('stat-total-stock');
+	let statTotalItems = document.getElementById('stat-total-items');
+	let statTotalStock = document.getElementById('stat-total-stock');
 
-	var activeItemName = document.getElementById('active-item-name');
-	var activeItemSku = document.getElementById('active-item-sku');
-	var activeItemQty = document.getElementById('active-item-qty');
-	var currentActiveRow = null;
+	let activeItemName = document.getElementById('active-item-name');
+	let activeItemSku = document.getElementById('active-item-sku');
+	let activeItemQty = document.getElementById('active-item-qty');
+	let currentActiveRow = null;
 
 	// 영수증 로그 출력 함수
 	function appendLog(text) {
 		if (!logEl) return;
-		var now = new Date();
-		var timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
-		var line = '[' + timeStr + ']\n' + text + '\n' + '----------------------------------------\n';
+		let now = new Date();
+		let timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+		let line = '[' + timeStr + ']\n' + text + '\n' + '----------------------------------------\n';
 		logEl.textContent += line;
 		logEl.scrollTop = logEl.scrollHeight;
 	}
 
 	// 총합 통계 업데이트
 	function updateTotals() {
-		var totalStock = 0;
+		let totalStock = 0;
 		rows.forEach(function (r) {
-			var v = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
+			let v = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
 			totalStock += Math.max(0, v);
 		});
 		if (statTotalStock) {
@@ -371,7 +371,7 @@
 			statTotalItems.textContent = rows.length + '종';
 		}
 		if (currentActiveRow) {
-			var curVal = currentActiveRow.querySelector('.sim-stock').value;
+			let curVal = currentActiveRow.querySelector('.sim-stock').value;
 			if (activeItemQty) activeItemQty.textContent = curVal;
 		}
 	}
@@ -410,7 +410,7 @@
 
 	// POS 재고 실제 전송 (POST /api/pos/stock)
 	function pushStock(items) {
-		var body = JSON.stringify(items);
+		let body = JSON.stringify(items);
 		appendLog('>>> POS TX: POST /api/pos/stock (' + items.length + '건)\n' + JSON.stringify(items, null, 2));
 
 		fetch('/api/pos/stock', {
@@ -422,7 +422,7 @@
 				appendLog('<<< POS RX: HTTP ' + res.status + ' OK\n' + JSON.stringify(json));
 				// 화면 재고칸을 전송값으로 갱신
 				items.forEach(function (it) {
-					var row = rows.find(function (r) { return r.getAttribute('data-sku') === it.posSku; });
+					let row = rows.find(function (r) { return r.getAttribute('data-sku') === it.posSku; });
 					if (row) {
 						row.querySelector('.sim-stock').value = it.remaining;
 					}
@@ -440,32 +440,32 @@
 			return rowItem(r, seedStock(parseInt(r.getAttribute('data-price'), 10) || 1));
 		}));
 	}
-	var btnRestock = document.getElementById('sim-restock');
+	let btnRestock = document.getElementById('sim-restock');
 	if (btnRestock) { btnRestock.addEventListener('click', triggerRestock); }
 
 	// [F2] 하루 장사 빨리감기 (40~85% 판매)
 	function triggerSelldown() {
 		pushStock(rows.map(function (r) {
-			var cur = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
-			var sold = 0.40 + Math.random() * 0.45;
+			let cur = parseInt(r.querySelector('.sim-stock').value, 10) || 0;
+			let sold = 0.40 + Math.random() * 0.45;
 			return rowItem(r, Math.max(0, Math.round(cur * (1 - sold))));
 		}));
 	}
-	var btnSelldown = document.getElementById('sim-selldown');
+	let btnSelldown = document.getElementById('sim-selldown');
 	if (btnSelldown) { btnSelldown.addEventListener('click', triggerSelldown); }
 
 	// [F3] 전체 재고 전송
 	function triggerPushAll() {
 		pushStock(rows.map(function (r) {
-			var v = parseInt(r.querySelector('.sim-stock').value, 10);
+			let v = parseInt(r.querySelector('.sim-stock').value, 10);
 			return rowItem(r, isNaN(v) || v < 0 ? 0 : v);
 		}));
 	}
-	var btnPushAll = document.getElementById('sim-push-all');
+	let btnPushAll = document.getElementById('sim-push-all');
 	if (btnPushAll) { btnPushAll.addEventListener('click', triggerPushAll); }
 
 	// PING
-	var btnPing = document.getElementById('sim-ping');
+	let btnPing = document.getElementById('sim-ping');
 	if (btnPing) {
 		btnPing.addEventListener('click', function () {
 			appendLog('--- POS HEARTBEAT PING ---\nDEVICE STATUS: 200 OK (LAN 1000Mbps)\nACTIVE MENU ITEMS: ' + rows.length);
@@ -474,10 +474,10 @@
 
 	// 개별 카드 이벤트 (선택, 수량 증감, 단품 저장)
 	rows.forEach(function (r) {
-		var input = r.querySelector('.sim-stock');
-		var btnMinus = r.querySelector('.btn-qty-minus');
-		var btnPlus = r.querySelector('.btn-qty-plus');
-		var btnSave = r.querySelector('.sim-save');
+		let input = r.querySelector('.sim-stock');
+		let btnMinus = r.querySelector('.btn-qty-minus');
+		let btnPlus = r.querySelector('.btn-qty-plus');
+		let btnSave = r.querySelector('.sim-save');
 
 		r.addEventListener('click', function (e) {
 			if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
@@ -489,7 +489,7 @@
 			btnMinus.addEventListener('click', function (e) {
 				e.stopPropagation();
 				setActiveRow(r);
-				var cur = parseInt(input.value, 10) || 0;
+				let cur = parseInt(input.value, 10) || 0;
 				input.value = Math.max(0, cur - 1);
 				updateTotals();
 			});
@@ -499,7 +499,7 @@
 			btnPlus.addEventListener('click', function (e) {
 				e.stopPropagation();
 				setActiveRow(r);
-				var cur = parseInt(input.value, 10) || 0;
+				let cur = parseInt(input.value, 10) || 0;
 				input.value = cur + 1;
 				updateTotals();
 			});
@@ -514,27 +514,27 @@
 			btnSave.addEventListener('click', function (e) {
 				e.stopPropagation();
 				setActiveRow(r);
-				var v = parseInt(input.value, 10);
+				let v = parseInt(input.value, 10);
 				pushStock([rowItem(r, isNaN(v) || v < 0 ? 0 : v)]);
 			});
 		}
 	});
 
 	// 우측 키패드 (Numpad) 로직
-	var numpadWrap = document.querySelector('.pos-numpad-wrap');
-	var isNumpadTyping = false;
+	let numpadWrap = document.querySelector('.pos-numpad-wrap');
+	let isNumpadTyping = false;
 
 	if (numpadWrap) {
 		numpadWrap.addEventListener('click', function (e) {
-			var btn = e.target.closest('button');
+			let btn = e.target.closest('button');
 			if (!btn || !currentActiveRow) return;
 
-			var input = currentActiveRow.querySelector('.sim-stock');
+			let input = currentActiveRow.querySelector('.sim-stock');
 			if (!input) return;
 
 			// 숫자 키 (0~9)
 			if (btn.classList.contains('num-key')) {
-				var digit = btn.getAttribute('data-val');
+				let digit = btn.getAttribute('data-val');
 				if (!isNumpadTyping) {
 					input.value = digit;
 					isNumpadTyping = true;
@@ -547,8 +547,8 @@
 
 			// 프리셋 키 (+1, +5, +10)
 			if (btn.classList.contains('preset-key')) {
-				var addVal = parseInt(btn.getAttribute('data-add'), 10) || 0;
-				var cur = parseInt(input.value, 10) || 0;
+				let addVal = parseInt(btn.getAttribute('data-add'), 10) || 0;
+				let cur = parseInt(input.value, 10) || 0;
 				input.value = cur + addVal;
 				isNumpadTyping = false;
 				updateTotals();
@@ -556,18 +556,18 @@
 
 			// 액션 키 (CLR, DEL, APPLY)
 			if (btn.classList.contains('num-action')) {
-				var act = btn.getAttribute('data-act');
+				let act = btn.getAttribute('data-act');
 				if (act === 'clr') {
 					input.value = '0';
 					isNumpadTyping = false;
 					updateTotals();
 				} else if (act === 'del') {
-					var s = String(input.value);
+					let s = String(input.value);
 					input.value = s.length > 1 ? s.slice(0, -1) : '0';
 					updateTotals();
 				} else if (act === 'apply') {
 					isNumpadTyping = false;
-					var v = parseInt(input.value, 10);
+					let v = parseInt(input.value, 10);
 					pushStock([rowItem(currentActiveRow, isNaN(v) || v < 0 ? 0 : v)]);
 				}
 			}
@@ -575,13 +575,13 @@
 	}
 
 	// 검색 필터
-	var searchInput = document.getElementById('sim-search');
+	let searchInput = document.getElementById('sim-search');
 	if (searchInput) {
 		searchInput.addEventListener('input', function () {
-			var q = this.value.trim().toLowerCase();
+			let q = this.value.trim().toLowerCase();
 			rows.forEach(function (r) {
-				var name = (r.getAttribute('data-name') || '').toLowerCase();
-				var sku = (r.getAttribute('data-sku') || '').toLowerCase();
+				let name = (r.getAttribute('data-name') || '').toLowerCase();
+				let sku = (r.getAttribute('data-sku') || '').toLowerCase();
 				if (!q || name.indexOf(q) !== -1 || sku.indexOf(q) !== -1) {
 					r.style.display = '';
 				} else {
@@ -592,7 +592,7 @@
 	}
 
 	// 전체 품절(0)
-	var btnZeroAll = document.getElementById('btn-zero-all');
+	let btnZeroAll = document.getElementById('btn-zero-all');
 	if (btnZeroAll) {
 		btnZeroAll.addEventListener('click', function () {
 			if (!confirm('화면의 모든 품목 재고를 0으로 맞추시겠습니까?')) return;
@@ -604,7 +604,7 @@
 	}
 
 	// 화면 새로고침
-	var btnReset = document.getElementById('btn-reset-inputs');
+	let btnReset = document.getElementById('btn-reset-inputs');
 	if (btnReset) {
 		btnReset.addEventListener('click', function () {
 			window.location.reload();
@@ -612,13 +612,13 @@
 	}
 
 	// 영수증 로그 컨트롤 (FEED, CLEAR)
-	var btnFeed = document.getElementById('btn-log-feed');
+	let btnFeed = document.getElementById('btn-log-feed');
 	if (btnFeed) {
 		btnFeed.addEventListener('click', function () {
 			appendLog('.\n.\n--- PAPER FEED ---');
 		});
 	}
-	var btnClear = document.getElementById('btn-log-clear');
+	let btnClear = document.getElementById('btn-log-clear');
 	if (btnClear) {
 		btnClear.addEventListener('click', function () {
 			if (logEl) {

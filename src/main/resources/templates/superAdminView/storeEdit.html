@@ -145,19 +145,19 @@
        열릴 때 닫기 버튼으로 포커스를 옮기고 Esc로 닫을 수 있게 한다(2026-09-21 UI/UX 감사) —
        다음 위젯은 iframe이라 내부까지 포커스 트랩을 걸 수는 없지만, 최소한 열자마자 배경 폼으로
        포커스가 새지 않게 한다. */
-    var postcodeOverlay = document.getElementById('postcodeOverlay');
-    var postcodeLayer = document.getElementById('postcodeLayer');
-    var postcodeCloseBtn = document.getElementById('postcodeCloseBtn');
-    var postcode = new daum.Postcode({
+    let postcodeOverlay = document.getElementById('postcodeOverlay');
+    let postcodeLayer = document.getElementById('postcodeLayer');
+    let postcodeCloseBtn = document.getElementById('postcodeCloseBtn');
+    let postcode = new daum.Postcode({
       oncomplete: function (data) {
-        var addr = data.roadAddress || data.jibunAddress;
-        var addressInput = document.getElementById('address');
+        let addr = data.roadAddress || data.jibunAddress;
+        let addressInput = document.getElementById('address');
         addressInput.value = addr;
         postcodeOverlay.style.display = 'none';
         addressInput.focus();
         // 주소 검색 직후 좌표까지 바로 확인되도록 기존 지오코더 버튼을 이어서 눌러준다
         // (카카오맵 SDK가 로드됐을 때만 실제로 동작 — 실패했으면 이 클릭은 조용히 무시됨).
-        var geocodeBtn = document.getElementById('geocodeBtn');
+        let geocodeBtn = document.getElementById('geocodeBtn');
         if (geocodeBtn) geocodeBtn.click();
       },
       width: '100%',
@@ -181,12 +181,12 @@
   <script th:src="@{'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + ${kakaoMapJsKey} + '&libraries=services&autoload=false'}"></script>
   <script th:inline="javascript">
     kakao.maps.load(function () {
-      var geocoder = new kakao.maps.services.Geocoder();
-      var statusEl = document.getElementById('geocodeStatus');
-      var detailEl = document.getElementById('geocodeDetail');
-      var mapEl = document.getElementById('locationPreviewMap');
-      var map = null;
-      var marker = null;
+      let geocoder = new kakao.maps.services.Geocoder();
+      let statusEl = document.getElementById('geocodeStatus');
+      let detailEl = document.getElementById('geocodeDetail');
+      let mapEl = document.getElementById('locationPreviewMap');
+      let map = null;
+      let marker = null;
 
       // 다른 화면의 상태 배지와 같은 방식(색만 다르고 모양은 통일, 이모지 없음).
       function setGeoStatus(text, variant, detail) {
@@ -196,7 +196,7 @@
       }
 
       function showPreview(lat, lng) {
-        var position = new kakao.maps.LatLng(lat, lng);
+        let position = new kakao.maps.LatLng(lat, lng);
         mapEl.style.display = 'block';
 
         if (!map) {
@@ -209,14 +209,14 @@
         }
       }
 
-      var initialLat = document.getElementById('latitude').value;
-      var initialLng = document.getElementById('longitude').value;
+      let initialLat = document.getElementById('latitude').value;
+      let initialLng = document.getElementById('longitude').value;
       if (initialLat && initialLng) {
         showPreview(Number(initialLat), Number(initialLng));
       }
 
       document.getElementById('geocodeBtn').addEventListener('click', function () {
-        var address = document.getElementById('address').value.trim();
+        let address = document.getElementById('address').value.trim();
         if (!address) {
           setGeoStatus('주소 입력 필요', 'danger');
           return;
@@ -225,8 +225,8 @@
 
         geocoder.addressSearch(address, function (result, status) {
           if (status === kakao.maps.services.Status.OK) {
-            var lat = result[0].y;
-            var lng = result[0].x;
+            let lat = result[0].y;
+            let lng = result[0].x;
             document.getElementById('latitude').value = lat;
             document.getElementById('longitude').value = lng;
             setGeoStatus('위치 확인됨', 'success', '확인된 위치: ' + result[0].address_name + ' — 아래 지도 핀이 맞는지 확인해 주세요.');
@@ -245,30 +245,30 @@
   <!-- 영업시간 구조화 입력 및 hidden 값 동기화 -->
   <script th:inline="none">
   (function () {
-    var hiddenInput = document.getElementById('operatingHours');
-    var openEl = document.getElementById('openTimeInput');
-    var closeEl = document.getElementById('closeTimeInput');
-    var saleCheck = document.getElementById('saleTimeCheck');
-    var saleRow = document.getElementById('saleTimeRow');
-    var saleEl = document.getElementById('saleTimeInput');
-    var form = hiddenInput ? hiddenInput.closest('form') : null;
+    let hiddenInput = document.getElementById('operatingHours');
+    let openEl = document.getElementById('openTimeInput');
+    let closeEl = document.getElementById('closeTimeInput');
+    let saleCheck = document.getElementById('saleTimeCheck');
+    let saleRow = document.getElementById('saleTimeRow');
+    let saleEl = document.getElementById('saleTimeInput');
+    let form = hiddenInput ? hiddenInput.closest('form') : null;
 
     if (!hiddenInput || !openEl || !closeEl) return;
 
-    var raw = hiddenInput.value ? hiddenInput.value.trim() : '';
+    let raw = hiddenInput.value ? hiddenInput.value.trim() : '';
     if (raw) {
-      var parts = raw.split('~');
+      let parts = raw.split('~');
       if (parts.length >= 2) {
-        var openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
+        let openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
         if (openMatch) {
           openEl.value = openMatch[1].length === 4 ? '0' + openMatch[1] : openMatch[1];
         }
-        var closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
+        let closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
         if (closeMatch) {
           closeEl.value = closeMatch[1].length === 4 ? '0' + closeMatch[1] : closeMatch[1];
         }
       }
-      var saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
+      let saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
       if (saleMatch && saleEl && saleCheck) {
         saleCheck.checked = true;
         if (saleRow) saleRow.style.display = 'block';
@@ -277,13 +277,13 @@
     }
 
     function updateHidden() {
-      var openVal = openEl.value;
-      var closeVal = closeEl.value;
+      let openVal = openEl.value;
+      let closeVal = closeEl.value;
       if (!openVal || !closeVal) {
         hiddenInput.value = '';
         return;
       }
-      var res = openVal + ' ~ ' + closeVal;
+      let res = openVal + ' ~ ' + closeVal;
       if (saleCheck && saleCheck.checked && saleEl && saleEl.value) {
         res += ' (마감 세일 ' + saleEl.value + '~)';
       }

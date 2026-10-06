@@ -281,8 +281,8 @@
 	<script th:inline="none">
 		(function () {
 			// 상단 뒤로가기 = "가입을 완료하지 않고 나가기"와 동일(가입 취소). app.js보다 먼저 data-back을 뗀다.
-			var back = document.querySelector('.topbar__back[data-back]');
-			var form = document.getElementById('cancel-signup-form');
+			let back = document.querySelector('.topbar__back[data-back]');
+			let form = document.getElementById('cancel-signup-form');
 			if (!back || !form) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () {
@@ -522,11 +522,11 @@
 		// 변경됨 (2026-09-22, UI/UX 감사) — div onclick 대신 실제 radio의 change 이벤트를 듣는다.
 		// 클릭·Tab+스페이스·화살표 키 어느 방식으로 선택하든 change가 똑같이 발생해서 한 곳에서 처리된다.
 		(function () {
-			var cardUser = document.getElementById('card-user');
-			var cardOwner = document.getElementById('card-owner');
+			let cardUser = document.getElementById('card-user');
+			let cardOwner = document.getElementById('card-owner');
 
 			function syncSelectedCard() {
-				var isOwner = document.getElementById('role-owner').checked;
+				let isOwner = document.getElementById('role-owner').checked;
 				cardUser.classList.toggle('is-selected', !isOwner);
 				cardOwner.classList.toggle('is-selected', isOwner);
 			}
@@ -542,35 +542,35 @@
 	<script th:inline="none">
 		(function () {
 			// 휴대폰 번호 — 입력하는 대로 하이픈 자동 삽입(010-1234-5678). 검증은 input의 pattern+required가 담당.
-			var phoneInput = document.getElementById('phone');
+			let phoneInput = document.getElementById('phone');
 			if (phoneInput) {
 				phoneInput.addEventListener('input', function () {
-					var d = phoneInput.value.replace(/\D/g, '').slice(0, 11);
-					var out = d;
+					let d = phoneInput.value.replace(/\D/g, '').slice(0, 11);
+					let out = d;
 					if (d.length > 7) out = d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
 					else if (d.length > 3) out = d.slice(0, 3) + '-' + d.slice(3);
 					phoneInput.value = out;
 				});
 			}
 
-			var sidoSel = document.getElementById('sido');
-			var guSel = document.getElementById('sigungu');
-			var dongInput = document.getElementById('dong');
-			var regionHidden = document.getElementById('region');
-			var REGIONS = {};
+			let sidoSel = document.getElementById('sido');
+			let guSel = document.getElementById('sigungu');
+			let dongInput = document.getElementById('dong');
+			let regionHidden = document.getElementById('region');
+			let REGIONS = {};
 
 			function norm(s) {
 				return (s || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, '');
 			}
 			function syncRegion() {
-				var parts = [sidoSel.value, guSel.value, (dongInput.value || '').trim()].filter(Boolean);
+				let parts = [sidoSel.value, guSel.value, (dongInput.value || '').trim()].filter(Boolean);
 				regionHidden.value = parts.join(' ');
 			}
 			function fillGu(sido, selected) {
 				guSel.innerHTML = '<option value="">시/군/구</option>';
-				var list = REGIONS[sido] || [];
+				let list = REGIONS[sido] || [];
 				list.forEach(function (g) {
-					var o = document.createElement('option');
+					let o = document.createElement('option');
 					o.value = g; o.textContent = g;
 					if (g === selected) o.selected = true;
 					guSel.appendChild(o);
@@ -581,14 +581,14 @@
 			fetch('/js/regions.json').then(function (r) { return r.json(); }).then(function (data) {
 				REGIONS = data;
 				Object.keys(data).forEach(function (sido) {
-					var o = document.createElement('option');
+					let o = document.createElement('option');
 					o.value = sido; o.textContent = sido;
 					sidoSel.appendChild(o);
 				});
 				// 기존에 저장된 region("부산광역시 수영구 광안동")이 있으면 되살린다.
-				var saved = (regionHidden.value || '').trim();
+				let saved = (regionHidden.value || '').trim();
 				if (saved) {
-					var toks = saved.split(/\s+/);
+					let toks = saved.split(/\s+/);
 					if (data[toks[0]]) {
 						sidoSel.value = toks[0];
 						fillGu(toks[0]);
@@ -611,11 +611,11 @@
 
 			// 카카오 역지오코딩 결과를 세 칸에 채운다(부분 일치도 최대한 반영).
 			window.girigiriApplyRegion = function (sido1, sigungu2, dong3) {
-				var matchedSido = Object.keys(REGIONS).find(function (k) { return norm(k) === norm(sido1); });
+				let matchedSido = Object.keys(REGIONS).find(function (k) { return norm(k) === norm(sido1); });
 				if (matchedSido) {
 					sidoSel.value = matchedSido;
 					fillGu(matchedSido);
-					var gu = (REGIONS[matchedSido] || []).find(function (g) {
+					let gu = (REGIONS[matchedSido] || []).find(function (g) {
 						return sigungu2 && (sigungu2 === g || sigungu2.indexOf(g) === 0 || g.indexOf(sigungu2.split(' ')[0]) === 0);
 					});
 					if (gu) guSel.value = gu;
@@ -625,13 +625,13 @@
 			};
 
 			// ---- 약관 동의 ----
-			var all = document.getElementById('agreeAll');
-			var terms = document.getElementById('agreeTerms');
-			var privacy = document.getElementById('agreePrivacy');
-			var marketing = document.getElementById('agreeMarketing');
-			var submitBtn = document.getElementById('btn-submit');
-			var required = [terms, privacy];
-			var every = [terms, privacy, marketing];
+			let all = document.getElementById('agreeAll');
+			let terms = document.getElementById('agreeTerms');
+			let privacy = document.getElementById('agreePrivacy');
+			let marketing = document.getElementById('agreeMarketing');
+			let submitBtn = document.getElementById('btn-submit');
+			let required = [terms, privacy];
+			let every = [terms, privacy, marketing];
 
 			function refresh() {
 				all.checked = every.every(function (c) { return c.checked; });
@@ -651,17 +651,17 @@
 	(function () {
 		// 카카오 SDK 로드 실패(키 도메인 제한 등) 시 "위치 찾기"만 비활성화하고 나머지 폼은 그대로 쓴다.
 		if (typeof kakao === 'undefined' || !kakao.maps) {
-			var gpsBtn = document.getElementById('gpsRegionBtn');
+			let gpsBtn = document.getElementById('gpsRegionBtn');
 			if (gpsBtn) { gpsBtn.disabled = true; gpsBtn.title = '위치 서비스를 불러오지 못했어요'; }
 			return;
 		}
 		kakao.maps.load(function () {
-			var geocoder = new kakao.maps.services.Geocoder();
-			var statusEl = document.getElementById('gpsRegionStatus');
+			let geocoder = new kakao.maps.services.Geocoder();
+			let statusEl = document.getElementById('gpsRegionStatus');
 
 			// 다른 화면의 상태 배지(.badge)와 같은 방식 — 색만 다르고 모양은 통일, 이모지 없음.
 			// hint: 권한이 "차단"돼 있을 때 브라우저별 해제 방법을 배지 아래 한 줄로 덧붙인다.
-			var hintEl = document.createElement('div');
+			let hintEl = document.createElement('div');
 			hintEl.style.cssText = 'font-size:var(--fs-xs);color:var(--c-text-mut);margin-top:4px;display:none';
 			statusEl.parentNode.insertBefore(hintEl, statusEl.nextSibling);
 			function setGpsStatus(text, variant, hint) {
@@ -678,7 +678,7 @@
 				window.girigiriRequestLocation(function (pos) {
 					geocoder.coord2Address(pos.coords.longitude, pos.coords.latitude, function (result, status) {
 						if (status === kakao.maps.services.Status.OK) {
-							var addr = result[0].address;
+							let addr = result[0].address;
 							window.girigiriApplyRegion(
 								addr.region_1depth_name,
 								addr.region_2depth_name,
@@ -705,35 +705,35 @@
 	<!-- 1:N 멀티 소셜 계정 연동(Account Linking) 클라이언트 스크립트 -->
 	<script th:inline="javascript">
 	(function () {
-		var linkModal = document.getElementById('social-link-modal');
-		var linkModalProvider = document.getElementById('social-link-modal-provider');
-		var linkModalCancel = document.getElementById('social-link-modal-cancel');
-		var linkModalConfirm = document.getElementById('social-link-modal-confirm');
-		var linkModalNotMine = document.getElementById('social-link-modal-not-mine');
-		var linkAccountForm = document.getElementById('link-account-form');
-		var linkAccountPhone = document.getElementById('link-account-phone');
-		var linkAccountPassword = document.getElementById('link-account-password');
-		var linkPasswordBox = document.getElementById('social-link-password-box');
-		var linkPasswordInput = document.getElementById('social-link-password-input');
-		var linkPasswordError = document.getElementById('social-link-password-error');
-		var phoneInput = document.getElementById('phone');
-		var phoneFeedback = document.getElementById('phone-feedback');
-		var currentLinkedPhone = '';
-		var currentLinkedProviderRaw = '';
-		var isPhoneChecked = false;
-		var lastCheckedPhone = '';
+		let linkModal = document.getElementById('social-link-modal');
+		let linkModalProvider = document.getElementById('social-link-modal-provider');
+		let linkModalCancel = document.getElementById('social-link-modal-cancel');
+		let linkModalConfirm = document.getElementById('social-link-modal-confirm');
+		let linkModalNotMine = document.getElementById('social-link-modal-not-mine');
+		let linkAccountForm = document.getElementById('link-account-form');
+		let linkAccountPhone = document.getElementById('link-account-phone');
+		let linkAccountPassword = document.getElementById('link-account-password');
+		let linkPasswordBox = document.getElementById('social-link-password-box');
+		let linkPasswordInput = document.getElementById('social-link-password-input');
+		let linkPasswordError = document.getElementById('social-link-password-error');
+		let phoneInput = document.getElementById('phone');
+		let phoneFeedback = document.getElementById('phone-feedback');
+		let currentLinkedPhone = '';
+		let currentLinkedProviderRaw = '';
+		let isPhoneChecked = false;
+		let lastCheckedPhone = '';
 
 		// 휴대폰 인증(OTP) 상태 — 목업(실제 SMS 미발송, 서버가 만든 코드를 화면에 그대로 보여줌).
-		var btnSendOtp = document.getElementById('btn-send-otp');
-		var otpStatus = document.getElementById('otp-status');
-		var otpBlock = document.getElementById('otp-block');
-		var otpMockBannerCode = document.getElementById('otp-mock-banner-code');
-		var otpCodeInput = document.getElementById('otp-code-input');
-		var btnVerifyOtp = document.getElementById('btn-verify-otp');
-		var otpFeedback = document.getElementById('otp-feedback');
-		var isOtpVerified = false;
-		var lastOtpVerifiedPhone = '';
-		var otpCountdownTimer = null;
+		let btnSendOtp = document.getElementById('btn-send-otp');
+		let otpStatus = document.getElementById('otp-status');
+		let otpBlock = document.getElementById('otp-block');
+		let otpMockBannerCode = document.getElementById('otp-mock-banner-code');
+		let otpCodeInput = document.getElementById('otp-code-input');
+		let btnVerifyOtp = document.getElementById('btn-verify-otp');
+		let otpFeedback = document.getElementById('otp-feedback');
+		let isOtpVerified = false;
+		let lastOtpVerifiedPhone = '';
+		let otpCountdownTimer = null;
 
 		function showOtpFeedback(msg, isSuccess) {
 			if (!otpFeedback) return;
@@ -768,7 +768,7 @@
 
 		if (btnSendOtp) {
 			btnSendOtp.addEventListener('click', function () {
-				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				let rawPhone = phoneInput ? phoneInput.value.trim() : '';
 				if (!/^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/.test(rawPhone)) {
 					showOtpFeedback('휴대폰 번호를 먼저 올바르게 입력해 주세요.', false);
 					phoneInput && phoneInput.focus();
@@ -804,12 +804,12 @@
 						}
 						if (otpFeedback) otpFeedback.style.display = 'none';
 
-						var remaining = data.expiresInSeconds || 180;
+						let remaining = data.expiresInSeconds || 180;
 						if (otpCountdownTimer) clearInterval(otpCountdownTimer);
 						function tickCountdown() {
 							if (otpStatus) {
-								var m = Math.floor(remaining / 60);
-								var s = String(remaining % 60).padStart(2, '0');
+								let m = Math.floor(remaining / 60);
+								let s = String(remaining % 60).padStart(2, '0');
 								otpStatus.textContent = '유효시간 ' + m + ':' + s;
 							}
 							remaining -= 1;
@@ -832,8 +832,8 @@
 
 		if (btnVerifyOtp) {
 			btnVerifyOtp.addEventListener('click', function () {
-				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
-				var code = otpCodeInput ? otpCodeInput.value.trim() : '';
+				let rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				let code = otpCodeInput ? otpCodeInput.value.trim() : '';
 				if (!code) {
 					showOtpFeedback('인증번호를 입력해 주세요.', false);
 					otpCodeInput && otpCodeInput.focus();
@@ -863,7 +863,7 @@
 							// 닉네임·지역·약관까지 다 입력한 뒤에야 알게 되던 것보다 훨씬 이르게 알려준다.
 							executePhoneCheck();
 						} else {
-							var reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
+							let reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
 							showOtpFeedback(reason, false);
 						}
 					})
@@ -877,7 +877,7 @@
 		// 전화번호 입력 시 자동 하이픈 및 중복확인 상태 초기화
 		if (phoneInput) {
 			phoneInput.addEventListener('input', function () {
-				var val = phoneInput.value.replace(/[^0-9]/g, '');
+				let val = phoneInput.value.replace(/[^0-9]/g, '');
 				if (val.length > 3 && val.length <= 7) {
 					phoneInput.value = val.substring(0, 3) + '-' + val.substring(3);
 				} else if (val.length > 7) {
@@ -914,7 +914,7 @@
 			if (linkModalProvider) {
 				linkModalProvider.textContent = providerDisplay || '소셜';
 			}
-			var isEmailTarget = currentLinkedProviderRaw.toLowerCase() === 'email';
+			let isEmailTarget = currentLinkedProviderRaw.toLowerCase() === 'email';
 			if (linkPasswordBox) {
 				linkPasswordBox.style.display = isEmailTarget ? 'block' : 'none';
 			}
@@ -970,7 +970,7 @@
 				if (currentLinkedProviderRaw.toLowerCase() === 'email') {
 					// 본인 확인 1: 비밀번호 대조 — 서버(AuthService.linkSocialAccountWithPassword)가
 					// 실제로 검증한다. 여기서는 빈 값만 막는다.
-					var pw = linkPasswordInput ? linkPasswordInput.value : '';
+					let pw = linkPasswordInput ? linkPasswordInput.value : '';
 					if (!pw) {
 						if (linkPasswordError) {
 							linkPasswordError.textContent = '비밀번호를 입력해 주세요.';
@@ -994,7 +994,7 @@
 
 		// 중복 확인 비동기 실행 함수
 		function executePhoneCheck(callback) {
-			var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+			let rawPhone = phoneInput ? phoneInput.value.trim() : '';
 			if (!rawPhone) {
 				showPhoneFeedback('휴대폰 번호를 입력해 주세요.', false);
 				phoneInput && phoneInput.focus();
@@ -1031,19 +1031,19 @@
 
 		// 1. 서버 리다이렉트 (error=phone_linked) 시 모달 자동 노출
 		/*[# th:if="${param.error != null and param.error[0] == 'phone_linked'}"]*/
-		var serverProv = /*[[${linkedProvider}]]*/ '';
-		var serverProvRaw = /*[[${linkedProviderRaw}]]*/ '';
-		var serverPhone = /*[[${linkedPhone}]]*/ '';
+		let serverProv = /*[[${linkedProvider}]]*/ '';
+		let serverProvRaw = /*[[${linkedProviderRaw}]]*/ '';
+		let serverPhone = /*[[${linkedPhone}]]*/ '';
 		if (serverPhone) {
 			openLinkModal(serverProv, serverProvRaw, serverPhone);
 		}
 		/*[/]*/
 
 		// 2. 가입 완료 폼 제출 시: 중복 확인 검증
-		var signupForm = document.querySelector('form[action*="/auth/signup"]');
+		let signupForm = document.querySelector('form[action*="/auth/signup"]');
 		if (signupForm) {
 			signupForm.addEventListener('submit', function (e) {
-				var rawPhone = phoneInput ? phoneInput.value.trim() : '';
+				let rawPhone = phoneInput ? phoneInput.value.trim() : '';
 				if (!rawPhone) {
 					e.preventDefault();
 					showPhoneFeedback('휴대폰 번호를 입력해 주세요.', false);

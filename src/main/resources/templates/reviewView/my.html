@@ -7,7 +7,7 @@
 	<!-- 상단바 뒤로가기: 마이페이지로 복귀 -->
 	<script th:inline="none">
 	(function () {
-		var backBtn = document.querySelector('.topbar__back');
+		let backBtn = document.querySelector('.topbar__back');
 		if (!backBtn) { return; }
 		backBtn.removeAttribute('data-back');
 		backBtn.addEventListener('click', function () {

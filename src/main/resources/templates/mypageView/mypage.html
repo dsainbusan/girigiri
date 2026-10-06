@@ -174,7 +174,7 @@
 	     app.js의 기본 data-back 위임보다 먼저 떼어낸다. */-->
 	<script th:inline="none">
 		(function () {
-			var back = document.querySelector('.topbar__back[data-back]');
+			let back = document.querySelector('.topbar__back[data-back]');
 			if (!back) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/app'; });

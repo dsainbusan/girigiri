@@ -135,11 +135,11 @@
           </td>
           <td class="action-row">
             <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post"
-                  onsubmit="return confirm('이 매장의 입점을 승인할까요? 승인 즉시 손님에게 노출됩니다.')">
+                  onsubmit="return confirm('이 매장의 입점을 승인할까요?')">
               <button class="chip-btn" type="submit">승인</button>
             </form>
             <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/reject(id=${store.id})}" method="post"
-                  onsubmit="var r = prompt('반려 사유를 입력해 주세요 (비워도 반려는 진행돼요)'); if (r === null) { return false; } this.reason.value = r; return true;">
+                  onsubmit="let r = prompt('반려 사유를 입력해 주세요'); if (r === null) { return false; } this.reason.value = r; return true;">
               <input type="hidden" name="reason">
               <button class="chip-btn chip-btn--danger" type="submit">반려</button>
             </form>
@@ -160,13 +160,13 @@
     // 일괄 정지엔 없었다. members.html과 동일한 방식 — submitter의 formaction으로 판별.
     // 변경됨 (2026-09-29, 담당: 송보미) — confirm() 대신 prompt()로 정지 사유를 받아 #bulk-reason에
     // 채운다(members.html과 동일 이유 — SuperAdminStoreService#bulkSuspend 참고).
-    var bulkForm = document.getElementById('bulk-form');
-    var bulkReasonInput = document.getElementById('bulk-reason');
+    let bulkForm = document.getElementById('bulk-form');
+    let bulkReasonInput = document.getElementById('bulk-reason');
     if (bulkForm) {
       bulkForm.addEventListener('submit', function (e) {
-        var action = e.submitter && e.submitter.getAttribute('formaction');
+        let action = e.submitter && e.submitter.getAttribute('formaction');
         if (action && action.indexOf('bulk-suspend') !== -1) {
-          var r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)');
+          let r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)');
           if (r === null) {
             e.preventDefault();
             return;

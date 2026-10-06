@@ -30,7 +30,7 @@
 	<!--/* 탈퇴 후라 로그인 상태가 아님 — 뒤로가기는 이전(마이페이지/탈퇴 확인)이 아니라 홈으로 고정. */-->
 	<script th:inline="none">
 		(function () {
-			var back = document.querySelector('.topbar__back[data-back]');
+			let back = document.querySelector('.topbar__back[data-back]');
 			if (!back) { return; }
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/app'; });

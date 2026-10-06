@@ -184,24 +184,24 @@
 
 	<script th:inline="none">
 		(function () {
-			var form = document.getElementById('email-signup-form');
-			var emailInput = document.getElementById('email');
-			var emailLocalInput = document.getElementById('emailLocal');
-			var emailDomainSelect = document.getElementById('emailDomainSelect');
-			var emailDomainCustom = document.getElementById('emailDomainCustom');
+			let form = document.getElementById('email-signup-form');
+			let emailInput = document.getElementById('email');
+			let emailLocalInput = document.getElementById('emailLocal');
+			let emailDomainSelect = document.getElementById('emailDomainSelect');
+			let emailDomainCustom = document.getElementById('emailDomainCustom');
 
 			// 강노은: 이메일 도메인을 흔히 쓰는 목록에서 고르거나 "직접입력"으로 타이핑하게 분리.
 			// 실제 제출/검증 로직(위 emailInput = #email)은 그대로 두고, 여기서 로컬파트+도메인을
 			// 합쳐서 숨은 #email 값만 채워 넣는다 — fetch 쪽 코드를 안 건드려도 되게 하기 위함.
 			function syncEmailHiddenField() {
-				var local = emailLocalInput.value.trim();
-				var domain = emailDomainSelect.value === '__custom__'
+				let local = emailLocalInput.value.trim();
+				let domain = emailDomainSelect.value === '__custom__'
 					? emailDomainCustom.value.trim()
 					: emailDomainSelect.value;
 				emailInput.value = local && domain ? (local + '@' + domain) : '';
 			}
 			function onDomainSelectChange() {
-				var isCustom = emailDomainSelect.value === '__custom__';
+				let isCustom = emailDomainSelect.value === '__custom__';
 				emailDomainCustom.style.display = isCustom ? 'block' : 'none';
 				if (isCustom) emailDomainCustom.focus();
 				syncEmailHiddenField();
@@ -213,14 +213,14 @@
 			// 에러로 리다이렉트됐을 때(th:value="${email}") 기존에 입력했던 이메일을 로컬파트/도메인으로
 			// 다시 쪼개 채워 넣는다. 프리셋 목록에 없는 도메인이면 "직접입력"으로 전환.
 			(function restorePrefilledEmail() {
-				var prefilled = emailInput.value.trim();
+				let prefilled = emailInput.value.trim();
 				if (!prefilled || prefilled.indexOf('@') === -1) return;
-				var parts = prefilled.split('@');
-				var local = parts[0];
-				var domain = parts.slice(1).join('@');
+				let parts = prefilled.split('@');
+				let local = parts[0];
+				let domain = parts.slice(1).join('@');
 				emailLocalInput.value = local;
-				var matched = false;
-				for (var i = 0; i < emailDomainSelect.options.length; i++) {
+				let matched = false;
+				for (let i = 0; i < emailDomainSelect.options.length; i++) {
 					if (emailDomainSelect.options[i].value === domain) {
 						emailDomainSelect.value = domain;
 						matched = true;
@@ -234,28 +234,28 @@
 				}
 			})();
 
-			var passwordInput = document.getElementById('password');
-			var passwordConfirmInput = document.getElementById('passwordConfirm');
-			var btnSubmit = document.getElementById('btn-email-signup');
-			var otpBlock = document.getElementById('email-signup-otp-block');
-			var otpBanner = document.getElementById('email-signup-otp-banner');
-			var otpBannerCode = document.getElementById('email-signup-otp-banner-code');
-			var otpCodeInput = document.getElementById('signupOtpCode');
-			var btnVerifyOtp = document.getElementById('btn-verify-signup-otp');
-			var otpFeedback = document.getElementById('email-signup-otp-feedback');
-			var otpStatus = document.getElementById('email-signup-otp-status');
-			var otpRequested = false;
-			var otpCountdownTimer = null;
+			let passwordInput = document.getElementById('password');
+			let passwordConfirmInput = document.getElementById('passwordConfirm');
+			let btnSubmit = document.getElementById('btn-email-signup');
+			let otpBlock = document.getElementById('email-signup-otp-block');
+			let otpBanner = document.getElementById('email-signup-otp-banner');
+			let otpBannerCode = document.getElementById('email-signup-otp-banner-code');
+			let otpCodeInput = document.getElementById('signupOtpCode');
+			let btnVerifyOtp = document.getElementById('btn-verify-signup-otp');
+			let otpFeedback = document.getElementById('email-signup-otp-feedback');
+			let otpStatus = document.getElementById('email-signup-otp-status');
+			let otpRequested = false;
+			let otpCountdownTimer = null;
 
 			// signup.html(휴대폰 인증)과 같은 3분 카운트다운 — 서버가 이미 내려주는 expiresInSeconds를
 			// 화면에서 그동안 그냥 버리고 있었다(백엔드 AuthController#emailSignupSendOtp 참고).
 			function startOtpCountdown(seconds) {
-				var remaining = seconds || 180;
+				let remaining = seconds || 180;
 				if (otpCountdownTimer) clearInterval(otpCountdownTimer);
 				function tick() {
 					if (otpStatus) {
-						var m = Math.floor(remaining / 60);
-						var s = String(remaining % 60).padStart(2, '0');
+						let m = Math.floor(remaining / 60);
+						let s = String(remaining % 60).padStart(2, '0');
 						otpStatus.textContent = '유효시간 ' + m + ':' + s;
 					}
 					remaining -= 1;
@@ -269,10 +269,10 @@
 				otpCountdownTimer = setInterval(tick, 1000);
 			}
 
-			var linkModal = document.getElementById('email-link-modal');
-			var linkModalProvider = document.getElementById('email-link-modal-provider');
-			var linkModalCancel = document.getElementById('email-link-modal-cancel');
-			var linkModalConfirm = document.getElementById('email-link-modal-confirm');
+			let linkModal = document.getElementById('email-link-modal');
+			let linkModalProvider = document.getElementById('email-link-modal-provider');
+			let linkModalCancel = document.getElementById('email-link-modal-cancel');
+			let linkModalConfirm = document.getElementById('email-link-modal-confirm');
 
 			function openEmailLinkModal(providerDisplay) {
 				linkModalProvider.textContent = providerDisplay || '소셜';
@@ -298,7 +298,7 @@
 				otpFeedback.style.display = 'block';
 			}
 
-			var ERROR_MESSAGES = {
+			let ERROR_MESSAGES = {
 				INVALID_EMAIL: '이메일 형식이 올바르지 않아요.',
 				INVALID_PASSWORD: '비밀번호는 8자 이상이어야 해요.',
 				PASSWORD_MISMATCH: '비밀번호가 서로 일치하지 않아요.',
@@ -370,7 +370,7 @@
 			});
 
 			btnVerifyOtp.addEventListener('click', function () {
-				var code = otpCodeInput.value.trim();
+				let code = otpCodeInput.value.trim();
 				if (!code) {
 					showOtpFeedback('인증번호를 입력해 주세요.', false);
 					otpCodeInput.focus();
@@ -393,7 +393,7 @@
 						} else if (data.reason === 'duplicate') {
 							window.location.href = '/auth/emailSignup?error=duplicate&email=' + encodeURIComponent(emailInput.value.trim());
 						} else {
-							var reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
+							let reason = data.reason === 'expired' ? '인증번호가 만료됐어요. 다시 받아주세요.' : '인증번호가 일치하지 않아요.';
 							showOtpFeedback(reason, false);
 						}
 					})

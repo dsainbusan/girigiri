@@ -137,8 +137,8 @@
 			// 0으로 잡힌다. setTimeout(0)으로 한 틱 미뤄서 hidden이 풀린 뒤에 재기 재도록 한다.
 			document.querySelectorAll('[data-toggle-target]').forEach(function (btn) {
 				btn.addEventListener('click', function () {
-					var target = document.getElementById(btn.getAttribute('data-toggle-target'));
-					var textarea = target && target.querySelector('.js-autogrow');
+					let target = document.getElementById(btn.getAttribute('data-toggle-target'));
+					let textarea = target && target.querySelector('.js-autogrow');
 					if (textarea) { setTimeout(function () { fit(textarea); }, 0); }
 				});
 			});
@@ -158,7 +158,7 @@
 			// "뒤로"를 누르면 항상 /store/dashboard로 나가야 하는 사장님 기대와 어긋났다. app.js의
 			// data-back 핸들러가 data-back-href를 우선 보도록 바꿔두고, 여기서 그 값만 심어준다
 			// (app.js는 이 스크립트보다 body 아래쪽에서 로드되므로 반드시 먼저 실행된다).
-			var backBtn = document.querySelector('.topbar__back[data-back]');
+			let backBtn = document.querySelector('.topbar__back[data-back]');
 			if (backBtn) { backBtn.setAttribute('data-back-href', '/store/dashboard'); }
 		})();
 	</script>

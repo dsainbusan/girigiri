@@ -35,7 +35,7 @@
   // 완벽한 판별은 아니다(삼성인터넷 등 소수 브라우저는 else로 빠짐) — "아예 안 알려주는 것"보다
   // "대부분의 경우엔 맞는 안내"가 사용자 입장에서 훨씬 나아서 실용적으로 타협했다.
   window.girigiriGeoHint = function () {
-    var ua = navigator.userAgent;
+    let ua = navigator.userAgent;
     if (/Firefox/.test(ua)) {
       return "주소창 왼쪽의 방패 아이콘을 눌러 위치 차단을 해제한 뒤 새로고침 해주세요.";
     }
@@ -51,7 +51,7 @@
   // 대시보드로 안 가고 계속 리뷰 목록 안에서만 맴도는 문제가 있었다).
   document.querySelectorAll("[data-back]").forEach(function (el) {
     el.addEventListener("click", function () {
-      var href = el.getAttribute("data-back-href");
+      let href = el.getAttribute("data-back-href");
       if (href) { location.href = href; return; }
       history.back();
     });
@@ -60,7 +60,7 @@
   // 카테고리 칩: 클릭 시 활성 표시 (실제 필터는 서버 요청/쿼리스트링으로)
   document.querySelectorAll("[data-chip-row]").forEach(function (row) {
     row.addEventListener("click", function (e) {
-      var chip = e.target.closest(".chip");
+      let chip = e.target.closest(".chip");
       if (!chip) return;
       row.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("is-active"); });
       chip.classList.add("is-active");
@@ -72,15 +72,15 @@
   // 클릭만으로 전환 — 원래 supportView/home.html(고객센터)에만 있던 걸 가게 상세 페이지
   // (정보/상품/리뷰 탭)에도 재사용하면서 공용으로 뺐다.
   document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-tab]");
+    let btn = e.target.closest("[data-tab]");
     if (!btn) return;
-    var tabBar = btn.closest("[data-tabs]");
+    let tabBar = btn.closest("[data-tabs]");
     if (!tabBar || !tabBar.parentElement) return;
 
     tabBar.querySelectorAll("[data-tab]").forEach(function (b) { b.classList.remove("is-active"); });
     btn.classList.add("is-active");
 
-    var name = btn.getAttribute("data-tab");
+    let name = btn.getAttribute("data-tab");
     tabBar.parentElement.querySelectorAll("[data-tab-panel]").forEach(function (panel) {
       panel.hidden = panel.getAttribute("data-tab-panel") !== name;
     });
@@ -92,9 +92,9 @@
   // 폼이 펼쳐진 동안 "펼치기" 버튼 자체는 할 일이 끝났으니 같이 숨긴다(안 그러면 폼이 열려있는데
   // "리뷰 작성" 버튼이 그대로 남아있어서 안 눌린 것처럼 보인다).
   document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-toggle-target]");
+    let btn = e.target.closest("[data-toggle-target]");
     if (!btn) return;
-    var target = document.getElementById(btn.getAttribute("data-toggle-target"));
+    let target = document.getElementById(btn.getAttribute("data-toggle-target"));
     if (!target) return;
     target.hidden = false;
     btn.hidden = true;
@@ -106,12 +106,12 @@
   // 가까운 [data-reopen-btn] 조상(=위에서 펼쳐진 패널 자신)을 찾아 다시 숨기고, 그 패널을 열었던
   // 버튼(data-reopen-btn이 가리키는 id)을 되살린다.
   document.addEventListener("click", function (e) {
-    var closeBtn = e.target.closest("[data-close-panel]");
+    let closeBtn = e.target.closest("[data-close-panel]");
     if (!closeBtn) return;
-    var panel = closeBtn.closest("[data-reopen-btn]");
+    let panel = closeBtn.closest("[data-reopen-btn]");
     if (!panel) return;
     panel.hidden = true;
-    var openBtn = document.getElementById(panel.getAttribute("data-reopen-btn"));
+    let openBtn = document.getElementById(panel.getAttribute("data-reopen-btn"));
     if (openBtn) openBtn.hidden = false;
   });
 
@@ -121,7 +121,7 @@
   // 있고(기본 opacity:0, position:fixed), 여기서는 그 is-shown 토글만 해주면 CSS 트랜지션이
   // 나타남/사라짐을 똑같이 처리한다.
   document.querySelectorAll("[data-auto-dismiss]").forEach(function (el) {
-    var delay = parseInt(el.getAttribute("data-auto-dismiss"), 10) || 3000;
+    let delay = parseInt(el.getAttribute("data-auto-dismiss"), 10) || 3000;
     requestAnimationFrame(function () { el.classList.add("is-shown"); });
     setTimeout(function () {
       el.classList.remove("is-shown");
@@ -134,11 +134,11 @@
   // 탭하거나 그래프 바깥을 누르면 원래 안내문(data-hint-default)으로 돌아간다.
   // 대시보드 "최근 7일"과 매출 리포트 두 곳에서 같은 마크업을 쓴다.
   document.addEventListener("click", function (e) {
-    var tapped = e.target.closest(".bar-chart__col[data-tip]");
+    let tapped = e.target.closest(".bar-chart__col[data-tip]");
     document.querySelectorAll(".bar-chart-wrap").forEach(function (wrap) {
-      var hint = wrap.querySelector(".bar-chart__hint");
+      let hint = wrap.querySelector(".bar-chart__hint");
       if (!hint) return;
-      var pick = tapped && wrap.contains(tapped) && !tapped.classList.contains("is-selected")
+      let pick = tapped && wrap.contains(tapped) && !tapped.classList.contains("is-selected")
         ? tapped : null;
       wrap.querySelectorAll(".bar-chart__col").forEach(function (c) { c.classList.remove("is-selected"); });
       wrap.classList.toggle("has-selection", !!pick);
@@ -161,13 +161,13 @@
   // "사진이 없어졌다"가 idle 화면 자체로 충분히 보인다. removeFlag는 그대로 true로 세팅해서
   // 저장 시 서버가 기존 사진을 지우게 한다.
   function initReviewPhotoDropzone(root) {
-    var input = root.querySelector("[data-photo-input]");
-    var removeFlag = root.querySelector("[data-photo-remove-flag]");
-    var idle = root.querySelector("[data-photo-idle]");
-    var preview = root.querySelector("[data-photo-preview]");
-    var previewImg = root.querySelector("[data-photo-preview-img]");
-    var filenameEl = root.querySelector("[data-photo-filename]");
-    var removeBtn = root.querySelector("[data-photo-remove]");
+    let input = root.querySelector("[data-photo-input]");
+    let removeFlag = root.querySelector("[data-photo-remove-flag]");
+    let idle = root.querySelector("[data-photo-idle]");
+    let preview = root.querySelector("[data-photo-preview]");
+    let previewImg = root.querySelector("[data-photo-preview-img]");
+    let filenameEl = root.querySelector("[data-photo-filename]");
+    let removeBtn = root.querySelector("[data-photo-remove]");
     if (!input || !idle || !preview) return;
 
     function setState(state) {
@@ -213,7 +213,7 @@
 
     // dragenter/dragleave가 dropzone 안의 자식 요소를 넘나들 때마다 반복 발생해서
     // 카운터로 세지 않으면 is-dragover가 깜빡인다.
-    var dragCounter = 0;
+    let dragCounter = 0;
     root.addEventListener("dragenter", function (e) {
       e.preventDefault();
       dragCounter++;
@@ -232,7 +232,7 @@
       e.preventDefault();
       dragCounter = 0;
       root.classList.remove("is-dragover");
-      var files = e.dataTransfer && e.dataTransfer.files;
+      let files = e.dataTransfer && e.dataTransfer.files;
       if (files && files[0]) {
         input.files = files;
         showPreview(files[0]);
@@ -245,18 +245,18 @@
   // 강노은: 찜하기 버튼 (common/components.html의 storeCard 프래그먼트에서 쓰임).
   // 카드 전체가 <a> 링크라서 하트 클릭이 카드 이동으로 새는 걸 막고, fetch로 토글 후 색만 바꾼다.
   document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-like-btn]");
+    let btn = e.target.closest("[data-like-btn]");
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
 
-    var storeId = btn.getAttribute("data-store-id");
+    let storeId = btn.getAttribute("data-store-id");
     if (!storeId) return;
 
     fetch("/api/likes/" + storeId + "/toggle", { method: "POST" })
       .then(function (res) {
         // 401 또는 (로그인 세션이 없어 로그인 페이지로 302 리다이렉트된) HTML 응답 둘 다 "로그인 필요"로 처리.
-        var contentType = res.headers.get("content-type") || "";
+        let contentType = res.headers.get("content-type") || "";
         if (res.status === 401 || res.redirected || contentType.indexOf("application/json") === -1) {
           return Promise.reject(new Error("login_required"));
         }
@@ -277,16 +277,16 @@
   // 마크업(모든 화면에 한 번만 존재)을 채워서 연다. 원래 checkout.html 전용이던 .modal-overlay/
   // .modal-box 스타일을 components.css로 승격해서 재사용한다.
   (function () {
-    var modalEl = document.getElementById("girigiri-modal");
+    let modalEl = document.getElementById("girigiri-modal");
     if (!modalEl) return; // 레이아웃이 아직 안 바뀐 옛 페이지 캐시 등 방어
 
-    var titleEl = document.getElementById("girigiri-modal-title");
-    var descEl = document.getElementById("girigiri-modal-desc");
-    var inputEl = document.getElementById("girigiri-modal-input");
-    var okBtn = document.getElementById("girigiri-modal-ok");
-    var cancelBtn = document.getElementById("girigiri-modal-cancel");
-    var iconEl = document.getElementById("girigiri-modal-icon");
-    var iconUseEl = iconEl.querySelector("use");
+    let titleEl = document.getElementById("girigiri-modal-title");
+    let descEl = document.getElementById("girigiri-modal-desc");
+    let inputEl = document.getElementById("girigiri-modal-input");
+    let okBtn = document.getElementById("girigiri-modal-ok");
+    let cancelBtn = document.getElementById("girigiri-modal-cancel");
+    let iconEl = document.getElementById("girigiri-modal-icon");
+    let iconUseEl = iconEl.querySelector("use");
 
     function closeModal() {
       modalEl.style.display = "none";
@@ -301,7 +301,7 @@
       titleEl.textContent = opts.title || "";
       titleEl.hidden = !opts.title;
       descEl.textContent = opts.desc || "";
-      var isDanger = opts.tone !== "neutral";
+      let isDanger = opts.tone !== "neutral";
       iconEl.classList.toggle("modal-box__icon--neutral", !isDanger);
       if (iconUseEl) iconUseEl.setAttribute("href", "#" + (opts.icon || "i-warning"));
       okBtn.textContent = opts.okLabel || "확인";
@@ -351,7 +351,7 @@
       inputEl.min = opts.min != null ? opts.min : "";
       inputEl.max = opts.max != null ? opts.max : "";
       okBtn.onclick = function () {
-        var val = parseInt(inputEl.value, 10);
+        let val = parseInt(inputEl.value, 10);
         closeModal();
         onConfirm(val);
       };
@@ -384,7 +384,7 @@
 
   // 풀블리드 히어로(대시보드 / 매출리포트) 상단바 스크롤 시 반투명 블러 네이비(.is-scrolled) 전환
   (function () {
-    var darkTopbar = document.querySelector('.topbar--dark');
+    let darkTopbar = document.querySelector('.topbar--dark');
     if (!darkTopbar) return;
     function checkScroll() {
       if (window.scrollY > 20) {

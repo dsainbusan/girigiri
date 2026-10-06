@@ -152,7 +152,7 @@
 	<script th:inline="none">
 	(function () {
 		// 뒤로가기는 항상 점주 대시보드로
-		var backBtn = document.querySelector('.topbar__back');
+		let backBtn = document.querySelector('.topbar__back');
 		if (backBtn) {
 			backBtn.removeAttribute('data-back');
 			backBtn.addEventListener('click', function () {
@@ -165,15 +165,15 @@
 		}
 
 		// 날짜·시간대 필터 접기/펼치기
-		var toggleBtn = document.getElementById('btn-toggle-date-filter');
-		var filterForm = document.getElementById('date-filter-form');
-		var toggleIcon = document.getElementById('icon-toggle-date-filter');
+		let toggleBtn = document.getElementById('btn-toggle-date-filter');
+		let filterForm = document.getElementById('date-filter-form');
+		let toggleIcon = document.getElementById('icon-toggle-date-filter');
 		if (toggleBtn && filterForm) {
 			if (!filterForm.classList.contains('is-hidden') && toggleIcon) {
 				toggleIcon.style.transform = 'rotate(90deg)';
 			}
 			toggleBtn.addEventListener('click', function () {
-				var isHidden = filterForm.classList.toggle('is-hidden');
+				let isHidden = filterForm.classList.toggle('is-hidden');
 				if (toggleIcon) {
 					toggleIcon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(90deg)';
 				}

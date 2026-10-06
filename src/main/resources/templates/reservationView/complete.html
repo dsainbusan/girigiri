@@ -12,13 +12,13 @@
 		 다 준비될 때까지 기다릴 이유가 애초에 없었다. -->
 	<script th:inline="javascript">
 	(function () {
-		var productId = /*[[${productId}]]*/ 0;
+		let productId = /*[[${productId}]]*/ 0;
 		// 수정됨 (2026-10-05, 채채 테스트 — 뒤로가기를 또 누르면 체크아웃이 다시 보임) — 왜: 여기서
 		// 상품 화면으로 보내도, 그 상품 화면에서 뒤로가기를 한 번 더 누르면 그 밑에 남아있던
 		// 체크아웃(결제) 화면이 다시 보였다. ?fromReservation=1을 붙여서 보내면, 상품 화면
 		// (productView/detail.html) 쪽 스크립트가 이 표시를 보고 거기서도 뒤로가기를 한 번 더
 		// 가로채 체크아웃으로 안 가게 막아준다(해당 파일 스크립트 참고).
-		var productUrl = '/user/products/' + productId + '?fromReservation=1';
+		let productUrl = '/user/products/' + productId + '?fromReservation=1';
 		try {
 			history.pushState(null, '', location.href);
 			window.addEventListener('popstate', function onBack() {

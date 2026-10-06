@@ -469,7 +469,7 @@
 		// 0. 대시보드는 점주 모드의 홈이라 "뒤로가기"가 갈 곳이 없다 — 상단바 뒤로 버튼을 숨긴다.
 		//    (common/topbar 프래그먼트엔 버튼 표시 옵션이 없어서 여기서 처리. app.js보다 먼저 실행돼
 		//     data-back을 떼두면 history.back() 핸들러도 안 붙는다.)
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (back) {
 			back.removeAttribute('data-back');
 			back.style.display = 'none';
@@ -479,8 +479,8 @@
 		//    각 그룹이 제어하는 패널은 그 그룹 버튼의 data-target으로만 한정 → 그룹끼리 안 섞인다.
 		//    2026-09-24 — 클래스가 .stat-toggle-tabs에서 .seg-tabs로 통합됨 (WBS CSS 1단계 정리, B).
 		document.querySelectorAll('.seg-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
-			var panels = tabs
+			let tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
+			let panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);
 			tabs.forEach(function (tab, i) {
@@ -498,11 +498,11 @@
 		});
 
 		// 2. 구제율 목표 수정
-		var editBtn = document.getElementById('rescue-goal-edit-btn');
+		let editBtn = document.getElementById('rescue-goal-edit-btn');
 		if (!editBtn) { return; }
 
 		editBtn.addEventListener('click', function () {
-			var currentGoal = editBtn.getAttribute('data-goal-percent');
+			let currentGoal = editBtn.getAttribute('data-goal-percent');
 			// window.prompt()/alert() 대체 (2026-09-16, 디자인 리팩토링 2차) — 앱 전체에서 유일한
 			// prompt() 쓰임이라 범용 프롬프트 대신 숫자 입력 전용 girigiriPromptNumber로 대체했다.
 			window.girigiriPromptNumber({
@@ -523,8 +523,8 @@
 					body: 'percent=' + percent
 				}).then(function (res) {
 					if (!res.ok) { throw new Error('저장 실패'); }
-					var rescueRate = parseInt(editBtn.getAttribute('data-rescue-rate'), 10);
-					var goalText = document.getElementById('rescue-goal-text');
+					let rescueRate = parseInt(editBtn.getAttribute('data-rescue-rate'), 10);
+					let goalText = document.getElementById('rescue-goal-text');
 					goalText.textContent = rescueRate >= percent ? ('목표 ' + percent + '% 달성') : ('목표 ' + percent + '%');
 					editBtn.setAttribute('data-goal-percent', percent);
 				}).catch(function () {

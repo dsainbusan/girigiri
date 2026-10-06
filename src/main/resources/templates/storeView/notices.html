@@ -40,7 +40,7 @@
 	<!-- 이미 공지사항 화면이라 상단바의 공지사항 벨은 필요 없어서 숨긴다. -->
 	<script th:inline="none">
 	(function () {
-		var bell = document.querySelector('.topbar__action');
+		let bell = document.querySelector('.topbar__action');
 		if (bell) { bell.style.display = 'none'; }
 	})();
 	</script>

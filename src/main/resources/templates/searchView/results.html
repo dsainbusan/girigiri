@@ -117,8 +117,8 @@
 
 	<script>
 		(function () {
-			var btn = document.getElementById('filter-toggle-btn');
-			var panel = document.getElementById('filter-panel');
+			let btn = document.getElementById('filter-toggle-btn');
+			let panel = document.getElementById('filter-panel');
 			if (!btn || !panel) return;
 			btn.addEventListener('click', function () {
 				panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -130,31 +130,31 @@
 		   동기화한다. 컨테이너 단위로 초기화해서 가격대/픽업시간 두 슬라이더에 그대로 재사용한다. */
 		(function () {
 			document.querySelectorAll('[data-range-slider]').forEach(function (container) {
-				var min = Number(container.dataset.min);
-				var max = Number(container.dataset.max);
-				var thumbMin = container.querySelector('[data-range-thumb-min]');
-				var thumbMax = container.querySelector('[data-range-thumb-max]');
-				var fill = container.querySelector('[data-range-fill]');
+				let min = Number(container.dataset.min);
+				let max = Number(container.dataset.max);
+				let thumbMin = container.querySelector('[data-range-thumb-min]');
+				let thumbMax = container.querySelector('[data-range-thumb-max]');
+				let fill = container.querySelector('[data-range-fill]');
 				// 슬라이더(.range-slider)와 숫자입력(.range-inputs)은 같은 .field 안 형제 요소다.
-				var inputsRow = container.parentElement.querySelector('.range-inputs');
-				var inputMin = inputsRow ? inputsRow.querySelector('[data-range-input-min]') : null;
-				var inputMax = inputsRow ? inputsRow.querySelector('[data-range-input-max]') : null;
+				let inputsRow = container.parentElement.querySelector('.range-inputs');
+				let inputMin = inputsRow ? inputsRow.querySelector('[data-range-input-min]') : null;
+				let inputMax = inputsRow ? inputsRow.querySelector('[data-range-input-max]') : null;
 				if (!thumbMin || !thumbMax) return;
 
 				function clampToRange(raw, lo, hi) {
-					var n = Number(raw);
+					let n = Number(raw);
 					if (isNaN(n)) return lo;
 					return Math.min(hi, Math.max(lo, n));
 				}
 
 				function render() {
-					var lo = Number(thumbMin.value);
-					var hi = Number(thumbMax.value);
+					let lo = Number(thumbMin.value);
+					let hi = Number(thumbMax.value);
 					if (inputMin) inputMin.value = lo;
 					if (inputMax) inputMax.value = hi;
 					if (fill) {
-						var pctLo = ((lo - min) / (max - min)) * 100;
-						var pctHi = ((hi - min) / (max - min)) * 100;
+						let pctLo = ((lo - min) / (max - min)) * 100;
+						let pctHi = ((hi - min) / (max - min)) * 100;
 						fill.style.left = pctLo + '%';
 						fill.style.width = Math.max(0, pctHi - pctLo) + '%';
 					}
@@ -170,7 +170,7 @@
 				});
 				if (inputMin) {
 					inputMin.addEventListener('change', function () {
-						var v = clampToRange(inputMin.value, min, max);
+						let v = clampToRange(inputMin.value, min, max);
 						if (v > Number(thumbMax.value)) v = Number(thumbMax.value);
 						thumbMin.value = v;
 						render();
@@ -178,7 +178,7 @@
 				}
 				if (inputMax) {
 					inputMax.addEventListener('change', function () {
-						var v = clampToRange(inputMax.value, min, max);
+						let v = clampToRange(inputMax.value, min, max);
 						if (v < Number(thumbMin.value)) v = Number(thumbMin.value);
 						thumbMax.value = v;
 						render();
@@ -195,17 +195,17 @@
 		   가격 슬라이더를 한 번도 안 만졌는데 priceMax=20000이 그대로 전송돼서 2만원 넘는 상품이
 		   전부 걸러지는 문제가 생긴다. */
 		(function () {
-			var applyBtn = document.getElementById('filter-apply-btn');
+			let applyBtn = document.getElementById('filter-apply-btn');
 			if (!applyBtn) return;
 
 			applyBtn.addEventListener('click', function () {
-				var priceMinInput = document.querySelector('#price-range-inputs [data-range-input-min]');
-				var priceMaxInput = document.querySelector('#price-range-inputs [data-range-input-max]');
-				var pickupFromInput = document.querySelector('#pickup-range-inputs [data-range-input-min]');
-				var pickupToInput = document.querySelector('#pickup-range-inputs [data-range-input-max]');
-				var pickupNowCheck = document.getElementById('pickup-now-check');
+				let priceMinInput = document.querySelector('#price-range-inputs [data-range-input-min]');
+				let priceMaxInput = document.querySelector('#price-range-inputs [data-range-input-max]');
+				let pickupFromInput = document.querySelector('#pickup-range-inputs [data-range-input-min]');
+				let pickupToInput = document.querySelector('#pickup-range-inputs [data-range-input-max]');
+				let pickupNowCheck = document.getElementById('pickup-now-check');
 
-				var params = new URLSearchParams(window.location.search);
+				let params = new URLSearchParams(window.location.search);
 				params.delete('priceMin');
 				params.delete('priceMax');
 				params.delete('pickupNow');
@@ -245,12 +245,12 @@
 		   차단돼 있으면 alert() 대신 배너로 "어디서 풀 수 있는지"까지 안내한다 — 예전엔 "브라우저
 		   설정에서 허용해주세요"라고만 떠서 정작 어디로 가야 하는지 몰라 불편하다는 피드백을 받았다. */
 		(function () {
-			var chip = document.getElementById('sort-distance-chip');
+			let chip = document.getElementById('sort-distance-chip');
 			if (!chip) return;
 
-			var banner = document.getElementById('geo-blocked-banner');
-			var descEl = document.getElementById('geo-blocked-desc');
-			var dismissBtn = document.getElementById('geo-blocked-dismiss');
+			let banner = document.getElementById('geo-blocked-banner');
+			let descEl = document.getElementById('geo-blocked-desc');
+			let dismissBtn = document.getElementById('geo-blocked-dismiss');
 			if (dismissBtn) {
 				dismissBtn.addEventListener('click', function () { banner.style.display = 'none'; });
 			}
@@ -265,11 +265,11 @@
 				}
 				if (banner) banner.style.display = 'none';
 
-				var originalText = chip.textContent;
+				let originalText = chip.textContent;
 				chip.textContent = '위치 확인 중…';
 
 				window.girigiriRequestLocation(function (pos) {
-					var url = new URL(chip.href, window.location.origin);
+					let url = new URL(chip.href, window.location.origin);
 					url.searchParams.set('lat', pos.coords.latitude);
 					url.searchParams.set('lng', pos.coords.longitude);
 					window.location.replace(url.toString());

@@ -66,10 +66,10 @@
 
 	<script th:inline="none">
 		(function () {
-			var p = document.getElementById('phone');
+			let p = document.getElementById('phone');
 			if (!p) { return; }
 			p.addEventListener('input', function () {
-				var d = p.value.replace(/\D/g, '').slice(0, 11);
+				let d = p.value.replace(/\D/g, '').slice(0, 11);
 				p.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7)
 					: d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d;
 			});

@@ -160,11 +160,11 @@
 
     <script th:inline="none">
       (function () {
-        var codeInput = document.getElementById('cancelPickupCode');
-        var lookupBtn = document.getElementById('cancelLookupBtn');
-        var statusEl = document.getElementById('cancelLookupStatus');
-        var form = document.getElementById('cancelForm');
-        var hiddenCode = document.getElementById('cancelPickupCodeHidden');
+        let codeInput = document.getElementById('cancelPickupCode');
+        let lookupBtn = document.getElementById('cancelLookupBtn');
+        let statusEl = document.getElementById('cancelLookupStatus');
+        let form = document.getElementById('cancelForm');
+        let hiddenCode = document.getElementById('cancelPickupCodeHidden');
 
         function setStatus(text, variant) {
           statusEl.textContent = text;
@@ -224,12 +224,12 @@
        서버는 RefundEntity.orderId UNIQUE로 2차 방어). regionStores.html의 모달 패턴과 동일. -->
   <script th:inline="none" th:if="${linkedReservation != null and refundInfo == null and linkedReservationBlockedMessage == null}">
     (function () {
-      var modal = document.getElementById('refund-modal');
-      var openBtn = document.getElementById('open-refund-modal');
-      var templateSelect = document.getElementById('refund-reply-template');
-      var replyTextarea = document.getElementById('refundReplyContent');
-      var form = document.getElementById('refund-form');
-      var submitBtn = document.getElementById('refund-submit-btn');
+      let modal = document.getElementById('refund-modal');
+      let openBtn = document.getElementById('open-refund-modal');
+      let templateSelect = document.getElementById('refund-reply-template');
+      let replyTextarea = document.getElementById('refundReplyContent');
+      let form = document.getElementById('refund-form');
+      let submitBtn = document.getElementById('refund-submit-btn');
 
       openBtn.addEventListener('click', function () {
         modal.hidden = false;

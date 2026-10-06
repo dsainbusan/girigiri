@@ -131,7 +131,7 @@
 	     히스토리가 꼬여도 항상 같은 곳으로 돌아가게). -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (back) {
 			back.removeAttribute('data-back');
 			back.addEventListener('click', function () { location.href = '/mypage'; });
@@ -144,7 +144,7 @@
 	     제출 직전 스크롤 위치를 sessionStorage에 적어두고 새로 받은 화면에서 그 위치로 복원한다. -->
 	<script th:inline="none">
 	(function () {
-		var SCROLL_KEY = 'settingsScrollY';
+		let SCROLL_KEY = 'settingsScrollY';
 
 		document.querySelectorAll('.list-menu-item--toggle input[type="checkbox"]').forEach(function (input) {
 			input.addEventListener('change', function () {
@@ -153,7 +153,7 @@
 			});
 		});
 
-		var savedY = sessionStorage.getItem(SCROLL_KEY);
+		let savedY = sessionStorage.getItem(SCROLL_KEY);
 		if (savedY !== null) {
 			sessionStorage.removeItem(SCROLL_KEY);
 			window.scrollTo(0, parseInt(savedY, 10) || 0);

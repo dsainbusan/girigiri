@@ -101,31 +101,31 @@
 	     접두어 비교로 클라이언트에서 보이기/숨기기만 한다(서버는 전체 내역을 한 번에 내려준다). */-->
 	<script th:inline="none">
 	(function () {
-		var cards = Array.prototype.slice.call(document.querySelectorAll('.usage-card'));
-		var chips = Array.prototype.slice.call(document.querySelectorAll('.usage-chip'));
-		var yearSelect = document.getElementById('usage-year-select');
-		var monthSelect = document.getElementById('usage-month-select');
-		var summaryTitle = document.getElementById('usage-summary-title');
-		var visibleCountEl = document.getElementById('usage-visible-count');
-		var monthEmpty = document.getElementById('usage-month-empty');
+		let cards = Array.prototype.slice.call(document.querySelectorAll('.usage-card'));
+		let chips = Array.prototype.slice.call(document.querySelectorAll('.usage-chip'));
+		let yearSelect = document.getElementById('usage-year-select');
+		let monthSelect = document.getElementById('usage-month-select');
+		let summaryTitle = document.getElementById('usage-summary-title');
+		let visibleCountEl = document.getElementById('usage-visible-count');
+		let monthEmpty = document.getElementById('usage-month-empty');
 		if (!cards.length || !yearSelect) { return; }
 
-		var now = new Date();
-		var curYear = String(now.getFullYear());
-		var curMonth = String(now.getMonth() + 1).padStart(2, '0');
-		var thisMonthPrefix = curYear + '.' + curMonth;
+		let now = new Date();
+		let curYear = String(now.getFullYear());
+		let curMonth = String(now.getMonth() + 1).padStart(2, '0');
+		let thisMonthPrefix = curYear + '.' + curMonth;
 
-		var lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-		var lastYear = String(lastMonthDate.getFullYear());
-		var lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
-		var lastMonthPrefix = lastYear + '.' + lastMonth;
+		let lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		let lastYear = String(lastMonthDate.getFullYear());
+		let lastMonth = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+		let lastMonthPrefix = lastYear + '.' + lastMonth;
 
 		// 연도 셀렉트 옵션: 이용 내역에 실제로 있는 연도들(+ 올해)만 채운다.
-		var years = cards.map(function (c) { return (c.getAttribute('data-date-label') || '').slice(0, 4); });
+		let years = cards.map(function (c) { return (c.getAttribute('data-date-label') || '').slice(0, 4); });
 		years.push(curYear);
 		years = years.filter(function (y, i) { return y && years.indexOf(y) === i; }).sort().reverse();
 		years.forEach(function (y) {
-			var opt = document.createElement('option');
+			let opt = document.createElement('option');
 			opt.value = y; opt.textContent = y + '년';
 			if (y === curYear) { opt.selected = true; }
 			yearSelect.appendChild(opt);
@@ -134,8 +134,8 @@
 		function filter(mode) {
 			chips.forEach(function (chip) { chip.classList.toggle('is-active', chip.getAttribute('data-filter') === mode); });
 
-			var targetPrefix = '';
-			var labelText = '전체 내역';
+			let targetPrefix = '';
+			let labelText = '전체 내역';
 
 			if (mode === 'all') {
 				yearSelect.value = curYear; monthSelect.value = 'all';
@@ -153,19 +153,19 @@
 				targetPrefix = lastMonthPrefix; yearSelect.value = lastYear; monthSelect.value = lastMonth;
 				labelText = lastYear + '년 ' + parseInt(lastMonth, 10) + '월 내역 (지난달)';
 			} else {
-				var y = yearSelect.value, m = monthSelect.value;
+				let y = yearSelect.value, m = monthSelect.value;
 				if (m === 'all') { targetPrefix = y + '.'; labelText = y + '년 전체 내역'; }
 				else { targetPrefix = y + '.' + m; labelText = y + '년 ' + parseInt(m, 10) + '월 내역'; }
 				if (targetPrefix === thisMonthPrefix) {
-					var tm = document.querySelector('.usage-chip[data-filter="this-month"]'); if (tm) tm.classList.add('is-active');
+					let tm = document.querySelector('.usage-chip[data-filter="this-month"]'); if (tm) tm.classList.add('is-active');
 				} else if (targetPrefix === lastMonthPrefix) {
-					var lm = document.querySelector('.usage-chip[data-filter="last-month"]'); if (lm) lm.classList.add('is-active');
+					let lm = document.querySelector('.usage-chip[data-filter="last-month"]'); if (lm) lm.classList.add('is-active');
 				}
 			}
 
-			var visible = 0;
+			let visible = 0;
 			cards.forEach(function (c) {
-				var match = (c.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
+				let match = (c.getAttribute('data-date-label') || '').indexOf(targetPrefix) === 0;
 				c.style.display = match ? '' : 'none';
 				if (match) { visible++; }
 			});

@@ -132,15 +132,15 @@
 	<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 	<script th:inline="none">
 	(function () {
-		var overlay = document.getElementById('postcodeOverlay');
-		var layer = document.getElementById('postcodeLayer');
-		var searchBtn = document.getElementById('addressSearchBtn');
-		var closeBtn = document.getElementById('postcodeCloseBtn');
+		let overlay = document.getElementById('postcodeOverlay');
+		let layer = document.getElementById('postcodeLayer');
+		let searchBtn = document.getElementById('addressSearchBtn');
+		let closeBtn = document.getElementById('postcodeCloseBtn');
 		if (!overlay || !layer || !searchBtn || !closeBtn) return;
 
-		var postcode = new daum.Postcode({
+		let postcode = new daum.Postcode({
 			oncomplete: function (data) {
-				var addressInput = document.getElementById('address');
+				let addressInput = document.getElementById('address');
 				addressInput.value = data.roadAddress || data.jibunAddress;
 				closeOverlay();
 				addressInput.focus();
@@ -174,26 +174,26 @@
 	     "02"로 시작하면 2자리, 아니면 3자리 앞자리로 보고 뒤 4자리를 항상 마지막 블록으로 뺀다. -->
 	<script th:inline="none">
 	(function () {
-		var bizInput = document.getElementById('businessNumber');
+		let bizInput = document.getElementById('businessNumber');
 		if (bizInput) {
 			bizInput.addEventListener('input', function () {
-				var d = bizInput.value.replace(/\D/g, '').slice(0, 10);
-				var out = d;
+				let d = bizInput.value.replace(/\D/g, '').slice(0, 10);
+				let out = d;
 				if (d.length > 5) out = d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5);
 				else if (d.length > 3) out = d.slice(0, 3) + '-' + d.slice(3);
 				bizInput.value = out;
 			});
 		}
 
-		var phoneInput = document.getElementById('phone');
+		let phoneInput = document.getElementById('phone');
 		if (phoneInput) {
 			phoneInput.addEventListener('input', function () {
-				var d = phoneInput.value.replace(/\D/g, '');
-				var frontLen = d.slice(0, 2) === '02' ? 2 : 3;
+				let d = phoneInput.value.replace(/\D/g, '');
+				let frontLen = d.slice(0, 2) === '02' ? 2 : 3;
 				d = d.slice(0, frontLen === 2 ? 10 : 11);
-				var out = d;
+				let out = d;
 				if (d.length > frontLen) {
-					var midEnd = d.length - 4;
+					let midEnd = d.length - 4;
 					out = midEnd <= frontLen
 						? d.slice(0, frontLen) + '-' + d.slice(frontLen)
 						: d.slice(0, frontLen) + '-' + d.slice(frontLen, midEnd) + '-' + d.slice(midEnd);
@@ -207,30 +207,30 @@
 	<!-- 영업시간 구조화 입력 및 hidden 값 동기화 -->
 	<script th:inline="none">
 	(function () {
-		var hiddenInput = document.getElementById('operatingHours');
-		var openEl = document.getElementById('openTimeInput');
-		var closeEl = document.getElementById('closeTimeInput');
-		var saleCheck = document.getElementById('saleTimeCheck');
-		var saleRow = document.getElementById('saleTimeRow');
-		var saleEl = document.getElementById('saleTimeInput');
-		var form = hiddenInput ? hiddenInput.closest('form') : null;
+		let hiddenInput = document.getElementById('operatingHours');
+		let openEl = document.getElementById('openTimeInput');
+		let closeEl = document.getElementById('closeTimeInput');
+		let saleCheck = document.getElementById('saleTimeCheck');
+		let saleRow = document.getElementById('saleTimeRow');
+		let saleEl = document.getElementById('saleTimeInput');
+		let form = hiddenInput ? hiddenInput.closest('form') : null;
 
 		if (!hiddenInput || !openEl || !closeEl) return;
 
-		var raw = hiddenInput.value ? hiddenInput.value.trim() : '';
+		let raw = hiddenInput.value ? hiddenInput.value.trim() : '';
 		if (raw) {
-			var parts = raw.split('~');
+			let parts = raw.split('~');
 			if (parts.length >= 2) {
-				var openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
+				let openMatch = parts[0].match(/(\d{1,2}:\d{2})/);
 				if (openMatch) {
 					openEl.value = openMatch[1].length === 4 ? '0' + openMatch[1] : openMatch[1];
 				}
-				var closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
+				let closeMatch = parts[1].match(/(\d{1,2}:\d{2})/);
 				if (closeMatch) {
 					closeEl.value = closeMatch[1].length === 4 ? '0' + closeMatch[1] : closeMatch[1];
 				}
 			}
-			var saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
+			let saleMatch = raw.match(/마감\s*세일\s*:?\s*(\d{1,2}:\d{2})/);
 			if (saleMatch && saleEl && saleCheck) {
 				saleCheck.checked = true;
 				if (saleRow) saleRow.style.display = 'block';
@@ -239,13 +239,13 @@
 		}
 
 		function updateHidden() {
-			var openVal = openEl.value;
-			var closeVal = closeEl.value;
+			let openVal = openEl.value;
+			let closeVal = closeEl.value;
 			if (!openVal || !closeVal) {
 				hiddenInput.value = '';
 				return;
 			}
-			var res = openVal + ' ~ ' + closeVal;
+			let res = openVal + ' ~ ' + closeVal;
 			if (saleCheck && saleCheck.checked && saleEl && saleEl.value) {
 				res += ' (마감 세일 ' + saleEl.value + '~)';
 			}

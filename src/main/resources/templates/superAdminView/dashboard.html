@@ -39,17 +39,17 @@
     // 시간처럼 계속 흘러가 보였으면 좋겠다는 요청으로 추가. data-epoch(서버가 렌더링한 시각)를
     // 기준으로 클라이언트 시계와의 오차(offset)를 한 번 계산해두고, 그 오차를 계속 더해서
     // "서버 기준 지금 시각"을 1초마다 다시 포맷한다 — 새로고침 없이도 분 단위가 자연스럽게 넘어간다.
-    var el = document.getElementById('dash-updated-at');
+    let el = document.getElementById('dash-updated-at');
     if (!el) return;
 
-    var serverEpoch = Number(el.dataset.epoch);
+    let serverEpoch = Number(el.dataset.epoch);
     if (!serverEpoch) return;
-    var offset = serverEpoch - Date.now();
+    let offset = serverEpoch - Date.now();
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
     function render() {
-      var now = new Date(Date.now() + offset);
+      let now = new Date(Date.now() + offset);
       el.textContent = '마지막 업데이트 ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
     }
 
@@ -253,14 +253,14 @@
         // 변경됨 (2026-10-06) — 타일맵(과 타일 클릭 필터) 제거에 맞춰 이 블록도 더보기 아코디언만
         // 남기고 단순화했다. 행 클릭(.row-clickable, common/layout-admin.html의 전역 핸들러)은
         // 그대로 매장별 상세(/superadmin/regions/{sido}/stores)로 이동한다.
-        var rows = Array.prototype.slice.call(document.querySelectorAll('.region-table-wrap tbody tr[data-sido]'));
+        let rows = Array.prototype.slice.call(document.querySelectorAll('.region-table-wrap tbody tr[data-sido]'));
         if (rows.length === 0) return;
 
-        var PAGE_SIZE = 5;
-        var revealed = PAGE_SIZE;
-        var loadMoreRow = document.getElementById('region-table-load-more-row');
-        var loadMoreBtn = document.getElementById('region-table-load-more');
-        var loadMoreLabel = document.getElementById('region-table-load-more__label');
+        let PAGE_SIZE = 5;
+        let revealed = PAGE_SIZE;
+        let loadMoreRow = document.getElementById('region-table-load-more-row');
+        let loadMoreBtn = document.getElementById('region-table-load-more');
+        let loadMoreLabel = document.getElementById('region-table-load-more__label');
 
         // 변경됨 (2026-10-06) — "더보기만 있고 접기가 없다"는 피드백으로 토글로 바꿨다. 다 펼쳐진
         // 상태(hasMore=false)에서 버튼을 다시 누르면 처음 5개로 되접힌다 — 펼쳐도 숨길 수 없던 것을
@@ -269,8 +269,8 @@
           rows.forEach(function (r, i) {
             r.style.display = i < revealed ? '' : 'none';
           });
-          var hasMore = rows.length > revealed;
-          var expandable = rows.length > PAGE_SIZE;
+          let hasMore = rows.length > revealed;
+          let expandable = rows.length > PAGE_SIZE;
           if (loadMoreRow) loadMoreRow.hidden = !expandable;
           if (loadMoreBtn) {
             if (loadMoreLabel) loadMoreLabel.textContent = hasMore ? (rows.length - revealed) + '개 더보기' : '접기';
@@ -280,7 +280,7 @@
 
         if (loadMoreBtn) {
           loadMoreBtn.addEventListener('click', function () {
-            var hasMore = rows.length > revealed;
+            let hasMore = rows.length > revealed;
             revealed = hasMore ? revealed + PAGE_SIZE : PAGE_SIZE;
             renderReveal();
           });
@@ -387,16 +387,16 @@
     // fetch로 다시 받아 innerHTML만 교체한다. #daily-report(바깥 id)는 절대 갈아끼우지 않으므로
     // 여기 한 번만 건 이벤트 리스너는 내용이 바뀐 뒤에도 계속 살아있다. 실패하면(네트워크 오류 등)
     // 그 링크로 그냥 풀페이지 이동시켜 기존 동작으로 안전하게 되돌아간다.
-    var panel = document.getElementById('daily-report');
+    let panel = document.getElementById('daily-report');
     if (!panel) return;
 
     panel.addEventListener('click', function (e) {
-      var a = e.target.closest('a');
+      let a = e.target.closest('a');
       if (!a || !a.matches('.cal-cell, .cal-nav') || a.classList.contains('is-disabled')) return;
 
       e.preventDefault();
-      var url = new URL(a.href, window.location.origin);
-      var fragmentUrl = url.pathname.replace('/superadmin/dashboard', '/superadmin/dashboard/daily') + url.search;
+      let url = new URL(a.href, window.location.origin);
+      let fragmentUrl = url.pathname.replace('/superadmin/dashboard', '/superadmin/dashboard/daily') + url.search;
 
       fetch(fragmentUrl)
         .then(function (res) {

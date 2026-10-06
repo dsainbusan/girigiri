@@ -144,54 +144,54 @@
 	<script th:inline="javascript">
 		(function () {
 			// 탭 전환 엘리먼트
-			var tabs = document.querySelectorAll('.pickup-tab');
-			var scanPanel = document.getElementById('scan-panel');
-			var manualPanel = document.getElementById('manual-panel');
+			let tabs = document.querySelectorAll('.pickup-tab');
+			let scanPanel = document.getElementById('scan-panel');
+			let manualPanel = document.getElementById('manual-panel');
 
 			// 스캐너 엘리먼트
-			var toggleBtn = document.getElementById('scan-toggle-btn');
-			var stopBtn = document.getElementById('scan-stop-btn');
-			var readerDiv = document.getElementById('qr-reader');
-			var scannerIdle = document.getElementById('scanner-idle');
-			var scannerOverlay = document.getElementById('scanner-overlay');
-			var statusP = document.getElementById('scan-status');
-			var confirmCard = document.getElementById('scan-confirm-card');
-			var confirmActions = document.getElementById('scan-confirm-actions');
-			var confirmAddBtn = document.getElementById('scan-confirm-add-btn');
-			var confirmRetryBtn = document.getElementById('scan-confirm-retry-btn');
-			var verifyCode = document.getElementById('verify-code');
-			var verifyProduct = document.getElementById('verify-product');
-			var verifyQty = document.getElementById('verify-qty');
-			var verifyPrice = document.getElementById('verify-price');
-			var verifyStore = document.getElementById('verify-store');
+			let toggleBtn = document.getElementById('scan-toggle-btn');
+			let stopBtn = document.getElementById('scan-stop-btn');
+			let readerDiv = document.getElementById('qr-reader');
+			let scannerIdle = document.getElementById('scanner-idle');
+			let scannerOverlay = document.getElementById('scanner-overlay');
+			let statusP = document.getElementById('scan-status');
+			let confirmCard = document.getElementById('scan-confirm-card');
+			let confirmActions = document.getElementById('scan-confirm-actions');
+			let confirmAddBtn = document.getElementById('scan-confirm-add-btn');
+			let confirmRetryBtn = document.getElementById('scan-confirm-retry-btn');
+			let verifyCode = document.getElementById('verify-code');
+			let verifyProduct = document.getElementById('verify-product');
+			let verifyQty = document.getElementById('verify-qty');
+			let verifyPrice = document.getElementById('verify-price');
+			let verifyStore = document.getElementById('verify-store');
 
 			// 수동 입력 엘리먼트
-			var manualInput = document.getElementById('manual-code-input');
-			var manualAddBtn = document.getElementById('manual-add-btn');
-			var manualStatusP = document.getElementById('manual-status');
+			let manualInput = document.getElementById('manual-code-input');
+			let manualAddBtn = document.getElementById('manual-add-btn');
+			let manualStatusP = document.getElementById('manual-status');
 
 			// 대기 목록 엘리먼트
-			var cartEmptyState = document.getElementById('cart-empty-state');
-			var cartCard = document.getElementById('cart-card');
-			var cartList = document.getElementById('cart-list');
-			var cartCountEl = document.getElementById('cart-count');
-			var cartTotalPrice = document.getElementById('cart-total-price');
-			var cartClearBtn = document.getElementById('cart-clear-btn');
+			let cartEmptyState = document.getElementById('cart-empty-state');
+			let cartCard = document.getElementById('cart-card');
+			let cartList = document.getElementById('cart-list');
+			let cartCountEl = document.getElementById('cart-count');
+			let cartTotalPrice = document.getElementById('cart-total-price');
+			let cartClearBtn = document.getElementById('cart-clear-btn');
 
 			// 일괄 제출 및 결과
-			var batchSubmitBtn = document.getElementById('batch-submit-btn');
-			var batchResultCard = document.getElementById('batch-result-card');
-			var batchResultIcon = document.getElementById('batch-result-icon');
-			var batchResultTitle = document.getElementById('batch-result-title');
-			var batchResultList = document.getElementById('batch-result-list');
+			let batchSubmitBtn = document.getElementById('batch-submit-btn');
+			let batchResultCard = document.getElementById('batch-result-card');
+			let batchResultIcon = document.getElementById('batch-result-icon');
+			let batchResultTitle = document.getElementById('batch-result-title');
+			let batchResultList = document.getElementById('batch-result-list');
 
-			var html5QrCode = null;
-			var scanning = false;
-			var paused = false;
-			var cart = [];   // { pickupCode, productName, quantity, storeName, totalPrice }
-			var pendingLookup = null;
-			var lastScannedCode = null;
-			var lastScannedAt = 0;
+			let html5QrCode = null;
+			let scanning = false;
+			let paused = false;
+			let cart = [];   // { pickupCode, productName, quantity, storeName, totalPrice }
+			let pendingLookup = null;
+			let lastScannedCode = null;
+			let lastScannedAt = 0;
 
 			// 탭 전환 핸들러
 			tabs.forEach(function (tab) {
@@ -203,7 +203,7 @@
 					tab.classList.add('is-active');
 					tab.setAttribute('aria-selected', 'true');
 
-					var target = tab.getAttribute('data-target');
+					let target = tab.getAttribute('data-target');
 					if (target === 'scan-panel') {
 						scanPanel.style.display = 'block';
 						manualPanel.style.display = 'none';
@@ -220,19 +220,19 @@
 
 			/** 상태 피드백 표시 */
 			function showStatus(text, type, targetEl) {
-				var el = targetEl || statusP;
+				let el = targetEl || statusP;
 				el.style.display = 'block';
 				el.textContent = text;
 				el.className = 'scan-status status-' + (type || 'loading');
 			}
 
 			function hideStatus(targetEl) {
-				var el = targetEl || statusP;
+				let el = targetEl || statusP;
 				el.style.display = 'none';
 			}
 
 			function escapeHtml(text) {
-				var div = document.createElement('div');
+				let div = document.createElement('div');
 				div.textContent = text;
 				return div.innerHTML;
 			}
@@ -240,37 +240,37 @@
 			function renderCart() {
 				cartList.innerHTML = '';
 				cart.forEach(function (item) {
-					var li = document.createElement('li');
+					let li = document.createElement('li');
 					li.className = 'pickup-queue-item';
 
-					var infoDiv = document.createElement('div');
+					let infoDiv = document.createElement('div');
 					infoDiv.className = 'queue-item-info';
 
-					var titleRow = document.createElement('div');
+					let titleRow = document.createElement('div');
 					titleRow.className = 'queue-item-title-row';
 
-					var nameSpan = document.createElement('span');
+					let nameSpan = document.createElement('span');
 					nameSpan.className = 'queue-item-name';
 					nameSpan.textContent = item.productName;
 
-					var qtySpan = document.createElement('span');
+					let qtySpan = document.createElement('span');
 					qtySpan.className = 'queue-item-qty';
 					qtySpan.textContent = '× ' + item.quantity + '개';
 
 					titleRow.appendChild(nameSpan);
 					titleRow.appendChild(qtySpan);
 
-					var subRow = document.createElement('div');
+					let subRow = document.createElement('div');
 					subRow.className = 'queue-item-sub-row';
 
-					var codeSpan = document.createElement('span');
+					let codeSpan = document.createElement('span');
 					codeSpan.className = 'queue-item-code';
 					codeSpan.textContent = item.pickupCode;
 
-					var dotSpan = document.createElement('span');
+					let dotSpan = document.createElement('span');
 					dotSpan.textContent = '·';
 
-					var priceSpan = document.createElement('span');
+					let priceSpan = document.createElement('span');
 					priceSpan.className = 'queue-item-price';
 					priceSpan.textContent = (item.totalPrice ? item.totalPrice.toLocaleString() + '원' : '0원');
 
@@ -281,7 +281,7 @@
 					infoDiv.appendChild(titleRow);
 					infoDiv.appendChild(subRow);
 
-					var removeBtn = document.createElement('button');
+					let removeBtn = document.createElement('button');
 					removeBtn.type = 'button';
 					removeBtn.className = 'queue-item-remove-btn';
 					removeBtn.title = '대기 목록에서 제외';
@@ -297,7 +297,7 @@
 				});
 
 				cartCountEl.textContent = cart.length;
-				var totalAmount = cart.reduce(function (sum, it) { return sum + (it.totalPrice || 0); }, 0);
+				let totalAmount = cart.reduce(function (sum, it) { return sum + (it.totalPrice || 0); }, 0);
 				cartTotalPrice.textContent = totalAmount.toLocaleString() + '원';
 
 				if (cart.length > 0) {
@@ -398,7 +398,7 @@
 			}
 
 			function onScanSuccess(decodedText) {
-				var now = Date.now();
+				let now = Date.now();
 				if (decodedText === lastScannedCode && (now - lastScannedAt) < 3000) {
 					return;
 				}
@@ -472,7 +472,7 @@
 					scannerOverlay.style.display = 'none';
 					scannerIdle.style.display = 'flex';
 					console.error('QR 스캔 카메라 시작 실패:', err);
-					var reason = (err && err.name) ? err.name : String(err);
+					let reason = (err && err.name) ? err.name : String(err);
 					window.girigiriAlert('카메라를 사용할 수 없어요. 원인 코드: ' + reason + '. 코드를 직접 입력해주세요.');
 				});
 			}
@@ -532,7 +532,7 @@
 				batchSubmitBtn.textContent = '처리 중...';
 				batchResultCard.style.display = 'none';
 
-				var params = new URLSearchParams();
+				let params = new URLSearchParams();
 				cart.forEach(function (item) { params.append('pickupCodes', item.pickupCode); });
 
 				fetch('/reservation/pickup/batch', {
@@ -542,8 +542,8 @@
 				})
 					.then(function (res) { return res.json(); })
 					.then(function (results) {
-						var succeeded = results.filter(function (r) { return r.ok; });
-						var failed = results.filter(function (r) { return !r.ok; });
+						let succeeded = results.filter(function (r) { return r.ok; });
+						let failed = results.filter(function (r) { return !r.ok; });
 
 						batchResultCard.style.display = 'block';
 						if (failed.length === 0) {
@@ -559,7 +559,7 @@
 							return '<li>⚠️ ' + escapeHtml(r.pickupCode) + ' — ' + escapeHtml(r.message) + '</li>';
 						}).join('');
 
-						var succeededCodes = succeeded.map(function (r) { return r.pickupCode; });
+						let succeededCodes = succeeded.map(function (r) { return r.pickupCode; });
 						cart = cart.filter(function (item) { return succeededCodes.indexOf(item.pickupCode) === -1; });
 						renderCart();
 					})

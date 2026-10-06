@@ -159,7 +159,7 @@
             <!-- 2026-09-29 추가(담당: 송보미) — 정지 사유 입력. prompt() 채택 이유는 stores.html
                  반려 버튼과 동일(슈퍼어드민은 confirm()만 쓰던 시스템이라 새 모달 UI를 안 들여옴). -->
             <form th:unless="${u.status == 'SUSPENDED'}" th:action="@{/superadmin/members/{id}/suspend(id=${u.id}, q=${q}, filter=${filter}, page=${page})}" method="post"
-                  onsubmit="var r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)'); if (r === null) { return false; } this.reason.value = r; return true;">
+                  onsubmit="let r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)'); if (r === null) { return false; } this.reason.value = r; return true;">
               <input type="hidden" name="reason">
               <button class="chip-btn chip-btn--danger" type="submit">이용 정지</button>
             </form>
@@ -184,13 +184,13 @@
     // 변경됨 (2026-09-29, 담당: 송보미) — confirm() 대신 prompt()로 정지 사유를 받아 #bulk-reason에
     // 채운다(개별 행 정지와 동일 이유 — SuperAdminMemberService#bulkSuspend 참고). Cancel이면 기존과
     // 동일하게 제출을 막는다.
-    var bulkForm = document.getElementById('bulk-form');
-    var bulkReasonInput = document.getElementById('bulk-reason');
+    let bulkForm = document.getElementById('bulk-form');
+    let bulkReasonInput = document.getElementById('bulk-reason');
     if (bulkForm) {
       bulkForm.addEventListener('submit', function (e) {
-        var action = e.submitter && e.submitter.getAttribute('formaction');
+        let action = e.submitter && e.submitter.getAttribute('formaction');
         if (action && action.indexOf('bulk-suspend') !== -1) {
-          var r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)');
+          let r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)');
           if (r === null) {
             e.preventDefault();
             return;

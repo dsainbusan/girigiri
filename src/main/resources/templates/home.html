@@ -47,7 +47,7 @@
 	</div>
 	<script th:inline="none">
 	(function () {
-		var splash = document.getElementById('splash-screen');
+		let splash = document.getElementById('splash-screen');
 		if (!splash) { return; }
 		// 뒤로가기로 다시 보였을 때 재생 방지 (2026-09-17 추가) — 왜: Spring Security가 모든 응답에
 		// Cache-Control: no-store를 붙여서(로그인 후 뒤로가기로 인증된 페이지가 캐시에서 다시 보이는
@@ -62,7 +62,7 @@
 			return;
 		}
 		sessionStorage.setItem('girigiri-splash-shown', '1');
-		var dismissed = false;
+		let dismissed = false;
 		function dismissSplash() {
 			if (dismissed) { return; }
 			dismissed = true;
@@ -167,13 +167,13 @@
 		// 로드되기 때문에, 여기서 바로 호출하면 아직 정의 전이라 에러난다 — DOMContentLoaded까지
 		// 기다려서 app.js가 먼저 실행되게 한다.
 		document.addEventListener('DOMContentLoaded', function () {
-			var params = new URLSearchParams(window.location.search);
+			let params = new URLSearchParams(window.location.search);
 			if (params.has('lat') && params.has('lng')) return; // 이미 좌표로 들어온 상태 — 재요청 안 함
 
-			var STORAGE_KEY = 'giriGeoHintDismissed';
-			var banner = document.getElementById('geo-blocked-banner');
-			var descEl = document.getElementById('geo-blocked-desc');
-			var dismissBtn = document.getElementById('geo-blocked-dismiss');
+			let STORAGE_KEY = 'giriGeoHintDismissed';
+			let banner = document.getElementById('geo-blocked-banner');
+			let descEl = document.getElementById('geo-blocked-desc');
+			let dismissBtn = document.getElementById('geo-blocked-dismiss');
 
 			if (dismissBtn) {
 				dismissBtn.addEventListener('click', function () {
@@ -193,7 +193,7 @@
 				try {
 					if (localStorage.getItem(STORAGE_KEY) === '1') return; // 이미 한 번 닫았으면 다시 안 보여줌
 				} catch (e) { /* localStorage 접근 불가 환경 — 매번 보여주는 쪽이 안전하니 그냥 진행 */ }
-				var hint = reason === 'unsupported' ? '이 브라우저에서는 위치 정보를 사용할 수 없어요.' : window.girigiriGeoHint();
+				let hint = reason === 'unsupported' ? '이 브라우저에서는 위치 정보를 사용할 수 없어요.' : window.girigiriGeoHint();
 				if (descEl) descEl.textContent = '거리순 정렬을 쓰려면 위치 권한이 필요해요. ' + hint;
 				banner.style.display = 'flex';
 			});
@@ -205,30 +205,30 @@
 	<script th:inline="javascript">
 		/*<![CDATA[*/
 		// StoreRepository에서 좌표가 있는 매장 전체를 뿌린다.
-		var stores = /*[[${stores}]]*/ [];
+		let stores = /*[[${stores}]]*/ [];
 
 		// 매장이 하나도 없을 때는 서울시청 좌표를 기본값으로 둔다.
-		var FALLBACK_CENTER = { latitude: 37.5665, longitude: 126.9780 };
+		let FALLBACK_CENTER = { latitude: 37.5665, longitude: 126.9780 };
 
 		// 강노은: 지도 중심을 사용자 위치로 — 위의 DOMContentLoaded 스크립트가 Geolocation 허용 시
 		// ?lat=&lng=를 붙여 페이지를 다시 불러오므로, URL에 좌표가 있으면 그걸 최우선으로 쓴다.
 		// 없으면(권한 거부/미지원) 기존처럼 첫 매장 좌표 → 서울시청 순으로 폴백.
-		var urlParams = new URLSearchParams(window.location.search);
-		var userLat = parseFloat(urlParams.get('lat'));
-		var userLng = parseFloat(urlParams.get('lng'));
-		var hasUserLocation = !isNaN(userLat) && !isNaN(userLng);
+		let urlParams = new URLSearchParams(window.location.search);
+		let userLat = parseFloat(urlParams.get('lat'));
+		let userLng = parseFloat(urlParams.get('lng'));
+		let hasUserLocation = !isNaN(userLat) && !isNaN(userLng);
 
 		kakao.maps.load(function () {
-			var container = document.getElementById('kakao-map');
-			var center = hasUserLocation
+			let container = document.getElementById('kakao-map');
+			let center = hasUserLocation
 				? { latitude: userLat, longitude: userLng }
 				: (stores.length > 0 ? stores[0] : FALLBACK_CENTER);
-			var map = new kakao.maps.Map(container, {
+			let map = new kakao.maps.Map(container, {
 				center: new kakao.maps.LatLng(center.latitude, center.longitude),
 				level: 4
 			});
 
-			var infoWindow = new kakao.maps.InfoWindow({ removable: true });
+			let infoWindow = new kakao.maps.InfoWindow({ removable: true });
 
 			// 강노은: "내 위치" 표시 — 매장 핀과 헷갈리지 않게 파란 점(구글맵 스타일)으로 따로 표시.
 			// 클릭 동작은 없음(그냥 내 현재 위치 표식용).
@@ -249,7 +249,7 @@
 			// data URI로 만들어 씀 — 이미지 파일을 새로 추가할 필요 없이 마커 하나로 재사용
 			// (store마다 새로 안 만듦). CSS 변수를 못 쓰는 문맥(JS 문자열)이라 값이 하드코딩돼
 			// 있다 — tokens.css의 --c-primary를 바꾸면 여기도 같이 맞춰야 한다.
-			var markerImage = new kakao.maps.MarkerImage(
+			let markerImage = new kakao.maps.MarkerImage(
 				'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
 					'<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">' +
 					'<path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="#012A8C"/>' +
@@ -261,8 +261,8 @@
 			);
 
 			stores.forEach(function (store) {
-				var position = new kakao.maps.LatLng(store.latitude, store.longitude);
-				var marker = new kakao.maps.Marker({ position: position, map: map, image: markerImage });
+				let position = new kakao.maps.LatLng(store.latitude, store.longitude);
+				let marker = new kakao.maps.Marker({ position: position, map: map, image: markerImage });
 
 				kakao.maps.event.addListener(marker, 'click', function () {
 					// 강노은: 마커 클릭 시 이름/카테고리만 보여주고 끝이라 가게 상세로 넘어갈 방법이
@@ -284,21 +284,21 @@
 
 	<script>
 		(function () {
-			var filterBar = document.getElementById('category-filter');
-			var loadMoreBtn = document.getElementById('store-load-more');
+			let filterBar = document.getElementById('category-filter');
+			let loadMoreBtn = document.getElementById('store-load-more');
 			// 강노은: 카드가 0개(마감세일 중인 가게 없음)일 때도 칩은 눌리게 해야 한다 — 예전엔
 			// cardWrappers.length === 0이면 리스너 자체를 안 붙여서 클릭이 씹혔다. 필터바 유무만 본다.
 			if (!filterBar) return;
 
-			var PAGE_SIZE = 5;
-			var currentFilter = 'all';
-			var revealed = PAGE_SIZE;
+			let PAGE_SIZE = 5;
+			let currentFilter = 'all';
+			let revealed = PAGE_SIZE;
 
 			function render() {
-				var visibleCount = 0;
-				var cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
+				let visibleCount = 0;
+				let cardWrappers = document.querySelectorAll('#store-card-list > [data-category]');
 				cardWrappers.forEach(function (wrapper) {
-					var matches = currentFilter === 'all' || wrapper.dataset.category === currentFilter;
+					let matches = currentFilter === 'all' || wrapper.dataset.category === currentFilter;
 					if (!matches) {
 						wrapper.style.display = 'none';
 						return;
@@ -306,7 +306,7 @@
 					visibleCount++;
 					wrapper.style.display = visibleCount <= revealed ? '' : 'none';
 				});
-				var hasMore = visibleCount > revealed;
+				let hasMore = visibleCount > revealed;
 				if (loadMoreBtn) {
 					loadMoreBtn.style.display = hasMore ? '' : 'none';
 					// 더 펼칠 카드가 남아있는 동안(=아직 다 안 펼쳐짐)엔 false, 다 펼쳐서 버튼이
@@ -317,7 +317,7 @@
 
 			if (filterBar) {
 				filterBar.addEventListener('click', function (event) {
-					var chip = event.target.closest('.chip');
+					let chip = event.target.closest('.chip');
 					if (!chip) return;
 
 					filterBar.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('is-active'); });

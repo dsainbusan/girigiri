@@ -440,8 +440,8 @@
 	<script th:inline="none">
 	(function () {
 		document.querySelectorAll('.seg-tabs').forEach(function (group) {
-			var tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
-			var panels = tabs
+			let tabs = Array.prototype.slice.call(group.querySelectorAll('.seg-tab'));
+			let panels = tabs
 				.map(function (t) { return document.getElementById(t.getAttribute('data-target')); })
 				.filter(Boolean);
 			tabs.forEach(function (tab, i) {
@@ -465,7 +465,7 @@
 	     app.js의 history.back() 핸들러가 이 버튼엔 안 붙게 한다. -->
 	<script th:inline="none">
 	(function () {
-		var back = document.querySelector('.topbar__back[data-back]');
+		let back = document.querySelector('.topbar__back[data-back]');
 		if (!back) return;
 		back.removeAttribute('data-back');
 		back.addEventListener('click', function () { location.href = '/store/dashboard'; });
@@ -478,23 +478,23 @@
 	     건너뛴다(누르던 버튼이 사라지는 걸 막기 위해). -->
 	<script th:inline="none">
 	(function () {
-		var IDS = ['wait-section', 'selling-section', 'stats-strip'];
+		let IDS = ['wait-section', 'selling-section', 'stats-strip'];
 		setInterval(function () {
 			if (document.hidden) { return; }
 			if (window.__isPublishing && window.__isPublishing()) { return; }
 			// "⋯" 시트/삭제 다이얼로그가 열려 있으면 뒤 화면을 갈아끼우지 않는다.
 			if (document.querySelector('.stock-sheet:not(.is-hidden), .stock-dialog:not(.is-hidden)')) { return; }
-			var active = document.activeElement;
+			let active = document.activeElement;
 			if (active && active.closest && active.closest('#wait-section, #selling-section, #stats-strip')) { return; }
 			fetch(location.pathname, { credentials: 'same-origin' })
 				.then(function (res) { return res.ok ? res.text() : null; })
 				.then(function (html) {
 					if (!html) { return; }
-					var doc = new DOMParser().parseFromString(html, 'text/html');
-					var currentScroll = window.scrollY;
+					let doc = new DOMParser().parseFromString(html, 'text/html');
+					let currentScroll = window.scrollY;
 					IDS.forEach(function (id) {
-						var fresh = doc.getElementById(id);
-						var cur = document.getElementById(id);
+						let fresh = doc.getElementById(id);
+						let cur = document.getElementById(id);
 						if (fresh && cur && fresh.innerHTML !== cur.innerHTML) { cur.innerHTML = fresh.innerHTML; }
 					});
 					window.scrollTo(0, currentScroll);
@@ -509,17 +509,17 @@
 	     최상단 스크롤 튐을 원천 방지한다. fetch로 백그라운드 등록 후 wait/selling 섹션만 매끄럽게 동기화. -->
 	<script th:inline="none">
 	(function () {
-		var inFlight = 0;
-		var lastHtml = null;
+		let inFlight = 0;
+		let lastHtml = null;
 
 		function syncSections(html) {
 			if (!html) return;
-			var doc = new DOMParser().parseFromString(html, 'text/html');
-			var IDS = ['wait-section', 'selling-section', 'stats-strip'];
-			var currentScroll = window.scrollY;
+			let doc = new DOMParser().parseFromString(html, 'text/html');
+			let IDS = ['wait-section', 'selling-section', 'stats-strip'];
+			let currentScroll = window.scrollY;
 			IDS.forEach(function (id) {
-				var fresh = doc.getElementById(id);
-				var cur = document.getElementById(id);
+				let fresh = doc.getElementById(id);
+				let cur = document.getElementById(id);
 				if (fresh && cur && fresh.innerHTML !== cur.innerHTML) {
 					cur.innerHTML = fresh.innerHTML;
 				}
@@ -530,7 +530,7 @@
 		window.__isPublishing = function () { return inFlight > 0; };
 
 		document.addEventListener('submit', function (e) {
-			var form = e.target.closest('form[data-publish-form]');
+			let form = e.target.closest('form[data-publish-form]');
 			if (!form) return;
 			if (form.dataset.submitting === 'true') {
 				e.preventDefault();
@@ -539,8 +539,8 @@
 			e.preventDefault();
 			form.dataset.submitting = 'true';
 
-			var btn = form.querySelector('button[type="submit"]');
-			var card = form.closest('.stock-item');
+			let btn = form.querySelector('button[type="submit"]');
+			let card = form.closest('.stock-item');
 			if (btn) {
 				btn.disabled = true;
 				btn.textContent = '올리는 중…';
@@ -591,36 +591,36 @@
 	     판매 대기 상품의 [수정] 클릭 시 페이지 이동 없이 수량·할인율을 즉시 수정/발행 -->
 	<script th:inline="none">
 	(function () {
-		var qeSheet = document.getElementById('quick-edit-sheet');
-		var qeForm = document.getElementById('quick-edit-form');
+		let qeSheet = document.getElementById('quick-edit-sheet');
+		let qeForm = document.getElementById('quick-edit-form');
 		if (!qeSheet || !qeForm) return;
 
-		var qeTitle = document.getElementById('quick-edit-title');
-		var qeName = document.getElementById('qe-name');
-		var qeOrigPrice = document.getElementById('qe-originalPrice');
-		var qeQuantity = document.getElementById('qe-quantity');
-		var qeQtyMinus = document.getElementById('qe-qty-minus');
-		var qeQtyPlus = document.getElementById('qe-qty-plus');
-		var qeRateAutoRadio = document.getElementById('qe-rate-auto-radio');
-		var qeRateCustomRadio = document.getElementById('qe-rate-custom-radio');
-		var qeCustomRateBox = document.getElementById('qe-custom-rate-box');
-		var qeDiscountRate = document.getElementById('qe-discountRate');
-		var qeDiscountRateInput = document.getElementById('qe-discountRate-input');
-		var qePrevOrig = document.getElementById('qe-prev-orig');
-		var qePrevRate = document.getElementById('qe-prev-rate');
-		var qePrevSale = document.getElementById('qe-prev-sale');
-		var qeSubmitSave = document.getElementById('qe-submit-save');
-		var qeSubmitPublish = document.getElementById('qe-submit-publish');
-		var qePublishAfter = document.getElementById('qe-publishAfter');
-		var qeFullEditLink = document.getElementById('qe-full-edit-link');
+		let qeTitle = document.getElementById('quick-edit-title');
+		let qeName = document.getElementById('qe-name');
+		let qeOrigPrice = document.getElementById('qe-originalPrice');
+		let qeQuantity = document.getElementById('qe-quantity');
+		let qeQtyMinus = document.getElementById('qe-qty-minus');
+		let qeQtyPlus = document.getElementById('qe-qty-plus');
+		let qeRateAutoRadio = document.getElementById('qe-rate-auto-radio');
+		let qeRateCustomRadio = document.getElementById('qe-rate-custom-radio');
+		let qeCustomRateBox = document.getElementById('qe-custom-rate-box');
+		let qeDiscountRate = document.getElementById('qe-discountRate');
+		let qeDiscountRateInput = document.getElementById('qe-discountRate-input');
+		let qePrevOrig = document.getElementById('qe-prev-orig');
+		let qePrevRate = document.getElementById('qe-prev-rate');
+		let qePrevSale = document.getElementById('qe-prev-sale');
+		let qeSubmitSave = document.getElementById('qe-submit-save');
+		let qeSubmitPublish = document.getElementById('qe-submit-publish');
+		let qePublishAfter = document.getElementById('qe-publishAfter');
+		let qeFullEditLink = document.getElementById('qe-full-edit-link');
 
-		var curProduct = null;
-		var lastTrigger = null;
-		var isSubmitting = false;
+		let curProduct = null;
+		let lastTrigger = null;
+		let isSubmitting = false;
 
 		function isOpen(el) { return el && !el.classList.contains('is-hidden'); }
 		function syncScrollLock() {
-			var anyOpen = isOpen(qeSheet) ||
+			let anyOpen = isOpen(qeSheet) ||
 			              isOpen(document.getElementById('stock-sheet')) ||
 			              isOpen(document.getElementById('stock-dialog'));
 			document.body.style.overflow = anyOpen ? 'hidden' : '';
@@ -628,15 +628,15 @@
 
 		function updatePreview() {
 			if (!curProduct) return;
-			var orig = curProduct.origPrice || 0;
-			var isAuto = qeRateAutoRadio.checked;
-			var rate = isAuto ? (curProduct.autoRate || 0) : (parseInt(qeDiscountRateInput.value, 10) || 0);
+			let orig = curProduct.origPrice || 0;
+			let isAuto = qeRateAutoRadio.checked;
+			let rate = isAuto ? (curProduct.autoRate || 0) : (parseInt(qeDiscountRateInput.value, 10) || 0);
 			if (rate < 0) rate = 0;
 			if (rate > 90) rate = 90;
 
 			qePrevOrig.textContent = orig.toLocaleString() + '원';
 			qePrevRate.textContent = '-' + rate + '%';
-			var salePrice = Math.max(0, Math.round(orig * (100 - rate) / 100));
+			let salePrice = Math.max(0, Math.round(orig * (100 - rate) / 100));
 			qePrevSale.textContent = salePrice.toLocaleString() + '원';
 		}
 
@@ -673,7 +673,7 @@
 			}
 
 			// 칩 활성화 상태 동기화
-			var chips = qeCustomRateBox.querySelectorAll('.qe-chip');
+			let chips = qeCustomRateBox.querySelectorAll('.qe-chip');
 			chips.forEach(function (c) {
 				c.classList.toggle('is-active', c.getAttribute('data-rate') === qeDiscountRateInput.value);
 			});
@@ -694,13 +694,13 @@
 
 		// 수량 증감
 		qeQtyMinus.addEventListener('click', function () {
-			var val = parseInt(qeQuantity.value, 10) || 1;
+			let val = parseInt(qeQuantity.value, 10) || 1;
 			if (val > 1) {
 				qeQuantity.value = val - 1;
 			}
 		});
 		qeQtyPlus.addEventListener('click', function () {
-			var val = parseInt(qeQuantity.value, 10) || 1;
+			let val = parseInt(qeQuantity.value, 10) || 1;
 			if (val < 999) {
 				qeQuantity.value = val + 1;
 			}
@@ -727,9 +727,9 @@
 
 		// 칩 클릭
 		qeCustomRateBox.addEventListener('click', function (e) {
-			var chip = e.target.closest('.qe-chip');
+			let chip = e.target.closest('.qe-chip');
 			if (!chip) return;
-			var rate = chip.getAttribute('data-rate');
+			let rate = chip.getAttribute('data-rate');
 			qeDiscountRateInput.value = rate;
 			qeDiscountRate.value = rate;
 			qeCustomRateBox.querySelectorAll('.qe-chip').forEach(function (c) {
@@ -741,7 +741,7 @@
 		// 직접 입력
 		qeDiscountRateInput.addEventListener('input', function () {
 			qeDiscountRate.value = this.value;
-			var val = this.value;
+			let val = this.value;
 			qeCustomRateBox.querySelectorAll('.qe-chip').forEach(function (c) {
 				c.classList.toggle('is-active', c.getAttribute('data-rate') === val);
 			});
@@ -753,13 +753,13 @@
 			if (isSubmitting || !curProduct) return;
 			isSubmitting = true;
 			qePublishAfter.value = publish ? 'true' : 'false';
-			var targetBtn = publish ? qeSubmitPublish : qeSubmitSave;
-			var originalText = targetBtn.textContent;
+			let targetBtn = publish ? qeSubmitPublish : qeSubmitSave;
+			let originalText = targetBtn.textContent;
 			targetBtn.textContent = '처리 중…';
 			qeSubmitSave.disabled = true;
 			qeSubmitPublish.disabled = true;
 
-			var formData = new FormData(qeForm);
+			let formData = new FormData(qeForm);
 
 			fetch(qeForm.action, {
 				method: 'POST',
@@ -771,12 +771,12 @@
 				return res.text();
 			})
 			.then(function (html) {
-				var doc = new DOMParser().parseFromString(html, 'text/html');
-				var IDS = ['wait-section', 'selling-section', 'stats-strip'];
-				var currentScroll = window.scrollY;
+				let doc = new DOMParser().parseFromString(html, 'text/html');
+				let IDS = ['wait-section', 'selling-section', 'stats-strip'];
+				let currentScroll = window.scrollY;
 				IDS.forEach(function (id) {
-					var fresh = doc.getElementById(id);
-					var cur = document.getElementById(id);
+					let fresh = doc.getElementById(id);
+					let cur = document.getElementById(id);
 					if (fresh && cur) {
 						cur.innerHTML = fresh.innerHTML;
 					}
@@ -801,7 +801,7 @@
 
 		// 문서 위임 클릭 (열기 & 닫기)
 		document.addEventListener('click', function (e) {
-			var trigger = e.target.closest('[data-open-quick-edit]');
+			let trigger = e.target.closest('[data-open-quick-edit]');
 			if (trigger) {
 				openQuickEdit(trigger);
 				return;
@@ -828,24 +828,24 @@
 	       요청 중엔 확인 버튼을 잠가 중복 클릭을 막는다. -->
 	<script th:inline="none">
 	(function () {
-		var sheet = document.getElementById('stock-sheet');
-		var dialog = document.getElementById('stock-dialog');
-		var form = document.getElementById('stock-delete-form');
+		let sheet = document.getElementById('stock-sheet');
+		let dialog = document.getElementById('stock-dialog');
+		let form = document.getElementById('stock-delete-form');
 		if (!sheet || !dialog || !form) { return; }
-		var sheetName = document.getElementById('stock-sheet-name');
-		var editLink = document.getElementById('stock-sheet-edit');
-		var deleteRow = document.getElementById('stock-sheet-delete');
-		var discardRow = document.getElementById('stock-sheet-discard');
-		var soldoutRow = document.getElementById('stock-sheet-soldout');
-		var resumeRow = document.getElementById('stock-sheet-resume');
-		var dialogTitle = document.getElementById('stock-dialog-title');
-		var dialogDesc = document.getElementById('stock-dialog-desc');
-		var confirmBtn = document.getElementById('stock-dialog-confirm');
+		let sheetName = document.getElementById('stock-sheet-name');
+		let editLink = document.getElementById('stock-sheet-edit');
+		let deleteRow = document.getElementById('stock-sheet-delete');
+		let discardRow = document.getElementById('stock-sheet-discard');
+		let soldoutRow = document.getElementById('stock-sheet-soldout');
+		let resumeRow = document.getElementById('stock-sheet-resume');
+		let dialogTitle = document.getElementById('stock-dialog-title');
+		let dialogDesc = document.getElementById('stock-dialog-desc');
+		let confirmBtn = document.getElementById('stock-dialog-confirm');
 
-		var current = null;          // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl, discardUrl, ... }
-		var currentActionUrl = null; // 다이얼로그 확인 시 전송할 POST 주소
-		var lastTrigger = null;      // 닫을 때 포커스를 돌려줄 "⋯" 버튼
-		var submitting = false;
+		let current = null;          // 지금 메뉴가 열린 상품 { id, name, editUrl, deleteUrl, discardUrl, ... }
+		let currentActionUrl = null; // 다이얼로그 확인 시 전송할 POST 주소
+		let lastTrigger = null;      // 닫을 때 포커스를 돌려줄 "⋯" 버튼
+		let submitting = false;
 
 		function isOpen(el) { return !el.classList.contains('is-hidden'); }
 		function syncScrollLock() { document.body.style.overflow = (isOpen(sheet) || isOpen(dialog)) ? 'hidden' : ''; }
@@ -917,13 +917,13 @@
 
 		document.addEventListener('click', function (e) {
 			// 판매 대기 카드의 ✕ (오늘 안 함) 버튼
-			var dismissTrigger = e.target.closest('[data-discard-trigger]');
+			let dismissTrigger = e.target.closest('[data-discard-trigger]');
 			if (dismissTrigger) {
 				e.preventDefault();
 				e.stopPropagation();
 				if (submitting) { return; }
-				var name = dismissTrigger.getAttribute('data-name') || '';
-				var url = dismissTrigger.getAttribute('data-discard-url');
+				let name = dismissTrigger.getAttribute('data-name') || '';
+				let url = dismissTrigger.getAttribute('data-discard-url');
 				current = { name: name, discardUrl: url };
 				currentActionUrl = url;
 				lastTrigger = dismissTrigger;
@@ -936,7 +936,7 @@
 				return;
 			}
 
-			var trigger = e.target.closest('[data-stock-menu]');
+			let trigger = e.target.closest('[data-stock-menu]');
 			if (trigger) { openSheet(trigger); return; }
 			if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
 			if (e.target.closest('[data-dialog-close]')) { closeDialog(); return; }
@@ -980,10 +980,10 @@
 			if (submitting || !currentActionUrl) { return; }
 			submitting = true;
 			confirmBtn.disabled = true;
-			var originalBtnText = confirmBtn.textContent;
+			let originalBtnText = confirmBtn.textContent;
 			confirmBtn.textContent = '처리 중…';
 
-			var actionUrl = currentActionUrl;
+			let actionUrl = currentActionUrl;
 
 			fetch(actionUrl, {
 				method: 'POST',
@@ -997,12 +997,12 @@
 				submitting = false;
 				closeDialog(true);
 
-				var doc = new DOMParser().parseFromString(html, 'text/html');
-				var IDS = ['wait-section', 'selling-section', 'stats-strip'];
-				var currentScroll = window.scrollY;
+				let doc = new DOMParser().parseFromString(html, 'text/html');
+				let IDS = ['wait-section', 'selling-section', 'stats-strip'];
+				let currentScroll = window.scrollY;
 				IDS.forEach(function (id) {
-					var fresh = doc.getElementById(id);
-					var cur = document.getElementById(id);
+					let fresh = doc.getElementById(id);
+					let cur = document.getElementById(id);
 					if (fresh && cur) {
 						cur.innerHTML = fresh.innerHTML;
 					}
@@ -1030,13 +1030,13 @@
 			}
 			if (e.key !== 'Tab') { return; }
 			// 열린 레이어 안에서만 Tab 순환(포커스가 뒤 화면으로 새지 않게).
-			var layer = isOpen(dialog) ? dialog : (isOpen(sheet) ? sheet : null);
+			let layer = isOpen(dialog) ? dialog : (isOpen(sheet) ? sheet : null);
 			if (!layer) { return; }
-			var items = Array.prototype.filter.call(
+			let items = Array.prototype.filter.call(
 				layer.querySelectorAll('a[href], button:not([disabled])'),
 				function (el) { return el.offsetParent !== null; });
 			if (!items.length) { return; }
-			var first = items[0], last = items[items.length - 1];
+			let first = items[0], last = items[items.length - 1];
 			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
 			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 		});
