@@ -648,6 +648,18 @@ public class AuthService {
 						.role(UserEntity.ROLE_OWNER)
 						.build());
 
+		// 추가됨 (2026-10-07, 보안 리뷰 대응) — 이미 승인된(APPROVED) 매장이 이 폼을 다시 제출하면
+		// findByOwnerId가 그 매장을 그대로 재사용해서, 계좌를 포함한 전부가 재승인 없이 덮어써질 수
+		// 있었다(approvalStatus는 PENDING으로 되돌아가지만 accountStatus는 안 건드려서 NORMAL이
+		// 그대로 유지 — "계좌 변경은 승인제"로 막았던 BankAccountChangeService를 완전히 우회하는
+		// 구멍). 승인된 매장은 아예 이 경로를 못 타게 막는다 — 계좌를 바꾸고 싶으면
+		// BankAccountChangeService(/store/bank-account), 상호명 등 다른 정보는 기존처럼 운영자 문의
+		// (StoreController#editSubmit 주석 참고, 아직 별도 신청 플로우 없음).
+		if (store.getId() != null && StoreEntity.STATUS_APPROVED.equals(store.getApprovalStatus())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"이미 승인된 매장이에요. 계좌를 바꾸려면 매장 정보 수정 화면의 '계좌 등록·변경 신청'을 이용해 주세요.");
+		}
+
 		store.setRole(UserEntity.ROLE_OWNER);
 		store.setStoreName(storeName.trim());
 		store.setBusinessNumber(businessNumber.trim());
@@ -667,6 +679,10 @@ public class AuthService {
 			store.setBankAccount(bankAccount.trim());
 			store.setAccountHolder(accountHolder.trim());
 			store.setPassbookImageUrl(fileStorageUtil.storePrivate(passbook, "passbooks"));
+			// 2차 방어 — 위 승인된 매장 차단과 별개로, 이 경로로 계좌가 바뀌는 순간은 전부 "아직
+			// 아무도 검증 안 한 계좌"다. NORMAL은 오직 StoreService#approve 또는
+			// BankAccountChangeService#approve(둘 다 운영자 승인 액션)에서만 켜지게 한다.
+			store.setAccountStatus(StoreEntity.ACCOUNT_STATUS_UNREGISTERED);
 		}
 
 		return storeRepository.save(store);
