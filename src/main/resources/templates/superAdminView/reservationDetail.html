@@ -27,6 +27,12 @@
   "예약 신청(파랑) → 매장 수락(빨강) → 픽업 예정(빨강) → 취소(빨강)"로 이어진다. 연결선
   (.stepper__line)은 각 칸 자기 자신의 클래스를 따라 색이 정해지므로, 중간 칸을 is-cancelled로
   바꾸기만 하면 그 칸으로 들어오는 선도 자동으로 빨개진다.
+
+  추가됨 (2026-10-06) — "신고 없이도 이 화면에서 바로 취소·환불하고 싶다"는 요청으로 액션 버튼을
+  붙였다. 신고 상세(complaintDetail.html)의 모달 패턴(modal-overlay)을 그대로 재사용 — 거기와
+  다른 점은 "답변 템플릿"이 없다는 것뿐(여긴 신고가 없어서 답할 대상이 없음, 취소/환불 사유만 받음).
+  blockedCancelMessage/blockedRefundMessage 중 하나만 null이 될 수 있다(picked여야만 환불 가능,
+  picked가 아니어야 취소 가능이라 서로 배타적 — SuperAdminReservationController 참고).
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{common/layout-admin :: layoutAdmin('예약 상세', ~{:: #content}, ${from == 'member'} ? 'members' : (${from == 'orders'} ? 'orders' : 'stores'), '슈퍼어드민')}">
@@ -49,6 +55,62 @@
   </div>
 
   <div class="form-narrow">
+  <p class="text-muted text-muted--sm" th:if="${actionMessage != null}" th:text="${actionMessage}">처리 결과</p>
+
+  <!-- 추가됨 (2026-10-06) — 신고 없이 바로 취소/환불. 이미 환불 완료면 배지만, 그 외 취소 가능하면
+       취소 버튼, 픽업완료(환불 가능)면 환불 버튼만 보여준다(서로 배타적). -->
+  <div class="reply-box" th:if="${refundInfo != null or blockedCancelMessage == null or blockedRefundMessage == null}">
+    <div class="reply-box__label">관리자 처리</div>
+
+    <span class="badge badge--success" th:if="${refundInfo != null}"
+          th:text="'환불 완료(' + ${#temporals.format(refundInfo.updatedAt, 'yyyy-MM-dd HH:mm')} + ', ' + ${refundProcessedByName} + ')'">
+      환불 완료(2026-10-06 14:00, 송보미)
+    </span>
+
+    <button type="button" id="open-cancel-modal" class="btn btn--outline-danger btn--sm"
+            th:if="${refundInfo == null and blockedCancelMessage == null}">주문 취소</button>
+    <button type="button" id="open-refund-modal" class="btn btn--outline-danger btn--sm"
+            th:if="${refundInfo == null and blockedRefundMessage == null}">환불 처리</button>
+  </div>
+
+  <div th:if="${refundInfo == null and blockedCancelMessage == null}"
+       id="cancel-modal" role="dialog" aria-modal="true" aria-label="주문 취소" class="modal-overlay" hidden>
+    <form class="modal-card" th:action="@{/superadmin/reservations/{id}/cancel(id=${r.reservationId}, from=${from})}" method="post">
+      <h3 class="modal-card__title">이 주문을 취소할까요?</h3>
+      <p class="text-muted text-muted--sm" th:text="${r.productName} + ' · ' + ${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')} + '원 환불 · 되돌릴 수 없어요.'">
+        상품명 · 3,000원 환불 · 되돌릴 수 없어요.
+      </p>
+      <div class="field-group">
+        <label class="field-group__label" for="cancelReasonDirect">취소 사유</label>
+        <input class="field" type="text" id="cancelReasonDirect" name="reason" maxlength="255"
+               placeholder="예: 고객 요청으로 운영자가 직접 취소 처리">
+      </div>
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-modal>취소</button>
+        <button type="submit" class="btn btn--sm" id="cancel-submit-btn">주문 취소 확정</button>
+      </div>
+    </form>
+  </div>
+
+  <div th:if="${refundInfo == null and blockedRefundMessage == null}"
+       id="refund-modal" role="dialog" aria-modal="true" aria-label="환불 처리" class="modal-overlay" hidden>
+    <form class="modal-card" th:action="@{/superadmin/reservations/{id}/refund(id=${r.reservationId}, from=${from})}" method="post">
+      <h3 class="modal-card__title">이 주문을 환불할까요?</h3>
+      <p class="text-muted text-muted--sm" th:text="${r.productName} + ' · ' + ${#numbers.formatInteger(r.totalPrice, 0, 'COMMA')} + '원 전액 환불 · 되돌릴 수 없어요.'">
+        상품명 · 3,000원 전액 환불 · 되돌릴 수 없어요.
+      </p>
+      <div class="field-group">
+        <label class="field-group__label" for="refundReasonDirect">환불 사유</label>
+        <input class="field" type="text" id="refundReasonDirect" name="reason" maxlength="255" required
+               placeholder="예: 고객 요청으로 운영자가 직접 환불 처리">
+      </div>
+      <div class="modal-card__footer">
+        <button type="button" class="btn btn--outline-neutral btn--sm" data-close-modal>취소</button>
+        <button type="submit" class="btn btn--sm" id="refund-submit-btn">환불 확정</button>
+      </div>
+    </form>
+  </div>
+
   <h3 class="subhead">주문 정보</h3>
   <div class="info-list">
     <div class="info-row">
@@ -157,6 +219,33 @@
     </div>
   </div>
   </div>
+
+  <!-- 모달 열기/닫기 + 제출 즉시 버튼 비활성화(이중 제출 1차 방어, 서버는 RefundEntity.orderId
+       UNIQUE로 2차 방어) — complaintDetail.html과 동일 패턴. -->
+  <script th:inline="none" th:if="${refundInfo == null and (blockedCancelMessage == null or blockedRefundMessage == null)}">
+    (function () {
+      function wireModal(openBtnId, modalId, submitBtnId, confirmMessage) {
+        var openBtn = document.getElementById(openBtnId);
+        var modal = document.getElementById(modalId);
+        if (!openBtn || !modal) { return; }
+
+        openBtn.addEventListener('click', function () { modal.hidden = false; });
+        modal.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+          btn.addEventListener('click', function () { modal.hidden = true; });
+        });
+        modal.querySelector('form').addEventListener('submit', function (e) {
+          if (!confirm(confirmMessage)) {
+            e.preventDefault();
+            return;
+          }
+          document.getElementById(submitBtnId).disabled = true;
+        });
+      }
+
+      wireModal('open-cancel-modal', 'cancel-modal', 'cancel-submit-btn', '이 주문을 취소하고 환불할까요? 되돌릴 수 없어요.');
+      wireModal('open-refund-modal', 'refund-modal', 'refund-submit-btn', '이 주문을 환불할까요? 되돌릴 수 없어요.');
+    })();
+  </script>
 
 </div>
 </body>

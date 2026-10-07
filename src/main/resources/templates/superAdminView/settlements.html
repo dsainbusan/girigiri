@@ -76,8 +76,12 @@
     </table>
   </div>
 
-  <div class="section-row mt-8" th:if="${!#lists.isEmpty(pending)}">
-    <div class="field-group" style="flex:1">
+  <!-- 레이아웃 수정됨 (2026-10-07) — 메모/영수증 두 칸과 버튼의 세로 정렬이 안 맞던 문제. 전역
+       .section-row + .field-group 조합 대신 이 화면 전용 .pay-action-row로 분리했다(이유는
+       layout-admin.css의 .pay-action-row 주석 참고) — 기능(필드 name/타입/서버로 보내는 값)은
+       그대로, 배치만 바꿨다. -->
+  <div class="pay-action-row" th:if="${!#lists.isEmpty(pending)}">
+    <div class="pay-action-row__field">
       <label class="field-group__label" for="transferMemo">이체 확인 메모 (선택)</label>
       <input class="field" type="text" id="transferMemo" name="memo" form="pay-form" maxlength="200"
              placeholder="예: 2026-09-29 오전 기업뱅킹 이체 완료">
@@ -89,10 +93,17 @@
          수정됨 (2026-10-07, 보안 리뷰) — 은행 이체 확인 화면은 보통 그 배치의 모든 이체 건을 한 줄씩
          나열해서 보여주므로, 여러 매장을 한꺼번에 체크한 채로 영수증을 올리면 그 한 장이 전부에게
          똑같이 걸려서 다른 매장 점주에게 남의 계좌·금액이 보일 수 있다 — 한 매장만 선택했을 때만
-         첨부되게 서버에서 막는다(SuperAdminSettlementService#sameStore). -->
-    <div class="field-group" style="flex:1">
+         첨부되게 서버에서 막는다(SuperAdminSettlementService#sameStore).
+         커스텀 파일 UI로 바뀐 이유(2026-10-07, 레이아웃)는 .file-field CSS 주석 참고 — input
+         자체(name="receipt", form="pay-form")는 그대로라 서버로 가는 값은 안 바뀐다. -->
+    <div class="pay-action-row__field">
       <label class="field-group__label" for="transferReceipt">이체 확인증 (ONLY 매장 1곳)</label>
-      <input class="field" type="file" id="transferReceipt" name="receipt" form="pay-form" accept="image/jpeg,image/png,image/webp,image/gif">
+      <label class="file-field" for="transferReceipt">
+        <input class="file-field__input" type="file" id="transferReceipt" name="receipt" form="pay-form"
+               accept="image/jpeg,image/png,image/webp,image/gif">
+        <span class="chip-btn chip-btn--neutral file-field__btn">파일 선택</span>
+        <span class="file-field__name file-field__name--empty" id="transferReceiptName">선택된 파일 없음</span>
+      </label>
     </div>
     <button class="btn btn--outline-danger btn--sm" type="submit" form="pay-form">선택 건 지급 완료 처리</button>
   </div>
@@ -141,6 +152,20 @@
       </tbody>
     </table>
   </div>
+
+  <!-- 커스텀 파일 UI(.file-field)의 파일명 텍스트만 갱신 — 제출/검증 로직은 안 건드린다. -->
+  <script th:inline="none">
+  (function () {
+    let input = document.getElementById('transferReceipt');
+    let nameEl = document.getElementById('transferReceiptName');
+    if (!input || !nameEl) { return; }
+    input.addEventListener('change', function () {
+      let file = input.files && input.files[0];
+      nameEl.textContent = file ? file.name : '선택된 파일 없음';
+      nameEl.classList.toggle('file-field__name--empty', !file);
+    });
+  })();
+  </script>
 
 </div>
 </body>

@@ -25,13 +25,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 /**
- * 신고 처리로 발생하는 "관리자 환불" 전담 서비스. 2026-10-06, 신고 기반 리팩터링(스펙 C) 신설.
+ * "이미 픽업 완료(picked)된 주문을 운영자가 환불하는" 전담 서비스. 2026-10-06, 신고 기반
+ * 리팩터링(스펙 C) 신설.
  *
  * ReservationService.cancelByAdmin과는 완전히 분리한다(스펙 C.7) — cancelByAdmin은 지금도
  * pending/confirmed/ready(아직 안 끝난 예약)의 "분쟁 조정 취소"만 다루고, checkCancellableState가
- * picked를 명시적으로 막는다. 여기는 정반대로 "이미 픽업 완료(picked)된 주문을, 신고 접수 후
- * 운영자가 환불하는" 케이스만 다룬다 — 라우팅은 슈퍼어드민 전용(SuperAdminAccessInterceptor가
- * role=ADMIN을 이미 강제)인 SuperAdminSupportController에서만 호출된다.
+ * picked를 명시적으로 막는다. 여기는 정반대로 picked 주문만 다룬다.
+ *
+ * 진입 경로 2가지 — 둘 다 SuperAdminAccessInterceptor가 role=ADMIN을 이미 강제하는 슈퍼어드민
+ * 전용 화면에서만 호출된다:
+ *   1. refund(complaintId, ...) — 신고 상세(SuperAdminSupportController)에서, 신고에 답변까지
+ *      같이 남기며 처리완료(RESOLVED)로 바꾼다. RefundEntity.reportId가 그 신고 id로 채워진다.
+ *   2. refundDirect(reservationId, ...) — 주문 상세(SuperAdminReservationController)에서, 신고가
+ *      아예 없는 주문도 바로 환불한다("/superadmin/orders에 취소·환불 로직이 없다"는 지적으로
+ *      2026-10-06 추가). RefundEntity.reportId는 NULL — 신고 통계를 오염시키지 않으려고 가짜
+ *      신고를 만들지 않기로 했다(sql/migration-2026-10-06-refund-report-nullable.sql 참고).
  *
  * 범위 밖(스펙 TODO, 이번에 구현 안 함): 부분 환불, 쿠폰 복원, 정산 차감 — 전액 환불만, 쓴 쿠폰은
  * 그대로 소멸, 이미 만들어진 정산(SettlementEntity) 레코드는 건드리지 않는다. 정산 "금액 집계"는
@@ -82,8 +90,29 @@ public class AdminRefundService {
 		if (complaint.getTargetReservationId() == null) {
 			throw new AdminRefundNotAllowedException("이 신고는 연결된 주문이 없어서 환불할 수 없어요. 픽업 코드 검색으로 처리해주세요.");
 		}
-		Long reservationId = complaint.getTargetReservationId();
 
+		RefundResult result = doRefund(complaint.getTargetReservationId(), complaint.getId(), reason, adminUserId);
+		if (result.success()) {
+			complaint.resolve(replyContent);
+			complaintRepository.save(complaint);
+		}
+		return result;
+	}
+
+	/**
+	 * 추가됨 (2026-10-06, 슈퍼어드민 주문 상세 직접환불) — 신고가 아예 없는 주문도 슈퍼어드민이
+	 * 주문 상세 화면에서 바로 환불할 수 있게 한다(코드 리뷰에서 "/superadmin/orders에 취소·환불
+	 * 로직이 없다"는 지적 → Option 1: RefundEntity.reportId를 nullable로 풀고 신고 없는 환불은
+	 * NULL로 남긴다 — 가짜 신고를 만들어 신고 통계를 오염시키는 방식(Option 2)은 쓰지 않기로 함).
+	 * refund(complaintId, ...)와 핵심 로직(doRefund)을 공유하고, "신고 처리완료" 단계만 없다.
+	 */
+	@Transactional
+	public RefundResult refundDirect(Long reservationId, String reason, Long adminUserId) {
+		return doRefund(reservationId, null, reason, adminUserId);
+	}
+
+	/** refund()/refundDirect()가 공유하는 실제 환불 처리. reportId는 신고 경유면 그 id, 직접환불이면 null. */
+	private RefundResult doRefund(Long reservationId, Long reportId, String reason, Long adminUserId) {
 		// findByIdForUpdate로 락 — cancelReservation/cancelByAdmin과 동일한 이유(동시 처리 방지).
 		ReservationEntity reservation = reservationRepository.findByIdForUpdate(reservationId)
 				.orElseThrow(() -> new EntityNotFoundException("예약을 찾을 수 없습니다. id=" + reservationId));
@@ -99,7 +128,7 @@ public class AdminRefundService {
 			throw new AdminRefundNotAllowedException("결제 완료(PAID) 상태가 아니라 환불할 수 없어요. 현재 결제 상태=" + payment.getPayStatus());
 		}
 
-		String resolvedReason = truncate(reason == null || reason.isBlank() ? "신고 처리로 환불됨" : reason, 255);
+		String resolvedReason = truncate(reason == null || reason.isBlank() ? "운영자 직접 환불" : reason, 255);
 
 		// order_id UNIQUE라, 이미 이 주문에 대한 환불 레코드(과거 FAILED 등)가 있으면 재사용한다.
 		RefundEntity refund = refundRepository.findByOrderId(reservationId)
@@ -110,7 +139,7 @@ public class AdminRefundService {
 					existing.retry(reservation.getTotalPrice(), resolvedReason, adminUserId);
 					return existing;
 				})
-				.orElseGet(() -> RefundEntity.requested(reservationId, complaintId, reservation.getTotalPrice(), resolvedReason, adminUserId));
+				.orElseGet(() -> RefundEntity.requested(reservationId, reportId, reservation.getTotalPrice(), resolvedReason, adminUserId));
 		refund = refundRepository.save(refund);
 
 		PaymentGateway.PaymentCancelResult pgResult = paymentGateway.cancelPayment(payment.getMerchantUid(), resolvedReason);
@@ -118,8 +147,8 @@ public class AdminRefundService {
 		if (!pgResult.cancelled()) {
 			refund.markFailed();
 			refundRepository.save(refund);
-			log.warn("> [AdminRefundService] PG 환불 실패 - complaintId={}, reservationId={}, 사유={}",
-					complaintId, reservationId, pgResult.failReason());
+			log.warn("> [AdminRefundService] PG 환불 실패 - reservationId={}, reportId={}, 사유={}",
+					reservationId, reportId, pgResult.failReason());
 			return RefundResult.failed(pgResult.failReason());
 		}
 
@@ -135,9 +164,6 @@ public class AdminRefundService {
 		reservationRepository.save(reservation);
 		statusHistoryRepository.save(
 				ReservationStatusHistoryEntity.of(reservationId, fromStatus, "refunded", adminUserId, resolvedReason));
-
-		complaint.resolve(replyContent);
-		complaintRepository.save(complaint);
 
 		receiptService.generateReceipt(reservationId);
 

@@ -20,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -139,5 +140,36 @@ class AdminRefundServiceTest {
 
 		assertThrows(AdminRefundNotAllowedException.class,
 				() -> adminRefundService.refund(id, "환불 시도", "환불", 4L));
+	}
+
+	// 추가됨 (2026-10-06) — "/superadmin/orders에 취소·환불 로직이 없다" 요청으로 신설한
+	// refundDirect(신고 없는 직접환불) 테스트. refund()와 핵심 로직(doRefund)을 공유하므로
+	// PG 성공/실패·재시도 분기는 위에서 이미 검증됐고, 여기서는 "신고 없이도 되는지"와
+	// "RefundEntity.reportId가 NULL로 남는지"만 확인한다.
+	@Test
+	void 신고_없이도_직접환불이_가능하고_report_id는_NULL로_남는다() {
+		when(paymentGateway.cancelPayment(anyString(), anyString()))
+				.thenReturn(new PaymentGateway.PaymentCancelResult(true, "test-merchant-uid-2", null));
+
+		AdminRefundService.RefundResult result =
+				adminRefundService.refundDirect(pickedReservationId, "운영자 직접 환불", 4L);
+
+		assertTrue(result.success());
+
+		ReservationEntity reservation = reservationRepository.findById(pickedReservationId).orElseThrow();
+		assertEquals("refunded", reservation.getStatus());
+
+		assertEquals(RefundStatus.DONE, refundRepository.findByOrderId(pickedReservationId).orElseThrow().getStatus());
+		assertNull(refundRepository.findByOrderId(pickedReservationId).orElseThrow().getReportId());
+
+		// setUp()에서 만든 신고(complaintId)는 직접환불과 무관하므로 PENDING 그대로여야 한다.
+		assertEquals(ComplaintEntity.STATUS_PENDING, complaintRepository.findById(complaintId).orElseThrow().getStatus());
+	}
+
+	@Test
+	void 직접환불도_픽업완료_상태가_아니면_막는다() {
+		// sample-data.sql reservation id=1: confirmed 상태(아직 픽업 전)
+		assertThrows(AdminRefundNotAllowedException.class,
+				() -> adminRefundService.refundDirect(1L, "직접 환불 시도", 4L));
 	}
 }

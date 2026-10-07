@@ -40,8 +40,12 @@ public class RefundEntity extends BaseTimeEntity {
 	@Column(name = "order_id", nullable = false)
 	private Long orderId;   // = ReservationEntity.id ("주문")
 
-	@Column(name = "report_id", nullable = false)
-	private Long reportId;  // = ComplaintEntity.id (이 환불의 근거가 된 신고)
+	// nullable로 변경됨 (2026-10-06, 슈퍼어드민 주문 상세 직접환불 추가) — 신고 없이 운영자가
+	// 주문 상세에서 바로 환불한 건은 이 값이 NULL이다. docs/schema.sql 기준 DB는 NOT NULL이라
+	// sql/migration-2026-10-06-refund-report-nullable.sql로 풀어줘야 한다(ddl-auto=update는
+	// 기존 NOT NULL을 자동으로 안 풀어준다 — coupon nullable 마이그레이션과 동일한 이유).
+	@Column(name = "report_id")
+	private Long reportId;  // = ComplaintEntity.id (이 환불의 근거가 된 신고). 신고 없는 직접환불이면 NULL.
 
 	@Column(name = "amount", nullable = false)
 	private Integer amount;
