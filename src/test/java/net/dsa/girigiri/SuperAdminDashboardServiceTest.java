@@ -44,15 +44,16 @@ class SuperAdminDashboardServiceTest {
 	}
 
 	@Test
-	void 처리_대기_리스트는_신고접수_입점신청_매장문의_유저문의_순서로_고정된다() {
+	void 처리_대기_리스트는_신고접수_입점신청_매장문의_유저문의_정산지급_순서로_고정된다() {
 		SuperAdminDashboardStatsDto stats = dashboardService.getDashboardStats();
 
 		List<PendingQueueRowDto> queue = stats.pendingQueue();
-		assertEquals(4, queue.size());
+		assertEquals(5, queue.size());
 		assertEquals("환불 신청", queue.get(0).label());
 		assertEquals("입점 신청", queue.get(1).label());
 		assertEquals("매장 문의", queue.get(2).label());
 		assertEquals("유저 문의", queue.get(3).label());
+		assertEquals("정산 지급", queue.get(4).label());
 	}
 
 	@Test
@@ -64,6 +65,7 @@ class SuperAdminDashboardServiceTest {
 		assertFalse(queue.get(1).priority());
 		assertFalse(queue.get(2).priority());
 		assertFalse(queue.get(3).priority());
+		assertFalse(queue.get(4).priority());
 	}
 
 	@Test
@@ -80,7 +82,7 @@ class SuperAdminDashboardServiceTest {
 	}
 
 	@Test
-	void 처리_대기_총_건수는_네_항목의_합과_같다() {
+	void 처리_대기_총_건수는_다섯_항목의_합과_같다() {
 		SuperAdminDashboardStatsDto stats = dashboardService.getDashboardStats();
 
 		long expected = stats.pendingQueue().stream().mapToLong(PendingQueueRowDto::count).sum();

@@ -20,12 +20,14 @@ import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.ProductEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
+import net.dsa.girigiri.domain.entity.SettlementEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.ComplaintRepository;
 import net.dsa.girigiri.repository.InquiryCommentRepository;
 import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.ProductRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.DashboardPolicy;
@@ -42,6 +44,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -73,6 +76,8 @@ public class SuperAdminDashboardService {
 	private final StoreRepository storeRepository;
 	// 추가됨 (2026-09-30, 통계 대시보드 리디자인) — "마감 상품 소진 현황" 차트(등록/판매 SKU 집계)용.
 	private final ProductRepository productRepository;
+	// 추가됨 (2026-10-07) — 처리 대기 "정산 지급"(지급 대기 PENDING 건수 + 가장 이른 지급 예정일 카운트다운)용.
+	private final SettlementRepository settlementRepository;
 
 	// StoreService.CO2_KG_PER_ITEM과 동일한 계수(구제 1개당 0.5kg) — 마이페이지 절약 대시보드와
 	// 같은 기준으로 맞춰서 "구제량 → CO2 절감량" 환산이 화면마다 다르게 보이지 않게 한다.
@@ -252,8 +257,8 @@ public class SuperAdminDashboardService {
 	}
 
 	/**
-	 * 처리 대기 통합 리스트 — 순서는 항상 신고 접수 → 입점 신청 → 매장 문의 → 유저 문의로 고정한다
-	 * (건수와 무관, 신고가 가장 긴급하다는 운영 판단을 화면 순서로 드러낸다).
+	 * 처리 대기 통합 리스트 — 순서는 항상 신고 접수 → 입점 신청 → 매장 문의 → 유저 문의 → 정산 지급으로
+	 * 고정한다(건수와 무관, 신고가 가장 긴급하다는 운영 판단을 화면 순서로 드러낸다).
 	 */
 	private List<PendingQueueRowDto> buildPendingQueue(LocalDateTime now) {
 		List<ComplaintEntity> pendingComplaints = complaintRepository.findAll().stream()
@@ -283,7 +288,29 @@ public class SuperAdminDashboardService {
 		rows.add(pendingRow("유저 문의", "i-user", pendingUserInquiries.size(),
 				oldestOf(pendingUserInquiries.stream().map(InquiryEntity::getCreatedAt)), now,
 				DashboardPolicy.SLA_OTHER_HOURS, "/superadmin/reports?tab=user", false));
+		rows.add(settlementPayoutRow(now.toLocalDate()));
 		return rows;
+	}
+
+	/**
+	 * 추가됨 (2026-10-07) — 처리 대기 "정산 지급". 매주 월요일 확정된 정산(PENDING, 지급 대기)을 지급
+	 * 예정일까지 카운트다운한다 — 가장 이른 지급 예정일 기준 "D-2 · 10/9 지급 예정" / "D-day · 오늘 지급
+	 * 예정" / "10/9 지급 예정 · 1일 지남". 다른 항목의 "접수 후 N시간 SLA" 대신 지급 예정일이 지났으면
+	 * overSla(빨간 테두리)로 본다 — AdminNotificationTriggerScheduler의 "지급 예정일 도래" 알림과 같은 기준.
+	 */
+	private PendingQueueRowDto settlementPayoutRow(LocalDate today) {
+		List<SettlementEntity> pending = settlementRepository.findByStatusOrderByScheduledPayoutDateAsc(SettlementEntity.STATUS_PENDING);
+		String link = "/superadmin/settlements";
+		if (pending.isEmpty()) {
+			return new PendingQueueRowDto("정산 지급", "i-refresh", 0, null, link, false, false, "대기 없음");
+		}
+		LocalDate due = pending.get(0).getScheduledPayoutDate();
+		long daysLeft = ChronoUnit.DAYS.between(today, due);
+		String dueLabel = due.format(SELL_THROUGH_DAY_FORMAT) + " 지급 예정";
+		String dLabel = daysLeft > 0 ? "D-" + daysLeft : (daysLeft == 0 ? "D-day" : (-daysLeft) + "일 지남");
+		String subLabel = daysLeft > 0 ? dLabel + " · " + dueLabel
+				: (daysLeft == 0 ? "D-day · 오늘 지급 예정" : dueLabel + " · " + dLabel);
+		return new PendingQueueRowDto("정산 지급", "i-refresh", pending.size(), dLabel, link, false, daysLeft < 0, subLabel);
 	}
 
 	// 변경됨 (2026-10-06) — SLA 초과 여부(overSla)를 같이 계산하려면 "가장 오래된 건" 시각 자체가
@@ -293,7 +320,8 @@ public class SuperAdminDashboardService {
 	                                       LocalDateTime now, long slaHours, String linkUrl, boolean priority) {
 		String oldestAgoLabel = count > 0 && oldest != null ? formatAgo(oldest, now) : null;
 		boolean overSla = count > 0 && oldest != null && Duration.between(oldest, now).toHours() >= slaHours;
-		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla);
+		String subLabel = oldestAgoLabel != null ? oldestAgoLabel + " · 가장 오래된 요청" : "대기 없음";
+		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla, subLabel);
 	}
 
 	private LocalDateTime oldestOf(Stream<LocalDateTime> timestamps) {
