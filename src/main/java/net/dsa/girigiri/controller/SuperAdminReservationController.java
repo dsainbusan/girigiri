@@ -71,10 +71,14 @@ public class SuperAdminReservationController {
 		// 아니어야 취소 가능이라 서로 배타적).
 		model.addAttribute("blockedCancelMessage", reservationService.blockedCancelMessage(reservation));
 		model.addAttribute("blockedRefundMessage", adminRefundService.blockedRefundMessage(reservation));
-		adminRefundService.findRefund(id).ifPresent(refund -> {
-			model.addAttribute("refundInfo", refund);
-			model.addAttribute("refundProcessedByName", supportService.adminDisplayName(refund.getRequestedBy()));
-		});
+		// refunded일 때만 조회 — PG 실패로 FAILED 레코드만 남은 picked 주문까지 "환불 완료" 배지가 뜨고
+		// 재시도 버튼이 숨겨지는 걸 막는다(SuperAdminSupportController.complaintDetail과 동일 조건).
+		if ("refunded".equals(reservation.getStatus())) {
+			adminRefundService.findRefund(id).ifPresent(refund -> {
+				model.addAttribute("refundInfo", refund);
+				model.addAttribute("refundProcessedByName", supportService.adminDisplayName(refund.getRequestedBy()));
+			});
+		}
 
 		return "superAdminView/reservationDetail";
 	}
