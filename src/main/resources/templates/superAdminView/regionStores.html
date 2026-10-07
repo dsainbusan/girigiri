@@ -45,8 +45,8 @@
   <div id="selection-bar" class="selection-bar mb-16" hidden>
     <span id="selection-bar__count" class="selection-bar__count">0개 매장 선택됨</span>
     <div class="selection-bar__actions">
-      <button type="button" class="btn btn--outline-neutral btn--sm" id="open-suggestion-modal">점주에게 제안 보내기</button>
-      <button type="button" class="btn btn--sm" id="open-coupon-modal">쿠폰 발행</button>
+      <button type="button" class="btn btn--primary btn--sm" id="open-suggestion-modal">점주에게 제안 보내기</button>
+      <button type="button" class="btn btn--primary btn--sm" id="open-coupon-modal">쿠폰 발행</button>
     </div>
   </div>
 
@@ -154,7 +154,6 @@
       <div class="field-group">
         <label class="field-group__label">알림 발송</label>
         <label class="u-row"><input type="checkbox" name="notifyLiked" value="true"> 대상 매장을 찜한 손님에게 알림</label>
-        <label class="u-row" id="notify-region-row" hidden><input type="checkbox" name="notifySameRegion" value="true"> 동일한 지역 손님에게도 알림</label>
       </div>
 
       <div class="modal-card__footer">
@@ -339,10 +338,6 @@
     [maxDiscountInput, amountInput].forEach(function (el) {
       el.addEventListener('input', updateCostEstimate);
     });
-
-    // 알림 "같은 시도 손님" 체크박스 — 이 지역 정보가 확실하니 항상 노출(서버에서 users.region 파싱
-    // 실패분은 그냥 매칭 안 됨으로 처리).
-    document.getElementById('notify-region-row').hidden = false;
 
     // 직접 작성 템플릿일 때만 메시지 입력란 노출.
     let templateSelect = document.getElementById('suggestion-template');
