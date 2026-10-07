@@ -19,6 +19,7 @@ public record SettlementRowDto(
 		LocalDate scheduledPayoutDate,
 		LocalDateTime paidAt,
 		String transferMemo,
-		boolean bankInfoRegistered
+		boolean bankInfoRegistered,
+		String transferReceiptUrl
 ) {
 }

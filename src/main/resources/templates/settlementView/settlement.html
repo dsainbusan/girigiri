@@ -79,6 +79,15 @@
 					<svg class="icon settle-hist__arrow"><use href="#i-chevron-right"/></svg>
 				</div>
 			</a>
+			<!-- 추가됨 (2026-10-07) — 운영자가 "지급 완료" 처리 때 같이 올린 이체 확인증. <a class=
+				 "settle-hist__row">가 행 전체를 감싸고 있어 그 안에 또 인터랙티브 요소(버튼/링크)를
+				 넣을 수 없다(중첩 금지) — <a> 밖, <li> 안의 별도 줄로 뺐다. -->
+			<button th:if="${s.status == 'PAID' and s.transferReceiptUrl != null}" type="button"
+			        class="u-primary" style="display:block;font-size:var(--fs-xs);font-weight:var(--fw-bold);margin:4px 0 0 var(--s-3);background:none;border:none;padding:0;cursor:pointer"
+			        th:attr="data-receipt-url=@{${s.transferReceiptUrl}}"
+			        onclick="window.open(this.dataset.receiptUrl, '_blank', 'noopener')">
+				이체 영수증 보기
+			</button>
 		</li>
 		<li class="settle-hist__item settle-hist__item--empty" th:if="${#lists.isEmpty(settlements)}">
 			아직 확정된 정산이 없어요. 첫 주간 정산은 다음 월요일에 잡혀요.

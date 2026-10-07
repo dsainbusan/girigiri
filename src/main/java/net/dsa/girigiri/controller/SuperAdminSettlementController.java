@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
@@ -45,8 +46,9 @@ public class SuperAdminSettlementController {
 	@PostMapping("/settlements/pay")
 	public String markPaid(@RequestParam(required = false) List<Long> ids,
 	                        @RequestParam(required = false) String memo,
+	                        @RequestParam(required = false) MultipartFile receipt,
 	                        RedirectAttributes redirectAttributes) {
-		int paid = settlementService.markPaid(ids, memo);
+		int paid = settlementService.markPaid(ids, memo, receipt);
 		redirectAttributes.addFlashAttribute("paidCount", paid);
 		return "redirect:/superadmin/settlements";
 	}

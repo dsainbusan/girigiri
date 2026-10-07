@@ -117,6 +117,17 @@ public class SettlementBatchService {
 	/** 슈퍼어드민 "지급 완료" 처리. PENDING인 것만 PAID로 바꾼다. 처리된 건수를 돌려준다. */
 	@Transactional
 	public int markPaid(List<Long> settlementIds, String memo) {
+		return markPaid(settlementIds, memo, null);
+	}
+
+	/**
+	 * receiptUrl 버전 — 2026-10-07 추가. 이체 확인증(스크린샷) 경로를 같이 받아 선택한 건 전부에
+	 * 동일하게 붙인다("한 번의 대량이체 = 한 장의 이체 확인증"이라 여러 매장 건이 같은 파일을
+	 * 공유한다, transferMemo와 동일한 전제). receiptUrl이 null이면(파일 첨부 안 함) 기존 값을
+	 * 그대로 두고 건드리지 않는다 — 재시도 시 이미 붙은 영수증을 실수로 지우지 않기 위해서다.
+	 */
+	@Transactional
+	public int markPaid(List<Long> settlementIds, String memo, String receiptUrl) {
 		if (settlementIds == null || settlementIds.isEmpty()) {
 			return 0;
 		}
@@ -129,6 +140,9 @@ public class SettlementBatchService {
 			s.setStatus(SettlementEntity.STATUS_PAID);
 			s.setPaidAt(now);
 			s.setTransferMemo(memo != null && !memo.isBlank() ? memo.trim() : "은행 대량이체");
+			if (receiptUrl != null) {
+				s.setTransferReceiptUrl(receiptUrl);
+			}
 			paid++;
 		}
 		log.info("> [정산 지급] {}건 지급 완료 처리", paid);

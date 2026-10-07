@@ -6,9 +6,11 @@ import net.dsa.girigiri.domain.entity.SettlementEntity;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
+import net.dsa.girigiri.util.FileStorageUtil;
 import net.dsa.girigiri.util.SettlementTransferExcelGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +36,9 @@ public class SuperAdminSettlementService {
 	private final SettlementRepository settlementRepository;
 	private final StoreRepository storeRepository;
 	private final SettlementBatchService settlementBatchService;
+	// 추가됨 (2026-10-07) — "지급 완료" 처리 시 이체 확인증(스크린샷) 업로드용. 리뷰 사진 업로드와
+	// 같은 공용 유틸(이미지 전용, 매직바이트 검증) 그대로 재사용한다.
+	private final FileStorageUtil fileStorageUtil;
 
 	@Transactional(readOnly = true)
 	public List<SettlementRowDto> getPendingSettlements() {
@@ -62,7 +67,8 @@ public class SuperAdminSettlementService {
 							s.getScheduledPayoutDate(),
 							s.getPaidAt(),
 							s.getTransferMemo(),
-							hasBankInfo(store));
+							hasBankInfo(store),
+							s.getTransferReceiptUrl());
 				})
 				.toList();
 	}
@@ -93,10 +99,15 @@ public class SuperAdminSettlementService {
 		};
 	}
 
-	/** "지급 완료" 버튼 — 실제 상태 전환은 SettlementBatchService.markPaid()에 그대로 위임한다. */
+	/**
+	 * "지급 완료" 버튼 — 실제 상태 전환은 SettlementBatchService.markPaid()에 그대로 위임한다.
+	 * receipt(이체 확인증 스크린샷, 선택)는 여기서 업로드만 하고 URL만 넘긴다 — 저장은 안 했으면
+	 * (= 비어있으면) null을 넘겨서 SettlementBatchService가 기존 영수증을 안 건드리게 한다.
+	 */
 	@Transactional
-	public int markPaid(List<Long> settlementIds, String memo) {
-		return settlementBatchService.markPaid(settlementIds, memo);
+	public int markPaid(List<Long> settlementIds, String memo, MultipartFile receipt) {
+		String receiptUrl = fileStorageUtil.store(receipt, "settlement-receipts");
+		return settlementBatchService.markPaid(settlementIds, memo, receiptUrl);
 	}
 
 	/**

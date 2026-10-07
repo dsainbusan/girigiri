@@ -92,6 +92,12 @@ public class SettlementEntity {
 	@Column(name = "transfer_memo", length = 200)
 	private String transferMemo;                // 이체 확인 메모 (슈퍼어드민 입력)
 
+	// 추가됨 (2026-10-07) — 슈퍼어드민이 실제 은행 이체를 마친 뒤 "지급 완료" 처리할 때 같이 올리는
+	// 이체 확인증(스크린샷) 경로. FileStorageUtil.store()가 돌려주는 "/upload/..." 웹 경로 그대로
+	// 저장한다. 점주가 /store/settlement 목록에서 자기 정산 건의 영수증을 직접 확인할 수 있게 한다.
+	@Column(name = "transfer_receipt_url")
+	private String transferReceiptUrl;
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
