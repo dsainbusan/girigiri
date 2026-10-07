@@ -50,6 +50,14 @@
          주문 내역/정보 수정)를 .detail-header__actions로 묶어서 한 그룹으로 오른쪽 끝에 정렬하고,
          좁은 화면에서 제목·배지 줄과 안 겹치면 자연스럽게 아래 줄로 내려가게 했다(간격 피드백). */-->
     <div class="detail-header__actions">
+      <!-- 추가됨 (2026-10-07) — 대기 매장도 상세에서 바로 승인할 수 있게. 동작/확인 문구는
+           stores.html 목록의 승인 버튼(SuperAdminStoreController#approveStore)과 동일, filter만
+           이 페이지가 들고 있는 값을 그대로 실어서 승인 후 원래 보던 "대기" 탭으로 돌아가게 한다. -->
+      <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/approve(id=${store.id})}" method="post"
+            onsubmit="return confirm('이 매장의 입점을 승인할까요?')">
+        <input type="hidden" name="filter" th:value="${filter}">
+        <button class="btn btn--primary btn--sm" type="submit">승인</button>
+      </form>
       <a class="btn btn--outline-neutral btn--sm"
          th:href="@{/superadmin/stores/{id}/inventory(id=${store.id})}"><svg class="icon"><use href="#i-box"/></svg>재고 현황</a>
       <a class="btn btn--outline-neutral btn--sm"

@@ -137,10 +137,14 @@ public class SuperAdminStoreController {
 				.toUriString();
 	}
 
+	// filter 추가 (2026-10-07) — 매장 상세(storeDetail.html)에서도 승인 버튼을 쓸 수 있게 하면서,
+	// ?filter=PENDING으로 들어온 채였으면 승인 후에도 그 필터로 돌아가게 했다(buildStoresRedirectUri
+	// 재사용 — bulk-suspend/bulk-unsuspend와 동일 패턴). 기존 stores.html의 승인 폼은 filter를 안
+	// 실어 보내니 그대로 전체 목록으로 간다 — 하위호환.
 	@PostMapping("/stores/{id}/approve")
-	public String approveStore(@PathVariable Long id) {
+	public String approveStore(@PathVariable Long id, @RequestParam(required = false) String filter) {
 		storeService.approve(id);
-		return "redirect:/superadmin/stores";
+		return "redirect:" + buildStoresRedirectUri(null, filter);
 	}
 
 	// 추가됨 (2026-09-29, 담당: 송보미) — 승인 버튼 옆 반려 버튼. reason은 선택 입력(비워도 반려는
