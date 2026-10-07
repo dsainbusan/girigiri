@@ -110,8 +110,10 @@ public class SettlementEntity {
 	private String accountHolder;
 
 	// 추가됨 (2026-10-07) — 슈퍼어드민이 실제 은행 이체를 마친 뒤 "지급 완료" 처리할 때 같이 올리는
-	// 이체 확인증(스크린샷) 경로. FileStorageUtil.store()가 돌려주는 "/upload/..." 웹 경로 그대로
-	// 저장한다. 점주가 /store/settlement 목록에서 자기 정산 건의 영수증을 직접 확인할 수 있게 한다.
+	// 이체 확인증(스크린샷). 변경됨(같은 날) — 슈퍼어드민 내부 증빙 전용으로 바꿔서 FileStorageUtil
+	// .storePrivate()의 상대 경로("settlement-receipts/파일명")를 저장한다(점주는 대신 지급 명세서를 봄).
+	// 변경 전에 올라간 건은 "/upload/..." 공개 경로가 남아있을 수 있다 — SuperAdminSettlementService
+	// #transferReceipt가 두 형태 모두 연다. 컬럼명은 스키마 변경을 피하려고 그대로 뒀다.
 	@Column(name = "transfer_receipt_url")
 	private String transferReceiptUrl;
 

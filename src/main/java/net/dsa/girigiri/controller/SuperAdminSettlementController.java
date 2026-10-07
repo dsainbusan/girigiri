@@ -2,12 +2,15 @@ package net.dsa.girigiri.controller;
 
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.service.SuperAdminSettlementService;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -65,5 +70,19 @@ public class SuperAdminSettlementController {
 				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
 				.body(excel);
+	}
+
+	/** 추가됨 (2026-10-07) — 이체 확인증 보기(슈퍼어드민 전용 내부 증빙). PassbookFileController와 같은 스트리밍 방식. */
+	@GetMapping("/settlements/{id}/receipt")
+	public ResponseEntity<Resource> transferReceipt(@PathVariable Long id) {
+		Path path = settlementService.transferReceipt(id);
+		MediaType contentType;
+		try {
+			String probed = Files.probeContentType(path);
+			contentType = probed != null ? MediaType.parseMediaType(probed) : MediaType.IMAGE_JPEG;
+		} catch (IOException e) {
+			contentType = MediaType.IMAGE_JPEG;
+		}
+		return ResponseEntity.ok().contentType(contentType).body(new FileSystemResource(path));
 	}
 }

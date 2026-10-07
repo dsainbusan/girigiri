@@ -87,17 +87,13 @@
              placeholder="예: 2026-09-29 오전 기업뱅킹 이체 완료">
     </div>
     <!-- 추가됨 (2026-10-07) — 은행 기업뱅킹 대량이체를 마친 뒤 받은 이체 확인증(스크린샷)을 같이
-         올린다. 점주는 /store/settlement 목록에서 자기 건의 영수증을 확인할 수 있다(settlement.html
-         참고). 비워도 지급 완료 처리는 된다 — 나중에 다시 선택해서 영수증만 추가로 붙이고 싶을 수도
-         있어서 필수로 막지 않았다.
-         수정됨 (2026-10-07, 보안 리뷰) — 은행 이체 확인 화면은 보통 그 배치의 모든 이체 건을 한 줄씩
-         나열해서 보여주므로, 여러 매장을 한꺼번에 체크한 채로 영수증을 올리면 그 한 장이 전부에게
-         똑같이 걸려서 다른 매장 점주에게 남의 계좌·금액이 보일 수 있다 — 한 매장만 선택했을 때만
-         첨부되게 서버에서 막는다(SuperAdminSettlementService#sameStore).
-         커스텀 파일 UI로 바뀐 이유(2026-10-07, 레이아웃)는 .file-field CSS 주석 참고 — input
-         자체(name="receipt", form="pay-form")는 그대로라 서버로 가는 값은 안 바뀐다. -->
+         올린다. 비워도 지급 완료 처리는 된다.
+         변경됨 (2026-10-07) — 확인증은 슈퍼어드민 내부 증빙으로만 쓴다(비공개 저장, 아래 "최근 정산
+         이력"의 "보기"로만 열림). 점주는 대신 플랫폼이 발행하는 "지급 명세서"를 본다
+         (PayoutStatementService). 점주에게 안 보이니 "매장 1곳만 선택" 제한도 없앴다.
+         커스텀 파일 UI로 바뀐 이유(2026-10-07, 레이아웃)는 .file-field CSS 주석 참고. -->
     <div class="pay-action-row__field">
-      <label class="field-group__label" for="transferReceipt">이체 확인증 (ONLY 매장 1곳)</label>
+      <label class="field-group__label" for="transferReceipt">이체 확인증 (내부 보관용)</label>
       <label class="file-field" for="transferReceipt">
         <input class="file-field__input" type="file" id="transferReceipt" name="receipt" form="pay-form"
                accept="image/jpeg,image/png,image/webp,image/gif">
@@ -144,7 +140,7 @@
           <!-- 추가됨 (2026-10-07) — row-clickable 행 클릭 스크립트(common/layout-admin.html)가 이미
                a/button/input/form 클릭은 걸러주므로 이 링크를 눌러도 행 네비게이션과 안 겹친다. -->
           <td>
-            <a th:if="${row.transferReceiptUrl != null}" th:href="@{${row.transferReceiptUrl}}"
+            <a th:if="${row.transferReceiptUrl != null}" th:href="@{/superadmin/settlements/{id}/receipt(id=${row.id})}"
                target="_blank" rel="noopener" class="chip-btn chip-btn--neutral">보기</a>
             <span th:if="${row.transferReceiptUrl == null}" class="text-muted text-muted--sm">-</span>
           </td>

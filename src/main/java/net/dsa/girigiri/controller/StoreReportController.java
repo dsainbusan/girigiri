@@ -4,7 +4,9 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.StoreEntity;
 import net.dsa.girigiri.security.LoginRequired;
+import net.dsa.girigiri.domain.dto.PayoutStatementDto;
 import net.dsa.girigiri.domain.dto.SettlementData;
+import net.dsa.girigiri.service.PayoutStatementService;
 import net.dsa.girigiri.service.StoreAccessService;
 import net.dsa.girigiri.service.StoreService;
 import net.dsa.girigiri.util.PaginationUtil;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -38,6 +41,7 @@ public class StoreReportController {
 	private final StoreAccessService storeAccessService;
 	private final StoreService storeService;
 	private final net.dsa.girigiri.service.SettlementService settlementService;
+	private final PayoutStatementService payoutStatementService;
 
 	private StoreEntity reportStore(HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
@@ -147,6 +151,33 @@ public class StoreReportController {
 				.contentType(MediaType.APPLICATION_PDF)
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + settlementFilename(p, fromDate, toDate, "pdf") + "\"")
 				.body(pdf);
+	}
+
+	/**
+	 * 추가됨 (2026-10-07) — 지급 완료된 주간 정산 1건의 "지급 명세서". 은행 이체확인증 캡처 대신 플랫폼이
+	 * 정산 확정 기록으로 직접 발행한다(PayoutStatementService 참고). 내 매장 건 + PAID만 열린다.
+	 */
+	@GetMapping("/settlement/{id}/statement")
+	public String payoutStatement(@PathVariable Long id, HttpSession session, Model model) {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
+			return "redirect:/auth/owner-apply";
+		}
+		model.addAttribute("statement", payoutStatementService.getPaidStatement(store, id));
+		return "settlementView/payoutStatement";
+	}
+
+	@GetMapping("/settlement/{id}/statement/pdf")
+	public ResponseEntity<byte[]> payoutStatementPdf(@PathVariable Long id, HttpSession session) throws IOException {
+		StoreEntity store = reportStore(session);
+		if (store == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		PayoutStatementDto statement = payoutStatementService.getPaidStatement(store, id);
+		return ResponseEntity.ok()
+				.contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"payout-statement-" + statement.statementNo() + ".pdf\"")
+				.body(net.dsa.girigiri.util.PayoutStatementPdfGenerator.generate(statement));
 	}
 
 	private String settlementFilename(String period, LocalDate from, LocalDate to, String ext) {
