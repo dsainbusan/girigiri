@@ -301,12 +301,12 @@ public class SuperAdminDashboardService {
 		List<SettlementEntity> pending = settlementRepository.findByStatusOrderByScheduledPayoutDateAsc(SettlementEntity.STATUS_PENDING);
 		String link = "/superadmin/settlements";
 		if (pending.isEmpty()) {
-			return new PendingQueueRowDto("정산 지급", "i-refresh", 0, null, link, false, false, "대기 없음");
+			return new PendingQueueRowDto("정산 지급", "i-refresh", 0, null, link, false, false);
 		}
 		LocalDate due = pending.get(0).getScheduledPayoutDate();
 		String dueLabel = due.format(SELL_THROUGH_DAY_FORMAT) + " 지급 예정";
 		boolean dueReached = !due.isAfter(today);
-		return new PendingQueueRowDto("정산 지급", "i-refresh", pending.size(), dueLabel, link, false, dueReached, dueLabel);
+		return new PendingQueueRowDto("정산 지급", "i-refresh", pending.size(), dueLabel, link, false, dueReached);
 	}
 
 	// 변경됨 (2026-10-06) — SLA 초과 여부(overSla)를 같이 계산하려면 "가장 오래된 건" 시각 자체가
@@ -316,8 +316,7 @@ public class SuperAdminDashboardService {
 	                                       LocalDateTime now, long slaHours, String linkUrl, boolean priority) {
 		String oldestAgoLabel = count > 0 && oldest != null ? formatAgo(oldest, now) : null;
 		boolean overSla = count > 0 && oldest != null && Duration.between(oldest, now).toHours() >= slaHours;
-		String subLabel = oldestAgoLabel != null ? oldestAgoLabel + " · 가장 오래된 요청" : "대기 없음";
-		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla, subLabel);
+		return new PendingQueueRowDto(label, iconId, count, oldestAgoLabel, linkUrl, priority, overSla);
 	}
 
 	private LocalDateTime oldestOf(Stream<LocalDateTime> timestamps) {

@@ -18,9 +18,6 @@ public record PendingQueueRowDto(
 		// 추가됨 (2026-10-06) — 가장 오래된 건이 SLA(신고 24시간/나머지 72시간, DashboardPolicy)를
 		// 넘겼으면 true. count가 0이면 항상 false.
 		// 정산 지급 행은 "가장 오래된 건 기준 SLA"가 아니라 "지급 예정일 당일이 됐는가(지난 것 포함)"로 판정한다.
-		boolean overSla,
-		// 추가됨 (2026-10-07) — 카드 두 번째 줄 문구. 다른 항목은 "3시간 전 · 가장 오래된 요청",
-		// 정산 지급은 "10/8 지급 예정". count가 0이면 "대기 없음".
-		String subLabel
+		boolean overSla
 ) {
 }
