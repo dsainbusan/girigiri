@@ -152,6 +152,7 @@ class CouponStoreScopeTest {
 				.issueLimit(5)
 				.expiresAt(LocalDateTime.now().plusDays(7)).active(true).build();
 		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(campaign));
+		when(couponStoreRepository.existsByCampaignIdAndStoreId(50L, 7L)).thenReturn(true);
 		when(likeService.isLiked(100L, 7L)).thenReturn(true);
 		when(couponRepository.existsByCampaignIdAndIssuedToUserId(50L, 100L)).thenReturn(false);
 		when(couponRepository.countByCampaignId(50L)).thenReturn(5L);
@@ -171,12 +172,32 @@ class CouponStoreScopeTest {
 				.issueLimit(5)
 				.expiresAt(LocalDateTime.now().plusDays(7)).active(true).build();
 		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(campaign));
+		when(couponStoreRepository.existsByCampaignIdAndStoreId(50L, 7L)).thenReturn(true);
 		when(likeService.isLiked(100L, 7L)).thenReturn(false);
 
 		ResponseStatusException e = assertThrows(ResponseStatusException.class,
 				() -> couponService.claimStoreCampaignCoupon(100L, 50L, 7L));
 		assertEquals(403, e.getStatusCode().value());
 		assertTrue(e.getReason().contains("찜한"));
+	}
+
+	// 추가됨 (2026-10-07, 보안 리뷰 대응) — storeId가 이 캠페인 대상이 아니면(= 내가 찜한 "다른" 매장
+	// id를 끼워 넣은 경우) 찜 여부를 보기도 전에 막혀야 한다. 고쳤던 IDOR의 회귀 테스트.
+	@Test
+	void 매장_지정_쿠폰은_캠페인_대상이_아닌_매장id면_찜_여부와_무관하게_거부된다() {
+		CouponCampaignEntity campaign = CouponCampaignEntity.builder()
+				.id(50L).scope(CouponCampaignEntity.SCOPE_STORE)
+				.discountType(CouponCampaignEntity.DISCOUNT_TYPE_RATE).discountRate(10)
+				.issueLimit(5)
+				.expiresAt(LocalDateTime.now().plusDays(7)).active(true).build();
+		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(campaign));
+		// 999L은 내가 찜했지만 이 캠페인(50L)과는 무관한 매장이라고 가정 — isLiked를 스텁하지 않아도
+		// (= 호출되면 Mockito가 바로 실패시킴) existsByCampaignIdAndStoreId에서 먼저 막혀야 한다.
+		when(couponStoreRepository.existsByCampaignIdAndStoreId(50L, 999L)).thenReturn(false);
+
+		ResponseStatusException e = assertThrows(ResponseStatusException.class,
+				() -> couponService.claimStoreCampaignCoupon(100L, 50L, 999L));
+		assertEquals(400, e.getStatusCode().value());
 	}
 
 	@Test

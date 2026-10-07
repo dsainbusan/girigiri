@@ -281,6 +281,14 @@ public class CouponService {
 		// 버튼은 찜한 손님에게만 보이지만(findStoreCouponOffers), 그건 화면 쪽 필터일 뿐이라 URL을
 		// 직접 쳐서 들어오는 경우까지 막으려면 여기서도 한 번 더 확인해야 한다(신고하기 등 다른
 		// 기능들과 동일한 "화면에서 숨기는 것 + 서버에서도 막는 것" 2중 방어 관례).
+		// 수정됨 (2026-10-07, 보안 리뷰) — storeId가 폼 hidden input이라 그대로 믿으면 "내가 찜한
+		// 다른 아무 매장 id"를 끼워 넣어 이 캠페인과 무관한 매장으로 찜 검사를 통과시킬 수 있었다
+		// (campaignId와 storeId가 실제로 연결돼 있는지 확인이 없었음 — IDOR). validateForRedeem이
+		// 이미 쓰는 couponStoreRepository.existsByCampaignIdAndStoreId로 먼저 "이 storeId가 정말 이
+		// 캠페인 대상인지"를 묶은 다음에 찜 여부를 본다.
+		if (!couponStoreRepository.existsByCampaignIdAndStoreId(campaignId, storeId)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "받을 수 없는 쿠폰이에요.");
+		}
 		if (!likeService.isLiked(userId, storeId)) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이 매장을 찜한 손님만 받을 수 있는 쿠폰이에요.");
 		}
