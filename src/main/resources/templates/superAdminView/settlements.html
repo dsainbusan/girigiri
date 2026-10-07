@@ -76,12 +76,17 @@
              placeholder="예: 2026-09-29 오전 기업뱅킹 이체 완료">
     </div>
     <!-- 추가됨 (2026-10-07) — 은행 기업뱅킹 대량이체를 마친 뒤 받은 이체 확인증(스크린샷)을 같이
-         올린다. 선택한 건 전부(한 번의 대량이체라 보통 한 장)에 똑같이 붙고, 점주는 /store/settlement
-         목록에서 자기 건의 영수증을 확인할 수 있다(settlement.html 참고). 비워도 지급 완료 처리는 된다
-         — 나중에 다시 선택해서 영수증만 추가로 붙이고 싶을 수도 있어서 필수로 막지 않았다. -->
+         올린다. 점주는 /store/settlement 목록에서 자기 건의 영수증을 확인할 수 있다(settlement.html
+         참고). 비워도 지급 완료 처리는 된다 — 나중에 다시 선택해서 영수증만 추가로 붙이고 싶을 수도
+         있어서 필수로 막지 않았다.
+         수정됨 (2026-10-07, 보안 리뷰) — 은행 이체 확인 화면은 보통 그 배치의 모든 이체 건을 한 줄씩
+         나열해서 보여주므로, 여러 매장을 한꺼번에 체크한 채로 영수증을 올리면 그 한 장이 전부에게
+         똑같이 걸려서 다른 매장 점주에게 남의 계좌·금액이 보일 수 있다 — 한 매장만 선택했을 때만
+         첨부되게 서버에서 막는다(SuperAdminSettlementService#sameStore). -->
     <div class="field-group" style="flex:1">
-      <label class="field-group__label" for="transferReceipt">이체 확인증 (선택)</label>
+      <label class="field-group__label" for="transferReceipt">이체 확인증 (선택, 매장 1곳만 선택 시)</label>
       <input class="field" type="file" id="transferReceipt" name="receipt" form="pay-form" accept="image/jpeg,image/png,image/webp,image/gif">
+      <p class="text-muted text-muted--sm">여러 매장을 한 번에 체크한 채로 영수증을 첨부하면 다른 매장에 정보가 노출될 수 있어 막아뒀어요 — 매장 1곳만 선택했을 때만 올려주세요.</p>
     </div>
     <button class="btn btn--outline-danger btn--sm" type="submit" form="pay-form">선택 건 지급 완료 처리</button>
   </div>

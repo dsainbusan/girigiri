@@ -8,14 +8,17 @@ import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.util.FileStorageUtil;
 import net.dsa.girigiri.util.SettlementTransferExcelGenerator;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -103,11 +106,32 @@ public class SuperAdminSettlementService {
 	 * "지급 완료" 버튼 — 실제 상태 전환은 SettlementBatchService.markPaid()에 그대로 위임한다.
 	 * receipt(이체 확인증 스크린샷, 선택)는 여기서 업로드만 하고 URL만 넘긴다 — 저장은 안 했으면
 	 * (= 비어있으면) null을 넘겨서 SettlementBatchService가 기존 영수증을 안 건드리게 한다.
+	 *
+	 * 수정됨 (2026-10-07, 보안 리뷰) — 여러 매장을 한꺼번에 체크해서 지급 완료 처리하면서 영수증을
+	 * 같이 올리면, 그 한 장이 선택된 매장 전부의 /store/settlement 화면에 똑같이 걸린다. 은행
+	 * 대량이체 확인 화면은 보통 이체 건을 전부 한 줄씩 나열해서 보여주므로, 그 캡처 한 장을 다른
+	 * 매장 점주에게도 그대로 보여주면 그 매장의 계좌·금액이 남의 점주에게 노출될 수 있다(IDOR은
+	 * 아니지만 교차 매장 정보 노출) — 영수증을 첨부하려면 선택한 건이 전부 같은 매장이어야 한다.
+	 * 여러 매장을 한 번에 처리하고 싶으면(기존 동작) 영수증 없이 진행하거나 매장별로 나눠서 올린다.
 	 */
 	@Transactional
 	public int markPaid(List<Long> settlementIds, String memo, MultipartFile receipt) {
+		if (receipt != null && !receipt.isEmpty() && !sameStore(settlementIds)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"이체 확인증은 한 매장 건을 선택했을 때만 첨부할 수 있어요. 여러 매장을 한 번에 처리하려면 영수증 없이 지급 완료 처리해 주세요.");
+		}
 		String receiptUrl = fileStorageUtil.store(receipt, "settlement-receipts");
 		return settlementBatchService.markPaid(settlementIds, memo, receiptUrl);
+	}
+
+	private boolean sameStore(List<Long> settlementIds) {
+		if (settlementIds == null || settlementIds.isEmpty()) {
+			return true;
+		}
+		Set<Long> storeIds = settlementRepository.findAllById(settlementIds).stream()
+				.map(SettlementEntity::getStoreId)
+				.collect(Collectors.toSet());
+		return storeIds.size() <= 1;
 	}
 
 	/**
