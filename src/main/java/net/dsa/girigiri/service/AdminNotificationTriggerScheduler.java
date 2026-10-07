@@ -4,14 +4,18 @@ import lombok.RequiredArgsConstructor;
 import net.dsa.girigiri.domain.entity.InquiryEntity;
 import net.dsa.girigiri.domain.entity.NotificationEntity;
 import net.dsa.girigiri.domain.entity.ReservationEntity;
+import net.dsa.girigiri.domain.entity.SettlementEntity;
 import net.dsa.girigiri.domain.entity.UserEntity;
 import net.dsa.girigiri.repository.InquiryRepository;
 import net.dsa.girigiri.repository.ReservationRepository;
+import net.dsa.girigiri.repository.SettlementRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -27,10 +31,14 @@ public class AdminNotificationTriggerScheduler {
 
 	private static final long SCAN_INTERVAL_MS = 60 * 1000L; // 1분마다
 
+	private static final DateTimeFormatter PAYOUT_DATE_LABEL = DateTimeFormatter.ofPattern("M월 d일");
+
 	private final NotificationService notificationService;
 	private final UserRepository userRepository;
 	private final InquiryRepository inquiryRepository;
 	private final ReservationRepository reservationRepository;
+	// 추가됨 (2026-10-07) — 정산 지급 예정일 도래 알림용.
+	private final SettlementRepository settlementRepository;
 
 	// 이 시각 이후에 생긴 것만 알림 대상으로 본다(회원가입/문의/예약 전부) — 없으면 서버를 켤 때마다
 	// 그 전부터 있던 데이터 전부가 한꺼번에 "새로 생겼어요" 알림으로 쏟아진다(NotificationTriggerScheduler의
@@ -47,6 +55,26 @@ public class AdminNotificationTriggerScheduler {
 		scanNewMembers(admin.getId());
 		scanNewInquiries(admin.getId());
 		scanNewReservations(admin.getId());
+		scanSettlementsDue(admin.getId());
+	}
+
+	/**
+	 * 추가됨 (2026-10-07) — 정산 지급 예정일이 됐는데 아직 지급 대기(PENDING)인 건을 알린다. 다른
+	 * scan*()과 다르게 startedAt(서버 뜬 뒤 "새로 생긴 것"만) 기준이 아니다 — 정산 건 자체는 확정
+	 * 시점에 이미 만들어져 있고, 신호는 "지급 예정일이 됐는가"라는 날짜 조건이라서다. 대신
+	 * sourceKey 중복방지(createNotification 내부)가 같은 건에 대해 한 번만 알림이 가게 막아준다
+	 * (매일 스캔이 다시 돌아도 이미 보낸 건 재발송 안 함).
+	 */
+	private void scanSettlementsDue(Long adminId) {
+		LocalDate today = LocalDate.now();
+		for (SettlementEntity s : settlementRepository.findByStatusOrderByScheduledPayoutDateAsc(SettlementEntity.STATUS_PENDING)) {
+			if (s.getScheduledPayoutDate() == null || s.getScheduledPayoutDate().isAfter(today)) {
+				continue;
+			}
+			notificationService.createNotification(adminId, NotificationEntity.TYPE_ADMIN_SETTLEMENT_DUE,
+					"지급 예정일(" + s.getScheduledPayoutDate().format(PAYOUT_DATE_LABEL) + ")이 된 정산 건이 있어요. 지급을 처리해 주세요.",
+					"/superadmin/settlements", "admin_settlement_due:" + s.getId());
+		}
 	}
 
 	private void scanNewMembers(Long adminId) {

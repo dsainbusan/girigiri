@@ -186,6 +186,7 @@ public class NotificationService {
 			case NotificationEntity.TYPE_ADMIN_NEW_MEMBER -> "👤";
 			case NotificationEntity.TYPE_ADMIN_NEW_INQUIRY -> "💬";
 			case NotificationEntity.TYPE_ADMIN_NEW_RESERVATION -> "📅";
+			case NotificationEntity.TYPE_ADMIN_SETTLEMENT_DUE -> "💰";
 			case NotificationEntity.TYPE_STORE_REJECTED -> "❌";
 			case NotificationEntity.TYPE_ACCOUNT_SUSPENDED -> "🚫";
 			case NotificationEntity.TYPE_STORE_COUPON_AVAILABLE -> "🎟️";

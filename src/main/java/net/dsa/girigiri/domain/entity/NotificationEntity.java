@@ -39,6 +39,10 @@ public class NotificationEntity {
 	public static final String TYPE_ADMIN_NEW_MEMBER = "ADMIN_NEW_MEMBER";         // 신규 회원가입
 	public static final String TYPE_ADMIN_NEW_INQUIRY = "ADMIN_NEW_INQUIRY";       // 새 문의 등록
 	public static final String TYPE_ADMIN_NEW_RESERVATION = "ADMIN_NEW_RESERVATION"; // 새 예약 등록
+	// 추가됨 (2026-10-07, 계좌 보안 작업 겸) — 왜: 정산 지급 예정일(SettlementEntity.scheduledPayoutDate)이
+	// 됐는데 아직 지급 대기(PENDING)인 건을 슈퍼어드민이 놓치지 않게. AdminNotificationTriggerScheduler
+	// 참고 — 위 ADMIN_* 타입들과 동일하게 스키마 변경 없이 타입 문자열만 추가.
+	public static final String TYPE_ADMIN_SETTLEMENT_DUE = "ADMIN_SETTLEMENT_DUE"; // 정산 지급 예정일 도래
 
 	// 추가됨 (송채현, 2026-09-07) — 왜: 신규 가입 시 자동 발급되는 웰컴 쿠폰 안내용. 위 ADMIN_* 추가 때와
 	// 동일하게 스키마 변경 없이 타입 문자열만 추가한다 (WelcomeCouponScheduler 참고).
