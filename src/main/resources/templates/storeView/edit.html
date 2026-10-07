@@ -135,7 +135,10 @@
 			<input type="hidden" id="longitude" name="longitude" th:value="${store.longitude}">
 		</div>
 
-		<!-- 섹션 3: 정산 계좌 정보 -->
+		<!-- 섹션 3: 정산 계좌 정보 — 수정됨 (2026-10-07, 계좌 보안). 여기서 더 이상 직접 수정 못 한다
+		     (저장 즉시 반영되던 예전 동작 제거) — 계좌는 입점 심사 때 사업자 정보와 함께 한 번 확인되고,
+		     그 뒤로는 "변경 신청 → 슈퍼어드민 승인" 절차를 거쳐야 한다(StoreBankAccountController).
+		     상단 "매장 기본 인증 정보" 카드(상호·사업자번호·주소, 수정 불가)와 같은 잠금 톤으로 맞췄다. -->
 		<div class="edit-section-card">
 			<div class="edit-section-card__header">
 				<div class="edit-section-card__title-group">
@@ -143,24 +146,16 @@
 					<h3 class="edit-section-card__title">정산 입금 계좌</h3>
 					<span class="edit-section-card__subtitle">주간 자동 정산용</span>
 				</div>
+				<span class="badge"
+				      th:classappend="${store.accountStatus == 'NORMAL'} ? 'badge--success' : (${store.accountStatus == 'UNDER_REVIEW'} ? 'badge--warning' : 'badge--danger')"
+				      th:text="${store.accountStatus == 'NORMAL'} ? '정상' : (${store.accountStatus == 'UNDER_REVIEW'} ? '변경 심사 중' : '미등록')">미등록</span>
 			</div>
 
-			<div class="u-row" style="gap: var(--s-2)">
-				<select class="input" name="bankName" style="flex: 0 0 38%">
-					<option value="">은행 선택</option>
-					<option th:each="b : ${ {'국민','신한','우리','하나','농협','기업','카카오뱅크','토스뱅크','새마을금고','부산','경남','대구','우체국'} }"
-					        th:value="${b}" th:text="${b}" th:selected="${store.bankName == b}">국민</option>
-				</select>
-				<input class="input" type="text" name="bankAccount" th:value="${store.bankAccount}"
-				       placeholder="계좌번호 (- 없이 입력)" maxlength="40" style="flex: 1">
-			</div>
-			<div style="margin-top: var(--s-2)">
-				<input class="input" type="text" name="accountHolder" th:value="${store.accountHolder}"
-				       placeholder="예금주명" maxlength="40">
-			</div>
+			<p style="font-size: var(--fs-sm); margin: 0" th:text="(${store.bankName} ?: '-') + ' · ' + (${T(net.dsa.girigiri.util.BankAccountMaskUtil).mask(store.bankAccount)} ?: '-') + ' · ' + (${store.accountHolder} ?: '-')">국민 · 110***4567 · 예금주</p>
 			<p style="font-size: 11px; color: var(--c-text-mut); margin-top: 6px; margin-bottom: 0;">
-				* 매주 정산 대금이 위 계좌로 자동 입금됩니다. 정확히 입력해 주세요.
+				* 계좌를 등록·변경하려면 신청 후 운영자 승인이 필요해요. 승인 전까지는 정산 지급이 보류돼요.
 			</p>
+			<a th:href="@{/store/bank-account}" class="btn btn--outline btn--block" style="margin-top: var(--s-3)">계좌 등록·변경 신청</a>
 		</div>
 
 		<!-- 저장 버튼 -->

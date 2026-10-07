@@ -35,11 +35,46 @@ public class FileStorageUtil {
 			Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
 	private static final long MAX_FILE_SIZE = 5L * 1024 * 1024; // 5MB
 
+	// 추가됨 (2026-10-07, 계좌 보안) — upload/(=uploadDir)는 WebMvcConfig가 "/upload/**"로 통째로
+	// 공개 서빙한다. 통장 사본처럼 URL만 알면 아무나 보면 안 되는 파일은 이 트리 밖(형제 디렉터리)에
+	// 저장해서 애초에 정적 리소스 매핑 대상이 안 되게 한다 — 실제로 읽어서 내려주는 건 인증을 확인하는
+	// 전용 컨트롤러(PassbookFileController)만 한다.
+	@Value("${app.private-upload.dir:upload-private}")
+	private String privateUploadDir;
+
 	/**
 	 * 이미지를 upload/{subDir}/ 아래 랜덤 파일명으로 저장하고, "/upload/{subDir}/파일명" 형태의
 	 * 웹 접근 경로를 돌려준다. file이 null이거나 비어있으면 null을 돌려준다(=사진 없음).
 	 */
 	public String store(MultipartFile file, String subDir) {
+		StoredFile stored = validateAndStore(file, Path.of(uploadDir, subDir));
+		return stored == null ? null : "/" + uploadDir + "/" + subDir + "/" + stored.filename();
+	}
+
+	/**
+	 * store()와 검증 로직은 동일하지만, 공개 디렉터리(uploadDir) 대신 upload-private/{subDir}/ 아래에
+	 * 저장하고 "subDir/파일명"(디렉터리 안에서의 상대 경로)만 돌려준다 — 이 값은 href로 바로 못 쓰고,
+	 * PassbookFileController가 readPrivate()로 다시 열어서 인증 확인 후 스트리밍할 때만 쓴다.
+	 */
+	public String storePrivate(MultipartFile file, String subDir) {
+		StoredFile stored = validateAndStore(file, Path.of(privateUploadDir, subDir));
+		return stored == null ? null : subDir + "/" + stored.filename();
+	}
+
+	/** storePrivate()가 돌려준 상대 경로로 실제 파일을 읽는다. 경로 조작(".." 등) 방지로 정규화 후 private 루트 밖이면 거부한다. */
+	public Path resolvePrivate(String relativePath) {
+		Path root = Path.of(privateUploadDir).toAbsolutePath().normalize();
+		Path target = root.resolve(relativePath).normalize();
+		if (!target.startsWith(root)) {
+			throw new InvalidImageFileException("잘못된 파일 경로예요.");
+		}
+		return target;
+	}
+
+	private record StoredFile(String filename) {
+	}
+
+	private StoredFile validateAndStore(MultipartFile file, Path targetDir) {
 		if (file == null || file.isEmpty()) {
 			return null;
 		}
@@ -60,14 +95,13 @@ public class FileStorageUtil {
 		}
 
 		try {
-			Path targetDir = Path.of(uploadDir, subDir);
 			Files.createDirectories(targetDir);
 
 			String filename = UUID.randomUUID() + extensionFor(contentType);
 			Path target = targetDir.resolve(filename);
 			file.transferTo(target);
 
-			return "/" + uploadDir + "/" + subDir + "/" + filename;
+			return new StoredFile(filename);
 		} catch (IOException e) {
 			throw new UncheckedIOException("이미지 파일 저장에 실패했습니다.", e);
 		}

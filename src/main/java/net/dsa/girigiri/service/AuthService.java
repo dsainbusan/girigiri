@@ -8,6 +8,7 @@ import net.dsa.girigiri.repository.SocialAccountRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.repository.UserRepository;
 import net.dsa.girigiri.util.BusinessNumberUtil;
+import net.dsa.girigiri.util.FileStorageUtil;
 import net.dsa.girigiri.util.PhoneUtil;
 import net.dsa.girigiri.util.SidoParser;
 import net.dsa.girigiri.util.StoreHoursUtil;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -47,6 +49,8 @@ public class AuthService {
 	private final StoreRepository storeRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final SocialAccountRepository socialAccountRepository;
+	// 추가됨 (2026-10-07, 계좌 보안) — 입점 신청 때 같이 받는 통장 사본 업로드용.
+	private final FileStorageUtil fileStorageUtil;
 
 	/**
 	 * 이메일 회원가입 1단계 — 형식·중복만 검증하고 계정은 아직 만들지 않는다.
@@ -597,6 +601,22 @@ public class AuthService {
 	}
 
 	/**
+	 * 추가됨 (2026-10-07, 계좌 보안) — 입점 신청에 정산 계좌(은행/계좌번호/예금주) + 통장 사본을
+	 * 필수로 넣으면서 생긴 오버로드. 화면(ownerApply.html)의 required만 믿지 않고 서버에서도 다시
+	 * 확인한다 — 빈 값으로 직접 POST를 쏘면 통과되던 구멍을 막는다.
+	 */
+	public boolean isOwnerApplyValid(String storeName, String businessNumber, String category,
+	                                  String address, String phone, String operatingHours,
+	                                  String bankName, String bankAccount, String accountHolder,
+	                                  MultipartFile passbook) {
+		return isOwnerApplyValid(storeName, businessNumber, category, address, phone, operatingHours)
+				&& bankName != null && !bankName.isBlank()
+				&& bankAccount != null && !bankAccount.isBlank()
+				&& accountHolder != null && !accountHolder.isBlank()
+				&& passbook != null && !passbook.isEmpty();
+	}
+
+	/**
 	 * 점주 입점 신청서 제출 처리
 	 * - 매장 정보 및 사업자 등록번호를 PENDING 상태로 저장
 	 * - 기존 신청 건이 있으면 업데이트, 없으면 신규 생성
@@ -605,6 +625,23 @@ public class AuthService {
 	@Transactional
 	public StoreEntity ownerApply(Long userId, String storeName, String businessNumber, String category,
 	                               String address, String phone, String operatingHours) {
+		return ownerApply(userId, storeName, businessNumber, category, address, phone, operatingHours,
+				null, null, null, null);
+	}
+
+	/**
+	 * 수정됨 (2026-10-07, 계좌 보안) — 계좌(은행/계좌번호/예금주) + 통장 사본을 같이 받는다. 여기서
+	 * 바로 StoreEntity.accountStatus를 NORMAL로 올리지는 않는다 — 입점 승인 자체가 아직 안 끝난
+	 * 시점(PENDING)이라, 계좌도 사업자 정보와 함께 슈퍼어드민이 승인할 때(StoreService#approve)
+	 * 한 번에 검증된다. 그때까지는 기본값(UNREGISTERED)로 둬서 "미심사 계좌로 지급"이 안 생기게 한다.
+	 * 4개 인자를 전부 null로 주는 기존 오버로드(위)는 하위호환용 — 실제로는 컨트롤러가 항상 이 전체
+	 * 버전만 호출한다(계좌 필수화 이후).
+	 */
+	@Transactional
+	public StoreEntity ownerApply(Long userId, String storeName, String businessNumber, String category,
+	                               String address, String phone, String operatingHours,
+	                               String bankName, String bankAccount, String accountHolder,
+	                               MultipartFile passbook) {
 		StoreEntity store = storeRepository.findByOwnerId(userId)
 				.orElseGet(() -> StoreEntity.builder()
 						.ownerId(userId)
@@ -624,6 +661,13 @@ public class AuthService {
 		}
 		store.setOperatingHours(trimmedHours);
 		store.setApprovalStatus(StoreEntity.STATUS_PENDING); // 승인 대기 상태
+
+		if (bankName != null) {
+			store.setBankName(bankName.trim());
+			store.setBankAccount(bankAccount.trim());
+			store.setAccountHolder(accountHolder.trim());
+			store.setPassbookImageUrl(fileStorageUtil.storePrivate(passbook, "passbooks"));
+		}
 
 		return storeRepository.save(store);
 	}

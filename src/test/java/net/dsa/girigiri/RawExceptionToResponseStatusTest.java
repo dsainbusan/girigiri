@@ -51,7 +51,7 @@ class RawExceptionToResponseStatusTest {
 
 		ResponseStatusException ex = assertThrows(ResponseStatusException.class,
 				() -> storeService.updateStoreInfo(store, "베이커리", "02-1234-5678", "이상한 형식",
-						37.5, 127.0, null, null, null));
+						37.5, 127.0));
 
 		assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
 	}

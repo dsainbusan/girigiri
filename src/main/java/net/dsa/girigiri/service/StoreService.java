@@ -255,10 +255,13 @@ public class StoreService {
 	 * 사유는 원래 StoreController#editSubmit 주석 참고(승인 심사 근거값 보호, 카카오맵 Geocoder로
 	 * 좌표만 hidden input으로 전달).
 	 */
+	// 수정됨 (2026-10-07, 계좌 보안) — bankName/bankAccount/accountHolder 파라미터를 뺐다. 승인된
+	// 매장의 계좌는 더 이상 이 메서드(= /store/edit "정보 수정" 자율 저장)로 바로 안 바뀐다 — 바꾸고
+	// 싶으면 BankAccountChangeService의 신청/승인 절차를 거쳐야 한다(요구사항 3). storeView/edit.html
+	// 쪽 폼에서도 이 세 입력란을 지우고 마스킹 표시 + "계좌 변경 신청" 링크로 바꿨다.
 	@Transactional
 	public void updateStoreInfo(StoreEntity store, String category, String phone, String operatingHours,
-	                             Double latitude, Double longitude,
-	                             String bankName, String bankAccount, String accountHolder) {
+	                             Double latitude, Double longitude) {
 		store.setCategory(category.trim());
 		store.setPhone(phone.trim());
 		String trimmedHours = (operatingHours != null && !operatingHours.isBlank()) ? operatingHours.trim() : null;
@@ -268,15 +271,7 @@ public class StoreService {
 		store.setOperatingHours(trimmedHours);
 		store.setLatitude(latitude);
 		store.setLongitude(longitude);
-		// 정산 입금 계좌 (WBS 2.0) — 셋 다 비면 미등록으로 둔다
-		store.setBankName(trimToNull(bankName));
-		store.setBankAccount(trimToNull(bankAccount));
-		store.setAccountHolder(trimToNull(accountHolder));
 		storeRepository.save(store);
-	}
-
-	private String trimToNull(String s) {
-		return (s == null || s.isBlank()) ? null : s.trim();
 	}
 
 	private List<ProductEntity> fetchTodayProducts(Long storeId, LocalDateTime todayStart, LocalDateTime todayEnd) {

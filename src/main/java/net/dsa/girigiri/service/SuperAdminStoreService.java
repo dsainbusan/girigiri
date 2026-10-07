@@ -132,6 +132,14 @@ public class SuperAdminStoreService {
 	public void approve(Long id) {
 		StoreEntity store = lookupService.getStore(id);
 		store.setApprovalStatus(StoreEntity.STATUS_APPROVED);
+		// 추가됨 (2026-10-07, 계좌 보안) — 입점 신청 단계에서 계좌+통장 사본이 사업자 정보와 함께
+		// 제출되므로, 이 승인 한 번으로 계좌도 같이 검증된 것으로 본다(별도의 "계좌 승인" 단계를
+		// 또 거치게 하지 않는다 — 요구사항 2 "함께 보고 확인"). 승인 후 계좌를 "바꾸는" 건부터
+		// BankAccountChangeService의 신청/승인 절차를 탄다. bankAccount가 비어있으면(이 입점 신청
+		// 전에 만들어진 기존 매장을 재승인하는 극히 드문 경우) 기본값(UNREGISTERED)을 그대로 둔다.
+		if (store.getBankAccount() != null && !store.getBankAccount().isBlank()) {
+			store.setAccountStatus(StoreEntity.ACCOUNT_STATUS_NORMAL);
+		}
 		storeRepository.save(store);
 
 		// 변경됨 (2026-09-08, 코드 감사) — owner_id 컬럼(StoreEntity)이 nullable이라("User가 Store를

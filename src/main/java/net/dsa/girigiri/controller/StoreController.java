@@ -201,6 +201,11 @@ public class StoreController {
 	 * 이 셋을 바꾸고 싶으면 운영자 재심사가 필요한데, 그건 슈퍼어드민 화면(송보미 담당)이 생긴 뒤
 	 * "변경 요청 → 재승인" 플로우로 별도 구현할 예정 — 지금은 범위 밖.
 	 *
+	 * 계좌(bankName/bankAccount/accountHolder)도 같은 이유로 2026-10-07부터 여기서 뺐다 — 다만
+	 * 이쪽은 "범위 밖"이 아니라 실제로 StoreBankAccountController의 신청(/store/bank-account) →
+	 * 슈퍼어드민 승인 플로우로 이미 구현돼 있다(BankAccountChangeService 참고). 미등록·승인 전까지는
+	 * 정산 지급이 보류된다(StoreEntity.accountStatus).
+	 *
 	 * 위치(latitude/longitude)는 폼에서 직접 입력받지 않는다 — 주소를 사람이 손으로 좌표로 옮기는 건
 	 * 비현실적이라, 화면에서 카카오맵 Geocoder(주소→좌표 변환)로 미리 계산해서 hidden input으로
 	 * 같이 제출한다. 변환에 실패하면 null로 넘어와서 좌표 없이 저장되고(홈 지도엔 그 매장만 안 뜸),
@@ -212,9 +217,6 @@ public class StoreController {
 	                         @RequestParam(required = false) String operatingHours,
 	                         @RequestParam(required = false) Double latitude,
 	                         @RequestParam(required = false) Double longitude,
-	                         @RequestParam(required = false) String bankName,
-	                         @RequestParam(required = false) String bankAccount,
-	                         @RequestParam(required = false) String accountHolder,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
 		StoreEntity store = storeAccessService.findMyStore(userId).orElse(null);
@@ -226,8 +228,7 @@ public class StoreController {
 			return "redirect:/store/edit?error";
 		}
 
-		storeService.updateStoreInfo(store, category, phone, operatingHours, latitude, longitude,
-				bankName, bankAccount, accountHolder);
+		storeService.updateStoreInfo(store, category, phone, operatingHours, latitude, longitude);
 
 		return "redirect:/store/dashboard?edited";
 	}

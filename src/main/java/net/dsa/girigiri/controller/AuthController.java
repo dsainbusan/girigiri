@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -562,13 +563,20 @@ public class AuthController {
 	                         @RequestParam String address,
 	                         @RequestParam String phone,
 	                         @RequestParam(required = false) String operatingHours,
+	                         // 추가됨 (2026-10-07, 계좌 보안) — 정산 계좌 + 통장 사본 필수화.
+	                         @RequestParam String bankName,
+	                         @RequestParam String bankAccount,
+	                         @RequestParam String accountHolder,
+	                         @RequestParam(required = false) MultipartFile passbook,
 	                         HttpSession session) {
 		Long userId = (Long) session.getAttribute("userId");
-		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone, operatingHours)) {
+		if (!authService.isOwnerApplyValid(storeName, businessNumber, category, address, phone, operatingHours,
+				bankName, bankAccount, accountHolder, passbook)) {
 			return "redirect:/auth/owner-apply?error";
 		}
 
-		StoreEntity store = authService.ownerApply(userId, storeName, businessNumber, category, address, phone, operatingHours);
+		StoreEntity store = authService.ownerApply(userId, storeName, businessNumber, category, address, phone,
+				operatingHours, bankName, bankAccount, accountHolder, passbook);
 
 		session.setAttribute("appliedStoreName", store.getStoreName());
 		return "redirect:/auth/owner-apply-complete";

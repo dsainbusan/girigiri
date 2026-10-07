@@ -70,7 +70,8 @@ public class SuperAdminSettlementService {
 							s.getScheduledPayoutDate(),
 							s.getPaidAt(),
 							s.getTransferMemo(),
-							hasBankInfo(store),
+							s.isPayable(store),
+							accountStatusLabel(s, store),
 							s.getTransferReceiptUrl());
 				})
 				.toList();
@@ -82,10 +83,17 @@ public class SuperAdminSettlementService {
 				.collect(Collectors.toMap(StoreEntity::getId, s -> s));
 	}
 
-	private boolean hasBankInfo(StoreEntity store) {
-		return store != null
-				&& store.getBankName() != null && !store.getBankName().isBlank()
-				&& store.getBankAccount() != null && !store.getBankAccount().isBlank();
+	// 수정됨 (2026-10-07, 계좌 보안) — 예전엔 "등록됨/미등록" 2단이었는데, 요구사항 5의 3단
+	// (정상/변경 심사 중/미등록)으로 바꿨다. SettlementEntity.isPayable과 같은 기준(스냅샷 우선)을
+	// 쓰되, 라벨은 화면 문구용으로 하나 더 세분화한다.
+	private String accountStatusLabel(SettlementEntity s, StoreEntity store) {
+		if (s.isPayable(store)) {
+			return "정상";
+		}
+		if (store != null && StoreEntity.ACCOUNT_STATUS_UNDER_REVIEW.equals(store.getAccountStatus())) {
+			return "변경 심사 중";
+		}
+		return "미등록";
 	}
 
 	private String periodLabel(SettlementEntity s) {
@@ -140,6 +148,11 @@ public class SuperAdminSettlementService {
 	 * 배치(SettlementScheduler)로 한 번에 확정되므로, "이번 주 지급 대기 전체"가 곧 이번 배치 이체
 	 * 대상과 같다.
 	 */
+	// 수정됨 (2026-10-07, 계좌 보안) — 계좌가 없거나 심사 중인 건은 보낼 곳이 없으니 이체 목록에서
+	// 아예 뺀다(이전엔 store 계좌가 비어도 그냥 빈칸으로 한 줄 끼어 들어갔다). 계좌 값은 더 이상
+	// StoreEntity를 그때그때 조회하지 않고 SettlementEntity 스냅샷을 우선 쓴다(확정 당시 계좌가 없어
+	// 스냅샷이 비어있으면 지금 매장 계좌로 폴백 — isPayable과 같은 기준, SettlementEntity 주석 참고).
+	// 전체 계좌번호 복호화는 바로 이 메서드(Excel 생성 시점)에서만 일어난다(요구사항 4).
 	@Transactional(readOnly = true)
 	public byte[] buildTransferExcel() throws IOException {
 		List<SettlementEntity> pending =
@@ -147,12 +160,14 @@ public class SuperAdminSettlementService {
 		Map<Long, StoreEntity> storesById = storesByIdFor(pending);
 
 		List<SettlementTransferExcelGenerator.Line> lines = pending.stream()
+				.filter(s -> s.isPayable(storesById.get(s.getStoreId())))
 				.map(s -> {
 					StoreEntity store = storesById.get(s.getStoreId());
+					boolean useSnapshot = s.getBankAccount() != null;
 					return new SettlementTransferExcelGenerator.Line(
-							store != null ? store.getBankName() : null,
-							store != null ? store.getBankAccount() : null,
-							store != null ? store.getAccountHolder() : null,
+							useSnapshot ? s.getBankName() : store.getBankName(),
+							useSnapshot ? s.getBankAccount() : store.getBankAccount(),
+							useSnapshot ? s.getAccountHolder() : store.getAccountHolder(),
 							s.getPayout(),
 							"기리기리 정산",
 							store != null ? store.getStoreName() : "알 수 없음",

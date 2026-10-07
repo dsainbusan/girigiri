@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--/*
+  계좌 변경 심사. /superadmin/bank-account-requests 로 접속. (2026-10-07, 계좌 보안)
+
+  settlements.html(지급 대기 + 최근 이력 2단 구성)과 동일한 패턴 — 승인 대기 목록에서 바로 승인/반려
+  하고, 아래 최근 이력(최근 100건, 상태 무관)으로 지금까지 처리된 건까지 확인한다. 승인/반려는 둘 다
+  stores.html의 승인/반려 액션(confirm/prompt)과 같은 패턴. 통장 사본은 PassbookFileController로
+  새 창에서 연다(공개 URL이 아니라 인증된 스트리밍 엔드포인트 — FileStorageUtil#storePrivate 참고).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{common/layout-admin :: layoutAdmin('계좌 변경 심사', ~{:: #content}, 'stores', '슈퍼어드민')}">
+<body>
+<div id="content" th:fragment="content">
+
+  <p class="text-muted text-muted--sm" th:if="${resultMessage != null}" th:text="${resultMessage}">처리 결과</p>
+
+  <h3 class="subhead">승인 대기</h3>
+  <div class="toolbar">
+    <p class="result-count result-count--inline">대기 <b th:text="${pending.size()}">0</b>건</p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col><col style="width:14%"><col style="width:22%"><col style="width:13%"><col style="width:10%"><col style="width:18%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>신청일</th>
+          <th>신청 계좌</th>
+          <th>통장 사본</th>
+          <th>상태</th>
+          <th>처리</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(pending)}">
+          <td colspan="6" class="table-empty">대기 중인 계좌 변경 신청이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="row : ${pending}"
+            th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
+          <td class="cell-name" th:text="${row.storeName}">매장명</td>
+          <td th:text="${#temporals.format(row.requestedAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:00</td>
+          <td th:text="${row.newBankName} + ' ' + ${row.newBankAccountMasked} + ' (' + ${row.newAccountHolder} + ')'">국민 110***4567 (예금주)</td>
+          <td>
+            <a th:if="${row.hasPassbook}" target="_blank" class="chip-btn chip-btn--neutral"
+               th:href="@{/superadmin/bank-account-requests/{id}/passbook(id=${row.id})}">보기</a>
+            <span th:unless="${row.hasPassbook}" class="text-muted text-muted--sm">-</span>
+          </td>
+          <td><span class="badge badge--warning" th:text="${row.statusLabel}">대기중</span></td>
+          <td class="action-row">
+            <form th:action="@{/superadmin/bank-account-requests/{id}/approve(id=${row.id})}" method="post"
+                  onsubmit="return confirm('이 계좌 변경을 승인할까요? 이 매장의 정산 계좌가 바로 바뀝니다.')">
+              <button class="chip-btn" type="submit">승인</button>
+            </form>
+            <form th:action="@{/superadmin/bank-account-requests/{id}/reject(id=${row.id})}" method="post"
+                  onsubmit="let r = prompt('반려 사유를 입력해 주세요'); if (r === null) { return false; } this.reason.value = r; return true;">
+              <input type="hidden" name="reason">
+              <button class="chip-btn chip-btn--danger" type="submit">반려</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subhead mt-24">최근 이력 <span class="text-muted text-muted--sm">(최근 100건, 상태 무관)</span></h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <colgroup>
+        <col><col style="width:14%"><col style="width:22%"><col style="width:10%"><col style="width:24%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>매장</th>
+          <th>신청일</th>
+          <th>신청 계좌</th>
+          <th>상태</th>
+          <th>반려 사유</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:if="${#lists.isEmpty(recent)}">
+          <td colspan="5" class="table-empty">이력이 없습니다.</td>
+        </tr>
+        <tr class="row-clickable" th:each="row : ${recent}"
+            th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
+          <td class="cell-name" th:text="${row.storeName}">매장명</td>
+          <td th:text="${#temporals.format(row.requestedAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:00</td>
+          <td th:text="${row.newBankName} + ' ' + ${row.newBankAccountMasked} + ' (' + ${row.newAccountHolder} + ')'">국민 110***4567 (예금주)</td>
+          <td>
+            <span class="badge badge--warning" th:if="${row.status == 'PENDING'}" th:text="${row.statusLabel}">대기중</span>
+            <span class="badge badge--success" th:if="${row.status == 'APPROVED'}" th:text="${row.statusLabel}">승인됨</span>
+            <span class="badge badge--danger" th:if="${row.status == 'REJECTED'}" th:text="${row.statusLabel}">반려됨</span>
+          </td>
+          <td th:text="${row.rejectReason} ?: '-'">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

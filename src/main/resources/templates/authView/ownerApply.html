@@ -24,7 +24,7 @@
 
 	<p class="u-danger" th:if="${param.error}" style="margin-bottom: var(--s-4)">필수 항목을 모두 올바르게 입력해 주세요.</p>
 
-	<form th:action="@{/auth/owner-apply}" method="post">
+	<form th:action="@{/auth/owner-apply}" method="post" enctype="multipart/form-data">
 		<!-- 1. 상호명 -->
 		<div class="field">
 			<label class="field__label" for="storeName">상호명 (매장명) <span class="u-accent">*</span></label>
@@ -107,6 +107,33 @@
 
 			<!-- 실제 서버로 전송되는 규격 문자열 -->
 			<input type="hidden" id="operatingHours" name="operatingHours">
+		</div>
+
+		<!-- 7. 정산 계좌 — 추가됨 (2026-10-07, 계좌 보안). 승인 후엔 여기서 다시 자유 수정이 안 되고
+		     "계좌 변경 신청 → 슈퍼어드민 승인" 절차를 거쳐야 한다(/store/bank-account). 입력란 자체는
+		     storeView/edit.html의 기존 은행 선택 목록과 동일 — 통장 사본은 필수 첨부, 운영자가 입점
+		     심사 때 사업자 정보와 함께 확인한다. -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label">정산 입금 계좌 <span class="u-accent">*</span></label>
+			<p class="u-mut" style="font-size: var(--fs-xs); margin-bottom: var(--s-2)">승인 후 주간 정산 대금이 입금되는 계좌예요. 승인 뒤 바꾸려면 운영자 승인이 다시 필요해요.</p>
+			<div class="u-row" style="gap: var(--s-2)">
+				<select class="input" name="bankName" required style="flex: 0 0 38%">
+					<option value="">은행 선택</option>
+					<option th:each="b : ${ {'국민','신한','우리','하나','농협','기업','카카오뱅크','토스뱅크','새마을금고','부산','경남','대구','우체국'} }"
+					        th:value="${b}" th:text="${b}">국민</option>
+				</select>
+				<input class="input" type="text" name="bankAccount" required maxlength="40"
+				       placeholder="계좌번호 (- 없이 입력)" style="flex: 1">
+			</div>
+			<input class="input" type="text" name="accountHolder" required maxlength="40"
+			       placeholder="예금주명" style="margin-top: var(--s-2)">
+		</div>
+
+		<!-- 8. 통장 사본 -->
+		<div class="field" style="margin-top: var(--s-4)">
+			<label class="field__label" for="passbook">통장 사본 <span class="u-accent">*</span></label>
+			<input class="input" type="file" id="passbook" name="passbook" accept="image/jpeg,image/png,image/webp,image/gif" required>
+			<p class="u-mut" style="font-size: var(--fs-xs); margin-top: 4px">예금주명이 보이도록 촬영한 통장 사본 또는 계좌 개설 확인서 이미지를 올려주세요. 운영자 심사에만 쓰이고 공개되지 않아요.</p>
 		</div>
 
 		<!-- 제출 버튼 -->

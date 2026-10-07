@@ -138,8 +138,10 @@ CREATE TABLE store (
     pos_last_sync_at       DATETIME,
     pos_draft_prompt_time  TIME COMMENT '매일 이 시각에 POS 재고 스냅샷으로 "오늘의 구제" 초안 자동 생성(B안)',
     bank_name              VARCHAR(30) COMMENT '정산 입금 계좌 (WBS 2.0 매장 정산)',
-    bank_account           VARCHAR(40),
+    bank_account           VARCHAR(255) COMMENT 'AesStringConverter로 암호화 저장 (2026-10-07, 계좌 보안) — 길이를 40→255로 늘림(IV+태그가 Base64로 더해져 평문보다 길어짐)',
     account_holder         VARCHAR(40),
+    passbook_image_url     VARCHAR(255) COMMENT '통장 사본 경로, upload-private/ 아래(공개 서빙 안 됨) — PassbookFileController로만 열람 (2026-10-07 추가)',
+    account_status         VARCHAR(20) DEFAULT 'UNREGISTERED' COMMENT 'UNREGISTERED/NORMAL/UNDER_REVIEW — 정산 지급 가능 여부 (2026-10-07 추가, 계좌 보안)',
     owner_id               BIGINT COMMENT 'users.id 참조 — 이 매장을 소유한 점주(role=OWNER) 계정',
     reliability_suspended_until  DATETIME COMMENT '신뢰도(취소율) 자동 정지 해제 시각. NULL/과거면 정지 아님 (2026-09-16 추가)',
     reliability_suspension_count INT NOT NULL DEFAULT 0 COMMENT '신뢰도 위반 누적 정지 횟수(0~3), 해제돼도 리셋 안 됨',
@@ -554,10 +556,41 @@ CREATE TABLE settlement (
     scheduled_payout_date  DATE NOT NULL COMMENT '확정일 + 영업일 2일',
     paid_at                DATETIME,
     transfer_memo          VARCHAR(200),
+    transfer_receipt_url   VARCHAR(255) COMMENT '지급 완료 처리 시 첨부하는 이체 확인증 경로 (2026-10-07 추가)',
+    bank_name              VARCHAR(30) COMMENT '정산 확정 시점 계좌 스냅샷 (2026-10-07 추가, 계좌 보안) — 확정 당시 계좌가 정상이었을 때만 채워짐',
+    bank_account           VARCHAR(255) COMMENT 'AesStringConverter로 암호화 저장. 스냅샷이 없으면(NULL) 지급 시점에 store 계좌를 그대로 씀(SettlementEntity.isPayable)',
+    account_holder         VARCHAR(40),
     created_at             DATETIME,
     UNIQUE KEY uk_settlement_store_period (store_id, period_start),
     FOREIGN KEY (store_id) REFERENCES store(id),
     FOREIGN KEY (merged_into_id) REFERENCES settlement(id)
+);
+
+-- 매장 정산 계좌 등록/변경 신청 1건 (2026-10-07 신규, 계좌 보안). 승인 전까지 store.account_status가
+-- UNDER_REVIEW로 바뀌어 정산 지급이 보류된다. old_*는 신청 시점 스냅샷(감사 이력, 전부 마스킹값),
+-- new_bank_account만 암호화 원본(승인 시 store에 그대로 복사해야 해서) — 나머지 new_*는 화면 표시용.
+CREATE TABLE bank_account_change_request (
+    id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id                BIGINT NOT NULL,
+    requested_by            BIGINT NOT NULL COMMENT '신청한 점주의 users.id',
+    requested_at            DATETIME NOT NULL,
+    status                  VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED',
+    reviewed_by             BIGINT COMMENT '승인/반려 처리한 슈퍼어드민 users.id',
+    reviewed_at             DATETIME,
+    reject_reason           VARCHAR(255),
+    old_bank_name           VARCHAR(30),
+    old_bank_account_masked VARCHAR(40),
+    old_account_holder      VARCHAR(40),
+    new_bank_name           VARCHAR(30),
+    new_bank_account        VARCHAR(255) COMMENT 'AesStringConverter로 암호화 저장',
+    new_bank_account_masked VARCHAR(40),
+    new_account_holder      VARCHAR(40),
+    new_passbook_image_url  VARCHAR(255) COMMENT 'upload-private/ 아래 경로, PassbookFileController로만 열람',
+    INDEX idx_bank_account_change_request_store_id (store_id),
+    INDEX idx_bank_account_change_request_status (status),
+    FOREIGN KEY (store_id) REFERENCES store(id),
+    FOREIGN KEY (requested_by) REFERENCES users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
 );
 
 -- 사용자가 실제로 획득(해금)한 뱃지. 한 번 딴 뱃지는 조건이 다시 거짓이 돼도 영구 유지.

@@ -2,6 +2,7 @@ package net.dsa.girigiri.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.dsa.girigiri.util.AesStringConverter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -92,6 +93,22 @@ public class SettlementEntity {
 	@Column(name = "transfer_memo", length = 200)
 	private String transferMemo;                // 이체 확인 메모 (슈퍼어드민 입력)
 
+	// 추가됨 (2026-10-07, 계좌 보안) — "확정된 정산 건은 기존 계좌 유지, 다음 정산부터 새 계좌 적용"
+	// 요구사항 때문에 추가. 지금까지는 SettlementEntity가 계좌를 따로 안 들고 있고 지급 시점(Excel
+	// 다운로드)에 StoreEntity를 그때그때 조회해서 썼는데, 그러면 정산이 확정(PENDING, 송금 전)된
+	// 뒤에 점주가 계좌를 바꾸면 다음 Excel 다운로드 때 새 계좌로 나가버린다 — 그래서
+	// SettlementBatchService.confirmWeek()가 확정 시점의 계좌를 이 컬럼들에 스냅샷으로 복사해두고,
+	// 이후 Excel/화면은 전부 StoreEntity가 아니라 이 스냅샷을 쓴다(SuperAdminSettlementService 수정).
+	@Column(name = "bank_name", length = 30)
+	private String bankName;
+
+	@Convert(converter = AesStringConverter.class)
+	@Column(name = "bank_account", length = 255)
+	private String bankAccount;
+
+	@Column(name = "account_holder", length = 40)
+	private String accountHolder;
+
 	// 추가됨 (2026-10-07) — 슈퍼어드민이 실제 은행 이체를 마친 뒤 "지급 완료" 처리할 때 같이 올리는
 	// 이체 확인증(스크린샷) 경로. FileStorageUtil.store()가 돌려주는 "/upload/..." 웹 경로 그대로
 	// 저장한다. 점주가 /store/settlement 목록에서 자기 정산 건의 영수증을 직접 확인할 수 있게 한다.
@@ -101,4 +118,16 @@ public class SettlementEntity {
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
+
+	/**
+	 * 추가됨 (2026-10-07, 계좌 보안) — 지급 가능 여부. 확정 시점에 계좌 스냅샷이 찍혔으면(=그때 정상
+	 * 계좌였음) 그 뒤로 매장 계좌가 어떻게 바뀌든 항상 지급 가능 — 스냅샷 자체가 "그때 쓸 계좌가
+	 * 확정됐다"는 뜻이라 다시 흔들리지 않는다. 스냅샷이 없으면(확정 당시 계좌가 없었던 경우) 지금
+	 * 시점의 매장 계좌 상태를 그대로 따른다 — 그 사이 등록·승인됐으면 지급 가능해진다.
+	 * SettlementBatchService.markPaid()(지급 처리 서버 재검증)와 SuperAdminSettlementService
+	 * (목록 표시) 양쪽에서 같은 기준으로 쓴다.
+	 */
+	public boolean isPayable(StoreEntity store) {
+		return bankAccount != null || (store != null && store.isAccountPayable());
+	}
 }

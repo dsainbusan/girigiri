@@ -14,6 +14,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 주간 정산 배치 — WBS 2.0 (문창호, 2026-09-01).
@@ -83,6 +85,12 @@ public class SettlementBatchService {
 
 			boolean pay = total >= SettlementService.MIN_PAYOUT && total > 0;
 
+			// 추가됨 (2026-10-07, 계좌 보안) — 확정 시점에 계좌가 정상(NORMAL)이면 그 계좌를 스냅샷으로
+			// 같이 저장한다("확정된 건은 기존 계좌 유지" 요구사항, SettlementEntity.isPayable 참고).
+			// 정상이 아니면(미등록/변경 심사 중) 스냅샷을 안 남긴다 — 나중에 계좌가 정상화되면 그때
+			// 가서 지금 시점의 매장 계좌를 쓰도록 비워둔다(SettlementEntity.isPayable의 폴백 분기).
+			boolean accountNormalNow = store.isAccountPayable();
+
 			SettlementEntity s = SettlementEntity.builder()
 					.storeId(store.getId())
 					.periodStart(periodStart)
@@ -98,6 +106,9 @@ public class SettlementBatchService {
 					.status(pay ? SettlementEntity.STATUS_PENDING : SettlementEntity.STATUS_CARRIED)
 					.confirmedAt(now)
 					.scheduledPayoutDate(payoutDate)
+					.bankName(accountNormalNow ? store.getBankName() : null)
+					.bankAccount(accountNormalNow ? store.getBankAccount() : null)
+					.accountHolder(accountNormalNow ? store.getAccountHolder() : null)
 					.build();
 			settlementRepository.save(s);
 			created++;
@@ -132,9 +143,20 @@ public class SettlementBatchService {
 			return 0;
 		}
 		LocalDateTime now = LocalDateTime.now();
+		List<SettlementEntity> targets = settlementRepository.findAllById(settlementIds);
+		// 추가됨 (2026-10-07, 계좌 보안) — "지급 대기 + 계좌 정상"인 건만 업데이트(요구사항 5). 화면에서
+		// 체크박스를 비활성화해도 폼을 직접 조작해서 비정상 계좌 건의 id를 끼워 넣을 수 있으니, 여기서
+		// 한 번 더 막는다 — SettlementEntity.isPayable()이 스냅샷 우선, 없으면 현재 매장 계좌 상태를 본다.
+		Map<Long, StoreEntity> storesById = storeRepository.findAllById(
+				targets.stream().map(SettlementEntity::getStoreId).distinct().toList())
+				.stream().collect(Collectors.toMap(StoreEntity::getId, store -> store));
+
 		int paid = 0;
-		for (SettlementEntity s : settlementRepository.findAllById(settlementIds)) {
+		for (SettlementEntity s : targets) {
 			if (!SettlementEntity.STATUS_PENDING.equals(s.getStatus())) {
+				continue;
+			}
+			if (!s.isPayable(storesById.get(s.getStoreId()))) {
 				continue;
 			}
 			s.setStatus(SettlementEntity.STATUS_PAID);

@@ -52,6 +52,12 @@ SUPABASE_STORAGE_BUCKET=receipts
 GEMINI_API_KEY_MEMBER=
 GEMINI_API_KEY_GUEST=
 
+# 2026-10-07追加 — 店舗の精算口座番号をDBに暗号化して保存する際に使うAESキー(AesStringConverter
+# 参照)。未設定でもローカルはダミーのデフォルト値で動作するが(application.properties)、実際に
+# デプロイする前には必ず別途発行して設定すること。長さは自由 — どんな文字列でもSHA-256で32バイト
+# に変換して使う。
+BANK_ENCRYPTION_KEY=
+
 ENV
 
 # 4. 実行
@@ -111,6 +117,11 @@ SUPABASE_STORAGE_BUCKET=receipts
 # 무료 키는 https://aistudio.google.com/apikey 에서 발급받을 수 있다.
 GEMINI_API_KEY_MEMBER=
 GEMINI_API_KEY_GUEST=
+
+# 2026-10-07 추가 — 매장 정산 계좌번호를 DB에 암호화해서 저장할 때 쓰는 AES 키(AesStringConverter
+# 참고). 안 채워도 로컬은 더미 기본값으로 돌아가지만(application.properties), 실제 배포 전에는
+# 꼭 따로 발급해서 채워야 한다. 길이는 자유 — 어떤 문자열이든 SHA-256으로 32바이트로 변환해서 쓴다.
+BANK_ENCRYPTION_KEY=
 
 ENV
 

@@ -19,7 +19,11 @@ public record SettlementRowDto(
 		LocalDate scheduledPayoutDate,
 		LocalDateTime paidAt,
 		String transferMemo,
-		boolean bankInfoRegistered,
+		// 수정됨 (2026-10-07, 계좌 보안) — bankInfoRegistered(등록됨/미등록 2단)를 payable +
+		// accountStatusLabel(정상/변경 심사 중/미등록 3단)로 교체. payable=false인 행은 화면에서
+		// 체크박스를 비활성화한다(settlements.html).
+		boolean payable,
+		String accountStatusLabel,
 		String transferReceiptUrl
 ) {
 }

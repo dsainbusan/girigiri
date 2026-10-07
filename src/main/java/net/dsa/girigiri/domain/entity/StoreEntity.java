@@ -2,6 +2,7 @@ package net.dsa.girigiri.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.dsa.girigiri.util.AesStringConverter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -30,6 +31,15 @@ public class StoreEntity {
 	// 노출만 막는 수준이고, 점주 대시보드 접근 자체를 차단하지는 않는다.
 	public static final String STATUS_ACTIVE = "ACTIVE";
 	public static final String STATUS_SUSPENDED = "SUSPENDED";
+
+	// 추가됨 (2026-10-07, 계좌 보안) — 정산 지급 가능 여부를 가르는 계좌 상태. approvalStatus(입점
+	// 심사)·status(정지)와는 별개 축이다. UNREGISTERED(계좌 자체가 없음)/NORMAL(정상, 지급 가능)/
+	// UNDER_REVIEW(변경 신청 중 — 승인 전까지 지급 보류)만 지급 가능 상태가 NORMAL인지로 판정한다
+	// (SuperAdminSettlementService 참고). 기존 매장(계좌 컬럼이 비어있던)은 ddl-auto가 컬럼을 추가하면
+	// 전부 NULL인데, null은 UNREGISTERED와 동일하게 취급해서 "기존 데이터가 안 깨지게" 한다(요구사항 6).
+	public static final String ACCOUNT_STATUS_UNREGISTERED = "UNREGISTERED";
+	public static final String ACCOUNT_STATUS_NORMAL = "NORMAL";
+	public static final String ACCOUNT_STATUS_UNDER_REVIEW = "UNDER_REVIEW";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -126,14 +136,32 @@ public class StoreEntity {
 
 	// 추가됨 (2026-09-01, 문창호) — 왜: 주간 정산 지급용 입금 계좌. 슈퍼어드민이 "정산 지급" 화면에서
 	// 이 정보로 이체 목록(Excel)을 만들어 은행 대량이체로 송금한다. 미등록이면 지급 보류.
+	//
+	// 수정됨 (2026-10-07, 계좌 보안) — 입점 신청 단계부터 필수로 받고, 승인 후 변경은 더 이상 여기
+	// 직접 setter로 바로 안 바뀐다(BankAccountChangeRequestEntity 승인 흐름을 거쳐야 함 —
+	// BankAccountChangeService 참고). bankAccount는 AesStringConverter로 암호화 저장(컬럼 길이를
+	// 255로 늘림 — IV+태그가 Base64로 더해지면 평문보다 길어진다). bankName/accountHolder는 그대로
+	// 평문 — 계좌번호만 암호화 대상이라는 요구사항 범위를 그대로 따름.
 	@Column(name = "bank_name", length = 30)
 	private String bankName;
 
-	@Column(name = "bank_account", length = 40)
+	@Convert(converter = AesStringConverter.class)
+	@Column(name = "bank_account", length = 255)
 	private String bankAccount;
 
 	@Column(name = "account_holder", length = 40)
 	private String accountHolder;
+
+	// 추가됨 (2026-10-07, 계좌 보안) — 입점 신청/계좌 변경 신청 시 같이 받는 통장 사본 이미지 경로.
+	// FileStorageUtil이 저장하는 일반 공개 업로드 경로(/upload/**)가 아니라, 인증된 사용자(본인
+	// 점주·슈퍼어드민)만 접근 가능한 전용 경로에 저장한다(PassbookFileController 참고) — 통장 사본은
+	// 계좌번호보다 훨씬 민감해서 공개 URL로 두면 안 된다.
+	@Column(name = "passbook_image_url", length = 255)
+	private String passbookImageUrl;
+
+	@Builder.Default
+	@Column(name = "account_status", length = 20)
+	private String accountStatus = ACCOUNT_STATUS_UNREGISTERED;
 
 	// 변경됨 — 왜: Store가 자체 loginId/password를 갖는 "독립 계정" 모델(안A)과, 세션 설계
 	// ({ userId, role, viewMode, storeId })가 암시하는 "User가 storeId로 Store를 소유"하는 모델(안B)이
@@ -181,4 +209,9 @@ public class StoreEntity {
 	@LastModifiedDate
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
+
+	/** 정산 지급 가능 상태인지 — accountStatus가 null(ddl-auto로 막 생긴 기존 로우)이면 미등록과 동일 취급. */
+	public boolean isAccountPayable() {
+		return ACCOUNT_STATUS_NORMAL.equals(accountStatus);
+	}
 }

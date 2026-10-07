@@ -31,6 +31,9 @@
   <div class="toolbar">
     <p class="result-count result-count--inline">지급 대기 <b th:text="${pending.size()}">0</b>건</p>
     <div class="toolbar__spacer"></div>
+    <!-- 추가됨 (2026-10-07, 계좌 보안) — 아래 표의 "계좌: 미등록/변경 심사 중" 매장을 처리할 수 있는
+         화면으로 바로 연결. 지급이 막힌 이유를 보고 바로 거기서 처리하게 한다. -->
+    <a class="link-action" th:href="@{/superadmin/bank-account-requests}"><svg class="icon"><use href="#i-list"/></svg>계좌 변경 심사</a>
     <a class="link-action" th:href="@{/superadmin/settlements/export}"><svg class="icon"><use href="#i-download"/></svg>이체 목록 Excel 다운로드</a>
   </div>
 
@@ -41,7 +44,7 @@
       </colgroup>
       <thead>
         <tr>
-          <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
+          <th class="th-check"><input class="checkbox" type="checkbox" aria-label="전체 선택" onchange="document.querySelectorAll('.row-check:not(:disabled)').forEach(function(cb){cb.checked=this.checked;}, this)"></th>
           <th>매장</th>
           <th>정산 주간</th>
           <th>지급액</th>
@@ -55,14 +58,18 @@
         </tr>
         <tr class="row-clickable" th:each="row : ${pending}"
             th:attr="data-href=@{/superadmin/stores/{id}(id=${row.storeId})}">
-          <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${row.id}" form="pay-form"></td>
+          <!-- 수정됨 (2026-10-07, 계좌 보안) — payable=false(미등록/변경 심사 중)인 행은 체크박스
+               자체를 비활성화한다(요구사항 5). 서버도 markPaid()에서 같은 기준으로 다시 막는다
+               (SettlementBatchService 참고) — 화면에서 막아도 폼 직접 조작은 막아야 한다. -->
+          <td><input class="checkbox row-check" type="checkbox" aria-label="행 선택" name="ids" th:value="${row.id}" form="pay-form" th:disabled="${!row.payable}"></td>
           <td class="cell-name" th:text="${row.storeName}">매장명</td>
           <td th:text="${row.periodLabel}">2026-09-01 ~ 2026-09-07</td>
           <td th:text="'₩' + ${#numbers.formatInteger(row.payout, 0, 'COMMA')}">₩0</td>
           <td th:text="${#temporals.format(row.scheduledPayoutDate, 'yyyy-MM-dd')}">2026-09-10</td>
           <td>
-            <span class="badge badge--open" th:if="${row.bankInfoRegistered}">등록됨</span>
-            <span class="badge badge--danger" th:unless="${row.bankInfoRegistered}">미등록</span>
+            <span class="badge"
+                  th:classappend="${row.accountStatusLabel == '정상'} ? 'badge--open' : (${row.accountStatusLabel == '변경 심사 중'} ? 'badge--warning' : 'badge--danger')"
+                  th:text="${row.accountStatusLabel}">미등록</span>
           </td>
         </tr>
       </tbody>

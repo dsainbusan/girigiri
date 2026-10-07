@@ -40,6 +40,7 @@ out/
 .DS_Store
 .env
 /upload/
+/upload-private/
 
 test-output-qr.png
 test-output-receipt.pdf

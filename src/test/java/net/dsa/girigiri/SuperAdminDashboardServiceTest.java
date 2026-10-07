@@ -49,7 +49,7 @@ class SuperAdminDashboardServiceTest {
 
 		List<PendingQueueRowDto> queue = stats.pendingQueue();
 		assertEquals(4, queue.size());
-		assertEquals("신고 접수", queue.get(0).label());
+		assertEquals("환불 신청", queue.get(0).label());
 		assertEquals("입점 신청", queue.get(1).label());
 		assertEquals("매장 문의", queue.get(2).label());
 		assertEquals("유저 문의", queue.get(3).label());
