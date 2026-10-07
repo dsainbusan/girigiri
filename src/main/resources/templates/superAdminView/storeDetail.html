@@ -43,8 +43,11 @@
           th:text="${store.approvalStatus == 'APPROVED'} ? '승인됨' : (${store.approvalStatus == 'REJECTED'} ? '반려됨' : (${store.approvalStatus == 'PENDING'} ? '대기중' : '상태 미확인'))">승인됨</span>
     <!-- 변경됨 (2026-09-09) — "승인됨"(위 배지, badge--success/파랑)과 색이 같아서 구분이 안 된다는
          피드백으로 badge--open(초록)으로 뺐다. -->
-    <span class="badge badge--open" th:if="${isOpen}">영업중</span>
-    <span class="badge badge--danger" th:unless="${isOpen}">휴업</span>
+    <!-- 변경됨 (2026-10-07) — 상세에서 정지할 수 있게 되면서 stores.html 목록과 동일하게 정지 매장은
+         영업중/휴업 대신 "정지됨" 배지를 보여준다. -->
+    <span class="badge badge--danger" th:if="${store.status == 'SUSPENDED'}">정지됨</span>
+    <span class="badge badge--open" th:if="${store.status != 'SUSPENDED' and isOpen}">영업중</span>
+    <span class="badge badge--danger" th:if="${store.status != 'SUSPENDED' and !isOpen}">휴업</span>
     <!--/* 추가됨 (2026-09-09) — "재고 현황"·"주문 내역"으로 그 매장이 지금 뭘 얼마에 몇 개 파는지,
          유저와 사이에 어떤 주문이 오갔는지 조회 전용으로 볼 수 있는 화면 2개. 버튼 3개(재고 현황/
          주문 내역/정보 수정)를 .detail-header__actions로 묶어서 한 그룹으로 오른쪽 끝에 정렬하고,
@@ -57,6 +60,27 @@
             onsubmit="return confirm('이 매장의 입점을 승인할까요?')">
         <input type="hidden" name="filter" th:value="${filter}">
         <button class="btn btn--primary btn--sm" type="submit">승인</button>
+      </form>
+      <!-- 추가됨 (2026-10-07) — 상세에서 반려/정지/정지 해제. 반려는 stores.html 목록의 반려 버튼과,
+           정지는 목록의 "선택 매장 정지"와 같은 서버 로직(사유는 prompt로 받아 알림에 실림)이고,
+           filter를 실어 보내 처리 후 원래 보던 탭으로 돌아간다. 반려는 PENDING에서만, 정지/해제는
+           승인된 매장에서만 보인다(대기 매장은 승인/반려가 먼저). -->
+      <form th:if="${store.approvalStatus == 'PENDING'}" th:action="@{/superadmin/stores/{id}/reject(id=${store.id})}" method="post"
+            onsubmit="let r = prompt('반려 사유를 입력해 주세요'); if (r === null) { return false; } this.reason.value = r; return true;">
+        <input type="hidden" name="reason">
+        <input type="hidden" name="filter" th:value="${filter}">
+        <button class="btn btn--outline-danger btn--sm" type="submit">반려</button>
+      </form>
+      <form th:if="${store.approvalStatus == 'APPROVED' and store.status != 'SUSPENDED'}" th:action="@{/superadmin/stores/{id}/suspend(id=${store.id})}" method="post"
+            onsubmit="let r = prompt('정지 사유를 입력해 주세요 (비워도 정지는 진행돼요)'); if (r === null) { return false; } this.reason.value = r; return true;">
+        <input type="hidden" name="reason">
+        <input type="hidden" name="filter" th:value="${filter}">
+        <button class="btn btn--outline-danger btn--sm" type="submit">매장 정지</button>
+      </form>
+      <form th:if="${store.status == 'SUSPENDED'}" th:action="@{/superadmin/stores/{id}/unsuspend(id=${store.id})}" method="post"
+            onsubmit="return confirm('이 매장의 정지를 해제할까요?')">
+        <input type="hidden" name="filter" th:value="${filter}">
+        <button class="btn btn--outline btn--sm" type="submit">정지 해제</button>
       </form>
       <a class="btn btn--outline-neutral btn--sm"
          th:href="@{/superadmin/stores/{id}/inventory(id=${store.id})}"><svg class="icon"><use href="#i-box"/></svg>재고 현황</a>

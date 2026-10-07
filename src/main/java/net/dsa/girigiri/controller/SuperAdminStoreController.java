@@ -147,12 +147,30 @@ public class SuperAdminStoreController {
 		return "redirect:" + buildStoresRedirectUri(null, filter);
 	}
 
-	// 추가됨 (2026-09-29, 담당: 송보미) — 승인 버튼 옆 반려 버튼. reason은 선택 입력(비워도 반려는
-	// 되고, 신청자에게 가는 알림 문구만 달라진다 — SuperAdminStoreService#reject 참고).
+	// 추가됨 (2026-09-29, 담당: 송보미) — 승인 버튼 옆 반려 버튼. reason은 선택 입력(SuperAdminStoreService#reject).
+	// filter 추가 (2026-10-07) — 매장 상세에서도 반려할 수 있게 하면서 approveStore와 동일하게 원래 필터로 복귀.
 	@PostMapping("/stores/{id}/reject")
-	public String rejectStore(@PathVariable Long id, @RequestParam(required = false) String reason) {
+	public String rejectStore(@PathVariable Long id, @RequestParam(required = false) String reason, @RequestParam(required = false) String filter) {
 		storeService.reject(id, reason);
-		return "redirect:/superadmin/stores";
+		return "redirect:" + buildStoresRedirectUri(null, filter);
+	}
+
+	// 추가됨 (2026-10-07) — 매장 상세에서 단건 정지/해제. bulk 메서드를 1건으로 재사용(사유 알림 포함), 상세로 복귀.
+	@PostMapping("/stores/{id}/suspend")
+	public String suspendStore(@PathVariable Long id, @RequestParam(required = false) String reason, @RequestParam(required = false) String filter) {
+		storeService.bulkSuspend(List.of(lookupService.getStore(id).getId()), reason);
+		return "redirect:" + buildStoreDetailRedirectUri(id, filter);
+	}
+
+	@PostMapping("/stores/{id}/unsuspend")
+	public String unsuspendStore(@PathVariable Long id, @RequestParam(required = false) String filter) {
+		storeService.bulkUnsuspend(List.of(lookupService.getStore(id).getId()));
+		return "redirect:" + buildStoreDetailRedirectUri(id, filter);
+	}
+
+	private String buildStoreDetailRedirectUri(Long id, String filter) {
+		return UriComponentsBuilder.fromPath("/superadmin/stores/{id}")
+				.queryParamIfPresent("filter", Optional.ofNullable(filter).filter(s -> !s.isBlank())).buildAndExpand(id).toUriString();
 	}
 
 	@PostMapping("/stores/{id}/delete")
