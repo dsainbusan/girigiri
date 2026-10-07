@@ -44,7 +44,6 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -293,10 +292,10 @@ public class SuperAdminDashboardService {
 	}
 
 	/**
-	 * 추가됨 (2026-10-07) — 처리 대기 "정산 지급". 매주 월요일 확정된 정산(PENDING, 지급 대기)을 지급
-	 * 예정일까지 카운트다운한다 — 가장 이른 지급 예정일 기준 "D-2 · 10/9 지급 예정" / "D-day · 오늘 지급
-	 * 예정" / "10/9 지급 예정 · 1일 지남". 다른 항목의 "접수 후 N시간 SLA" 대신 지급 예정일이 지났으면
-	 * overSla(빨간 테두리)로 본다 — AdminNotificationTriggerScheduler의 "지급 예정일 도래" 알림과 같은 기준.
+	 * 추가됨 (2026-10-07) — 처리 대기 "정산 지급". 매주 월요일 확정된 정산(PENDING, 지급 대기) 건수와
+	 * 가장 이른 지급 예정일("10/8 지급 예정")을 보여준다. 다른 항목의 "접수 후 N시간 SLA" 대신 지급
+	 * 예정일 당일이 되면(또는 지났으면) overSla(빨간 테두리)로 본다 — AdminNotificationTriggerScheduler의
+	 * "지급 예정일 도래" 알림과 같은 기준. (D-day 카운트다운 문구는 필요 없다는 피드백으로 뺐다.)
 	 */
 	private PendingQueueRowDto settlementPayoutRow(LocalDate today) {
 		List<SettlementEntity> pending = settlementRepository.findByStatusOrderByScheduledPayoutDateAsc(SettlementEntity.STATUS_PENDING);
@@ -305,12 +304,9 @@ public class SuperAdminDashboardService {
 			return new PendingQueueRowDto("정산 지급", "i-refresh", 0, null, link, false, false, "대기 없음");
 		}
 		LocalDate due = pending.get(0).getScheduledPayoutDate();
-		long daysLeft = ChronoUnit.DAYS.between(today, due);
 		String dueLabel = due.format(SELL_THROUGH_DAY_FORMAT) + " 지급 예정";
-		String dLabel = daysLeft > 0 ? "D-" + daysLeft : (daysLeft == 0 ? "D-day" : (-daysLeft) + "일 지남");
-		String subLabel = daysLeft > 0 ? dLabel + " · " + dueLabel
-				: (daysLeft == 0 ? "D-day · 오늘 지급 예정" : dueLabel + " · " + dLabel);
-		return new PendingQueueRowDto("정산 지급", "i-refresh", pending.size(), dLabel, link, false, daysLeft < 0, subLabel);
+		boolean dueReached = !due.isAfter(today);
+		return new PendingQueueRowDto("정산 지급", "i-refresh", pending.size(), dueLabel, link, false, dueReached, dueLabel);
 	}
 
 	// 변경됨 (2026-10-06) — SLA 초과 여부(overSla)를 같이 계산하려면 "가장 오래된 건" 시각 자체가
