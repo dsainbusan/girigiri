@@ -60,6 +60,12 @@ public class CouponService {
 	// 추가됨 (2026-10-01, 매장 지정 쿠폰) — claimStoreCampaignCoupon()에서 발급 수량 상한을
 	// 동시성 안전하게 확인하기 위해 캠페인 행을 락 걸고 다시 조회한다.
 	private final CouponCampaignRepository couponCampaignRepository;
+	// 추가됨 (2026-10-07) — 매장 지정 쿠폰은 "이 매장을 찜한 손님"에게만 주는 쿠폰이다
+	// (SuperAdminCouponService#createStoreCampaign이 발행 수량 자체를 찜한 손님 수로 제한하는 것과
+	// 같은 전제). 그동안 발행 수량만 그 수로 캡을 걸어뒀을 뿐, "찜 안 한 손님도 선착순으로 받을 수
+	// 있는" 구멍이 있었다 — findStoreCouponOffers/claimStoreCampaignCoupon 양쪽 다 실제 찜 여부를
+	// 확인하도록 좁힌다(StoreDetailController가 이미 쓰는 LikeService.isLiked 재사용).
+	private final LikeService likeService;
 
 	@Transactional(readOnly = true)
 	public List<CouponRowDto> listForUser(Long userId) {
@@ -263,7 +269,7 @@ public class CouponService {
 	 * (ProductRepository/StockService의 재고 차감 락과 동일한 패턴).
 	 */
 	@Transactional
-	public CouponEntity claimStoreCampaignCoupon(Long userId, Long campaignId) {
+	public CouponEntity claimStoreCampaignCoupon(Long userId, Long campaignId, Long storeId) {
 		CouponCampaignEntity campaign = couponCampaignRepository.findByIdForUpdate(campaignId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "쿠폰을 찾을 수 없어요."));
 		if (!CouponCampaignEntity.SCOPE_STORE.equals(campaign.getScope())) {
@@ -271,6 +277,12 @@ public class CouponService {
 		}
 		if (!campaign.isActive() || !campaign.getExpiresAt().isAfter(LocalDateTime.now())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지금은 받을 수 없는 쿠폰이에요.");
+		}
+		// 버튼은 찜한 손님에게만 보이지만(findStoreCouponOffers), 그건 화면 쪽 필터일 뿐이라 URL을
+		// 직접 쳐서 들어오는 경우까지 막으려면 여기서도 한 번 더 확인해야 한다(신고하기 등 다른
+		// 기능들과 동일한 "화면에서 숨기는 것 + 서버에서도 막는 것" 2중 방어 관례).
+		if (!likeService.isLiked(userId, storeId)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이 매장을 찜한 손님만 받을 수 있는 쿠폰이에요.");
 		}
 		if (couponRepository.existsByCampaignIdAndIssuedToUserId(campaignId, userId)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 받은 쿠폰이에요.");
@@ -306,9 +318,16 @@ public class CouponService {
 	 * 손님용 매장 상세 페이지 "쿠폰 받기" 카드 목록 — 2026-10-01 신규. 이 매장을 대상으로 한, 지금
 	 * 활성·미만료인 매장 지정 캠페인만 보여준다. userId가 null(비로그인)이면 claimed는 전부 false로
 	 * 내려준다 — 버튼을 눌렀을 때 로그인 화면으로 보내는 건 컨트롤러(@LoginRequired)가 처리한다.
+	 *
+	 * 좁혀짐 (2026-10-07) — 매장 지정 쿠폰은 그 매장을 찜한 손님 전용이라, 찜 안 한 손님(비로그인
+	 * 포함)에겐 카드 자체를 안 보여준다. claimStoreCampaignCoupon()의 서버 쪽 확인과 같은 기준
+	 * (LikeService.isLiked)이라 "카드는 보이는데 누르면 막히는" 불일치가 없다.
 	 */
 	@Transactional(readOnly = true)
 	public List<net.dsa.girigiri.domain.dto.StoreCouponOfferDto> findStoreCouponOffers(Long storeId, Long userId) {
+		if (!likeService.isLiked(userId, storeId)) {
+			return List.of();
+		}
 		LocalDateTime now = LocalDateTime.now();
 		return couponStoreRepository.findByStoreId(storeId).stream()
 				.map(net.dsa.girigiri.domain.entity.CouponStoreEntity::getCampaignId)

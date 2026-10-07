@@ -74,7 +74,7 @@ public class CouponController {
 	                                  RedirectAttributes redirectAttributes) {
 		Long userId = (Long) session.getAttribute("userId");
 		try {
-			couponService.claimStoreCampaignCoupon(userId, campaignId);
+			couponService.claimStoreCampaignCoupon(userId, campaignId, storeId);
 			redirectAttributes.addFlashAttribute("couponClaimed", "쿠폰을 받았어요! 내 쿠폰함에서 확인할 수 있어요.");
 		} catch (ResponseStatusException e) {
 			redirectAttributes.addFlashAttribute("couponClaimError", e.getReason());

@@ -10,6 +10,7 @@ import net.dsa.girigiri.repository.CouponRepository;
 import net.dsa.girigiri.repository.CouponStoreRepository;
 import net.dsa.girigiri.repository.StoreRepository;
 import net.dsa.girigiri.service.CouponService;
+import net.dsa.girigiri.service.LikeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -45,6 +46,9 @@ class CouponStoreScopeTest {
 	private CouponRegionRepository couponRegionRepository;
 	@Mock
 	private StoreRepository storeRepository;
+	// 매장 지정 쿠폰 찜 제한(2026-10-07) — claimStoreCampaignCoupon()이 LikeService.isLiked로 확인한다.
+	@Mock
+	private LikeService likeService;
 
 	@InjectMocks
 	private CouponService couponService;
@@ -136,7 +140,7 @@ class CouponStoreScopeTest {
 		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(regionCampaign));
 
 		ResponseStatusException e = assertThrows(ResponseStatusException.class,
-				() -> couponService.claimStoreCampaignCoupon(100L, 50L));
+				() -> couponService.claimStoreCampaignCoupon(100L, 50L, 7L));
 		assertEquals(400, e.getStatusCode().value());
 	}
 
@@ -148,12 +152,31 @@ class CouponStoreScopeTest {
 				.issueLimit(5)
 				.expiresAt(LocalDateTime.now().plusDays(7)).active(true).build();
 		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(campaign));
+		when(likeService.isLiked(100L, 7L)).thenReturn(true);
 		when(couponRepository.existsByCampaignIdAndIssuedToUserId(50L, 100L)).thenReturn(false);
 		when(couponRepository.countByCampaignId(50L)).thenReturn(5L);
 
 		ResponseStatusException e = assertThrows(ResponseStatusException.class,
-				() -> couponService.claimStoreCampaignCoupon(100L, 50L));
+				() -> couponService.claimStoreCampaignCoupon(100L, 50L, 7L));
 		assertTrue(e.getReason().contains("소진"));
+	}
+
+	// 추가됨 (2026-10-07) — 매장 지정 쿠폰은 그 매장을 찜한 손님 전용. 찜 안 한 손님은 발행 수량이
+	// 남아있어도 거부되는지 확인.
+	@Test
+	void 매장_지정_쿠폰은_찜하지_않은_손님이면_거부된다() {
+		CouponCampaignEntity campaign = CouponCampaignEntity.builder()
+				.id(50L).scope(CouponCampaignEntity.SCOPE_STORE)
+				.discountType(CouponCampaignEntity.DISCOUNT_TYPE_RATE).discountRate(10)
+				.issueLimit(5)
+				.expiresAt(LocalDateTime.now().plusDays(7)).active(true).build();
+		when(couponCampaignRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(campaign));
+		when(likeService.isLiked(100L, 7L)).thenReturn(false);
+
+		ResponseStatusException e = assertThrows(ResponseStatusException.class,
+				() -> couponService.claimStoreCampaignCoupon(100L, 50L, 7L));
+		assertEquals(403, e.getStatusCode().value());
+		assertTrue(e.getReason().contains("찜한"));
 	}
 
 	@Test
