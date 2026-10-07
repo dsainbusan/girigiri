@@ -145,7 +145,7 @@
   <div id="region-coupon-modal" role="dialog" aria-modal="true" aria-labelledby="region-coupon-title" class="modal-overlay" hidden>
     <form class="modal-card modal-card--wide" th:action="@{/superadmin/coupons/region}" method="post" id="region-coupon-form">
       <h3 class="modal-card__title" id="region-coupon-title">지역 지정 쿠폰 발행</h3>
-      <p class="modal-card__desc">선택한 시도에 사는 회원의 쿠폰함으로 바로 발급돼요. 쿠폰은 그 시도에 있는 매장에서만 쓸 수 있어요.</p>
+      <p class="modal-card__desc">선택한 지역에 사는 회원의 쿠폰함으로 바로 발급돼요. 쿠폰은 그 지역에 있는 매장에서만 쓸 수 있어요.</p>
 
       <div class="modal-section">
         <div class="modal-section__head">
@@ -204,9 +204,9 @@
 
       <div class="modal-sticky">
         <div class="summary-box" aria-live="polite">
-          <div class="summary-box__row"><span>발급 대상 회원</span><span class="summary-box__value summary-box__value--muted" id="rcRecipientDisplay">시도를 선택해 주세요</span></div>
+          <div class="summary-box__row"><span>발급 대상 회원</span><span class="summary-box__value summary-box__value--muted" id="rcRecipientDisplay">지역을 선택해 주세요</span></div>
           <div class="summary-box__row"><span>예상 최대 비용</span><span class="summary-box__value summary-box__value--muted" id="rcCostEstimate">-</span></div>
-          <p class="summary-box__hint">대상은 선택한 시도에 사는 활성 일반 회원이에요. 모두에게 한 장씩 발급되고 수량은 직접 정할 수 없어요.</p>
+          <p class="summary-box__hint">대상은 선택한 지역에 사는 활성 일반 회원이에요. 모두에게 한 장씩 발급되고 수량은 직접 정할 수 없어요.</p>
         </div>
 
         <div class="modal-card__footer">
