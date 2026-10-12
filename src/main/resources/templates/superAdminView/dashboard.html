@@ -75,7 +75,6 @@
       <div class="info-row__body">
         <div class="info-row__title">
           <span th:text="${row.label}">환불 신청</span>
-          <span class="badge badge--danger" th:if="${row.priority and row.count > 0}">우선 처리</span>
         </div>
         <div class="info-row__sub" th:text="${row.count > 0} ? ${row.oldestAgoLabel} : '대기 없음'">대기 없음</div>
       </div>

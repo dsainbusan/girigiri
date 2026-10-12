@@ -928,8 +928,9 @@ textarea.field { height: auto; min-height: 200px; padding: 12px 14px; resize: ve
   .pending-row { grid-template-columns: repeat(2, 1fr); }
 }
 .pending-row .info-row { border: 1px solid var(--gray-200); border-radius: var(--radius-md); }
-.pending-row .info-row.is-overdue { border-color: var(--red-400); background: var(--red-100); }
-.pending-row .info-row.is-overdue:hover { background: var(--red-100); }
+/* 수정됨 (2026-10-12) — 카드 전체(테두리+배경)를 빨갛게 칠하면 "지금 뭘 봐야 하는지"가 카드 5개
+   전부 눈에 들어와서 오히려 안 읽힌다는 피드백 — 건수 배지(.badge--danger, 마크업에서 이미
+   overSla일 때 자동으로 빨강)만으로 충분히 신호가 가니 카드 자체의 색은 안 바꾼다. */
 
 /* 통계 대시보드 "마감 상품 소진 현황"(최근 7일, SKU 기준) 카드 (2026-09-30).
    판매(진한 파랑)/미판매(연한 파랑) 스택 막대 + 소진율 꺾은선(인라인 SVG, 라이브러리 없음) —
